@@ -153,6 +153,12 @@ test("荊軻 taxes Qin's ops for the turn and costs Chu its best card; 逐客令
   assert.equal(E.opsOf(a, CHU, "mozhe"), 1);
 });
 
+test("every card has English text, and no English text is left without a card", async () => {
+  const { default: CARD_EN } = await import("../public/i18n/cards.en.js");
+  for (const c of E.CARDS) assert.ok(CARD_EN[c.id] && CARD_EN[c.id].length > 5, `${c.id} has no English text`);
+  for (const id of Object.keys(CARD_EN)) assert.ok(E.CARD[id], `${id} is not a card`);
+});
+
 test("every card can be played as its event from a fresh hand without throwing", () => {
   for (const card of E.CARDS) {
     if (card.scoring) continue;

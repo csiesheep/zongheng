@@ -60,7 +60,7 @@ function line(name, r) {
   const n = r.played || 1;
   const ends = ENDS.filter((e) => r.ends[e]).map((e) => `${SHORT[e]} ${(100 * r.ends[e] / n).toFixed(0)}%`).join(" ");
   const regions = Object.entries(r.regions).map(([k, v]) => `${k} ${(v.n / n).toFixed(1)}x ${(v.q / v.n).toFixed(1)}:${(v.c / v.n).toFixed(1)}`).join(" ");
-  return `${name.padEnd(22)} Qin ${(100 * r.qinWins / n).toFixed(0).padStart(3)}%  turn ${(r.turns / n).toFixed(1)}  mandate ${(r.mandate / n) >= 0 ? "+" : ""}${(r.mandate / n).toFixed(1)}  滅 ${(r.mie / n).toFixed(2)} 相印 ${(r.seals / n).toFixed(2)}  ${(r.ms / n / 1000).toFixed(1)}s/game${r.errors.length ? `  ERRORS ${r.errors.length}` : ""}\n${"".padEnd(22)} ${ends}\n${"".padEnd(22)} ${regions}`;
+  return `${name.padEnd(22)} n=${r.played}  Qin ${(100 * r.qinWins / n).toFixed(0).padStart(3)}%  turn ${(r.turns / n).toFixed(1)}  mandate ${(r.mandate / n) >= 0 ? "+" : ""}${(r.mandate / n).toFixed(1)}  滅 ${(r.mie / n).toFixed(2)} 相印 ${(r.seals / n).toFixed(2)}  ${(r.ms / n / 1000).toFixed(1)}s/game${r.errors.length ? `  ERRORS ${r.errors.length}` : ""}\n${"".padEnd(22)} ${ends}\n${"".padEnd(22)} ${regions}`;
 }
 
 export const CELLS = [
@@ -78,6 +78,9 @@ export const CELLS = [
   ["cap+comp0", { options: { sealAt: "cap", comp: 0 } }],
   ["cap+tieQin", { options: { sealAt: "cap", tie: "qin" } }],
   ["cap+seals5", { options: { sealAt: "cap", seals: 5 } }],
+  ["cap+hangu3", { options: { sealAt: "cap", hangu: 3 } }],
+  ["cap+hangu3+comp0", { options: { sealAt: "cap", hangu: 3, comp: 0 } }],
+  ["hangu3", { options: { hangu: 3 } }],
   ["qin=hard", { qin: "hard" }],
   ["chu=hard", { chu: "hard" }],
   ["qin=easy", { qin: "easy" }],
@@ -146,7 +149,10 @@ async function runCells(cfg) {
   const worker = async () => {
     while (queue.length) {
       const { name, args } = queue.shift();
-      results.set(name, merge(results.get(name), await runChild(args)));
+      // Await first, read after: reading the running total before the await
+      // lets two workers overwrite each other's chunks.
+      const chunk = await runChild(args);
+      results.set(name, merge(results.get(name), chunk));
       pending.set(name, pending.get(name) - 1);
       // `--out=file` keeps what is finished on disk: a long batch outlives the shell that started it.
       if (cfg.out) appendFileSync(cfg.out, `# ${new Date().toISOString()} ${name} ${results.get(name).played}/${cfg.games}\n`);

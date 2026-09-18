@@ -3,6 +3,7 @@
 import * as E from "./shared/engine.js";
 import en from "./i18n/en.js";
 import zh from "./i18n/zh-Hant.js";
+import CARD_EN from "./i18n/cards.en.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -85,7 +86,7 @@ function render() {
   const regionRows = E.SCORED_REGIONS.map((r) => { const R = E.REGIONS[r]; return [esc(lang === "en" ? R.en : R.zh), R.presence, R.domination, R.control, E.spacesOf(r).filter((id) => E.SPACE[id].battleground).length]; });
   const cardRows = E.CARDS.map((c) => {
     const side = c.scoring ? "s" : c.side === 0 ? "q" : c.side === 1 ? "c" : "n";
-    return [c.num, `<span class="${side}">${esc(c.zh)}${c.remove ? " *" : ""}</span>${lang === "en" ? `<br><small>${esc(c.en)}</small>` : ""}`, S.era[c.era], c.scoring ? S.scoringCard : S.side[c.side], c.scoring ? "–" : c.ops, esc(c.scoring ? `${lang === "en" ? "Scores " + E.REGIONS[c.scoring].en : "結算" + E.REGIONS[c.scoring].zh}` : c.text) + (c.year ? ` <small>(${lang === "en" ? "" : "前"}${c.year}${lang === "en" ? " BC" : ""})</small>` : "")];
+    return [c.num, `<span class="${side}">${esc(c.zh)}${c.remove ? " *" : ""}</span>${lang === "en" ? `<br><small>${esc(c.en)}</small>` : ""}`, S.era[c.era], c.scoring ? S.scoringCard : S.side[c.side], c.scoring ? "–" : c.ops, esc(c.scoring ? `${lang === "en" ? "Scores " + E.REGIONS[c.scoring].en : "結算" + E.REGIONS[c.scoring].zh}` : lang === "en" ? CARD_EN[c.id] ?? c.text : c.text) + (c.year ? ` <small>(${lang === "en" ? "" : "前"}${c.year}${lang === "en" ? " BC" : ""})</small>` : "")];
   });
   $("rules").innerHTML =
     `<h1>${esc(S.title)}</h1><p>${esc(S.intro)}</p>` +

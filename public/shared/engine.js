@@ -45,7 +45,9 @@ export const REFORM = [
 // `sealAt`: "control" gives Chu a 相印 on controlling the capital; "cap" only
 // once Chu's influence there sits at the cap (stability + 2).
 // `tie`: who wins a level Mandate after the final scoring.
-export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 2, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "control", tie: "chu" };
+// `hangu`: Qin's starting influence in 函谷關 (stability 3): 2 leaves Qin with one
+// controlled home space at the start against Chu's two, 3 makes it two each.
+export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 2, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "control", tie: "chu", hangu: 2 };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 
 // ---------- RNG (mulberry32) ----------
@@ -334,6 +336,7 @@ export function createGame(seed, options = {}) {
   for (const side of [QIN, CHU]) {
     for (const [id, n] of Object.entries(SETUP[SIDES[side]].fixed)) ensure(st, id)[side] = n;
   }
+  ensure(st, "hangu")[QIN] = st.options.hangu;
   const decks = { reform: ERA_DECKS.reform.slice(), alliance: ERA_DECKS.alliance.slice(), conquest: ERA_DECKS.conquest.slice() };
   if (st.options.scoringSplit === "v2") {
     decks.reform = decks.reform.filter((c) => c !== "score_west").concat("score_east");

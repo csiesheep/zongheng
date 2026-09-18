@@ -9,6 +9,7 @@ import * as E from "./shared/engine.js";
 import * as B from "./shared/bots.js";
 import en from "./i18n/en.js";
 import zh from "./i18n/zh-Hant.js";
+import CARD_EN from "./i18n/cards.en.js";
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);
@@ -26,7 +27,7 @@ const spaceName = (id) => (lang === "en" ? E.SPACE[id].en : E.SPACE[id].zh);
 const regionName = (r) => (lang === "en" ? E.REGIONS[r].en : E.REGIONS[r].zh);
 const stateName = (s) => (lang === "en" ? E.STATES[s].en : E.STATES[s].zh);
 const cardName = (id) => (id === E.JIUDING ? (lang === "en" ? "The Nine Cauldrons" : "九鼎") : lang === "en" ? E.CARD[id].en : E.CARD[id].zh);
-const cardText = (id) => (id === E.JIUDING ? (lang === "en" ? "4 ops; 5 if all of it lands in the Three Jin or Zhou. Then it passes face down." : "4 點;全部用在三晉或周室視為 5。用後蓋著交給對手。") : E.CARD[id].text);
+const cardText = (id) => (id === E.JIUDING ? (lang === "en" ? "4 ops; 5 if all of it lands in the Three Jin or Zhou. Then it passes face down." : "4 點;全部用在三晉或周室視為 5。用後蓋著交給對手。") : lang === "en" ? CARD_EN[id] ?? E.CARD[id].text : E.CARD[id].text);
 const sep = () => (lang === "en" ? ", " : "、");
 const mandateText = (m) => (m > 0 ? `${sideName(0)} +${m}` : m < 0 ? `${sideName(1)} +${-m}` : "0");
 const list = (ids, f) => ids.map(f).join(sep());
