@@ -1,0 +1,35 @@
+/* 帛與青銅: silk ground, lacquer chrome, bronze rules. Tokens in the plan
+   note (Projects/zongheng/zongheng plan.md, Look). Square corners, no shadows. */
+:root {
+  --silk: #e4d6b8;
+  --silk-field: #efe5cf;
+  --lacquer: #1c1a17;
+  --qin: #22201d;
+  --chu: #a8321f;
+  --bronze: #8b6b2e;
+  --bronze-light: #c9a45c;
+  --verdigris: #4f7a6a;
+  --ink: #1c1a17;
+  --ink-soft: #4a4336;
+  --display: "LXGW WenKai TC", "Noto Serif TC", serif;
+  --body: "Noto Serif TC", serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--lacquer);
+  color: var(--silk);
+  font-family: var(--body);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.bar { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px 0; }
+.bar .hub { color: var(--bronze-light); text-decoration: none; font-size: 12px; letter-spacing: 3px; }
+.bar button { background: none; border: 1px solid var(--bronze); color: var(--bronze-light); font: 12px var(--body); padding: 6px 10px; min-height: 32px; cursor: pointer; }
+.hero { padding: 28px 20px 0; max-width: 640px; }
+.hero h1 { font-family: var(--display); font-size: clamp(72px, 24vw, 128px); line-height: 1; letter-spacing: 0.12em; margin: 0 0 8px; font-weight: 400; }
+.tagline { font-family: var(--display); font-size: 16px; letter-spacing: 4px; color: var(--bronze-light); margin: 0 0 12px; }
+.about { font-size: 14px; line-height: 1.7; color: #cfc4a8; margin: 0 0 16px; }
+.soon { font-size: 13px; line-height: 1.6; color: var(--silk); border-left: 3px solid var(--bronze); padding-left: 10px; margin: 0; }
+.credit { margin-top: auto; padding: 24px 20px 16px; font-size: 11px; line-height: 1.6; color: #8a7f68; max-width: 640px; }

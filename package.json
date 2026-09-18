@@ -1,0 +1,16 @@
+{
+  "name": "zongheng",
+  "version": "0.0.1",
+  "description": "縱橫 Zongheng: a two-player Warring States card-driven strategy game. Qin against Chu, solo against a bot or in an online room. Cloudflare Worker + Durable Objects.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test",
+    "sim": "node tests/sim.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.131.0"
+  }
+}
