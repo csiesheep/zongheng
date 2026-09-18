@@ -81,6 +81,8 @@ export const CELLS = [
   ["cap+hangu3", { options: { sealAt: "cap", hangu: 3 } }],
   ["cap+hangu3+comp0", { options: { sealAt: "cap", hangu: 3, comp: 0 } }],
   ["hangu3", { options: { hangu: 3 } }],
+  ["westBonus", { options: { westBonus: true } }],
+  ["westBonus+comp1", { options: { westBonus: true, comp: 1 } }],
   ["cap+wuguo", { options: { sealAt: "cap", wuguo: "nonbg" } }],
   ["cap+hangu3+wuguo", { options: { sealAt: "cap", hangu: 3, wuguo: "nonbg" } }],
   ["s5+hangu3+wuguo", { options: { seals: 5, hangu: 3, wuguo: "nonbg" } }],
@@ -126,6 +128,21 @@ function runChild(args, tries = 5) {
   });
 }
 
+// A chunk that dies every time is replayed one game at a time; the games that
+// still kill Node are recorded as errors instead of ending the batch.
+async function runOneByOne(args) {
+  const n = Number(args[0]), seed = Number(args.find((a) => a.startsWith("seed=")).slice(5));
+  const rest = args.slice(1).filter((a) => !a.startsWith("seed="));
+  let total = null;
+  for (let i = 0; i < n; i++) {
+    let one;
+    try { one = await runChild(["1", `seed=${seed + i}`, ...rest], 2); }
+    catch { one = { games: 1, played: 0, qinWins: 0, ends: {}, turns: 0, mandate: 0, absMandate: 0, mie: 0, seals: 0, regions: {}, errors: [`${seed + i}: child crashed`], ms: 0 }; }
+    total = merge(total, one);
+  }
+  return total;
+}
+
 function merge(a, b) {
   if (!a) return b;
   const out = { ...a, qinWins: a.qinWins + b.qinWins, turns: a.turns + b.turns, mandate: a.mandate + b.mandate, absMandate: a.absMandate + b.absMandate,
@@ -156,7 +173,8 @@ async function runCells(cfg) {
       const { name, args } = queue.shift();
       // Await first, read after: reading the running total before the await
       // lets two workers overwrite each other's chunks.
-      const chunk = await runChild(args);
+      let chunk;
+      try { chunk = await runChild(args); } catch { chunk = await runOneByOne(args); }
       results.set(name, merge(results.get(name), chunk));
       pending.set(name, pending.get(name) - 1);
       // `--out=file` keeps what is finished on disk: a long batch outlives the shell that started it.

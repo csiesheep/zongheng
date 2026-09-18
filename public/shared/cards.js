@@ -69,7 +69,10 @@ export const CARDS = [
     } },
   { id: "simacuo", num: 10, zh: "司馬錯伐蜀", en: "Sima Cuo Takes Shu", era: "reform", side: Q, ops: 3, remove: true, year: 316,
     text: "秦在巴蜀放 3;若秦控制漢中,改放 4。",
-    effect(st) { E.place(st, Q, "bashu", E.controller(st, "hanzhong") === Q ? 4 : 3); } },
+    effect(st) {
+      E.place(st, Q, "bashu", E.controller(st, "hanzhong") === Q ? 4 : 3);
+      if (st.options.westBonus) E.addEffect(st, { card: "simacuo", side: Q, kind: "score", region: "west", who: Q, delta: 1, until: "game" });
+    } },
   { id: "hangu", num: 11, zh: "函谷關天險", en: "Hangu Pass", era: "reform", side: Q, ops: 2, remove: false,
     text: "持續:楚對西土征伐行動點 −2。「五國伐秦」或「合縱攻秦」事件觸發時移除本牌。",
     effect(st) { E.removeEffect(st, (e) => e.card === "hangu"); E.addEffect(st, { card: "hangu", side: Q, kind: "campaign", who: C, delta: -2, regions: ["west"], until: "game" }); } },
