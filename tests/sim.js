@@ -74,6 +74,9 @@ export const CELLS = [
   ["luoyi=0.5", { options: { luoyi: 0.5 } }],
   ["turns=9", { options: { turns: 9 } }],
   ["scoringSplit=v2", { options: { scoringSplit: "v2" } }],
+  ["cap+comp0", { options: { sealAt: "cap", comp: 0 } }],
+  ["cap+tieQin", { options: { sealAt: "cap", tie: "qin" } }],
+  ["cap+seals5", { options: { sealAt: "cap", seals: 5 } }],
   ["qin=hard", { qin: "hard" }],
   ["chu=hard", { chu: "hard" }],
   ["qin=easy", { qin: "easy" }],
@@ -81,9 +84,10 @@ export const CELLS = [
 ];
 
 function parseArgs(argv) {
-  const cfg = { games: 100, seed: 1, qin: "normal", chu: "normal", options: {}, cells: false, json: false, jobs: 4 };
+  const cfg = { games: 100, seed: 1, qin: "normal", chu: "normal", options: {}, cells: false, only: null, json: false, jobs: 4 };
   for (const a of argv) {
     if (a === "--cells") cfg.cells = true;
+    else if (a.startsWith("--only=")) { cfg.cells = true; cfg.only = a.slice(7).split(","); }
     else if (a === "--json") cfg.json = true;
     else if (a.startsWith("--jobs=")) cfg.jobs = Number(a.slice(7));
     else if (/^\d+$/.test(a)) cfg.games = Number(a);
@@ -97,9 +101,11 @@ function parseArgs(argv) {
   return cfg;
 }
 
-function runChild(args, tries = 3) {
+// SIM_NODE_FLAGS="--single-threaded-gc" node tests/sim.js … passes V8 flags to the children.
+const NODE_FLAGS = (process.env.SIM_NODE_FLAGS || "").split(" ").filter(Boolean);
+function runChild(args, tries = 5) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [fileURLToPath(import.meta.url), ...args, "--json"], { stdio: ["ignore", "pipe", "inherit"] });
+    const child = spawn(process.execPath, [...NODE_FLAGS, fileURLToPath(import.meta.url), ...args, "--json"], { stdio: ["ignore", "pipe", "inherit"] });
     let out = "";
     child.stdout.on("data", (d) => { out += d; });
     child.on("close", (code) => {
@@ -110,15 +116,37 @@ function runChild(args, tries = 3) {
   });
 }
 
+function merge(a, b) {
+  if (!a) return b;
+  const out = { ...a, qinWins: a.qinWins + b.qinWins, turns: a.turns + b.turns, mandate: a.mandate + b.mandate, absMandate: a.absMandate + b.absMandate,
+    mie: a.mie + b.mie, seals: a.seals + b.seals, played: a.played + b.played, games: a.games + b.games, ms: a.ms + b.ms, errors: a.errors.concat(b.errors), ends: { ...a.ends }, regions: { ...a.regions } };
+  for (const [k, v] of Object.entries(b.ends)) out.ends[k] = (out.ends[k] || 0) + v;
+  for (const [k, v] of Object.entries(b.regions)) {
+    const r = out.regions[k] ? { ...out.regions[k] } : { n: 0, net: 0, q: 0, c: 0 };
+    r.n += v.n; r.net += v.net; r.q += v.q; r.c += v.c; out.regions[k] = r;
+  }
+  return out;
+}
+
+// Each cell runs as several short child processes (CHUNK games each, seeds
+// in sequence), so a crash costs a couple of minutes and a retry, not the cell.
+const CHUNK = 10;
 async function runCells(cfg) {
-  const queue = CELLS.map(([name, cell]) => ({ name, cell }));
-  const results = new Map();
+  const cells = CELLS.filter(([name]) => !cfg.only || cfg.only.includes(name));
+  const queue = [];
+  for (const [name, cell] of cells) {
+    for (let start = 0; start < cfg.games; start += CHUNK) {
+      const n = Math.min(CHUNK, cfg.games - start);
+      queue.push({ name, args: [String(n), `seed=${cfg.seed + start}`, `qin=${cell.qin || cfg.qin}`, `chu=${cell.chu || cfg.chu}`, ...Object.entries({ ...cfg.options, ...(cell.options || {}) }).map(([k, v]) => `${k}=${v}`)] });
+    }
+  }
+  const results = new Map(), pending = new Map(cells.map(([name]) => [name, Math.ceil(cfg.games / CHUNK)]));
   const worker = async () => {
     while (queue.length) {
-      const { name, cell } = queue.shift();
-      const args = [String(cfg.games), `seed=${cfg.seed}`, `qin=${cell.qin || cfg.qin}`, `chu=${cell.chu || cfg.chu}`, ...Object.entries({ ...cfg.options, ...(cell.options || {}) }).map(([k, v]) => `${k}=${v}`)];
-      results.set(name, await runChild(args));
-      console.log(line(name, results.get(name)));
+      const { name, args } = queue.shift();
+      results.set(name, merge(results.get(name), await runChild(args)));
+      pending.set(name, pending.get(name) - 1);
+      if (pending.get(name) === 0) console.log(line(name, results.get(name)));
     }
   };
   await Promise.all(Array.from({ length: Math.max(1, cfg.jobs) }, worker));
