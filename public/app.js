@@ -42,6 +42,7 @@ function setLang(l) {
   for (const id of ["tagline", "about", "soon", "credit"]) $(id).textContent = S[id];
   $("hero").textContent = S.title;
   $("joinCode").placeholder = t("landing.code");
+  $("chatIn").placeholder = t("lobby.say");
   renderSetup();
   if (game.st) { render(); if (game.st.winner != null) renderOver(); }
 }
@@ -450,12 +451,20 @@ function renderLog(v) {
   const body = $("logBody");
   $("logToggle").textContent = `${t("buttons.log")} (${body.hidden ? t("buttons.show") : t("buttons.hide")})`;
   const lines = v.log.slice(-60).map(fmtLog).filter(Boolean).reverse();
-  body.innerHTML = (game.botLine ? `<div class="bot">${esc(game.botLine)}</div>` : "") + lines.map((s) => `<div>${esc(s)}</div>`).join("");
+  $("chatForm").hidden = !game.room || game.spectator;
+  const said = game.room ? room.chat.slice(-8).reverse().map((s) => `<div class="say">${esc(s)}</div>`).join("") : "";
+  body.innerHTML = said + (game.botLine ? `<div class="bot">${esc(game.botLine)}</div>` : "") + lines.map((s) => `<div>${esc(s)}</div>`).join("");
   // Under the prompt: what happened since this seat last acted.
   const NEWS = new Set(["headline", "play", "place", "campaign", "lobby", "score", "tire", "seal", "unseal", "mie", "restore", "reform", "jiuding", "bog", "skip", "era", "turn"]);
   const news = v.log.filter((l) => l.i > (game.seenLog || 0) && NEWS.has(l.type)).map(fmtLog).filter(Boolean).slice(-7);
   $("prompt").insertAdjacentHTML("beforeend", news.length ? `<div class="news">${news.map((s) => `<div>${esc(s)}</div>`).join("")}</div>` : "");
 }
+$("chatForm").onsubmit = (ev) => {
+  ev.preventDefault();
+  const text = $("chatIn").value.trim();
+  if (text) send({ type: "chat", text });
+  $("chatIn").value = "";
+};
 $("logToggle").onclick = () => { $("logBody").hidden = !$("logBody").hidden; if (game.st) renderLog(E.view(game.st, game.me)); };
 
 function renderOver() {
@@ -467,7 +476,7 @@ function renderOver() {
 }
 
 // ---------- rooms: a socket to the Durable Object ----------
-const room = { ws: null, code: null, me: null, token: null, seats: [], settings: null, phase: null, deadline: 0, gen: 0, isHost: false, fatal: false };
+const room = { ws: null, code: null, me: null, token: null, seats: [], settings: null, phase: null, deadline: 0, gen: 0, isHost: false, fatal: false, chat: [] };
 function wsUrl(params) {
   const base = location.pathname.replace(/\/[^/]*$/, "");
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
@@ -516,8 +525,13 @@ function onRoomMsg(m) {
       if (game.st.winner != null) renderOver();
       break;
     case "say":
-      game.botLine = m.sys ? m.text : `${room.seats[m.seat]?.name ?? ""}: ${m.text}`;
+      room.chat.push(m.sys ? m.text : `${room.seats[m.seat]?.name ?? ""}: ${m.text}`);
+      if (room.chat.length > 50) room.chat.shift();
+      if (!m.sys) $("logBody").hidden = false;
       if (game.st) renderLog(game.st);
+      break;
+    case "log":
+      room.chat = m.entries.map((e) => (e.sys ? e.text : `${room.seats[e.seat]?.name ?? ""}: ${e.text}`)).slice(-50);
       break;
     case "error":
       if (m.fatal) { room.fatal = true; $("lobbyErr").textContent = t("errors." + m.key); $("lobbyErr").hidden = false; show("lobby"); }
