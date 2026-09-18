@@ -10,7 +10,7 @@
 // Cells run as child processes because Node 24 on the development machine
 // dies with an access violation a few percent of the time on long runs.
 import { spawn } from "node:child_process";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import * as E from "../public/shared/engine.js";
 import * as B from "../public/shared/bots.js";
@@ -82,6 +82,7 @@ export const CELLS = [
   ["cap+hangu3+comp0", { options: { sealAt: "cap", hangu: 3, comp: 0 } }],
   ["hangu3", { options: { hangu: 3 } }],
   ["westBonus", { options: { westBonus: true } }],
+  ["noYue", { options: { yue: "none" } }],
   ["westBonus+comp1", { options: { westBonus: true, comp: 1 } }],
   ["cap+wuguo", { options: { sealAt: "cap", wuguo: "nonbg" } }],
   ["cap+hangu3+wuguo", { options: { sealAt: "cap", hangu: 3, wuguo: "nonbg" } }],
@@ -101,6 +102,7 @@ function parseArgs(argv) {
     else if (a.startsWith("--only=")) { cfg.cells = true; cfg.only = a.slice(7).split(","); }
     else if (a === "--json") cfg.json = true;
     else if (a.startsWith("--out=")) cfg.out = a.slice(6);
+    else if (a === "--resume") cfg.resume = true;
     else if (a.startsWith("--jobs=")) cfg.jobs = Number(a.slice(7));
     else if (/^\d+$/.test(a)) cfg.games = Number(a);
     else if (a.includes("=")) {
@@ -167,7 +169,24 @@ async function runCells(cfg) {
       queue.push({ name, args: [String(n), `seed=${cfg.seed + start}`, `qin=${cell.qin || cfg.qin}`, `chu=${cell.chu || cfg.chu}`, ...Object.entries({ ...cfg.options, ...(cell.options || {}) }).map(([k, v]) => `${k}=${v}`)] });
     }
   }
+  // With `--out`, the running totals are kept in `<out>.state.json` after every
+  // chunk, and `--resume` picks up from it: the parent is Node too, and dies
+  // at random like its children.
+  const statePath = cfg.out ? cfg.out + ".state.json" : null;
+  let state = {};
+  if (statePath && cfg.resume && existsSync(statePath)) { try { state = JSON.parse(readFileSync(statePath, "utf8")); } catch { state = {}; } }
   const results = new Map(), pending = new Map(cells.map(([name]) => [name, Math.ceil(cfg.games / CHUNK)]));
+  for (const [name] of cells) {
+    const s0 = state[name];
+    if (!s0) { state[name] = { done: [], result: null, printed: false }; continue; }
+    results.set(name, s0.result);
+    pending.set(name, pending.get(name) - s0.done.length);
+  }
+  for (let i = queue.length - 1; i >= 0; i--) {
+    const start = queue[i].args.find((a) => a.startsWith("seed=")).slice(5);
+    if (state[queue[i].name].done.includes(start)) queue.splice(i, 1);
+  }
+  for (const q of queue) state[q.name].printed = false; // more games to add: print again when they are in
   const worker = async () => {
     while (queue.length) {
       const { name, args } = queue.shift();
@@ -177,9 +196,14 @@ async function runCells(cfg) {
       try { chunk = await runChild(args); } catch { chunk = await runOneByOne(args); }
       results.set(name, merge(results.get(name), chunk));
       pending.set(name, pending.get(name) - 1);
+      state[name].done.push(args.find((a) => a.startsWith("seed=")).slice(5));
+      state[name].result = results.get(name);
+      if (statePath) writeFileSync(statePath, JSON.stringify(state));
       // `--out=file` keeps what is finished on disk: a long batch outlives the shell that started it.
       if (cfg.out) appendFileSync(cfg.out, `# ${new Date().toISOString()} ${name} ${results.get(name).played}/${cfg.games}\n`);
-      if (pending.get(name) === 0) {
+      if (pending.get(name) === 0 && !state[name].printed) {
+        state[name].printed = true;
+        if (statePath) writeFileSync(statePath, JSON.stringify(state));
         const text = line(name, results.get(name));
         console.log(text);
         if (cfg.out) appendFileSync(cfg.out, text + "\n");

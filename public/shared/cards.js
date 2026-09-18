@@ -106,7 +106,7 @@ export const CARDS = [
     effect(st, side, ch) { if (!ch.length) return pick(C, all()); E.addEffect(st, { card: "mozhe", side: C, kind: "protect", space: ch[0][0], until: "turn" }); } },
   { id: "chumieyue", num: 21, zh: "楚滅越", en: "Chu Conquers Yue", era: "reform", side: C, ops: 2, remove: true, year: 306,
     text: "楚在吳越放 2;此後南方記分時楚 +1。",
-    effect(st) { E.place(st, C, "wuyue", 2); E.addEffect(st, { card: "chumieyue", side: C, kind: "score", region: "south", who: C, delta: 1, until: "game" }); } },
+    effect(st) { E.place(st, C, "wuyue", 2); if (st.options.yue !== "none") E.addEffect(st, { card: "chumieyue", side: C, kind: "score", region: "south", who: C, delta: 1, until: "game" }); } },
 
   // ---------- 變法期・中立 ----------
   { id: "youshui", num: 22, zh: "縱橫家遊說", en: "The Persuaders", era: "reform", side: null, ops: 2, remove: false,
