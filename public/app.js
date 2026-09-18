@@ -93,7 +93,7 @@ function startSolo() {
   game.st = E.createGame(E.randomSeed(), {});
   game.rng = E.makeRng(E.randomSeed());
   game.ui = freshUi();
-  game.botLine = "";
+  game.botLine = ""; game.seenLog = 0;
   game.botName = S.names[E.SIDES[1 - game.me]][0];
   game.auto = new URLSearchParams(location.search).has("auto");
   $("logBody").hidden = true;
@@ -101,6 +101,8 @@ function startSolo() {
 }
 function humanAct(action) {
   if (game.spectator) return;
+  // Everything logged after this point is "what happened since you last acted".
+  game.seenLog = game.st.logSeq || 0;
   if (game.room) { send({ type: "act", action }); game.ui = freshUi(); render(); return; }
   try { game.st = E.apply(game.st, { ...action, side: game.me }); }
   catch (e) { game.ui.err = e.message; render(); return; }
@@ -168,6 +170,11 @@ function renderTracks(v) {
     `<div class="c">${sideName(1)} ${t("tracks.reform")} <span class="boxes">${reformBoxes(1)}</span></div>` +
     `<div class="q">${t("tracks.mie")}: ${mie} · ${v.handCounts[0]} ♠</div>` +
     `<div class="c">${t("tracks.seals")}: ${seals} · ${v.handCounts[1]} ♠</div>` +
+    // Per state: how many of its spaces Qin controls, and who holds the capital.
+    `<div class="wide states">${Object.entries(E.STATES).map(([id, s]) => {
+      const sp = E.spacesOfState(id), qc = sp.filter((x) => E.controller(v, x) === 0).length, cap = E.controller(v, s.capital);
+      return `<span class="${v.mie[id] ? "q" : v.seals[id] ? "c" : ""}">${stateName(id)} ${qc}/${sp.length}${cap === 1 ? " ◎" + sideName(1) : cap === 0 ? " ◎" + sideName(0) : ""}</span>`;
+    }).join(" ")}</div>` +
     `<div class="wide">${t("tracks.jiuding")}: ${sideName(v.jiuding.holder)}${v.jiuding.faceDown ? ` (${t("tracks.faceDown")})` : ""}</div>`;
 }
 
@@ -439,7 +446,10 @@ function renderLog(v) {
   $("logToggle").textContent = `${t("buttons.log")} (${body.hidden ? t("buttons.show") : t("buttons.hide")})`;
   const lines = v.log.slice(-60).map(fmtLog).filter(Boolean).reverse();
   body.innerHTML = (game.botLine ? `<div class="bot">${esc(game.botLine)}</div>` : "") + lines.map((s) => `<div>${esc(s)}</div>`).join("");
-  $("prompt").insertAdjacentHTML("beforeend", game.botLine ? `<div class="note">${esc(game.botLine)}</div>` : "");
+  // Under the prompt: what happened since this seat last acted.
+  const NEWS = new Set(["headline", "play", "place", "campaign", "lobby", "score", "tire", "seal", "unseal", "mie", "restore", "reform", "jiuding", "bog", "skip", "era", "turn"]);
+  const news = v.log.filter((l) => l.i > (game.seenLog || 0) && NEWS.has(l.type)).map(fmtLog).filter(Boolean).slice(-7);
+  $("prompt").insertAdjacentHTML("beforeend", news.length ? `<div class="news">${news.map((s) => `<div>${esc(s)}</div>`).join("")}</div>` : "");
 }
 $("logToggle").onclick = () => { $("logBody").hidden = !$("logBody").hidden; if (game.st) renderLog(E.view(game.st, game.me)); };
 
