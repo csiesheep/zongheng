@@ -762,10 +762,14 @@ export function view(st, side) {
   delete v.rngState;
   v.drawCount = st.draw.length; delete v.draw;
   v.laterCounts = Object.fromEntries(Object.entries(st.later).map(([k, a]) => [k, a.length])); delete v.later;
-  if (side != null) {
+  v.handCounts = [st.hands[QIN].length, st.hands[CHU].length];
+  if (side == null) {
+    // A spectator sees the table and neither hand.
+    v.hands = [null, null];
+    if (st.phase === "headline") v.headline = st.headline.map((h) => (h == null ? null : "hidden"));
+  } else {
     const opp = other(side);
     const showOpp = st.revealed[side] || (st.pending && st.pending.who === side && st.pending.showHand);
-    v.handCounts = [st.hands[QIN].length, st.hands[CHU].length];
     if (!showOpp) v.hands[opp] = null;
     // Headlines stay hidden until both are in, unless 行縣制 lets this side peek.
     if (st.phase === "headline" && st.headline[side] == null && !hasPerk(st, side, "peek")) v.headline[opp] = st.headline[opp] == null ? null : "hidden";

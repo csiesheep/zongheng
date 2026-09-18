@@ -10,6 +10,7 @@ export default {
   sides: { qin: "秦", chu: "楚" },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },
   setup: { defaultName: "玩家" },
-  sys: { joined: "{name} 進來了。", left: "{name} 離開了。" },
-  errors: { noRoom: "沒有這個房號。", full: "房間已滿。", needMore: "需要兩個座位。", notReady: "對方尚未就緒。", notYet: "牌桌還沒蓋好。" },
+  sys: { joined: "{name} 進來了。", left: "{name} 離開了。", leftGame: "{name} 離開了,由電腦代打。", dealt: "發牌了。", timeout: "{name} 逾時,由桌面代為決定。", over: "{side}({name})獲勝:{reason}。" },
+  ends: { unification: "三國同滅", alliance: "四國相印", mandate: "天命達 20", collapse: "對方把天下推到土崩", scoring: "對方回合結束時手上還有記分卡", scoringBoth: "雙方都留著記分卡,依平手規則", final: "終局結算後的天命", tie: "天命平手,依平手規則" },
+  errors: { noRoom: "沒有這個房號。", full: "房間已滿。", needMore: "需要兩個座位。", notReady: "對方尚未就緒。", notYet: "牌桌還沒蓋好。", notYourTurn: "現在不是你決定。" },
 };

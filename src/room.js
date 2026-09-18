@@ -1,19 +1,23 @@
-// One Durable Object per room, named by its four-letter code. It will be the
-// authority on the game: it deals the hands, applies every action through the
-// engine, runs the bot seat, keeps the clocks, and sends each socket only
-// `view(state, seat)`, never the state (the opponent's hand and the face-down
-// 九鼎 are the secrets).
+// One Durable Object per room, named by its four-letter code. It is the
+// authority on the game: it deals, applies every action through the engine,
+// runs the bot seat (and any human who is away), keeps the clocks, and sends
+// each socket only `view(state, side)`, never the state. The other hand and
+// the draw pile are the secrets.
 //
-// Scaffold (M0): the lobby only. Two seats, Qin and Chu; the host picks a side
-// and the bot level; "start" is refused until the engine (M1) and the room
-// flow (M4) exist. Connections use the WebSocket Hibernation API; everything
-// needed to resume is in storage under "room"; all timers are the one alarm.
+// Connections use the WebSocket Hibernation API, so an idle room costs
+// nothing between messages. Everything needed to resume is in storage under
+// "room"; all timers are the object's single alarm.
 import * as E from "../public/shared/engine.js";
 import * as B from "../public/shared/bots.js";
 import en from "../public/i18n/en.js";
 import zh from "../public/i18n/zh-Hant.js";
 
 const LANGS = { en, "zh-Hant": zh };
+// Clocks per kind of decision; when time runs out the table decides for
+// whoever has not acted, the way the bot would.
+const CLOCK_MS = { headline: 60_000, action: 90_000, choose: 45_000 };
+const BOT_MS = 900;          // pause before a bot moves so the table reads as a sequence
+const GRACE_MS = 20_000;     // a disconnected human's decisions go to the bot after this
 const IDLE_MS = 30 * 60_000; // a room nobody is connected to is deleted after this
 const MAX_SEATS = E.MAX_PLAYERS;
 const LOG_KEEP = 120, CHAT_MAX = 200;
@@ -46,6 +50,7 @@ export class Room {
     const v = key.split(".").reduce((o, k) => (o ? o[k] : undefined), this.S);
     return String(v ?? key).replace(/\{(\w+)\}/g, (_, k) => (p[k] ?? ""));
   }
+  seatBySide(side) { return this.room.seats.find((s) => s.side === side) || null; }
 
   // ---------- sockets ----------
   sockets(tag) { return this.ctx.getWebSockets(tag); }
@@ -67,6 +72,15 @@ export class Room {
     };
   }
   pushLobby() { this.broadcast(this.lobbyMsg()); }
+  names() { return Object.fromEntries(this.room.seats.map((s) => [E.SIDES[s.side], s.name])); }
+  viewMsg(seat) {
+    const r = this.room;
+    return { type: "view", view: E.view(r.state, seat ? seat.side : null), me: seat ? seat.side : null, names: this.names(), deadline: r.deadline, gen: r.gen };
+  }
+  pushViews() {
+    this.room.lastActive = Date.now();
+    for (const ws of this.sockets()) this.send(ws, this.viewMsg(this.seatOf(ws)));
+  }
   say(seat, text, hot = false) {
     const entry = { seat, text, hot, sys: seat === null };
     this.room.log.push(entry);
@@ -78,8 +92,9 @@ export class Room {
   async scheduleAt(at) { this.room.alarmAt = at; await this.ctx.storage.setAlarm(at); }
   async clearAlarm() { this.room.alarmAt = 0; await this.ctx.storage.deleteAlarm(); }
   async maybeIdle() {
-    if (this.sockets().length === 0) {
-      this.room.idle = true;
+    const r = this.room;
+    if (this.sockets().length === 0 && (r.phase !== "game" || !r.state || r.state.winner != null)) {
+      r.idle = true;
       await this.scheduleAt(Date.now() + IDLE_MS);
     }
   }
@@ -90,6 +105,7 @@ export class Room {
       if (this.sockets().length === 0) { await this.ctx.storage.deleteAll(); this.room = null; return; }
       room.idle = false;
     }
+    await this.pump();
     await this.save();
   }
 
@@ -120,7 +136,7 @@ export class Room {
       if (!create) return reject("noRoom");
       this.room = {
         code, phase: "lobby", seats: [], settings: { level: "normal", lang },
-        state: null, rngState: E.randomSeed(), gen: 0, deadline: 0,
+        state: null, rngState: E.randomSeed(), gen: 0, deadline: 0, clockKey: "",
         log: [], alarmAt: 0, idle: false, lastActive: Date.now(),
       };
       seat = this.addSeat(name || this.t("setup.defaultName"), E.QIN);
@@ -142,9 +158,11 @@ export class Room {
     server.serializeAttachment({ token: seat ? seat.token : null });
     if (this.room.idle) { this.room.idle = false; await this.clearAlarm(); }
 
-    this.send(server, { type: "joined", code: this.room.code, seat: seat ? seat.idx : -1, token: seat ? seat.token : null });
+    this.send(server, { type: "joined", code: this.room.code, seat: seat ? seat.idx : -1, side: seat ? seat.side : null, token: seat ? seat.token : null });
     this.pushLobby();
     this.send(server, { type: "log", entries: this.room.log });
+    if (this.room.state) this.send(server, this.viewMsg(seat));
+    if (seat && this.room.phase === "game") await this.afterChange();
     await this.save();
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -204,14 +222,26 @@ export class Room {
         if (!isHost || room.phase !== "lobby") return;
         if (room.seats.length < MAX_SEATS) return this.send(ws, { type: "error", key: "needMore" });
         if (room.seats.slice(1).some((s) => !s.ai && !s.ready)) return this.send(ws, { type: "error", key: "notReady" });
-        // M4: deal with E.createGame and run the table. Until then, say so.
-        this.send(ws, { type: "error", key: "notYet" }); break;
+        await this.startGame(); break;
+      case "act": {
+        if (!seat || room.phase !== "game" || !m.action || !room.state || room.state.winner != null) return;
+        if (!E.mustAct(room.state).includes(seat.side)) return this.send(ws, { type: "error", key: "notYourTurn" });
+        const action = { ...m.action, side: seat.side };
+        try { room.state = E.apply(room.state, action); } catch (err) { return this.send(ws, { type: "error", message: err.message }); }
+        await this.afterChange(); break;
+      }
       case "chat": {
         if (!seat) return;
         const text = String(m.text ?? "").replace(/\s+/g, " ").trim().slice(0, CHAT_MAX);
         if (!text) return;
         this.say(seat.idx, text); break;
       }
+      case "rematch":
+        if (!isHost || room.phase !== "over") return;
+        await this.clearAlarm();
+        for (const s of room.seats) { s.side = s.side === E.QIN ? E.CHU : E.QIN; s.ready = s.ai; }
+        room.phase = "lobby"; room.state = null; room.deadline = 0; room.clockKey = "";
+        this.pushLobby(); this.broadcast({ type: "view", view: null }); break;
       case "leave":
         await this.leave(seat);
         try { ws.close(1000, "left"); } catch {}
@@ -223,11 +253,20 @@ export class Room {
   async leave(seat) {
     const room = this.room;
     if (!seat) return;
-    room.seats = room.seats.filter((s) => s !== seat);
-    this.reindex();
-    if (!room.seats.some((s) => !s.ai)) { await this.clearAlarm(); await this.ctx.storage.deleteAll(); this.room = null; return; }
-    this.say(null, this.t("sys.left", { name: seat.name }));
-    this.pushLobby();
+    if (room.phase === "lobby" || room.phase === "over") {
+      room.seats = room.seats.filter((s) => s !== seat);
+      this.reindex();
+      if (room.phase === "over") { room.state = null; room.phase = "lobby"; for (const s of room.seats) s.ready = s.ai; }
+      if (!room.seats.some((s) => !s.ai)) { await this.clearAlarm(); await this.ctx.storage.deleteAll(); this.room = null; return; }
+      this.say(null, this.t("sys.left", { name: seat.name }));
+      this.pushLobby();
+    } else {
+      // Mid-game the seat becomes a bot so the table keeps moving.
+      seat.ai = true;
+      this.say(null, this.t("sys.leftGame", { name: seat.name }));
+      this.pushLobby();
+      await this.afterChange();
+    }
   }
 
   async webSocketClose(ws) {
@@ -238,9 +277,86 @@ export class Room {
     if (seat && !others.some((s) => s.deserializeAttachment()?.token === seat.token)) {
       seat.lastSeen = Date.now();
       this.pushLobby(); // shows the seat as away
+      if (room.phase === "game") await this.afterChange();
     }
     if (others.length === 0) await this.maybeIdle();
     await this.save();
   }
   async webSocketError(ws) { await this.webSocketClose(ws); }
+
+  // ---------- game flow ----------
+  async startGame() {
+    const room = this.room;
+    room.state = E.createGame(E.randomSeed(), room.settings.options || {});
+    room.phase = "game"; room.gen++; room.deadline = 0; room.clockKey = ""; room.log = [];
+    for (const s of room.seats) s.ready = false;
+    this.pushLobby();
+    this.broadcast({ type: "log", entries: [] });
+    this.say(null, this.t("sys.dealt"));
+    await this.afterChange();
+  }
+
+  // Which of the sides that must act are decided by the bot policy right now:
+  // bot seats, and humans away longer than the grace period.
+  botSides(need) {
+    const now = Date.now();
+    return need.filter((side) => { const s = this.seatBySide(side); return !s || s.ai || (!this.connected(s) && now - s.lastSeen > GRACE_MS); });
+  }
+  decideFor(side) {
+    const room = this.room;
+    return this.withRng((rng) => B.decide(E.view(room.state, side), side, room.settings.level, rng));
+  }
+  clockKind(st) { return st.pending ? "choose" : st.phase === "headline" ? "headline" : "action"; }
+
+  // After any change: keep the clock, push views, schedule whatever is next.
+  async afterChange() {
+    const room = this.room, st = room.state;
+    if (!st) return;
+    if (st.winner != null) { await this.finish(); return; }
+    const now = Date.now();
+    const need = E.mustAct(st);
+    // The clock restarts whenever the decision on the table changes.
+    const key = `${st.turn}:${st.phase}:${st.round}:${st.actor}:${st.pending ? st.pending.kind + st.pending.who : ""}:${st.headline.map((h) => (h ? 1 : 0)).join("")}`;
+    if (key !== room.clockKey) { room.clockKey = key; room.deadline = now + CLOCK_MS[this.clockKind(st)]; }
+    this.pushViews();
+    const bots = this.botSides(need);
+    await this.scheduleAt(bots.length ? Math.min(now + BOT_MS, room.deadline) : room.deadline);
+  }
+
+  // The alarm handler: let a bot act, or enforce the clock.
+  async pump() {
+    const room = this.room, st = room.state;
+    if (room.phase !== "game" || !st || st.winner != null) return;
+    const now = Date.now();
+    const need = E.mustAct(st);
+    if (!need.length) return;
+    const bots = this.botSides(need);
+    let side = null, timeout = false;
+    if (bots.length) side = bots[0];
+    else if (room.deadline && now >= room.deadline - 50) { side = need[0]; timeout = true; }
+    if (side == null) { await this.scheduleAt(room.deadline); return; }
+    const seat = this.seatBySide(side);
+    if (timeout && seat) this.say(null, this.t("sys.timeout", { name: seat.name }));
+    const action = this.decideFor(side);
+    if (!action) { await this.scheduleAt(now + BOT_MS); return; }
+    try { room.state = E.apply(room.state, action); } catch (err) {
+      // A bot action the engine refuses is a bug; log it and try again shortly.
+      this.say(null, `bot error: ${err.message}`, true);
+      await this.scheduleAt(now + BOT_MS);
+      return;
+    }
+    if (seat && seat.ai && action.why) this.say(seat.idx, action.why);
+    await this.afterChange();
+  }
+
+  async finish() {
+    const room = this.room;
+    await this.clearAlarm();
+    room.phase = "over"; room.deadline = 0;
+    const w = room.state.winner;
+    this.say(null, this.t("sys.over", { side: this.t(`sides.${E.SIDES[w]}`), name: this.seatBySide(w)?.name ?? "", reason: this.t(`ends.${room.state.reason}`) }));
+    this.pushLobby();
+    this.pushViews();
+    await this.maybeIdle();
+  }
 }
