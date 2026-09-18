@@ -28,8 +28,8 @@ URLs are query strings on the page so the same build works at any prefix:
 
 ## Milestones
 
-1. **M0 Scaffold**: router, board data, placeholder page. This commit; not deployed yet.
-2. **M1 Engine**: state, legal actions, reducer, view, the 72 cards, a test per rule and a fuzz test.
+1. **M0 Scaffold**: router, board data, placeholder page. Done, deployed as a `noindex` placeholder.
+2. **M1 Engine**: state, legal actions, reducer, view, the 72 cards, a test per rule and a fuzz test. Done: `public/shared/engine.js` is a plan-and-pending machine (every decision a card asks for is a `pending` the same `choose` action answers), `cards.js` holds the 72 effects, `tests/` has 47 tests including random games with invariants after every action and a replay check.
 3. **M2 Bots**: scored search, three levels, the harness over the rulebook's open numbers.
 4. **M3 Solo**: map, tracks, hand, action sheet, scoring overlay, rules page, both languages.
 5. **M4 Rooms**: two seats, clocks, bot fill and takeover, reconnect, rematch.
@@ -45,8 +45,9 @@ npm run dev
 Then open http://localhost:8787/zongheng/.
 
 ```bash
-npm test          # board, engine and bot tests
-npm run sim 400   # bot-vs-bot win rates per rules cell (M2)
+npm test                     # board, rules, cards and fuzz tests (FUZZ_GAMES=200 for more)
+node tests/diag.js 200       # random games: where the Mandate comes from, per region
+npm run sim 400              # bot-vs-bot win rates per rules cell (M2)
 ```
 
 ## Deploy
