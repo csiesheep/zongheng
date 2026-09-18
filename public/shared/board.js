@@ -8,7 +8,7 @@ export const REGIONS = {
   jin:   { zh: "三晉", en: "the Three Jin", home: null,  presence: 4, domination: 8, control: 10 },
   zhou:  { zh: "周室", en: "Zhou",          home: null,  presence: 0, domination: 0, control: 0 }, // never scored
   east:  { zh: "東方", en: "the East",      home: null,  presence: 3, domination: 6, control: 8 },
-  south: { zh: "南方", en: "the South",     home: "chu", presence: 2, domination: 5, control: 7 },
+  south: { zh: "南方", en: "the South",     home: "chu", presence: 2, domination: 4, control: 6 },
   north: { zh: "北疆", en: "the North",     home: null,  presence: 2, domination: 4, control: 6 },
 };
 export const SCORED_REGIONS = ["jin", "east", "south", "north", "west"];

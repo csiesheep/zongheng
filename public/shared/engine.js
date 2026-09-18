@@ -42,7 +42,10 @@ export const REFORM = [
 // scores 三晉 + both homes in the reform era and 東方 + 北疆 from the alliance
 // era; "v2" is the rulebook's first draft (東方 early, 西土 late), which scored
 // Chu's home two and a half times as often as Qin's.
-export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 2, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes" };
+// `sealAt`: "control" gives Chu a 相印 on controlling the capital; "cap" only
+// once Chu's influence there sits at the cap (stability + 2).
+// `tie`: who wins a level Mandate after the final scoring.
+export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 2, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "control", tie: "chu" };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 
 // ---------- RNG (mulberry32) ----------
@@ -80,8 +83,11 @@ function withRng(st, fn) {
   st.rngState = rng.getState();
   return out;
 }
+// Entries carry a running number `i`, so a reader that only sees the tail
+// (the log keeps the last 400) knows what it missed.
 export function log(st, entry) {
-  st.log.push({ t: st.turn, r: st.round, ...entry });
+  st.logSeq = (st.logSeq || 0) + 1;
+  st.log.push({ i: st.logSeq, t: st.turn, r: st.round, ...entry });
   if (st.log.length > 400) st.log.splice(0, st.log.length - 400);
 }
 const fail = (msg) => { throw new Error(msg); };
@@ -166,7 +172,8 @@ export function checkMarkers(st) {
       st.mie[id] = true; log(st, { type: "mie", state: id });
       if (!st.mieVp[id]) { st.mieVp[id] = true; vp(st, QIN, s.vp); }
     }
-    if (capCtl === CHU && !st.seals[id]) {
+    const sealed = capCtl === CHU && (st.options.sealAt !== "cap" || infOf(st, s.capital)[CHU] >= capOf(st, s.capital));
+    if (sealed && !st.seals[id]) {
       st.seals[id] = true; log(st, { type: "seal", state: id });
       if (!st.sealVp[id]) { st.sealVp[id] = true; vp(st, CHU, 1); }
     }
@@ -365,7 +372,7 @@ function exec(st, step) {
         const options = step.regions
           ? SPACES.filter((s) => step.regions.includes(s.region)).map((s) => s.id)
           : SPACES.filter((s) => infOf(st, s.id)[step.side] > 0).map((s) => s.id);
-        return ask(st, step, { kind: "points", n: step.n, min: step.n, options, tag: "setup" });
+        return ask(st, step, { kind: "points", n: step.n, min: step.n, options, side: step.side, tag: "setup" });
       }
       for (const id of step.choices[0]) place(st, step.side, id, 1);
       log(st, { type: "setup", side: step.side, points: step.choices[0] });
@@ -518,7 +525,8 @@ function endTurnChecks(st) {
 function finalScoring(st) {
   for (const r of SCORED_REGIONS) { scoreRegion(st, r); if (st.winner != null) return; }
   if (st.mandate > 0) win(st, QIN, "final");
-  else win(st, CHU, st.mandate < 0 ? "final" : "tie");
+  else if (st.mandate < 0) win(st, CHU, "final");
+  else win(st, st.options.tie === "qin" ? QIN : CHU, "tie");
 }
 function finishCard(st, step) {
   const c = step.card;
@@ -748,8 +756,10 @@ export function legal(st, side) {
 
 // ---------- the per-seat view ----------
 export function view(st, side) {
+  // The plan stays: it names only cards already face up and choices already
+  // made, and a bot answering a pending needs it to simulate.
   const v = clone(st);
-  delete v.rngState; delete v.plan;
+  delete v.rngState;
   v.drawCount = st.draw.length; delete v.draw;
   v.laterCounts = Object.fromEntries(Object.entries(st.later).map(([k, a]) => [k, a.length])); delete v.later;
   if (side != null) {
