@@ -17,14 +17,55 @@
 <body>
 <header class="bar">
   <a class="hub" href="https://games.csiesheep.com/" data-t="nav.hub"></a>
+  <span id="barMid"></span>
   <button id="langBtn" type="button" data-t="nav.lang"></button>
 </header>
-<main class="hero">
+
+<main id="landing" class="view">
   <h1 id="hero"></h1>
   <p class="tagline" id="tagline"></p>
   <p class="about" id="about"></p>
+  <div class="actions">
+    <button id="btnPlay" class="primary" data-t="landing.play"></button>
+    <div class="row">
+      <button id="btnCreate" data-t="landing.create" disabled></button>
+      <input id="joinCode" maxlength="4" autocapitalize="characters" spellcheck="false">
+      <button id="btnJoin" data-t="landing.join" disabled></button>
+    </div>
+    <a href="rules.html" class="link" data-t="landing.rulesLink"></a>
+  </div>
   <p class="soon" id="soon"></p>
 </main>
+
+<main id="setup" class="view" hidden>
+  <h2 data-t="setup.title"></h2>
+  <div class="field"><div class="label" data-t="setup.side"></div><div class="seg" id="segSide"></div></div>
+  <div class="field"><div class="label" data-t="setup.level"></div><div class="seg" id="segLevel"></div></div>
+  <div class="actions">
+    <button id="btnStart" class="primary" data-t="setup.start"></button>
+    <button id="btnBack" data-t="setup.back"></button>
+  </div>
+</main>
+
+<main id="table" class="view" hidden>
+  <section class="tracks" id="tracks"></section>
+  <section class="map" id="map"></section>
+  <section class="prompt" id="prompt"></section>
+  <section class="sheet" id="sheet"></section>
+  <section class="hand" id="hand"></section>
+  <section class="log"><button id="logToggle" class="small"></button><div id="logBody" hidden></div></section>
+</main>
+
+<main id="over" class="view" hidden>
+  <h2 id="overTitle"></h2>
+  <p id="overReason"></p>
+  <p id="overMandate"></p>
+  <div class="actions">
+    <button id="btnAgain" class="primary" data-t="buttons.playAgain"></button>
+    <button id="btnHome" data-t="buttons.home"></button>
+  </div>
+</main>
+
 <footer class="credit" id="credit"></footer>
 <script type="module" src="app.js"></script>
 </body>

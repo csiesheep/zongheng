@@ -1,21 +1,36 @@
-// The client. Scaffold (M0): the placeholder landing with the language
-// toggle. M3 adds the views (landing / setup / lobby / table / over), picked
-// by query string so the build works at any prefix, the solo driver and the
-// room socket client.
+// The client. Views on one page (landing / setup / table / over) picked by
+// what is happening, so the build works at any prefix. Solo mode runs the
+// engine and the bot right here; the bot acts on a short timer so the table
+// reads as two people taking turns. Rooms (a socket to the Durable Object)
+// come in M4 and reuse the same renderers on the view the room sends.
+//
+// Plain on purpose: the look is to be redesigned; this is the play flow.
+import * as E from "./shared/engine.js";
+import * as B from "./shared/bots.js";
 import en from "./i18n/en.js";
 import zh from "./i18n/zh-Hant.js";
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const store = {
   get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
 };
 
+// ---------- language and names ----------
 let lang = "en", S = en;
-function t(key) {
-  return String(key.split(".").reduce((o, k) => (o ? o[k] : undefined), S) ?? key);
-}
+const t = (key, p = {}) => String(key.split(".").reduce((o, k) => (o ? o[k] : undefined), S) ?? key).replace(/\{(\w+)\}/g, (_, k) => (p[k] ?? `{${k}}`));
+const sideName = (s) => t(`sides.${E.SIDES[s]}`);
+const spaceName = (id) => (lang === "en" ? E.SPACE[id].en : E.SPACE[id].zh);
+const regionName = (r) => (lang === "en" ? E.REGIONS[r].en : E.REGIONS[r].zh);
+const stateName = (s) => (lang === "en" ? E.STATES[s].en : E.STATES[s].zh);
+const cardName = (id) => (id === E.JIUDING ? (lang === "en" ? "The Nine Cauldrons" : "九鼎") : lang === "en" ? E.CARD[id].en : E.CARD[id].zh);
+const cardText = (id) => (id === E.JIUDING ? (lang === "en" ? "4 ops; 5 if all of it lands in the Three Jin or Zhou. Then it passes face down." : "4 點;全部用在三晉或周室視為 5。用後蓋著交給對手。") : E.CARD[id].text);
+const sep = () => (lang === "en" ? ", " : "、");
+const mandateText = (m) => (m > 0 ? `${sideName(0)} +${m}` : m < 0 ? `${sideName(1)} +${-m}` : "0");
+const list = (ids, f) => ids.map(f).join(sep());
+
 function setLang(l) {
   lang = LANGS[l] ? l : "en";
   S = LANGS[lang];
@@ -25,8 +40,395 @@ function setLang(l) {
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
   for (const id of ["tagline", "about", "soon", "credit"]) $(id).textContent = S[id];
   $("hero").textContent = S.title;
+  $("joinCode").placeholder = t("landing.code");
+  renderSetup();
+  if (game.st) { render(); if (game.st.winner != null) renderOver(); }
 }
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
 
+// ---------- views ----------
+function show(view) { for (const v of ["landing", "setup", "table", "over"]) $(v).hidden = v !== view; window.scrollTo(0, 0); }
+$("btnPlay").onclick = () => show("setup");
+$("btnBack").onclick = () => show("landing");
+$("btnHome").onclick = () => { game.st = null; $("barMid").textContent = ""; show("landing"); };
+$("btnAgain").onclick = () => show("setup");
+
+// ---------- setup ----------
+const setup = { side: store.get("zh.side", "chu"), level: store.get("zh.level", "normal") };
+function seg(el, items, value, onPick) {
+  el.innerHTML = "";
+  for (const [v, label] of items) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = label; b.setAttribute("aria-pressed", String(v === value));
+    b.onclick = () => onPick(v);
+    el.appendChild(b);
+  }
+}
+function renderSetup() {
+  seg($("segSide"), [["qin", t("sides.qin")], ["chu", t("sides.chu")], ["random", t("setup.random")]], setup.side, (v) => { setup.side = v; store.set("zh.side", v); renderSetup(); });
+  seg($("segLevel"), [["easy", t("setup.easy")], ["normal", t("setup.normal")], ["hard", t("setup.hard")]], setup.level, (v) => { setup.level = v; store.set("zh.level", v); renderSetup(); });
+}
+$("btnStart").onclick = startSolo;
+
+// ---------- the solo game ----------
+const game = { st: null, me: 0, level: "normal", rng: null, ui: null, botLine: "", botName: "" };
+const freshUi = (card = null) => ({ card, use: null, order: "opsFirst", pair: null, points: [], target: null, picks: [], opsUse: null, err: "" });
+
+function startSolo() {
+  game.me = setup.side === "random" ? (Math.random() < 0.5 ? 0 : 1) : setup.side === "qin" ? 0 : 1;
+  game.level = setup.level;
+  game.st = E.createGame(E.randomSeed(), {});
+  game.rng = E.makeRng(E.randomSeed());
+  game.ui = freshUi();
+  game.botLine = "";
+  game.botName = S.names[E.SIDES[1 - game.me]][0];
+  game.auto = new URLSearchParams(location.search).has("auto");
+  $("logBody").hidden = true;
+  show("table"); render(); botLoop();
+}
+function humanAct(action) {
+  try { game.st = E.apply(game.st, { ...action, side: game.me }); }
+  catch (e) { game.ui.err = e.message; render(); return; }
+  game.ui = freshUi();
+  render();
+  botLoop();
+}
+let botTimer = 0;
+function botLoop() {
+  clearTimeout(botTimer);
+  const st = game.st;
+  if (st.winner != null) { renderOver(); return; }
+  // `?auto` (a development aid) lets the bot play the human seat too, so a
+  // whole game can be watched in the client.
+  const need = E.mustAct(st);
+  const bot = need.includes(1 - game.me) ? 1 - game.me : game.auto && need.includes(game.me) ? game.me : null;
+  if (bot == null) return;
+  botTimer = setTimeout(() => {
+    const a = B.decide(E.view(game.st, bot), bot, game.level, game.rng);
+    if (!a) return;
+    try { game.st = E.apply(game.st, a); } catch (e) { console.error(e); return; }
+    if (bot !== game.me) game.botLine = describeAction(a);
+    render();
+    botLoop();
+  }, game.auto ? 120 : 700);
+}
+function describeAction(a) {
+  if (a.type === "headline") return `${game.botName}: ${t("prompt.headline")}`;
+  if (a.type === "choose") return `${game.botName}: …`;
+  return `${game.botName}: ${cardName(a.card)} · ${t(`useNames.${a.use || "event"}`)}${a.pair ? ` + ${cardName(a.pair)}` : ""}`;
+}
+
+// ---------- rendering ----------
+function render() {
+  const v = E.view(game.st, game.me);
+  $("barMid").textContent = `${t("tracks.turn")} ${v.turn} · ${sideName(game.me)}`;
+  renderTracks(v);
+  renderMap(v);
+  renderPromptAndSheet(v);
+  renderHand(v);
+  renderLog(v);
+}
+
+function renderTracks(v) {
+  const w = v.weariness;
+  const boxes = [5, 4, 3, 2, 1].map((k) => `<span class="box${k <= 2 ? " bad" : ""}${k === w ? " on" : ""}">${t("weariness." + k)}</span>`).join("");
+  const reformBoxes = (side) => [1, 2, 3, 4, 5, 6].map((k) => `<span class="box${k <= v.reform[side] ? " on" : ""}">${k}</span>`).join("");
+  const seals = Object.keys(v.seals).map(stateName).join(" ") || "–";
+  const mie = Object.keys(v.mie).map(stateName).join(" ") || "–";
+  const pos = Math.max(2, Math.min(98, 50 - (v.mandate / E.MANDATE_TO_WIN) * 50));
+  const phase = v.phase === "setup" ? "" : ` · ${t("tracks.round")} ${v.round}${t("tracks.of")}${v.rounds}`;
+  $("tracks").innerHTML =
+    `<div class="wide"><b>${t("tracks.turn")} ${v.turn}</b> · ${v.era ? t("eras." + v.era) : ""}${phase}</div>` +
+    `<div class="wide">${t("tracks.mandate")} <b>${mandateText(v.mandate)}</b><div class="mandate"><span class="mid"></span><span class="dot" style="left:${pos}%"></span></div></div>` +
+    `<div class="wide">${t("tracks.weariness")} <span class="boxes">${boxes}</span></div>` +
+    `<div class="q">${sideName(0)} ${t("tracks.reform")} <span class="boxes">${reformBoxes(0)}</span></div>` +
+    `<div class="c">${sideName(1)} ${t("tracks.reform")} <span class="boxes">${reformBoxes(1)}</span></div>` +
+    `<div class="q">${t("tracks.mie")}: ${mie} · ${v.handCounts[0]} ♠</div>` +
+    `<div class="c">${t("tracks.seals")}: ${seals} · ${v.handCounts[1]} ♠</div>` +
+    `<div class="wide">${t("tracks.jiuding")}: ${sideName(v.jiuding.holder)}${v.jiuding.faceDown ? ` (${t("tracks.faceDown")})` : ""}</div>`;
+}
+
+const REGION_BOX = { north: [60, 0, 298, 70], west: [0, 72, 104, 278], jin: [108, 72, 142, 160], zhou: [108, 236, 50, 34], east: [254, 72, 104, 160], south: [108, 274, 250, 76] };
+const NODE_POS = {
+  dai: [70, 26], zhongshan: [150, 26], ji: [230, 26], liaodong: [306, 26],
+  yiqu: [6, 84], hangu: [54, 116], guanzhong: [6, 150], hanzhong: [6, 220], bashu: [54, 252],
+  hedong: [114, 80], handan: [196, 80], shangdang: [155, 118], yiyang: [114, 156], daliang: [196, 156], xinzheng: [155, 196],
+  luoyi: [110, 238], linzi: [262, 80], jimo: [308, 114], ju: [262, 148], xue: [308, 182], song: [262, 196],
+  qianzhong: [112, 312], chencai: [170, 280], ying: [170, 314], huaisi: [240, 280], wuyue: [300, 314],
+};
+
+// What tapping the map does right now: the lit spaces, the picks so far, the cost badges.
+function placementTrial(v, side, points) {
+  const trial = E.clone(v); trial.log = [];
+  let spent = 0;
+  for (const id of points) { spent += E.placeCost(trial, side, id); E.place(trial, side, id, 1); }
+  return { trial, spent };
+}
+function roomFor(p, v, id, counts) {
+  let r = Infinity;
+  if (p.distinct) r = Math.min(r, 1);
+  if (p.maxPer) r = Math.min(r, p.maxPer);
+  if (p.maxOf) r = Math.min(r, p.maxOf[id] ?? 0);
+  if (p.side != null) r = Math.min(r, E.capOf(v, id) - E.infOf(v, id)[p.side]);
+  return r - (counts[id] || 0);
+}
+function currentMode(v) {
+  const none = { lit: new Set(), picked: {}, costs: null, onTap() {} };
+  const me = game.me, ui = game.ui;
+  if (v.winner != null) return none;
+  const L = E.legal(v, me);
+  const placing = (ops, points) => {
+    const { trial, spent } = placementTrial(v, me, points);
+    const left = ops - spent;
+    const lit = new Set(), costs = {};
+    for (const sp of E.SPACES) {
+      const cost = E.placeCost(trial, me, sp.id);
+      if (cost <= left && E.canPlaceAt(trial, me, sp.id) && E.infOf(trial, sp.id)[me] < E.capOf(trial, sp.id)) { lit.add(sp.id); costs[sp.id] = cost; }
+    }
+    const picked = {}; for (const id of points) picked[id] = (picked[id] || 0) + 1;
+    return { lit, picked, costs, onTap: (id) => { points.push(id); render(); } };
+  };
+  if (L.kind === "pending") {
+    const p = L.pending;
+    if (p.kind === "points") {
+      const counts = {}; for (const id of ui.picks) counts[id] = (counts[id] || 0) + 1;
+      const lit = new Set(ui.picks.length < p.n ? p.options.filter((id) => roomFor(p, v, id, counts) > 0) : []);
+      return { lit, picked: counts, costs: null, onTap: (id) => { ui.picks.push(id); render(); } };
+    }
+    if (p.kind === "ops" && ui.opsUse === "place") return placing(p.ops, ui.points);
+    if (p.kind === "ops" && (ui.opsUse === "campaign" || ui.opsUse === "lobby")) {
+      const ids = ui.opsUse === "campaign" ? p.options.campaignTargets : p.options.lobbyTargets.map((x) => x.id);
+      return { lit: new Set(ids), picked: ui.target ? { [ui.target]: 1 } : {}, costs: null, onTap: (id) => { ui.target = id; render(); } };
+    }
+    return none;
+  }
+  if (L.kind !== "action" || !ui.card || !ui.use) return none;
+  const info = cardInfo(L, ui.card);
+  if (!info) return none;
+  if (ui.use === "place" && !(info.enemy && ui.order === "eventFirst")) return placing(info.ops, ui.points);
+  if (ui.use === "campaign" || ui.use === "lobby") {
+    const u = info.uses[ui.use];
+    const ids = u ? (ui.use === "campaign" ? u.targets : u.targets.map((x) => x.id)) : [];
+    return { lit: new Set(ids), picked: ui.target ? { [ui.target]: 1 } : {}, costs: null, onTap: (id) => { ui.target = id; render(); } };
+  }
+  return none;
+}
+function cardInfo(L, card) {
+  if (card === E.JIUDING) return L.jiuding ? { id: card, ops: 4, enemy: false, uses: { place: L.jiuding.place, campaign: L.jiuding.campaign, lobby: L.jiuding.lobby } } : null;
+  const c = L.cards.find((x) => x.id === card);
+  if (!c) return null;
+  const ops = game.ui.pair ? E.opsOf(game.st, game.me, game.ui.pair) : c.ops;
+  return { id: card, ops, enemy: !!c.uses.enemy, uses: c.uses };
+}
+
+function renderMap(v) {
+  const el = $("map"); el.innerHTML = "";
+  for (const [r, [x, y, w, h]] of Object.entries(REGION_BOX)) {
+    const d = document.createElement("div");
+    d.className = "region" + (E.REGIONS[r].home ? " home" : "");
+    d.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
+    d.innerHTML = `<span>${esc(regionName(r))}</span>`;
+    el.appendChild(d);
+  }
+  const mode = currentMode(v);
+  for (const sp of E.SPACES) {
+    const [x, y] = NODE_POS[sp.id], [q, c] = E.infOf(v, sp.id), ctl = E.controller(v, sp.id);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "node" + (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (mode.lit.has(sp.id) ? " lit" : "") + (mode.picked[sp.id] ? " picked" : "");
+    b.style.cssText = `left:${x}px;top:${y}px`;
+    const cap = sp.state && E.STATES[sp.state].capital === sp.id;
+    b.innerHTML = `<span class="nm${cap ? " cap" : ""}">${sp.battleground ? "★" : ""}${esc(spaceName(sp.id))}</span>` +
+      `<span class="cnt">${q ? `<i class="q">${q}</i>` : ""}${c ? `<i class="c">${c}</i>` : ""}</span>` +
+      (mode.picked[sp.id] ? `<span class="badge">+${mode.picked[sp.id]}</span>` : "") +
+      (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "");
+    b.disabled = !mode.lit.has(sp.id);
+    b.title = `${spaceName(sp.id)} · ${sp.stability}`;
+    b.onclick = () => mode.onTap(sp.id);
+    el.appendChild(b);
+  }
+}
+
+function btn(parent, label, onClick, cls = "", pressed = null, disabled = false) {
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = label; b.className = cls; b.disabled = disabled;
+  if (pressed != null) b.setAttribute("aria-pressed", String(pressed));
+  b.onclick = onClick;
+  parent.appendChild(b);
+  return b;
+}
+function row(parent) { const d = document.createElement("div"); d.className = "rowb"; parent.appendChild(d); return d; }
+function note(parent, text) { const d = document.createElement("div"); d.className = "note"; d.textContent = text; parent.appendChild(d); }
+
+function renderPromptAndSheet(v) {
+  const p = $("prompt"), sh = $("sheet");
+  sh.innerHTML = "";
+  const me = game.me, ui = game.ui;
+  const err = ui.err ? `<div class="err">${esc(ui.err)}</div>` : "";
+  const setPrompt = (html) => { p.innerHTML = html + err; };
+  if (v.winner != null) { setPrompt(t("prompt.over")); return; }
+  const L = E.legal(v, me);
+  if (L.kind === "wait") { setPrompt(t("prompt.wait", { name: game.botName })); return; }
+  if (L.kind === "pending") { renderPending(v, L.pending, setPrompt, sh); return; }
+  if (L.kind === "headline") {
+    setPrompt(t("prompt.headline"));
+    if (ui.card) btn(sh, `${t("buttons.headline")} · ${cardName(ui.card)}`, () => humanAct({ type: "headline", card: ui.card }), "primary");
+    return;
+  }
+  // An action round.
+  if (L.bog && L.bog.length && !ui.card) { setPrompt(t("uses.bog")); return; }
+  if (!ui.card) { setPrompt(t("prompt.yourAction")); return; }
+  if (L.bog && L.bog.length) {
+    setPrompt(t("uses.bog"));
+    btn(sh, `${t("buttons.confirm")} · ${cardName(ui.card)}`, () => humanAct({ type: "play", card: ui.card, use: "bog" }), "primary");
+    return;
+  }
+  const info = cardInfo(L, ui.card);
+  if (!info) { setPrompt(t("prompt.yourAction")); return; }
+  const uses = row(sh);
+  const usable = (u) => (u === "event" ? info.uses.event : u === "reform" ? info.uses.reform : !!info.uses[u]);
+  for (const u of ["event", "place", "campaign", "lobby", "reform"]) {
+    if (ui.card === E.JIUDING && (u === "event" || u === "reform")) continue;
+    btn(uses, t(`uses.${u}`), () => { ui.use = u; ui.points = []; ui.target = null; ui.err = ""; render(); }, "", ui.use === u, !usable(u));
+  }
+  if (info.enemy && ui.use && ui.use !== "event" && ui.use !== "reform") {
+    const r = row(sh);
+    for (const o of ["opsFirst", "eventFirst"]) btn(r, t(`uses.${o}`), () => { ui.order = o; ui.points = []; render(); }, "", ui.order === o);
+    note(sh, t("preview.enemyEvent"));
+  }
+  if (ui.card === "shuoke" && info.uses.pair && info.uses.pair.length && ui.use && ui.use !== "event" && ui.use !== "reform") {
+    const r = row(sh);
+    note(sh, t("uses.pair"));
+    for (const c of info.uses.pair) btn(r, `${cardName(c)} (${E.opsOf(game.st, me, c)})`, () => { ui.pair = ui.pair === c ? null : c; ui.points = []; render(); }, "", ui.pair === c);
+  }
+  const base = { type: "play", card: ui.card, use: ui.use };
+  if (ui.pair) base.pair = ui.pair;
+  if (info.enemy && !ui.pair) base.order = ui.order;
+  if (!ui.use) { setPrompt(`<b>${esc(cardName(ui.card))}</b> · ${esc(cardText(ui.card))}`); return; }
+  if (ui.use === "event" || ui.use === "reform") {
+    setPrompt(`<b>${esc(cardName(ui.card))}</b> · ${esc(cardText(ui.card))}`);
+    btn(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)}`, () => humanAct(base), "primary");
+    return;
+  }
+  if (ui.use === "place") {
+    if (info.enemy && ui.order === "eventFirst" && !ui.pair) {
+      setPrompt(t("uses.eventFirst"));
+      btn(sh, t("buttons.confirm"), () => humanAct(base), "primary");
+      return;
+    }
+    const { spent } = placementTrial(v, me, ui.points);
+    setPrompt(t("prompt.place", { ops: info.ops, left: info.ops - spent }));
+    const r = row(sh);
+    btn(r, t("buttons.done"), () => humanAct({ ...base, points: ui.points }), "primary", null, ui.points.length === 0);
+    btn(r, t("buttons.cancel"), () => { ui.points = []; render(); });
+    return;
+  }
+  // campaign or lobby
+  setPrompt(t(`prompt.${ui.use}`, { ops: info.ops }));
+  if (ui.target) {
+    const trial = E.clone(v); trial.log = [];
+    let text;
+    if (ui.use === "campaign") { const r = E.campaign(trial, me, ui.target, info.ops); text = t("preview.campaign", { removed: r.removed, placed: r.placed, w: t("weariness." + trial.weariness) }); }
+    else { const e = E.edge(v, me, ui.target); text = t("preview.lobby", { edge: e, n: Math.min(info.ops, e) }); }
+    note(sh, `${spaceName(ui.target)}: ${text}`);
+    btn(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}`, () => humanAct({ ...base, target: ui.target }), "primary");
+  }
+}
+
+function renderPending(v, p, setPrompt, sh) {
+  const ui = game.ui;
+  if (p.kind === "points") {
+    const key = p.tag === "setup" ? (p.min === v.options.comp && v.turn === 0 && game.me === 1 && !p.options.includes("ying") ? "setupBonus" : "setup") : p.min < p.n ? "pointsMin" : "points";
+    setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t(`prompt.${key}`, { n: p.n, left: p.n - ui.picks.length })}`);
+    const r = row(sh);
+    btn(r, t("buttons.confirm"), () => humanAct({ type: "choose", choice: ui.picks }), "primary", null, ui.picks.length < p.min);
+    btn(r, t("buttons.cancel"), () => { ui.picks = []; render(); }, "", null, ui.picks.length === 0);
+    return;
+  }
+  if (p.kind === "card") {
+    setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t(p.min === 0 ? "prompt.cardOptional" : "prompt.card")}`);
+    const r = row(sh);
+    for (const c of p.options) btn(r, `${cardName(c)} (${E.CARD[c].ops})`, () => humanAct({ type: "choose", choice: [c] }));
+    if (p.min === 0) btn(r, t("buttons.skip"), () => humanAct({ type: "choose", choice: [] }));
+    return;
+  }
+  if (p.kind === "option") {
+    setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t("prompt.option")}`);
+    const r = row(sh);
+    for (const o of p.options) btn(r, o.label, () => humanAct({ type: "choose", choice: o.id }));
+    return;
+  }
+  if (p.kind === "ops") {
+    setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t("prompt.ops", { ops: p.ops })}`);
+    const r = row(sh);
+    for (const u of p.allowed) btn(r, t(`uses.${u}`), () => { ui.opsUse = u; ui.points = []; ui.target = null; render(); }, "", ui.opsUse === u);
+    if (ui.opsUse === "place") {
+      const { spent } = placementTrial(v, game.me, ui.points);
+      note(sh, t("prompt.place", { ops: p.ops, left: p.ops - spent }));
+      const r2 = row(sh);
+      btn(r2, t("buttons.done"), () => humanAct({ type: "choose", choice: { use: "place", points: ui.points } }), "primary", null, ui.points.length === 0);
+      btn(r2, t("buttons.cancel"), () => { ui.points = []; render(); });
+    } else if (ui.opsUse && ui.target) {
+      btn(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.opsUse}`)} · ${spaceName(ui.target)}`, () => humanAct({ type: "choose", choice: { use: ui.opsUse, target: ui.target } }), "primary");
+    }
+  }
+}
+
+function renderHand(v) {
+  const el = $("hand"); el.innerHTML = "";
+  const me = game.me, ui = game.ui;
+  const hand = v.hands[me] || [];
+  const canPick = v.winner == null && (E.legal(v, me).kind === "action" || E.legal(v, me).kind === "headline");
+  const tile = (id, cls = "") => {
+    const c = E.CARD[id];
+    const kind = id === E.JIUDING ? "n" : c.scoring ? "s" : c.side === 0 ? "q" : c.side === 1 ? "c" : "n";
+    const b = document.createElement("button");
+    b.type = "button"; b.className = `card ${cls}`;
+    b.setAttribute("aria-pressed", String(ui.card === id));
+    b.innerHTML = `<span class="ops ${kind}">${id === E.JIUDING ? "4" : c.scoring ? "S" : c.ops}</span><span class="nm">${esc(cardName(id))}</span><span class="tx">${esc(cardText(id))}</span>`;
+    b.disabled = !canPick;
+    b.onclick = () => { game.ui = freshUi(ui.card === id ? null : id); render(); };
+    el.appendChild(b);
+  };
+  for (const id of hand) tile(id);
+  if (v.phase === "action" && E.jiudingUsable(v, me)) tile(E.JIUDING, "jiuding");
+}
+
+function fmtLog(l) {
+  const P = { side: l.side != null ? sideName(l.side) : "", turn: l.turn, era: l.era ? t("eras." + l.era) : "", box: l.box, ops: l.ops, removed: l.removed, placed: l.placed, mandate: l.mandate != null ? mandateText(l.mandate) : "", weariness: l.weariness ? t("weariness." + l.weariness) : "", to: l.to ? t("weariness." + l.to) : "" };
+  if (l.points) P.spaces = list(l.points, spaceName);
+  if (l.target) P.target = spaceName(l.target);
+  if (l.card) P.card = cardName(l.card);
+  if (l.use) P.use = t("useNames." + l.use);
+  if (l.region) P.region = regionName(l.region);
+  if (l.state) P.state = stateName(l.state);
+  if (l.type === "score") { P.q = l.qin.total; P.c = l.chu.total; }
+  if (l.type === "headline") { P.qin = cardName(l.cards[0]); P.chu = cardName(l.cards[1]); P.first = sideName(l.first); }
+  if (l.type === "jiuding") P.side = sideName(l.to);
+  if (l.type === "over") { P.side = sideName(l.winner); P.reason = t("over.reasons." + l.reason); }
+  if (l.type === "vp") P.side = sideName(l.side);
+  const key = `log.${l.type}`;
+  const s = t(key, P);
+  return s === key ? "" : s;
+}
+function renderLog(v) {
+  const body = $("logBody");
+  $("logToggle").textContent = `${t("buttons.log")} (${body.hidden ? t("buttons.show") : t("buttons.hide")})`;
+  const lines = v.log.slice(-60).map(fmtLog).filter(Boolean).reverse();
+  body.innerHTML = (game.botLine ? `<div class="bot">${esc(game.botLine)}</div>` : "") + lines.map((s) => `<div>${esc(s)}</div>`).join("");
+  $("prompt").insertAdjacentHTML("beforeend", game.botLine ? `<div class="note">${esc(game.botLine)}</div>` : "");
+}
+$("logToggle").onclick = () => { $("logBody").hidden = !$("logBody").hidden; if (game.st) renderLog(E.view(game.st, game.me)); };
+
+function renderOver() {
+  const st = game.st;
+  $("overTitle").textContent = t("over.winner", { side: sideName(st.winner) });
+  $("overReason").textContent = t("over.reasons." + st.reason);
+  $("overMandate").textContent = `${t("over.mandate")}: ${mandateText(st.mandate)}`;
+  show("over");
+}
+
+// ---------- boot ----------
 const wanted = new URLSearchParams(location.search).get("lang");
-setLang(wanted || store.get("zh.lang", navigator.language.startsWith("zh") ? "zh-Hant" : "en"));
+setLang(wanted || store.get("zh.lang", (navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
+if (new URLSearchParams(location.search).has("play")) show("setup");
