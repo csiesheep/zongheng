@@ -96,7 +96,8 @@ export const CARDS = [
     effect(st, side, ch) { if (!ch.length) return pts(C, 3, withRoom(st, C, ids("east"))); placeAll(st, C, ch[0]); } },
   { id: "wuguo", num: 19, zh: "五國伐秦", en: "Five States Attack Qin", era: "reform", side: C, ops: 3, remove: true, year: 318,
     text: "楚對西土任一據點發動免費征伐,行動點 +1,不受疲敝限制;移除「函谷關天險」。",
-    effect(st, side, ch) { dropHanguPass(st); return freeCampaign(st, C, ch, ids("west"), 3 + 1, { ignoreLocks: true }); } },
+    // Option `wuguo: "nonbg"` keeps the 318 BC coalition outside 關中, as it was.
+    effect(st, side, ch) { dropHanguPass(st); return freeCampaign(st, C, ch, ids("west").filter((id) => st.options.wuguo !== "nonbg" || !E.SPACE[id].battleground), 3 + 1, { ignoreLocks: true }); } },
   { id: "mozhe", num: 20, zh: "墨者守城", en: "Mohist Defenders", era: "reform", side: C, ops: 1, remove: false,
     text: "指定 1 個據點,本回合內不可對其征伐或遊說。",
     effect(st, side, ch) { if (!ch.length) return pick(C, all()); E.addEffect(st, { card: "mozhe", side: C, kind: "protect", space: ch[0][0], until: "turn" }); } },
