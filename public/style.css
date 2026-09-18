@@ -33,6 +33,15 @@ h2 { font-family: var(--display); font-weight: 400; letter-spacing: 3px; margin:
 .seg button { flex: 1; min-height: 44px; background: none; border: none; border-right: 1.5px solid var(--bronze); color: var(--silk); font-size: 15px; }
 .seg button:last-child { border-right: none; }
 .seg button[aria-pressed="true"] { background: var(--bronze); color: var(--lacquer); font-weight: 600; }
+.code { font-family: var(--display); font-size: 64px; letter-spacing: 12px; color: var(--silk); margin: 4px 0; }
+.seats { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.seat { display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--bronze); background: var(--silk-field); color: var(--ink); padding: 10px 12px; }
+.seat .sd { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 22px; color: var(--silk-field); }
+.seat .sd.q { background: var(--qin); } .seat .sd.c { background: var(--chu); }
+.seat .who { flex: 1; }
+.seat .tag { font-size: 11px; color: var(--ink-soft); border: 1px solid var(--bronze); padding: 1px 5px; margin-left: 6px; }
+.seat.away { opacity: 0.6; }
+.deadline { font-size: 12px; color: var(--bronze-light); }
 .credit { margin-top: auto; padding: 18px 14px 14px; font-size: 11px; line-height: 1.6; color: #8a7f68; max-width: 640px; }
 
 /* table */

@@ -28,13 +28,26 @@
   <div class="actions">
     <button id="btnPlay" class="primary" data-t="landing.play"></button>
     <div class="row">
-      <button id="btnCreate" data-t="landing.create" disabled></button>
+      <input id="landName" maxlength="16" spellcheck="false">
+    </div>
+    <div class="row">
+      <button id="btnCreate" data-t="landing.create"></button>
       <input id="joinCode" maxlength="4" autocapitalize="characters" spellcheck="false">
-      <button id="btnJoin" data-t="landing.join" disabled></button>
+      <button id="btnJoin" data-t="landing.join"></button>
     </div>
     <a href="rules.html" class="link" data-t="landing.rulesLink"></a>
   </div>
   <p class="soon" id="soon"></p>
+</main>
+
+<main id="lobby" class="view" hidden>
+  <h2 data-t="lobby.title"></h2>
+  <div class="code" id="lobbyCode"></div>
+  <p class="about" id="lobbyHint"></p>
+  <div id="lobbySeats" class="seats"></div>
+  <div class="field"><div class="label" data-t="setup.level"></div><div class="seg" id="lobbyLevel"></div></div>
+  <div class="actions" id="lobbyActions"></div>
+  <p class="soon" id="lobbyErr" hidden></p>
 </main>
 
 <main id="setup" class="view" hidden>

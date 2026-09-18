@@ -47,11 +47,17 @@ function setLang(l) {
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
 
 // ---------- views ----------
-function show(view) { for (const v of ["landing", "setup", "table", "over"]) $(v).hidden = v !== view; window.scrollTo(0, 0); }
+function show(view) { for (const v of ["landing", "setup", "lobby", "table", "over"]) $(v).hidden = v !== view; window.scrollTo(0, 0); }
 $("btnPlay").onclick = () => show("setup");
 $("btnBack").onclick = () => show("landing");
-$("btnHome").onclick = () => { game.st = null; $("barMid").textContent = ""; show("landing"); };
-$("btnAgain").onclick = () => show("setup");
+$("btnHome").onclick = () => { if (game.room) leaveRoom(); game.st = null; $("barMid").textContent = ""; show("landing"); };
+$("btnAgain").onclick = () => (game.room ? show("lobby") : show("setup"));
+$("landName").value = store.get("zh.name", "");
+$("btnCreate").onclick = () => connect({ create: "1" });
+$("btnJoin").onclick = () => {
+  const code = $("joinCode").value.trim().toUpperCase();
+  if (code.length === 4) connect({ room: code, token: sess.get("zh.token." + code) || "" });
+};
 
 // ---------- setup ----------
 const setup = { side: store.get("zh.side", "chu"), level: store.get("zh.level", "normal") };
@@ -71,10 +77,16 @@ function renderSetup() {
 $("btnStart").onclick = startSolo;
 
 // ---------- the solo game ----------
-const game = { st: null, me: 0, level: "normal", rng: null, ui: null, botLine: "", botName: "" };
+const game = { st: null, me: 0, level: "normal", rng: null, ui: null, botLine: "", botName: "", room: false, spectator: false };
+// Per-tab: the reconnect token, so two tabs in one browser are two players.
+const sess = {
+  get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, v); } catch {} },
+};
 const freshUi = (card = null) => ({ card, use: null, order: "opsFirst", pair: null, points: [], target: null, picks: [], opsUse: null, err: "" });
 
 function startSolo() {
+  game.room = false; game.spectator = false;
   game.me = setup.side === "random" ? (Math.random() < 0.5 ? 0 : 1) : setup.side === "qin" ? 0 : 1;
   game.level = setup.level;
   game.st = E.createGame(E.randomSeed(), {});
@@ -87,6 +99,8 @@ function startSolo() {
   show("table"); render(); botLoop();
 }
 function humanAct(action) {
+  if (game.spectator) return;
+  if (game.room) { send({ type: "act", action }); game.ui = freshUi(); render(); return; }
   try { game.st = E.apply(game.st, { ...action, side: game.me }); }
   catch (e) { game.ui.err = e.message; render(); return; }
   game.ui = freshUi();
@@ -96,6 +110,7 @@ function humanAct(action) {
 let botTimer = 0;
 function botLoop() {
   clearTimeout(botTimer);
+  if (game.room) return;
   const st = game.st;
   if (st.winner != null) { renderOver(); return; }
   // `?auto` (a development aid) lets the bot play the human seat too, so a
@@ -120,9 +135,16 @@ function describeAction(a) {
 
 // ---------- rendering ----------
 function render() {
-  const v = E.view(game.st, game.me);
-  $("barMid").textContent = `${t("tracks.turn")} ${v.turn} · ${sideName(game.me)}`;
+  // In a room the state on hand is already this seat's view.
+  const v = game.room ? game.st : E.view(game.st, game.me);
+  $("barMid").textContent = `${t("tracks.turn")} ${v.turn} · ${game.spectator ? "" : sideName(game.me)}`;
   renderTracks(v);
+  if (game.spectator) {
+    renderMap({ ...v, winner: 0 }); // nothing lit
+    $("prompt").textContent = ""; $("sheet").innerHTML = ""; $("hand").innerHTML = "";
+    renderLog(v);
+    return;
+  }
   renderMap(v);
   renderPromptAndSheet(v);
   renderHand(v);
@@ -428,7 +450,102 @@ function renderOver() {
   show("over");
 }
 
+// ---------- rooms: a socket to the Durable Object ----------
+const room = { ws: null, code: null, me: null, token: null, seats: [], settings: null, phase: null, deadline: 0, gen: 0, isHost: false, fatal: false };
+function wsUrl(params) {
+  const base = location.pathname.replace(/\/[^/]*$/, "");
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${location.host}${base}/ws?${new URLSearchParams(params)}`;
+}
+function send(msg) { if (room.ws && room.ws.readyState === 1) room.ws.send(JSON.stringify(msg)); }
+function connect(params) {
+  if (room.ws) { try { room.ws.close(); } catch {} }
+  const name = $("landName").value.trim() || t("setup.defaultName");
+  store.set("zh.name", name);
+  const ws = new WebSocket(wsUrl({ ...params, name, lang }));
+  Object.assign(room, { ws, code: params.room || null, me: null, seats: [], settings: null, phase: null, fatal: false });
+  game.room = true; game.spectator = false; game.st = null; game.ui = freshUi();
+  $("lobbyErr").hidden = true; $("lobbyHint").textContent = t("lobby.connecting"); $("lobbyCode").textContent = room.code || ""; $("lobbySeats").innerHTML = ""; $("lobbyActions").innerHTML = "";
+  show("lobby");
+  ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch { return; } onRoomMsg(m); };
+  ws.onclose = () => { if (room.ws === ws) { room.ws = null; if (!room.fatal) { $("lobbyErr").textContent = t("lobby.closed"); $("lobbyErr").hidden = false; } } };
+}
+function leaveRoom() {
+  if (room.ws) { try { room.ws.close(); } catch {} }
+  room.ws = null; game.room = false; game.st = null;
+  history.replaceState(null, "", location.pathname);
+}
+function onRoomMsg(m) {
+  switch (m.type) {
+    case "joined":
+      room.code = m.code; room.me = m.side; room.token = m.token;
+      if (m.token) sess.set("zh.token." + m.code, m.token);
+      game.spectator = m.side == null; game.me = m.side ?? 0;
+      history.replaceState(null, "", `?room=${m.code}`);
+      break;
+    case "lobby":
+      room.phase = m.phase; room.seats = m.seats; room.settings = m.settings;
+      room.isHost = m.seats.some((s) => s.idx === 0 && s.side === room.me);
+      if (m.phase === "lobby") { game.st = null; renderLobby(); show("lobby"); }
+      else if (m.phase === "over") renderLobby();
+      break;
+    case "view":
+      if (m.view == null) { game.st = null; renderLobby(); show("lobby"); break; }
+      room.deadline = m.deadline; room.gen = m.gen;
+      game.st = m.view; game.me = m.me ?? game.me;
+      game.botName = m.names ? m.names[E.SIDES[1 - game.me]] : "";
+      if (!game.ui) game.ui = freshUi();
+      if ($("table").hidden && $("over").hidden) show("table");
+      render();
+      if (game.st.winner != null) renderOver();
+      break;
+    case "say":
+      game.botLine = m.sys ? m.text : `${room.seats[m.seat]?.name ?? ""}: ${m.text}`;
+      if (game.st) renderLog(game.st);
+      break;
+    case "error":
+      if (m.fatal) { room.fatal = true; $("lobbyErr").textContent = t("errors." + m.key); $("lobbyErr").hidden = false; show("lobby"); }
+      else if (game.st) { game.ui.err = m.key ? t("errors." + m.key) : m.message; render(); }
+      break;
+    default: break;
+  }
+}
+function renderLobby() {
+  $("lobbyCode").textContent = room.code || "";
+  $("lobbyHint").textContent = room.isHost ? t("lobby.hint") : t("lobby.waiting");
+  const el = $("lobbySeats"); el.innerHTML = "";
+  for (const s of room.seats) {
+    const d = document.createElement("div");
+    d.className = "seat" + (!s.connected ? " away" : "");
+    const tags = [s.side === room.me ? t("lobby.you") : "", s.idx === 0 ? t("lobby.host") : "", s.ai ? t("lobby.bot") : "", !s.connected && !s.ai ? t("lobby.away") : ""].filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join("");
+    d.innerHTML = `<div class="sd ${s.side === 0 ? "q" : "c"}">${esc(sideName(s.side))}</div><div class="who">${esc(s.name)}${tags}</div><span>${s.ready || s.idx === 0 ? t("lobby.ready") : t("lobby.notReady")}</span>`;
+    el.appendChild(d);
+  }
+  seg($("lobbyLevel"), [["easy", t("setup.easy")], ["normal", t("setup.normal")], ["hard", t("setup.hard")]], room.settings?.level || "normal", (v) => { if (room.isHost) send({ type: "settings", level: v }); });
+  const a = $("lobbyActions"); a.innerHTML = "";
+  if (room.phase === "over") {
+    if (room.isHost) btn(a, t("lobby.rematch"), () => send({ type: "rematch" }), "primary");
+  } else if (room.isHost) {
+    const hasBot = room.seats.some((s) => s.ai), full = room.seats.length >= 2;
+    btn(a, t("lobby.start"), () => send({ type: "start" }), "primary", null, !full);
+    if (hasBot) btn(a, t("lobby.removeBot"), () => send({ type: "removeBot" }));
+    else if (!full) btn(a, t("lobby.addBot"), () => send({ type: "addBot" }));
+    btn(a, t("lobby.swap"), () => send({ type: "swap" }));
+  } else if (!game.spectator) {
+    const me = room.seats.find((s) => s.side === room.me);
+    btn(a, me?.ready ? t("lobby.notReady") : t("lobby.ready"), () => send({ type: "ready", ready: !me?.ready }), "primary");
+  }
+  btn(a, t("lobby.leave"), () => { send({ type: "leave" }); leaveRoom(); show("landing"); });
+}
+setInterval(() => {
+  if (!game.room || !game.st || game.st.winner != null || !room.deadline) return;
+  const s = Math.max(0, Math.ceil((room.deadline - Date.now()) / 1000));
+  $("barMid").textContent = `${t("tracks.turn")} ${game.st.turn} · ${game.spectator ? "" : sideName(game.me)} · ${t("lobby.clock", { s })}`;
+}, 1000);
+
 // ---------- boot ----------
-const wanted = new URLSearchParams(location.search).get("lang");
-setLang(wanted || store.get("zh.lang", (navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
-if (new URLSearchParams(location.search).has("play")) show("setup");
+const params = new URLSearchParams(location.search);
+setLang(params.get("lang") || store.get("zh.lang", (navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
+$("landName").placeholder = t("landing.name");
+if (params.has("play")) show("setup");
+else if (params.get("room")) { const code = params.get("room").toUpperCase(); connect({ room: code, token: sess.get("zh.token." + code) || "" }); }
