@@ -49,8 +49,13 @@ function setLang(l) {
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
 
 // ---------- views ----------
-function show(view) { for (const v of ["landing", "setup", "lobby", "table", "over"]) $(v).hidden = v !== view; window.scrollTo(0, 0); }
+function show(view) {
+  for (const v of ["landing", "setup", "lobby", "table", "over"]) $(v).hidden = v !== view;
+  if (view === "landing") $("btnResume").hidden = !loadSolo();
+  window.scrollTo(0, 0);
+}
 $("btnPlay").onclick = () => show("setup");
+$("btnResume").onclick = () => resumeSolo();
 $("btnBack").onclick = () => show("landing");
 $("btnHome").onclick = () => { if (game.room) leaveRoom(); game.st = null; $("barMid").textContent = ""; show("landing"); };
 $("btnAgain").onclick = () => (game.room ? show("lobby") : show("setup"));
@@ -101,6 +106,25 @@ function startSolo() {
   $("logBody").hidden = true;
   show("table"); render(); botLoop();
 }
+// A solo game is kept in this browser so a reload, or a phone that drops the
+// tab, does not lose an hour of play.
+const SAVE = "zh.solo";
+function saveSolo() {
+  if (game.room || !game.st) return;
+  if (game.st.winner != null) { try { localStorage.removeItem(SAVE); } catch {} return; }
+  store.set(SAVE, JSON.stringify({ st: game.st, me: game.me, level: game.level, rng: game.rng.getState(), seenLog: game.seenLog || 0 }));
+}
+function loadSolo() {
+  try { const s = JSON.parse(store.get(SAVE, "null")); return s && s.st && s.st.winner == null ? s : null; } catch { return null; }
+}
+function resumeSolo() {
+  const s = loadSolo();
+  if (!s) return;
+  Object.assign(game, { room: false, spectator: false, st: s.st, me: s.me, level: s.level, rng: E.makeRng(0), ui: freshUi(), botLine: "", seenLog: s.seenLog, auto: false });
+  game.rng.setState(s.rng);
+  game.botName = S.names[E.SIDES[1 - game.me]][0];
+  show("table"); render(); botLoop();
+}
 function humanAct(action) {
   if (game.spectator) return;
   // Everything logged after this point is "what happened since you last acted".
@@ -109,6 +133,7 @@ function humanAct(action) {
   try { game.st = E.apply(game.st, { ...action, side: game.me }); }
   catch (e) { game.ui.err = e.message; render(); return; }
   game.ui = freshUi();
+  saveSolo();
   render();
   botLoop();
 }
@@ -117,7 +142,7 @@ function botLoop() {
   clearTimeout(botTimer);
   if (game.room) return;
   const st = game.st;
-  if (st.winner != null) { renderOver(); return; }
+  if (st.winner != null) { saveSolo(); renderOver(); return; }
   // `?auto` (a development aid) lets the bot play the human seat too, so a
   // whole game can be watched in the client.
   const need = E.mustAct(st);
@@ -128,6 +153,7 @@ function botLoop() {
     if (!a) return;
     try { game.st = E.apply(game.st, a); } catch (e) { console.error(e); return; }
     if (bot !== game.me) game.botLine = describeAction(a);
+    saveSolo();
     render();
     botLoop();
   }, game.auto ? 120 : 700);
@@ -577,5 +603,6 @@ setInterval(() => {
 const params = new URLSearchParams(location.search);
 setLang(params.get("lang") || store.get("zh.lang", (navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
 $("landName").placeholder = t("landing.name");
+$("btnResume").hidden = !loadSolo();
 if (params.has("play")) show("setup");
 else if (params.get("room")) { const code = params.get("room").toUpperCase(); connect({ room: code, token: sess.get("zh.token." + code) || "" }); }

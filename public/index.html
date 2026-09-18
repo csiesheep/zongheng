@@ -18,7 +18,7 @@
 <header class="bar">
   <a class="hub" href="https://games.csiesheep.com/" data-t="nav.hub"></a>
   <span id="barMid"></span>
-  <button id="langBtn" type="button" data-t="nav.lang"></button>
+  <span><a class="hub" id="rulesLink" href="rules.html" target="_blank" rel="noopener" data-t="nav.rules"></a> <button id="langBtn" type="button" data-t="nav.lang"></button></span>
 </header>
 
 <main id="landing" class="view">
@@ -26,6 +26,7 @@
   <p class="tagline" id="tagline"></p>
   <p class="about" id="about"></p>
   <div class="actions">
+    <button id="btnResume" class="primary" data-t="landing.resume" hidden></button>
     <button id="btnPlay" class="primary" data-t="landing.play"></button>
     <div class="row">
       <input id="landName" maxlength="16" spellcheck="false">
