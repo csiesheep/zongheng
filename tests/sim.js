@@ -10,6 +10,7 @@
 // Cells run as child processes because Node 24 on the development machine
 // dies with an access violation a few percent of the time on long runs.
 import { spawn } from "node:child_process";
+import { appendFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import * as E from "../public/shared/engine.js";
 import * as B from "../public/shared/bots.js";
@@ -89,6 +90,7 @@ function parseArgs(argv) {
     if (a === "--cells") cfg.cells = true;
     else if (a.startsWith("--only=")) { cfg.cells = true; cfg.only = a.slice(7).split(","); }
     else if (a === "--json") cfg.json = true;
+    else if (a.startsWith("--out=")) cfg.out = a.slice(6);
     else if (a.startsWith("--jobs=")) cfg.jobs = Number(a.slice(7));
     else if (/^\d+$/.test(a)) cfg.games = Number(a);
     else if (a.includes("=")) {
@@ -146,10 +148,17 @@ async function runCells(cfg) {
       const { name, args } = queue.shift();
       results.set(name, merge(results.get(name), await runChild(args)));
       pending.set(name, pending.get(name) - 1);
-      if (pending.get(name) === 0) console.log(line(name, results.get(name)));
+      // `--out=file` keeps what is finished on disk: a long batch outlives the shell that started it.
+      if (cfg.out) appendFileSync(cfg.out, `# ${new Date().toISOString()} ${name} ${results.get(name).played}/${cfg.games}\n`);
+      if (pending.get(name) === 0) {
+        const text = line(name, results.get(name));
+        console.log(text);
+        if (cfg.out) appendFileSync(cfg.out, text + "\n");
+      }
     }
   };
   await Promise.all(Array.from({ length: Math.max(1, cfg.jobs) }, worker));
+  if (cfg.out) appendFileSync(cfg.out, "# done\n");
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
