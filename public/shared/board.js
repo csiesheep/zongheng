@@ -69,6 +69,6 @@ export function cap(id) { return SPACE[id].stability + CAP_OVER_STABILITY; }
 
 // Setup from the rulebook: fixed points, then the free points the players place.
 export const SETUP = {
-  qin: { fixed: { guanzhong: 4, hangu: 2, hanzhong: 1, yiqu: 1 }, free: 4, freeIn: ["west", "jin"] },
-  chu: { fixed: { ying: 4, chencai: 2, qianzhong: 1, huaisi: 1 }, free: 4, freeIn: ["south", "east"], bonus: 2 },
+  qin: { fixed: { guanzhong: 4, hangu: 3, hanzhong: 1, yiqu: 1 }, free: 4, freeIn: ["west", "jin"] },
+  chu: { fixed: { ying: 4, chencai: 2, qianzhong: 1, huaisi: 1 }, free: 4, freeIn: ["south", "east"], bonus: 0 },
 };

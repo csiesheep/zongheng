@@ -58,7 +58,8 @@ test("setup: fixed points sit in the right home and free points have regions", (
     for (const id of Object.keys(E.SETUP[side].fixed)) assert.equal(E.SPACE[id].region, home, `${side} ${id}`);
     for (const r of E.SETUP[side].freeIn) assert.ok(E.REGIONS[r], r);
   }
-  assert.equal(E.SETUP.chu.bonus, 2);
+  assert.equal(E.SETUP.chu.bonus, 0);
+  assert.equal(E.SETUP.qin.fixed.hangu, 3, "函谷關 starts controlled");
 });
 
 test("rng: deterministic, and shuffle is a permutation", () => {

@@ -12,7 +12,6 @@ function atAction(hands = [[], []], patch = {}) {
   let st = E.createGame(11);
   st = E.apply(st, { type: "choose", side: QIN, choice: ["yiyang", "yiyang", "hedong", "hedong"] });
   st = E.apply(st, { type: "choose", side: CHU, choice: ["song", "song", "huaisi", "chencai"] });
-  st = E.apply(st, { type: "choose", side: CHU, choice: ["huaisi", "chencai"] });
   st.draw = st.draw.concat(st.hands[0], st.hands[1]).filter((c) => !hands.flat().includes(c));
   st.hands = [hands[0].slice(), hands[1].slice()];
   Object.assign(st, { phase: "action", round: 1, actor: QIN, phasing: QIN, plan: [], pending: null, headline: [null, null] }, patch);

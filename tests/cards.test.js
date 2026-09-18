@@ -10,7 +10,6 @@ function atAction(hands = [[], []], patch = {}) {
   let st = E.createGame(11);
   st = E.apply(st, { type: "choose", side: QIN, choice: ["yiyang", "yiyang", "hedong", "hedong"] });
   st = E.apply(st, { type: "choose", side: CHU, choice: ["song", "song", "huaisi", "chencai"] });
-  st = E.apply(st, { type: "choose", side: CHU, choice: ["huaisi", "chencai"] });
   st.draw = st.draw.concat(st.hands[0], st.hands[1]).filter((c) => !hands.flat().includes(c));
   st.hands = [hands[0].slice(), hands[1].slice()];
   Object.assign(st, { phase: "action", round: 1, actor: QIN, phasing: QIN, plan: [], pending: null, headline: [null, null] }, patch);
@@ -138,7 +137,8 @@ test("五國伐秦 ignores the home lock, drops 函谷關天險 out of the game,
   let a = play(st, CHU, "wuguo");
   assert.ok(a.pending.options.includes("hangu"), "the pass is a target although 兵連 locks the home");
   a = choose(a, CHU, ["hangu"]);
-  assert.deepEqual(inf(a, "hangu"), [0, 2], "3 +1, the −2 is gone with the card: remove 2, place 2");
+  assert.deepEqual(inf(a, "hangu"), [0, 1], "3 +1, the −2 is gone with the card: remove 3, place 1");
+  assert.ok(!play(st, CHU, "wuguo").pending.options.includes("guanzhong"), "關中 is never offered: the coalition of 318 BC stopped at the pass");
   assert.equal(a.weariness, 4, "函谷關 is not a battleground");
   assert.ok(a.removed.includes("hangu") && !a.discard.includes("hangu"));
   assert.equal(a.effects.length, 0);

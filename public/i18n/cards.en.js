@@ -19,7 +19,7 @@ export default {
   weiwei: "Remove 2 Qin influence from Daliang; Chu places 1 in Handan.",
   maling: "Remove all Qin influence (up to 3) from one space in the Three Jin.",
   jixia: "Chu places 3 in the East, split as it likes.",
-  wuguo: "Chu makes a free campaign in the West with +1 op, ignoring weariness locks. Hangu Pass leaves the game.",
+  wuguo: "Chu makes a free campaign in a West space that is not a battleground, with +1 op, ignoring weariness locks. Hangu Pass leaves the game.",
   mozhe: "Name one space: no campaign or lobby there for the rest of the turn.",
   chumieyue: "Chu places 2 in Wu-Yue. From now on Chu adds 1 whenever the South scores.",
   youshui: "Lobby any one space with 2 ops; your edge counts as at least 2.",

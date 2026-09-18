@@ -48,7 +48,10 @@ export const REFORM = [
 // `hangu`: Qin's starting influence in 函谷關 (stability 3): 2 leaves Qin with one
 // controlled home space at the start against Chu's two, 3 makes it two each.
 // `wuguo`: "any" lets 五國伐秦 strike any West space; "nonbg" keeps it out of 關中.
-export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 2, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "control", tie: "chu", hangu: 2, wuguo: "any" };
+// Defaults are the rules as decided on 2026-09-18 from the harness (plan note,
+// Balance log); the first drafts stay reachable as cells: sealAt "control",
+// comp 2, hangu 2, wuguo "any".
+export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg" };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 
 // ---------- RNG (mulberry32) ----------

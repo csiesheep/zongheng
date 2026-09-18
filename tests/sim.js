@@ -84,6 +84,8 @@ export const CELLS = [
   ["cap+wuguo", { options: { sealAt: "cap", wuguo: "nonbg" } }],
   ["cap+hangu3+wuguo", { options: { sealAt: "cap", hangu: 3, wuguo: "nonbg" } }],
   ["s5+hangu3+wuguo", { options: { seals: 5, hangu: 3, wuguo: "nonbg" } }],
+  ["cap+hangu3+wuguo+comp0", { options: { sealAt: "cap", hangu: 3, wuguo: "nonbg", comp: 0 } }],
+  ["cap+hangu3+wuguo+comp1", { options: { sealAt: "cap", hangu: 3, wuguo: "nonbg", comp: 1 } }],
   ["qin=hard", { qin: "hard" }],
   ["chu=hard", { chu: "hard" }],
   ["qin=easy", { qin: "easy" }],

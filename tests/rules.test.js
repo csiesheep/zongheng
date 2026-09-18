@@ -12,7 +12,6 @@ function atAction(hands = [[], []], patch = {}) {
   let st = E.createGame(11);
   st = E.apply(st, { type: "choose", side: QIN, choice: ["yiyang", "yiyang", "hedong", "hedong"] });
   st = E.apply(st, { type: "choose", side: CHU, choice: ["song", "song", "huaisi", "chencai"] });
-  st = E.apply(st, { type: "choose", side: CHU, choice: ["huaisi", "chencai"] });
   assert.equal(st.phase, "headline");
   // Put the cards the test wants into the hands and the rest back on the pile.
   st.draw = st.draw.concat(st.hands[0], st.hands[1]).filter((c) => !hands.flat().includes(c));
@@ -152,7 +151,10 @@ test("滅: all of a state's spaces under Qin control, paid once; 復國 when Chu
   setInf(st, "xinzheng", 1, 3);
   E.checkMarkers(st);
   assert.ok(!st.mie.han, "the capital restores the state");
-  assert.ok(st.seals.han, "and gives Chu the seal");
+  assert.ok(!st.seals.han, "control alone is not a seal: the capital must sit at the cap");
+  setInf(st, "xinzheng", 0, 4);
+  E.checkMarkers(st);
+  assert.ok(st.seals.han, "at the cap Chu holds the seal");
   assert.equal(st.mandate, 1);
   setInf(st, "xinzheng", 3, 1);
   E.checkMarkers(st);
@@ -167,7 +169,7 @@ test("three 滅 win for Qin; four 相印 win for Chu; 田單 lifts 滅 齊", () 
   assert.equal(st.winner, QIN);
   assert.equal(st.reason, "unification");
   const st2 = atAction();
-  for (const id of ["xinzheng", "daliang", "handan", "linzi"]) setInf(st2, id, 0, 4);
+  for (const id of ["xinzheng", "daliang", "handan", "linzi"]) setInf(st2, id, 0, E.capOf(st2, id));
   E.checkMarkers(st2);
   assert.equal(st2.winner, CHU);
   assert.equal(st2.reason, "alliance");
