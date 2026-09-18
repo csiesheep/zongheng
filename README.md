@@ -30,9 +30,9 @@ URLs are query strings on the page so the same build works at any prefix:
 
 1. **M0 Scaffold**: router, board data, placeholder page. Done, deployed as a `noindex` placeholder.
 2. **M1 Engine**: state, legal actions, reducer, view, the 72 cards, a test per rule and a fuzz test. Done: `public/shared/engine.js` is a plan-and-pending machine (every decision a card asks for is a `pending` the same `choose` action answers), `cards.js` holds the 72 effects, `tests/` has 47 tests including random games with invariants after every action and a replay check.
-3. **M2 Bots**: scored search, three levels, the harness over the rulebook's open numbers.
-4. **M3 Solo**: map, tracks, hand, action sheet, scoring overlay, rules page, both languages.
-5. **M4 Rooms**: two seats, clocks, bot fill and takeover, reconnect, rematch.
+3. **M2 Bots**: scored search, three levels, the harness over the rulebook's open numbers. Done: `bots.js` decides from a seat's view (a random consistent guess for the unknown, one ply over `legal()`, the other side's best reply on hard); `tests/sim.js` runs rules cells in short child processes with retries and reports how games end.
+4. **M3 Solo**: map, tracks, hand, action sheet, scoring overlay, rules page, both languages. First cut done: the table plays end to end against the bot (`?play`; `?play&auto` lets the bot play both seats). Rules page and polish remain.
+5. **M4 Rooms**: two seats, clocks, bot fill and takeover, reconnect, rematch. Server side done in `src/room.js` (deal, actions through the engine, one clock per decision kind, bot seat and away seats played by the bot, per-seat views); the client's socket path remains.
 6. **M5 Ship**: SEO, OG image, hub tile, sitemap.
 
 ## Develop
