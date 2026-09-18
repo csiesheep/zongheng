@@ -53,6 +53,7 @@ $("btnPlay").onclick = () => show("setup");
 $("btnBack").onclick = () => show("landing");
 $("btnHome").onclick = () => { if (game.room) leaveRoom(); game.st = null; $("barMid").textContent = ""; show("landing"); };
 $("btnAgain").onclick = () => (game.room ? show("lobby") : show("setup"));
+$("btnBoard").onclick = () => { show("table"); render(); };
 $("landName").value = store.get("zh.name", "");
 $("btnCreate").onclick = () => connect({ create: "1" });
 $("btnJoin").onclick = () => {
@@ -296,7 +297,11 @@ function renderPromptAndSheet(v) {
   const me = game.me, ui = game.ui;
   const err = ui.err ? `<div class="err">${esc(ui.err)}</div>` : "";
   const setPrompt = (html) => { p.innerHTML = html + err; };
-  if (v.winner != null) { setPrompt(t("prompt.over")); return; }
+  if (v.winner != null) {
+    setPrompt(`${t("prompt.over")} <b>${esc(t("over.winner", { side: sideName(v.winner) }))}</b> · ${esc(t("over.reasons." + v.reason))}`);
+    btn(sh, t("buttons.result"), () => renderOver(), "primary");
+    return;
+  }
   const L = E.legal(v, me);
   if (L.kind === "wait") { setPrompt(t("prompt.wait", { name: game.botName })); return; }
   if (L.kind === "pending") { renderPending(v, L.pending, setPrompt, sh); return; }

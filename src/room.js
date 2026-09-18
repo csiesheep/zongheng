@@ -345,7 +345,6 @@ export class Room {
       await this.scheduleAt(now + BOT_MS);
       return;
     }
-    if (seat && seat.ai && action.why) this.say(seat.idx, action.why);
     await this.afterChange();
   }
 

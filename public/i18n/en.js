@@ -29,7 +29,7 @@ export default {
     over: "Game over.",
   },
   uses: { event: "Event", place: "Place", campaign: "Campaign", lobby: "Lobby", reform: "Reform", bog: "Discard (bogged)", pair: "Pair with", opsFirst: "Ops first", eventFirst: "Event first" },
-  buttons: { confirm: "Confirm", done: "Done", cancel: "Cancel", skip: "Skip", playAgain: "Play again", swap: "Swap sides", home: "Home", headline: "Commit headline", show: "Show", hide: "Hide", log: "Log" },
+  buttons: { board: "View the board", result: "Result", confirm: "Confirm", done: "Done", cancel: "Cancel", skip: "Skip", playAgain: "Play again", swap: "Swap sides", home: "Home", headline: "Commit headline", show: "Show", hide: "Hide", log: "Log" },
   preview: { campaign: "Removes {removed} of theirs, places {placed} of yours; weariness {w}.", lobby: "Edge {edge}: removes up to {n}.", locked: "Locked by weariness.", enemyEvent: "This is their card: its event will happen too." },
   over: { winner: "{side} wins", reasons: { unification: "Three states destroyed", alliance: "Four seals held", mandate: "The Mandate reached 20", collapse: "The realm collapsed", scoring: "A scoring card was held at the turn's end", scoringBoth: "Both held scoring cards", final: "Final scoring", tie: "Level Mandate, the tie goes to Chu" }, mandate: "Final Mandate" },
   log: {
