@@ -53,3 +53,23 @@ $("btnJoin").onclick = () => {
 $("joinCode").addEventListener("keydown", (ev) => { if (ev.key === "Enter") $("btnJoin").click(); });
 
 setLang(new URLSearchParams(location.search).get("lang") || store.get("zh.lang", (navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
+
+// Desktop (>=768px, see landing-desktop.css): the backdrop's gold seam has
+// to line up with the Qin/Chu split inside the phone column. That split is
+// an exact 50/50 flex division of .sides and isn't a fixed number (it
+// depends on viewport height, the bar's height, and the controls' height),
+// so we measure it instead of trying to duplicate it in a CSS calc(). Runs
+// on every width; it's cheap, and mobile CSS never reads --seam-y.
+function syncDesktopSeam() {
+  const qin = $("btnQin");
+  if (!qin) return;
+  const y = qin.getBoundingClientRect().bottom;
+  document.documentElement.style.setProperty("--seam-y", `${y}px`);
+}
+window.addEventListener("resize", syncDesktopSeam);
+window.addEventListener("load", syncDesktopSeam);
+if (window.ResizeObserver) {
+  const sides = document.querySelector(".sides");
+  if (sides) new ResizeObserver(syncDesktopSeam).observe(sides);
+}
+syncDesktopSeam();
