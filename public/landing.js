@@ -24,9 +24,7 @@ function setLang(l) {
   document.documentElement.lang = lang;
   document.title = lang === "en" ? "Zongheng 縱橫" : "縱橫 Zongheng";
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
-  $("credit").textContent = S.credit;
   $("joinCode").placeholder = t("landing.codePlaceholder");
-  $("landName").placeholder = t("landing.name");
   // A room this tab still holds a seat in, or a solo game still in progress:
   // offer the way back. Both can appear together; that row must still fit.
   const room = sess.get("zh.lastRoom");
@@ -37,17 +35,10 @@ function setLang(l) {
 }
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
 
-$("landName").value = store.get("zh.name", "");
-$("landName").addEventListener("input", () => store.set("zh.name", $("landName").value.trim()));
-const saveName = () => store.set("zh.name", $("landName").value.trim());
-$("btnQin").addEventListener("click", saveName);
-$("btnChu").addEventListener("click", saveName);
-$("btnRandom").addEventListener("click", saveName);
-$("btnCreate").onclick = () => { saveName(); location.href = "play.html?create=1"; };
+$("btnCreate").onclick = () => { location.href = "play.html?create=1"; };
 $("btnJoin").onclick = () => {
   const code = $("joinCode").value.trim().toUpperCase();
   if (!/^[A-Z0-9]{4}$/.test(code)) { $("joinCode").focus(); return; }
-  saveName();
   location.href = `play.html?room=${code}`;
 };
 $("joinCode").addEventListener("keydown", (ev) => { if (ev.key === "Enter") $("btnJoin").click(); });
