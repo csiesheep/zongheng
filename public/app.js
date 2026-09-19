@@ -267,47 +267,62 @@ function render() {
   setSheetOpen(wantsCardOverlay(v));
   layoutTable(); // the map's real box depends on the hand's, so both are sized together, then fitMap() scales the map's content
 }
-// The map is NEVER scaled down for lack of height — its scale is the
-// viewport-width ratio only (DESIGN_W is the mockup's own canvas width), so
-// a real 375-390px phone always renders discs/text within a hair of the
-// 30/34px and 13px specs. What used to be "shrink the map" instead shrinks
-// the hand's card art first (down to CARD_MIN), and only concedes the map's
-// real height as an absolute last resort.
-const CARD_H = 176, HAND_GUTTER = 31, CARD_MIN = 90; // 96x176 card + the C2_Game hand row's own headroom (207 total)
+// The map's scale is the viewport-width ratio (DESIGN_W is the mockup's own
+// canvas width) UNLESS that would leave no room at all for a shown hand, in
+// which case scale gives up only down to FLOOR_SCALE — the scale at which
+// the disc/name/tap-target minimums are still met (30/34px design discs ->
+// 28/32px drawn). A real 375-390px-wide phone never needs the floor; only a
+// short one (e.g. 390x669 with iOS Chrome's toolbars up) does. Below the
+// floor, it's the hand's card ART that concedes further (see CARD_H below),
+// never the map — a fixed short viewport (no scrolling allowed) has to put
+// the shortfall somewhere, and the map's drawn spec is the one thing that
+// must never move.
+const DESIGN_DISC = 30, DESIGN_BIG_DISC = 34; // keep in sync with .node .disc / .node.big .disc in style.css
+const MIN_DISC = 28, MIN_BIG_DISC = 32; // the owner's C2 touch/legibility floor at any width
+const FLOOR_SCALE = Math.max(MIN_DISC / DESIGN_DISC, MIN_BIG_DISC / DESIGN_BIG_DISC) * 1.01; // +1% safety margin over the exact minimum
+const CARD_H = 176, HAND_GUTTER = 31; // 96x176 card + the C2_Game hand row's own headroom (207 total)
 function layoutTable() {
   const table = $("table");
   if (table.hidden) return;
   // table.clientWidth includes #table's own left/right padding, but a child
   // like .map only gets the content width inside that padding — use the
-  // map's own rendered width so `scale` matches what actually gets drawn
-  // (a wrong wider scale here under-fills the hand below its 96x176 spec).
+  // map's own rendered width so `scale` matches what actually gets drawn.
   const availW = $("map").clientWidth || table.clientWidth, availH = table.clientHeight;
   if (!availW || !availH) return;
-  const scale = availW / DESIGN_W;
-  const mapH = Math.round(DESIGN_H * scale);
+  const widthScale = availW / DESIGN_W;
   const chrome = ["topbar", "statline", "prompt", "sheet"].reduce((sum, id) => sum + $(id).getBoundingClientRect().height, 0);
   // #table's own top/bottom padding, plus one flex column gap per boundary
   // between its VISIBLE children (a hidden/empty row like #sheet or #chatForm
   // takes no box and no gap) — measured, not guessed, so a wrong constant
   // here can't eat into the hand's real 96x176 card height.
   const tcs = getComputedStyle(table);
-  const visibleKids = [...table.children].filter((c) => getComputedStyle(c).display !== "none").length;
-  const gapsAndPadding = parseFloat(tcs.paddingTop) + parseFloat(tcs.paddingBottom) + Math.max(0, visibleKids - 1) * parseFloat(tcs.rowGap || 0);
-  const remaining = availH - chrome - gapsAndPadding;
+  const hand = $("hand");
   // A phase with nothing to hold in hand (placement, campaign/lobby target
   // picking, scoring) gets zero hand row, not a blank 200px+ strip under the
   // map — the map takes back every pixel the hand isn't using.
-  const hand = $("hand");
   const hasHand = hand.children.length > 0;
   hand.hidden = !hasHand;
-  const handWanted = CARD_H + HAND_GUTTER; // 207, the C2_Game hand row height
-  const handH = hasHand ? Math.max(CARD_MIN + HAND_GUTTER, Math.min(handWanted, remaining - mapH)) : 0;
+  const visibleKids = [...table.children].filter((c) => getComputedStyle(c).display !== "none").length;
+  const gapsAndPadding = parseFloat(tcs.paddingTop) + parseFloat(tcs.paddingBottom) + Math.max(0, visibleKids - 1) * parseFloat(tcs.rowGap || 0);
+  const spaceForMapAndHand = availH - chrome - gapsAndPadding;
+  const handWanted = hasHand ? CARD_H + HAND_GUTTER : 0; // 207, the C2_Game hand row height
+  // Shrink scale, if it must, only far enough to give the hand its full
+  // wanted height — never below FLOOR_SCALE, never above the natural
+  // width-fit (that would overflow sideways).
+  const scale = hasHand
+    ? Math.min(widthScale, Math.max(FLOOR_SCALE, (spaceForMapAndHand - handWanted) / DESIGN_H))
+    : widthScale;
+  const mapH = Math.round(DESIGN_H * scale);
+  // Whatever's left after the map took its (possibly floor-scale) height is
+  // the hand's real height — capped at what it wanted, never forced above
+  // what's actually left (that would push the table past the viewport and
+  // force a scroll, which C2 does not allow).
+  const handH = hasHand ? Math.max(0, Math.min(handWanted, spaceForMapAndHand - mapH)) : 0;
   hand.style.flex = `0 0 ${handH}px`;
-  document.documentElement.style.setProperty("--card-h", Math.max(CARD_MIN, handH - HAND_GUTTER) + "px");
-  // The map's own minimum never shrinks for lack of height (only the hand's
-  // card art concedes above); anything left over after the hand took its
-  // share goes back to the map instead of sitting blank below it.
-  const mapFinalH = Math.max(mapH, remaining - handH);
+  document.documentElement.style.setProperty("--card-h", Math.max(0, handH - HAND_GUTTER) + "px");
+  // Any height neither the map's floor nor the hand's want needed goes back
+  // to the map instead of sitting blank below it.
+  const mapFinalH = Math.max(mapH, spaceForMapAndHand - handH);
   $("map").style.flex = `0 0 ${mapFinalH}px`;
   fitMap(scale);
 }
