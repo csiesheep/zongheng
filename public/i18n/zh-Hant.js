@@ -13,9 +13,20 @@ export default {
   sys: { joined: "{name} 進來了。", left: "{name} 離開了。", leftGame: "{name} 離開了,由電腦代打。", dealt: "發牌了。", timeout: "{name} 逾時,由桌面代為決定。", over: "{side}({name})獲勝:{reason}。" },
   ends: { unification: "三國同滅", alliance: "四國相印", mandate: "天命達 20", collapse: "對方把天下推到土崩", scoring: "對方回合結束時手上還有記分卡", scoringBoth: "雙方都留著記分卡,依平手規則", final: "終局結算後的天命", tie: "天命平手,依平手規則" },
   errors: { noRoom: "沒有這個房號。", full: "房間已滿。", needMore: "需要兩個座位。", notReady: "對方尚未就緒。", notYet: "牌桌還沒蓋好。", notYourTurn: "現在不是你決定。" },
-  landing: { backToRoom: "回到房間 {code}", resume: "繼續上一局", play: "與電腦對弈", create: "開房間", join: "加入", code: "房號", rulesLink: "規則與七十二張牌", name: "你的名字" },
+  landing: { backToRoom: "回到房間 {code}", resume: "繼續上一局", play: "與電腦對弈", random: "隨機陣營", multiplayer: "多人遊戲", create: "開房間", join: "加入", code: "房號", codePlaceholder: "CODE", rulesLink: "規則與七十二張牌", name: "你的名字" },
+  side: {
+    qin: { headline: "連橫", sub: "逐一吞併六國。", cta: "以秦開局" },
+    chu: { headline: "合縱", sub: "把六國綁在一起。", cta: "以楚開局" },
+  },
   lobby: { say: "說點什麼", title: "房間", hint: "把房號給朋友,或讓電腦補上另一邊。斷線的人由電腦代打,回來即可接手。", you: "你", host: "房主", bot: "電腦", away: "離線", ready: "已就緒", notReady: "尚未就緒", addBot: "加入電腦", removeBot: "移除電腦", swap: "換邊", start: "開局", leave: "離開", rematch: "再戰(換邊)", waiting: "等房主開局。", connecting: "連線中…", closed: "連線已中斷。", clock: "{s} 秒" },
-  setup: { defaultName: "玩家", title: "與電腦對弈", side: "你的陣營", random: "隨機", level: "電腦強度", easy: "簡單", normal: "普通", hard: "困難", start: "開局", back: "返回" },
+  setup: {
+    defaultName: "玩家", title: "與電腦對弈", side: "你的陣營", random: "隨機", randomTag: "任一陣營", level: "電腦強度", easy: "簡單", normal: "普通", hard: "困難", start: "開局", back: "返回",
+    desc: {
+      qin: "你扮演秦:逐一吞併六國。八回合,約一小時;遊戲會自動存在這個瀏覽器裡。",
+      chu: "你扮演楚:把六國綁在一起。八回合,約一小時;遊戲會自動存在這個瀏覽器裡。",
+      random: "開局時隨機決定你的陣營。八回合,約一小時;遊戲會自動存在這個瀏覽器裡。",
+    },
+  },
   eras: { reform: "變法期", alliance: "縱橫期", conquest: "兼併期" },
   tracks: { mandate: "天命", weariness: "疲敝", reform: "變法", seals: "相印", mie: "滅", jiuding: "九鼎", faceDown: "蓋著", turn: "回合", round: "行動", of: "／" },
   weariness: { 5: "承平", 4: "兵連", 3: "禍結", 2: "民困", 1: "土崩" },

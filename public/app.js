@@ -48,9 +48,18 @@ function setLang(l) {
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
 
 // ---------- views ----------
+// The page's whole colour follows the side: the setup screen re-skins by
+// whichever side is picked (Qin black, Chu lacquer red, Random parchment);
+// once seated, the table and result screens follow the seat instead.
+function paintBody(view) {
+  document.body.classList.remove("setup-qin", "setup-chu", "setup-random", "side-qin", "side-chu");
+  if (view === "setup") document.body.classList.add("setup-" + setup.side);
+  else if ((view === "table" || view === "over") && !game.spectator) document.body.classList.add(game.me === 0 ? "side-qin" : "side-chu");
+}
 function show(view) {
   for (const v of ["setup", "lobby", "table", "over"]) $(v).hidden = v !== view;
   window.scrollTo(0, 0);
+  paintBody(view);
 }
 // The landing is its own page. Going back never loses anything: the solo game
 // is saved on every move, and a room keeps this tab's seat (the bot covers it
@@ -72,10 +81,32 @@ function seg(el, items, value, onPick) {
     el.appendChild(b);
   }
 }
-function renderSetup() {
-  seg($("segSide"), [["qin", t("sides.qin")], ["chu", t("sides.chu")], ["random", t("setup.random")]], setup.side, (v) => { setup.side = v; store.set("zh.side", v); renderSetup(); });
-  seg($("segLevel"), [["easy", t("setup.easy")], ["normal", t("setup.normal")], ["hard", t("setup.hard")]], setup.level, (v) => { setup.level = v; store.set("zh.level", v); renderSetup(); });
+// A picture tile per side (art/ui/qin.jpg, chu.jpg), plus a plain "random"
+// tile — the selected one gets a thick border and full opacity, the way the
+// C2 setup mockups (C2_SetupQin/Setup/SetupRandom) show all three at once.
+function renderSideTiles() {
+  const el = $("sideTiles"); el.innerHTML = "";
+  const pick = (v) => { setup.side = v; store.set("zh.side", v); renderSetup(); };
+  for (const v of ["qin", "chu", "random"]) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = `tile ${v}`; b.setAttribute("aria-pressed", String(setup.side === v));
+    const glyph = v === "qin" ? "秦" : v === "chu" ? "楚" : "?";
+    const tname = v === "random" ? t("setup.random") : t(`sides.${v}`);
+    const tag = v === "random" ? t("setup.randomTag") : t(`side.${v}.headline`);
+    b.innerHTML = (v !== "random" ? `<img src="art/ui/${v}.jpg" alt="">` : "") +
+      `<span class="tile-info"><span class="tg" lang="zh-Hant">${esc(glyph)}</span><span class="tname">${esc(tname)}</span><span class="ttag">${esc(tag)}</span></span>`;
+    b.onclick = () => pick(v);
+    el.appendChild(b);
+  }
 }
+function renderSetup() {
+  renderSideTiles();
+  seg($("segLevel"), [["easy", t("setup.easy")], ["normal", t("setup.normal")], ["hard", t("setup.hard")]], setup.level, (v) => { setup.level = v; store.set("zh.level", v); renderSetup(); });
+  $("setupDesc").textContent = t(`setup.desc.${setup.side}`);
+  if (!$("setup").hidden) paintBody("setup");
+}
+$("setupName").value = store.get("zh.name", "");
+$("setupName").addEventListener("input", () => store.set("zh.name", $("setupName").value.trim()));
 $("btnStart").onclick = startSolo;
 
 // ---------- the solo game ----------
@@ -160,6 +191,10 @@ function describeAction(a) {
 
 // ---------- rendering ----------
 function render() {
+  // The whole page's accent (buttons, pressed hand card, the block below the
+  // map) follows whichever court you sit in; paintBody() sets this once the
+  // seat is known (see show()). A spectator gets the neutral default.
+  if (!$("table").hidden) paintBody("table");
   // In a room the state on hand is already this seat's view.
   const v = game.room ? game.st : E.view(game.st, game.me);
   $("barMid").textContent = `${t("tracks.turn")} ${v.turn} · ${game.spectator ? "" : sideName(game.me)}`;
@@ -265,6 +300,13 @@ function currentMode(v) {
   }
   return none;
 }
+// Which colour a card belongs to: Qin (q), Chu (c), neutral (n) or a scoring
+// card (s). Used to tint both the hand tile and the sheet panel below it.
+function cardSide(id) {
+  if (id === E.JIUDING) return "n";
+  const c = E.CARD[id];
+  return c.scoring ? "s" : c.side === 0 ? "q" : c.side === 1 ? "c" : "n";
+}
 function cardInfo(L, card) {
   if (card === E.JIUDING) return L.jiuding ? { id: card, ops: 4, enemy: false, uses: { place: L.jiuding.place, campaign: L.jiuding.campaign, lobby: L.jiuding.lobby } } : null;
   const c = L.cards.find((x) => x.id === card);
@@ -277,7 +319,7 @@ function renderMap(v) {
   const el = $("map"); el.innerHTML = "";
   for (const [r, [x, y, w, h]] of Object.entries(REGION_BOX)) {
     const d = document.createElement("div");
-    d.className = "region" + (E.REGIONS[r].home ? " home" : "");
+    d.className = `region region-${r}` + (E.REGIONS[r].home ? " home" : "");
     d.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
     d.innerHTML = `<span>${esc(regionName(r))}</span>`;
     el.appendChild(d);
@@ -309,12 +351,47 @@ function btn(parent, label, onClick, cls = "", pressed = null, disabled = false)
   parent.appendChild(b);
   return b;
 }
-function row(parent) { const d = document.createElement("div"); d.className = "rowb"; parent.appendChild(d); return d; }
+function row(parent, cls = "rowb") { const d = document.createElement("div"); d.className = cls; parent.appendChild(d); return d; }
 function note(parent, text) { const d = document.createElement("div"); d.className = "note"; d.textContent = text; parent.appendChild(d); }
+// Card names are the one place bilingual text is wanted regardless of the
+// page's language (see TEAM.md's language-mixing exception list).
+const cardZh = (id) => (id === E.JIUDING ? "九鼎" : E.CARD[id].zh);
+const cardEn = (id) => (id === E.JIUDING ? "The Nine Cauldrons" : E.CARD[id].en);
+const opsLabel = (id) => (id === E.JIUDING ? "4" : E.CARD[id].scoring ? "S" : String(E.CARD[id].ops));
+
+// The full card sheet: art, ops badge, both names, era/number/year, and the
+// card's own text — the same on every card, only the surrounding colour
+// (sheet-q/c/n/s, set by the caller) tells its owner apart.
+function cardHeader(sh, id) {
+  const meta = id === E.JIUDING ? null : E.CARD[id];
+  const info = meta ? `${t("eras." + meta.era)}${meta.num ? ` · No. ${meta.num}` : ""}${meta.year ? ` · ${lang === "en" ? meta.year + " BC" : "前" + meta.year + "年"}` : ""}` : "";
+  const head = document.createElement("div"); head.className = "sheet-head";
+  head.innerHTML =
+    `<img class="sheet-img" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
+    `<div class="sheet-meta"><span class="sheet-badge">${esc(opsLabel(id))}</span>` +
+    `<div class="sheet-name-zh" lang="zh-Hant">${esc(cardZh(id))}</div>` +
+    `<div class="sheet-name-en">${esc(cardEn(id))}</div>` +
+    (info ? `<div class="sheet-info">${esc(info)}</div>` : "") + `</div>`;
+  sh.appendChild(head);
+  const text = document.createElement("div"); text.className = "sheet-text"; text.textContent = cardText(id);
+  sh.appendChild(text);
+}
+// A Cancel + Confirm footer pair, used everywhere a card sheet asks for a
+// final commit (event/reform, place, campaign/lobby).
+function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel) {
+  const r = row(sh, "sheet-footer");
+  btn(r, t("buttons.cancel"), onCancel || (() => { game.ui = freshUi(); render(); }));
+  btn(r, confirmLabel, onConfirm, "primary", null, confirmDisabled);
+  return r;
+}
 
 function renderPromptAndSheet(v) {
   const p = $("prompt"), sh = $("sheet");
   sh.innerHTML = "";
+  // The sheet's own background follows the selected card's owner, like the
+  // card-sheet mockups (a Chu card opens on lacquer red, Qin on black,
+  // neutral/scoring on parchment).
+  sh.className = "sheet" + (game.ui.card != null ? " sheet-" + cardSide(game.ui.card) : "");
   const me = game.me, ui = game.ui;
   const err = ui.err ? `<div class="err">${esc(ui.err)}</div>` : "";
   const setPrompt = (html) => { p.innerHTML = html + err; };
@@ -328,7 +405,10 @@ function renderPromptAndSheet(v) {
   if (L.kind === "pending") { renderPending(v, L.pending, setPrompt, sh); return; }
   if (L.kind === "headline") {
     setPrompt(t("prompt.headline"));
-    if (ui.card) btn(sh, `${t("buttons.headline")} · ${cardName(ui.card)}`, () => humanAct({ type: "headline", card: ui.card }), "primary");
+    if (ui.card) {
+      cardHeader(sh, ui.card);
+      footer(sh, t("buttons.headline"), () => humanAct({ type: "headline", card: ui.card }), false, () => { game.ui = freshUi(); render(); });
+    }
     return;
   }
   // An action round.
@@ -336,19 +416,21 @@ function renderPromptAndSheet(v) {
   if (!ui.card) { setPrompt(t("prompt.yourAction")); return; }
   if (L.bog && L.bog.length) {
     setPrompt(t("uses.bog"));
-    btn(sh, `${t("buttons.confirm")} · ${cardName(ui.card)}`, () => humanAct({ type: "play", card: ui.card, use: "bog" }), "primary");
+    cardHeader(sh, ui.card);
+    footer(sh, t("buttons.confirm"), () => humanAct({ type: "play", card: ui.card, use: "bog" }), false);
     return;
   }
   const info = cardInfo(L, ui.card);
   if (!info) { setPrompt(t("prompt.yourAction")); return; }
-  const uses = row(sh);
+  cardHeader(sh, ui.card);
+  const uses = row(sh, "rowb sheet-grid");
   const usable = (u) => (u === "event" ? info.uses.event : u === "reform" ? info.uses.reform : !!info.uses[u]);
   for (const u of ["event", "place", "campaign", "lobby", "reform"]) {
     if (ui.card === E.JIUDING && (u === "event" || u === "reform")) continue;
     btn(uses, t(`uses.${u}`), () => { ui.use = u; ui.points = []; ui.target = null; ui.err = ""; render(); }, "", ui.use === u, !usable(u));
   }
   if (info.enemy && ui.use && ui.use !== "event" && ui.use !== "reform") {
-    const r = row(sh);
+    const r = row(sh, "rowb order");
     for (const o of ["opsFirst", "eventFirst"]) btn(r, t(`uses.${o}`), () => { ui.order = o; ui.points = []; render(); }, "", ui.order === o);
     note(sh, t("preview.enemyEvent"));
   }
@@ -360,23 +442,21 @@ function renderPromptAndSheet(v) {
   const base = { type: "play", card: ui.card, use: ui.use };
   if (ui.pair) base.pair = ui.pair;
   if (info.enemy && !ui.pair) base.order = ui.order;
-  if (!ui.use) { setPrompt(`<b>${esc(cardName(ui.card))}</b> · ${esc(cardText(ui.card))}`); return; }
+  if (!ui.use) { setPrompt(""); return; }
   if (ui.use === "event" || ui.use === "reform") {
-    setPrompt(`<b>${esc(cardName(ui.card))}</b> · ${esc(cardText(ui.card))}`);
-    btn(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)}`, () => humanAct(base), "primary");
+    setPrompt("");
+    footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)}`, () => humanAct(base), false);
     return;
   }
   if (ui.use === "place") {
     if (info.enemy && ui.order === "eventFirst" && !ui.pair) {
       setPrompt(t("uses.eventFirst"));
-      btn(sh, t("buttons.confirm"), () => humanAct(base), "primary");
+      footer(sh, t("buttons.confirm"), () => humanAct(base), false);
       return;
     }
     const { spent } = placementTrial(v, me, ui.points);
     setPrompt(t("prompt.place", { ops: info.ops, left: info.ops - spent }));
-    const r = row(sh);
-    btn(r, t("buttons.done"), () => humanAct({ ...base, points: ui.points }), "primary", null, ui.points.length === 0);
-    btn(r, t("buttons.cancel"), () => { ui.points = []; render(); });
+    footer(sh, t("buttons.done"), () => humanAct({ ...base, points: ui.points }), ui.points.length === 0, () => { ui.points = []; render(); });
     return;
   }
   // campaign or lobby
@@ -387,7 +467,7 @@ function renderPromptAndSheet(v) {
     if (ui.use === "campaign") { const r = E.campaign(trial, me, ui.target, info.ops); text = t("preview.campaign", { removed: r.removed, placed: r.placed, w: t("weariness." + trial.weariness) }); }
     else { const e = E.edge(v, me, ui.target); text = t("preview.lobby", { edge: e, n: Math.min(info.ops, e) }); }
     note(sh, `${spaceName(ui.target)}: ${text}`);
-    btn(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}`, () => humanAct({ ...base, target: ui.target }), "primary");
+    footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}`, () => humanAct({ ...base, target: ui.target }), false);
   }
 }
 
@@ -435,13 +515,15 @@ function renderHand(v) {
   const me = game.me, ui = game.ui;
   const hand = v.hands[me] || [];
   const canPick = v.winner == null && (E.legal(v, me).kind === "action" || E.legal(v, me).kind === "headline");
+  // Image on top, circular ops badge + both names below — the same shape
+  // for Qin, Chu, neutral and scoring cards; only colour tells them apart.
   const tile = (id, cls = "") => {
-    const c = E.CARD[id];
-    const kind = id === E.JIUDING ? "n" : c.scoring ? "s" : c.side === 0 ? "q" : c.side === 1 ? "c" : "n";
+    const kind = cardSide(id);
     const b = document.createElement("button");
     b.type = "button"; b.className = `card ${cls}`;
     b.setAttribute("aria-pressed", String(ui.card === id));
-    b.innerHTML = `<span class="ops ${kind}">${id === E.JIUDING ? "4" : c.scoring ? "S" : c.ops}</span><span class="nm">${esc(cardName(id))}</span><span class="tx">${esc(cardText(id))}</span>`;
+    b.innerHTML = `<img class="cardimg" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
+      `<span class="ci"><span class="ops ${kind}">${esc(opsLabel(id))}</span><span class="nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span></span>`;
     b.disabled = !canPick;
     b.onclick = () => { game.ui = freshUi(ui.card === id ? null : id); render(); };
     el.appendChild(b);
@@ -602,4 +684,11 @@ setLang(params.get("lang") || store.get("zh.lang", (navigator.language || "").st
 if (params.has("resume") && loadSolo()) resumeSolo();
 else if (params.get("create") === "1") connect({ create: "1" });
 else if (params.get("room")) { const code = params.get("room").toUpperCase(); connect({ room: code, token: sess.get("zh.token." + code) || "" }); }
-else show("setup");
+else {
+  // The landing's Qin/Chu/Random taps preselect a side and land here; the
+  // level (bot strength) is still picked on this screen.
+  const side = params.get("side");
+  if (side === "qin" || side === "chu" || side === "random") { setup.side = side; store.set("zh.side", side); }
+  renderSetup();
+  show("setup");
+}

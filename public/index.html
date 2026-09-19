@@ -7,43 +7,74 @@
 <title>Zongheng 縱橫</title>
 <meta name="description" content="縱橫 Zongheng: a two-player Warring States card-driven strategy game, Qin against Chu. Solo against a bot, or a room with a friend.">
 <link rel="canonical" href="https://games.csiesheep.com/zongheng/">
-<meta name="theme-color" content="#1c1a17">
+<meta name="theme-color" content="#0c0b0a">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=LXGW+WenKai+TC:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;700;900&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
-<header class="bar">
-  <a class="hub" href="https://games.csiesheep.com/" data-t="nav.hub"></a>
-  <span id="barMid"></span>
-  <span><a class="hub" id="rulesLink" href="rules.html" data-t="nav.rules"></a> <button id="langBtn" type="button" data-t="nav.lang"></button></span>
-</header>
-
-<main id="landing" class="view">
-  <h1 id="hero"></h1>
-  <p class="tagline" id="tagline"></p>
-  <p class="about" id="about"></p>
-  <div class="actions">
-    <a id="btnResume" class="primary" href="play.html?resume" data-t="landing.resume" hidden></a>
-    <a id="btnRoom" class="primary" href="play.html" hidden></a>
-    <a id="btnPlay" class="primary" href="play.html?play" data-t="landing.play"></a>
-    <div class="row">
-      <label for="landName" class="sr" data-t="landing.name"></label>
-      <input id="landName" maxlength="16" spellcheck="false">
+<body class="landing-body">
+<div class="landing-page">
+  <div class="hero">
+    <header class="bar landing-bar">
+      <a class="hub" href="https://games.csiesheep.com/" data-t="nav.hub"></a>
+      <button id="langBtn" class="langBtn" type="button" data-t="nav.lang"></button>
+    </header>
+    <div class="sides">
+      <a id="btnQin" class="side-tap qin" href="play.html?play&amp;side=qin" aria-label="Play as Qin, the Horizontal">
+        <img class="side-img" src="art/ui/qin.jpg" alt="">
+        <span class="side-shade" aria-hidden="true"></span>
+        <span class="side-content">
+          <span class="side-glyph" lang="zh-Hant" aria-hidden="true">秦</span>
+          <span class="side-text">
+            <span class="side-headline" data-t="side.qin.headline"></span>
+            <span class="side-sub" data-t="side.qin.sub"></span>
+          </span>
+        </span>
+        <span class="side-cta" data-t="side.qin.cta"></span>
+      </a>
+      <a id="btnChu" class="side-tap chu" href="play.html?play&amp;side=chu" aria-label="Play as Chu, the Vertical">
+        <img class="side-img" src="art/ui/chu.jpg" alt="">
+        <span class="side-shade" aria-hidden="true"></span>
+        <span class="side-content">
+          <span class="side-glyph" lang="zh-Hant" aria-hidden="true">楚</span>
+          <span class="side-text">
+            <span class="side-headline" data-t="side.chu.headline"></span>
+            <span class="side-sub" data-t="side.chu.sub"></span>
+          </span>
+        </span>
+        <span class="side-cta" data-t="side.chu.cta"></span>
+      </a>
+      <h1 id="hero" lang="zh-Hant" aria-hidden="true">縱橫</h1>
     </div>
-    <div class="row">
-      <button id="btnCreate" type="button" data-t="landing.create"></button>
-      <label for="joinCode" class="sr" data-t="landing.code"></label>
-      <input id="joinCode" maxlength="4" autocapitalize="characters" spellcheck="false">
-      <button id="btnJoin" type="button" data-t="landing.join"></button>
-    </div>
-    <a href="rules.html" class="link" data-t="landing.rulesLink"></a>
   </div>
-</main>
 
-<footer class="credit" id="credit"></footer>
+  <div class="controls">
+    <div class="row extra" id="extraRow" hidden>
+      <a id="btnResume" class="ghost small" href="play.html?resume" data-t="landing.resume" hidden></a>
+      <a id="btnRoom" class="ghost small" href="play.html" hidden></a>
+    </div>
+    <div class="mp-card">
+      <div class="row">
+        <label for="landName" class="sr" data-t="landing.name"></label>
+        <input id="landName" maxlength="16" spellcheck="false">
+        <a id="btnRandom" class="ghost" href="play.html?play&amp;side=random" data-t="landing.random"></a>
+      </div>
+      <h2 class="mp-title" data-t="landing.multiplayer"></h2>
+      <div class="row">
+        <button id="btnCreate" type="button" data-t="landing.create"></button>
+        <label for="joinCode" class="sr" data-t="landing.code"></label>
+        <input id="joinCode" maxlength="4" autocapitalize="characters" spellcheck="false">
+        <button id="btnJoin" type="button" data-t="landing.join"></button>
+      </div>
+      <div class="row bottom">
+        <a href="rules.html" class="link" data-t="landing.rulesLink"></a>
+        <p class="credit" id="credit"></p>
+      </div>
+    </div>
+  </div>
+</div>
 <script type="module" src="landing.js"></script>
 </body>
 </html>

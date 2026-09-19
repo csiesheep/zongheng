@@ -24,25 +24,30 @@ function setLang(l) {
   document.documentElement.lang = lang;
   document.title = lang === "en" ? "Zongheng 縱橫" : "縱橫 Zongheng";
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
-  for (const id of ["tagline", "about", "credit"]) $(id).textContent = S[id];
-  $("hero").textContent = S.title;
-  $("joinCode").placeholder = t("landing.code");
+  $("credit").textContent = S.credit;
+  $("joinCode").placeholder = t("landing.codePlaceholder");
   $("landName").placeholder = t("landing.name");
-  // A room this tab still holds a seat in: offer the way back.
+  // A room this tab still holds a seat in, or a solo game still in progress:
+  // offer the way back. Both can appear together; that row must still fit.
   const room = sess.get("zh.lastRoom");
   $("btnRoom").hidden = !room;
   if (room) { $("btnRoom").href = `play.html?room=${room}`; $("btnRoom").textContent = t("landing.backToRoom", { code: room }); }
   $("btnResume").hidden = !savedSolo();
+  $("extraRow").hidden = $("btnRoom").hidden && $("btnResume").hidden;
 }
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
 
 $("landName").value = store.get("zh.name", "");
 $("landName").addEventListener("input", () => store.set("zh.name", $("landName").value.trim()));
-$("btnCreate").onclick = () => { store.set("zh.name", $("landName").value.trim()); location.href = "play.html?create=1"; };
+const saveName = () => store.set("zh.name", $("landName").value.trim());
+$("btnQin").addEventListener("click", saveName);
+$("btnChu").addEventListener("click", saveName);
+$("btnRandom").addEventListener("click", saveName);
+$("btnCreate").onclick = () => { saveName(); location.href = "play.html?create=1"; };
 $("btnJoin").onclick = () => {
   const code = $("joinCode").value.trim().toUpperCase();
   if (!/^[A-Z0-9]{4}$/.test(code)) { $("joinCode").focus(); return; }
-  store.set("zh.name", $("landName").value.trim());
+  saveName();
   location.href = `play.html?room=${code}`;
 };
 $("joinCode").addEventListener("keydown", (ev) => { if (ev.key === "Enter") $("btnJoin").click(); });
