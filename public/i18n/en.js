@@ -21,7 +21,14 @@ export default {
     chu: { headline: "the Vertical", sub: "Bind the states together.", cta: "Play as Chu" },
   },
   lobby: { say: "Say something", title: "Room", hint: "Share the code, or add the bot for the other seat. A player who drops is played by the bot until they return.", you: "you", host: "host", bot: "bot", away: "away", ready: "Ready", notReady: "Not ready", addBot: "Add bot", removeBot: "Remove bot", swap: "Swap sides", start: "Start", leave: "Leave", rematch: "Rematch (sides swap)", waiting: "Waiting for the host to start.", connecting: "Connecting…", closed: "The connection closed.", clock: "{s} s" },
-  setup: { defaultName: "Player", title: "Play vs bot", side: "Your side", random: "Random", level: "Opponent", easy: "Easy", normal: "Normal", hard: "Hard", start: "Start", back: "Back" },
+  setup: {
+    defaultName: "Player", title: "Play vs bot", side: "Your side", random: "Random", randomTag: "either court", level: "Opponent", easy: "Easy", normal: "Normal", hard: "Hard", start: "Start", back: "Back",
+    desc: {
+      qin: "You play Qin: pick the states off one by one. Eight turns, about an hour; the game saves itself in this browser.",
+      chu: "You play Chu: bind the states together. Eight turns, about an hour; the game saves itself in this browser.",
+      random: "Your side is picked at random when you start. Eight turns, about an hour; the game saves itself in this browser.",
+    },
+  },
   eras: { reform: "Reform era", alliance: "Alliance era", conquest: "Conquest era" },
   tracks: { mandate: "Mandate", weariness: "Weariness", reform: "Reform", seals: "Seals", mie: "Destroyed", jiuding: "Cauldrons", faceDown: "face down", turn: "Turn", round: "Action", of: " of " },
   weariness: { 5: "Peace", 4: "War", 3: "Strife", 2: "Misery", 1: "Collapse" },

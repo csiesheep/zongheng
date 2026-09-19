@@ -51,6 +51,38 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .soon { font-size: 13px; line-height: 1.6; border-left: 3px solid var(--gold-line); padding-left: 10px; margin: 16px 0 0; color: var(--text-dim); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .bar .back { font-family: var(--kai); font-size: 15px; letter-spacing: 2px; padding: 8px 10px 8px 0; min-height: 44px; display: inline-flex; align-items: center; }
+
+/* Solo setup: three picture tiles (Qin/Chu/Random), the level pills, a name
+   field and a description that follows the pick, with Back/Start pinned to
+   the bottom — see C2_SetupQin/Setup/SetupRandom. The whole screen already
+   re-skins by body.setup-qin/chu/random (shared --bg/--text/--gold tokens). */
+.setup-view { display: flex; flex-direction: column; gap: 16px; flex: 1 1 auto; min-height: 0; padding-top: 18px; }
+.setup-h1 { margin: 0; font: 900 26px var(--serif); color: var(--gold); }
+.setup-view .field { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.field-label { font: 600 11px/1 var(--serif); letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+.tiles { display: flex; gap: 8px; }
+.tile { flex: 1; height: 150px; padding: 0; position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--gold-line); opacity: 0.72; background: #15130f; cursor: pointer; }
+.tile.chu { background: #3a0a07; }
+.tile.random { background: #ece4d0; }
+.tile[aria-pressed="true"] { border: 3px solid var(--gold); opacity: 1; }
+.tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.tile .tile-info { position: absolute; left: 0; right: 0; bottom: 0; padding: 24px 6px 10px; background: linear-gradient(to top, rgba(6, 5, 4, 0.95), rgba(6, 5, 4, 0)); display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.tile.random .tile-info { background: none; }
+.tile .tg { font: 900 26px/1 var(--serif); color: var(--qin-text); }
+.tile.chu .tg { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
+.tile.random .tg { color: #1a1a1a; }
+.tile .tname { font: 600 13px/1 var(--serif); color: #fff; }
+.tile .ttag { font: 400 10.5px/1.2 var(--serif); color: #fff; }
+.tile.random .tname, .tile.random .ttag { color: #1a1a1a; }
+.pills { display: flex; gap: 8px; }
+.pills button { flex: 1; height: 46px; border-radius: 10px; background: none; color: var(--text); border: 1px solid var(--gold-line); font: 600 14px var(--serif); }
+.pills button[aria-pressed="true"] { background: var(--gold); color: var(--bg); border-color: var(--gold); }
+.setup-view input { height: 46px; box-sizing: border-box; padding: 0 12px; border: 1px solid var(--gold-line); border-radius: 10px; background: var(--field-bg); font: 400 16px var(--serif); color: var(--text); }
+.setup-desc { margin: 0; font: 400 12px/1.5 var(--serif); color: var(--text-dim); }
+.setup-footer { display: flex; gap: 8px; margin-top: auto; padding-top: 8px; }
+.setup-footer button { height: 52px; border-radius: 10px; font: 600 15px var(--serif); }
+#btnBack { flex: none; padding: 0 16px; border: 1px solid var(--gold-line); background: none; color: var(--text); }
+.setup-footer .primary { flex: 1; border: none; background: var(--gold); color: var(--bg); }
 .actions { display: flex; flex-direction: column; gap: 10px; }
 .actions .row { display: flex; gap: 8px; }
 .actions .row input { flex: 1; min-width: 0; background: var(--field-bg); border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font: 16px var(--serif); padding: 0 10px; letter-spacing: 3px; }
@@ -89,7 +121,7 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .side-tap.qin { justify-content: flex-start; padding-top: 8px; }
 .side-tap.chu { justify-content: flex-end; padding-bottom: 8px; }
 .side-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
-.side-tap.chu .side-img { object-position: 22% center; }
+.side-tap.chu .side-img { object-position: 35% 8%; }
 .side-shade { position: absolute; inset: 0; z-index: 1; }
 .side-tap.qin .side-shade { background: linear-gradient(to right, rgba(6, 5, 4, 0.97), rgba(6, 5, 4, 0.9) 38%, rgba(6, 5, 4, 0.35) 72%, rgba(6, 5, 4, 0)); }
 .side-tap.chu .side-shade { background: linear-gradient(to left, rgba(60, 6, 4, 0.96), rgba(60, 6, 4, 0.7) 40%, rgba(60, 6, 4, 0) 70%); }
@@ -105,10 +137,12 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .side-tap.chu .side-headline { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
 /* Both CTAs are the same shape (size, border-width, radius); only the
    colour tells Qin and Chu apart. */
-.side-cta { position: relative; z-index: 2; align-self: flex-start; margin-top: 2px; min-width: 118px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; letter-spacing: 1px; border-radius: 10px; border-width: 1.5px; border-style: solid; }
+/* Both CTAs use the SAME font and weight (owner: "同字型、同圓角,只差顏色") —
+   only the border/text colour tells Qin and Chu apart. */
+.side-cta { position: relative; z-index: 2; align-self: flex-start; margin-top: 2px; min-width: 118px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; font-family: var(--serif); font-weight: 600; font-size: 13px; letter-spacing: 1px; border-radius: 10px; border-width: 1.5px; border-style: solid; }
 .side-tap.chu .side-cta { align-self: flex-end; }
-.side-tap.qin .side-cta { border-color: var(--qin-text); color: var(--qin-text); font-family: var(--serif); font-weight: 600; }
-.side-tap.chu .side-cta { border-color: var(--chu-gold); color: var(--chu-gold); font-family: var(--kai); font-weight: 700; }
+.side-tap.qin .side-cta { border-color: var(--qin-text); color: var(--qin-text); }
+.side-tap.chu .side-cta { border-color: var(--chu-gold); color: var(--chu-gold); }
 .sides h1#hero { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; z-index: 3;
   width: clamp(104px, 30vh, 148px); height: clamp(40px, 10vh, 52px); box-sizing: border-box; background: var(--bg); border: 1.5px solid var(--gold); border-radius: 10px;
   box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 4px var(--gold-line);
@@ -190,47 +224,74 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .prompt .news { margin-top: 6px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 12px; line-height: 1.5; color: var(--text-dim); }
 .tracks .states { display: flex; flex-wrap: wrap; gap: 4px 10px; }
 .tracks .states span { white-space: nowrap; }
-.sheet { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px 8px; border-radius: 10px; transition: background-color 0.15s; }
+.sheet { display: flex; flex-direction: column; gap: 8px; padding: 10px 10px 8px; border-radius: 10px; }
 .sheet .rowb { display: flex; flex-wrap: wrap; gap: 6px; }
-.sheet button { min-height: 40px; padding: 0 12px; background: none; border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font-size: 14px; }
+.sheet .rowb.order { gap: 8px; }
+.sheet button { min-height: 44px; padding: 0 12px; background: none; border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font-size: 13px; }
 .sheet button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .sheet button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-family: var(--accent-font); font-weight: var(--accent-weight); }
 .sheet .note { font-size: 12px; color: var(--text-dim); }
-/* The sheet's own background follows the selected card's owner (see the
-   card-sheet designs: Chu opens on lacquer red, Qin on black, neutral and
-   scoring cards on parchment) — the surrounding page keeps its own colour. */
-.sheet-q { background: var(--qin-bg); }
+/* The full card sheet: art, ops badge, both names, era/no./year, its own
+   text, the five-use grid, then a Cancel + Confirm footer. */
+.sheet-head { display: flex; gap: 12px; }
+.sheet-img { flex: none; width: 96px; height: 128px; object-fit: cover; border-radius: 10px; border: 1.5px solid var(--gold-line); }
+.sheet-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.sheet-badge { width: 28px; height: 28px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 14px; line-height: 28px; text-align: center; }
+.sheet-name-zh { font-family: var(--kai); font-size: 18px; font-weight: 700; letter-spacing: 1px; }
+.sheet-name-en { font-size: 12px; font-weight: 600; }
+.sheet-info { font-size: 10.5px; opacity: 0.75; margin-top: 2px; }
+.sheet-text { font-size: 12.5px; line-height: 1.5; padding-top: 6px; border-top: 1px solid var(--gold-line); }
+.sheet-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+.sheet-grid button { padding: 0 4px; }
+.sheet-footer { display: flex; gap: 8px; margin-top: 2px; }
+.sheet-footer button { flex: 1; border-radius: 22px; }
+.sheet-footer button.primary { flex: 2; }
+/* The sheet's own background follows the selected card's owner: Chu opens
+   on lacquer red, Qin on black, neutral and scoring cards on parchment —
+   the surrounding page (and header) keep the seated side's own colour. */
+.sheet-q { background: var(--bg); }
+.sheet-q .sheet-badge { background: var(--qin-text); color: var(--bg); }
+.sheet-q .sheet-name-zh, .sheet-q .sheet-name-en { color: var(--qin-text); }
+.sheet-q .sheet-text, .sheet-q .sheet-info { color: var(--text-soft); }
 .sheet-q button { border-color: var(--gold-line); color: var(--qin-text); }
 .sheet-q button[aria-pressed="true"], .sheet-q button.primary { background: var(--qin-text); border-color: var(--qin-text); color: var(--bg); }
 .sheet-q .note { color: var(--text-soft); }
-.sheet-c { background: var(--chu-bg); }
+.sheet-c { background: #4f0e0a; }
+.sheet-c .sheet-badge { background: var(--chu-gold); color: #6f120d; }
+.sheet-c .sheet-name-zh, .sheet-c .sheet-name-en { color: var(--chu-gold); }
+.sheet-c .sheet-text, .sheet-c .sheet-info { color: #fff3d2; }
 .sheet-c button { border-color: var(--gold); color: #fff3d2; }
 .sheet-c button[aria-pressed="true"], .sheet-c button.primary { background: var(--chu-gold); border-color: var(--chu-gold); color: #6f120d; }
 .sheet-c .note { color: #fff3d2; }
-.sheet-n, .sheet-s { background: var(--neutral-bg); }
+.sheet-n, .sheet-s { background: #f7f3e8; }
+.sheet-n .sheet-badge, .sheet-s .sheet-badge { background: var(--neutral-ink); color: #fff; }
+.sheet-n .sheet-name-zh, .sheet-n .sheet-name-en, .sheet-s .sheet-name-zh, .sheet-s .sheet-name-en { color: var(--neutral-ink); }
+.sheet-n .sheet-text, .sheet-n .sheet-info, .sheet-s .sheet-text, .sheet-s .sheet-info { color: #4a463c; }
 .sheet-n button, .sheet-s button { border-color: #8a8060; color: var(--neutral-ink); }
 .sheet-n button[aria-pressed="true"], .sheet-s button[aria-pressed="true"], .sheet-n button.primary, .sheet-s button.primary { background: var(--neutral-ink); border-color: var(--neutral-ink); color: #fff; }
 .sheet-n .note, .sheet-s .note { color: #4a463c; }
 
-/* Hand: rounded cards, circular ops badges. Qin, Chu and neutral/scoring
-   cards all share this shape — only colour, texture and font tell them apart. */
+/* Hand: art on top, a circular ops badge and both names (zh + en — the
+   exception to the no-mixing rule) below. Qin, Chu, neutral and scoring
+   cards all share this shape — only colour, texture and font differ. */
 .hand { display: flex; gap: 6px; overflow-x: auto; padding: 4px 4px 8px; }
-.card { flex: none; width: 96px; min-height: 100px; border: 1px solid var(--gold-line); border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 3px; text-align: left; }
+.card { flex: none; width: 100px; min-height: 128px; border: 1px solid var(--gold-line); border-radius: 10px; padding: 0; display: flex; flex-direction: column; text-align: left; overflow: hidden; }
 .card[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--gold); }
-.card .ops { width: 20px; height: 20px; border-radius: 50%; font-family: var(--sans); font-size: 11px; line-height: 20px; text-align: center; font-weight: 700; }
-.card .nm { font-size: 13px; line-height: 1.2; }
-.card .tx { font-size: 10px; line-height: 1.3; }
+.card .cardimg { display: block; width: 100%; height: 66px; object-fit: cover; }
+.card .ci { padding: 5px 6px 6px; display: flex; align-items: flex-start; gap: 5px; }
+.card .ops { flex: none; width: 20px; height: 20px; border-radius: 50%; font-family: var(--sans); font-size: 11px; line-height: 20px; text-align: center; font-weight: 700; }
+.card .nm { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.card .nm-zh { font-family: var(--kai); font-size: 12px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .nm-en { font-size: 9px; line-height: 1.2; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* side colouring: neutral (n), Qin (q), Chu (c), scoring (s) */
 .card .ops.n, .card.jiuding .ops { background: var(--gold); color: var(--bg); }
 .card:has(.ops.n) { background: var(--neutral-bg); color: var(--neutral-ink); }
 .card:has(.ops.q) { background: var(--qin-bg); color: var(--qin-text); border-color: var(--gold-line); }
 .card .ops.q { background: var(--qin-text); color: var(--bg); }
-.card:has(.ops.q) .nm { font-family: var(--serif); font-weight: 900; }
-.card:has(.ops.q) .tx { color: var(--text-soft); }
+.card:has(.ops.q) .nm-zh { font-family: var(--serif); font-weight: 900; }
 .card:has(.ops.c) { background: var(--chu-bg); color: #fff3d2; border-color: var(--gold); }
 .card .ops.c { background: var(--chu-gold); color: #6f120d; }
-.card:has(.ops.c) .nm { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
-.card:has(.ops.c) .tx { color: #fff3d2; }
+.card:has(.ops.c) .nm-zh { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
 .card .ops.s { background: var(--neutral-ink); color: #fff; }
 .card:has(.ops.s) { background: var(--neutral-bg); color: var(--neutral-ink); }
 .card.jiuding { background: #d9c58f; color: var(--neutral-ink); }

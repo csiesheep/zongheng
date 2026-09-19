@@ -31,13 +31,18 @@
   <p class="soon" id="lobbyErr" hidden></p>
 </main>
 
-<main id="setup" class="view" hidden>
-  <h2 data-t="setup.title"></h2>
-  <div class="field"><div class="label" data-t="setup.side"></div><div class="seg" id="segSide"></div></div>
-  <div class="field"><div class="label" data-t="setup.level"></div><div class="seg" id="segLevel"></div></div>
-  <div class="actions">
-    <button id="btnStart" class="primary" data-t="setup.start"></button>
+<main id="setup" class="view setup-view" hidden>
+  <h1 class="setup-h1" data-t="setup.title"></h1>
+  <div class="field"><span class="field-label" data-t="setup.side"></span><div class="tiles" id="sideTiles"></div></div>
+  <div class="field"><span class="field-label" data-t="setup.level"></span><div class="pills" id="segLevel"></div></div>
+  <div class="field">
+    <label for="setupName" class="field-label" data-t="landing.name"></label>
+    <input id="setupName" maxlength="16" spellcheck="false">
+  </div>
+  <p class="setup-desc" id="setupDesc"></p>
+  <div class="setup-footer">
     <button id="btnBack" data-t="setup.back"></button>
+    <button id="btnStart" class="primary" data-t="setup.start"></button>
   </div>
 </main>
 
