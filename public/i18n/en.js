@@ -26,7 +26,7 @@ export default {
     qin: { headline: "the Horizontal", sub: "Pick the states off one by one.", cta: "Play as Qin" },
     chu: { headline: "the Vertical", sub: "Bind the states together.", cta: "Play as Chu" },
   },
-  lobby: { say: "Say something", title: "Room", hint: "Share the code, or add the bot for the other seat. A player who drops is played by the bot until they return.", you: "you", host: "host", bot: "bot", away: "away", ready: "Ready", notReady: "Not ready", addBot: "Add bot", removeBot: "Remove bot", swap: "Swap sides", start: "Start", leave: "Leave", rematch: "Rematch (sides swap)", waiting: "Waiting for the host to start.", connecting: "Connecting…", closed: "The connection closed.", clock: "{s} s" },
+  lobby: { say: "Say something", title: "Room", hint: "Share the code, or add the bot for the other seat. A player who drops is played by the bot until they return.", you: "you", host: "host", bot: "bot", away: "away", empty: "Empty seat", ready: "Ready", notReady: "Not ready", addBot: "Add bot", removeBot: "Remove bot", swap: "Swap sides", start: "Start", leave: "Leave", rematch: "Rematch (sides swap)", waiting: "Waiting for the host to start.", connecting: "Connecting…", closed: "The connection closed.", clock: "{s} s", gateHint: "Pick a name before you sit down. It can't be changed in the room.", join: "Enter", copy: "Copy link", copied: "Copied" },
   setup: {
     defaultName: "Player", title: "Play vs bot", side: "Your side", random: "Random", randomTag: "either court", level: "Opponent", easy: "Easy", normal: "Normal", hard: "Hard", start: "Start", back: "Back",
     desc: {
@@ -48,7 +48,23 @@ export default {
   uses: { event: "Event", place: "Place", campaign: "Campaign", lobby: "Lobby", reform: "Reform", bog: "Discard (bogged)", pair: "Pair with", opsFirst: "Ops first", eventFirst: "Event first" },
   buttons: { send: "Send", board: "View the board", result: "Result", confirm: "Confirm", done: "Done", cancel: "Cancel", skip: "Skip", playAgain: "Play again", swap: "Swap sides", home: "Home", headline: "Commit headline", show: "Show", hide: "Hide", log: "Log", expand: "Card", collapse: "Collapse" },
   preview: { campaign: "Removes {removed} of theirs, places {placed} of yours; weariness {w}.", lobby: "Edge {edge}: removes up to {n}.", locked: "Locked by weariness.", enemyEvent: "This is their card: its event will happen too." },
-  over: { winner: "{side} wins", reasons: { unification: "Three states destroyed", alliance: "Four seals held", mandate: "The Mandate reached 20", collapse: "The realm collapsed", scoring: "A scoring card was held at the turn's end", scoringBoth: "Both held scoring cards", final: "Final scoring", tie: "Level Mandate, the tie goes to Chu" }, mandate: "Final Mandate" },
+  // The result screen's colour and art always follow the WINNER, not your
+  // own seat, so each ending's line and body read as fact from the table,
+  // and only `win`/`lose` (which side of that fact you were on) changes with
+  // the viewer. `{winner}`/`{loser}` fill in with that side's name.
+  over: {
+    winner: "{side} wins", mandate: "Final Mandate",
+    reasons: {
+      unification: { title: "Qin unites the realm", body: "Three states destroyed: the map answers to Qin alone.", win: "You win. The realm is united under Qin.", lose: "You lose. Qin unites the realm." },
+      alliance: { title: "The Vertical holds", body: "Four seals held: Qin cannot break what is bound together.", win: "You win. The Vertical holds.", lose: "You lose. The Vertical holds against you." },
+      mandate: { title: "{winner} carries the Mandate", body: "The Mandate reached twenty: the realm has decided for {winner}.", win: "You win. The Mandate is yours.", lose: "You lose. The Mandate turned to {winner}." },
+      collapse: { title: "The realm gives out on {loser}", body: "Weariness ran out before {winner} had to spend the last of it.", win: "You win. The realm gave out under them first.", lose: "You lose. The realm gave out under you first." },
+      scoring: { title: "A card left in hand", body: "A scoring card was still in hand when the turn ended; the tally falls to {winner}.", win: "You win. They were still holding a scoring card.", lose: "You lose. The scoring card was still in your hand." },
+      scoringBoth: { title: "Both still holding", body: "Both sides were still holding a scoring card; the tally falls to {winner} regardless.", win: "You win. Both of you were still holding a scoring card, and the tally favours you.", lose: "You lose. Both of you were still holding a scoring card, and the tally favours {winner}." },
+      final: { title: "The tally closes", body: "Turn eight closed with the Mandate favouring {winner}.", win: "You win. The Mandate favoured you at the end.", lose: "You lose. The Mandate favoured {winner} at the end." },
+      tie: { title: "Level Mandate, {winner}'s tie", body: "The Mandate was level; the tie rule favours {winner}.", win: "You win. The Mandate was level, and the tie favours you.", lose: "You lose. The Mandate was level, and the tie favours {winner}." },
+    },
+  },
   log: {
     setup: "{side} sets up: {spaces}.", turn: "Turn {turn}, {era}.", headline: "Headlines: {qin} and {chu}; {first} first.", play: "{side} plays {card} ({use}).",
     place: "{side} places in {spaces}.", campaign: "{side} campaigns in {target} with {ops}: removes {removed}, places {placed}.", lobby: "{side} lobbies in {target}: removes {removed}.",

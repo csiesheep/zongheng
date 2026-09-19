@@ -45,6 +45,7 @@ function setLang(l) {
   document.title = lang === "en" ? "Zongheng 縱橫" : "縱橫 Zongheng";
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
   $("chatIn").placeholder = t("lobby.say");
+  $("lobbyChatIn").placeholder = t("lobby.say");
   renderSetup();
   if (game.st) { render(); if (game.st.winner != null) renderOver(); }
 }
@@ -77,6 +78,14 @@ $("btnBack").onclick = toLanding;
 $("btnHome").onclick = toLanding;
 $("btnAgain").onclick = () => (game.room ? show("lobby") : show("setup"));
 $("btnBoard").onclick = () => { show("table"); render(); };
+// Swap sides from the result screen: in a room this is the same request the
+// lobby's own Swap button sends (the host's ask; the server is the judge of
+// whether it is allowed). Solo has no server to ask, so it just reopens setup
+// pre-picked to the other side.
+$("btnSwap").onclick = () => {
+  if (game.room) { send({ type: "swap" }); show("lobby"); }
+  else { setup.side = E.SIDES[1 - game.me]; store.set("zh.side", setup.side); renderSetup(); show("setup"); }
+};
 
 // ---------- setup ----------
 const setup = { side: store.get("zh.side", "chu"), level: store.get("zh.level", "normal") };
@@ -903,11 +912,36 @@ $("chatForm").onsubmit = (ev) => {
 };
 $("logToggle").onclick = () => { $("logBody").hidden = !$("logBody").hidden; if (game.st) renderLog(E.view(game.st, game.me)); };
 
+// The result screen's whole colour follows the WINNER, not your own seat
+// (owner, 2026-09-19: "for win page, the background should be the winner's
+// nation background") — #over.winner-qin/winner-chu carry that in
+// screens.css, set here rather than through paintBody (which still colours
+// the header/buttons by your own seat, unchanged for the table).
+const overGlyphChar = (side) => (side === E.QIN ? "秦" : "楚");
 function renderOver() {
   const st = game.st;
-  $("overTitle").textContent = t("over.winner", { side: sideName(st.winner) });
-  $("overReason").textContent = t("over.reasons." + st.reason);
-  $("overMandate").textContent = `${t("over.mandate")}: ${mandateText(st.mandate)}`;
+  const winner = st.winner;
+  const lost = !game.spectator && game.me !== winner;
+  const p = { winner: sideName(winner), loser: sideName(1 - winner) };
+  $("overImg").src = `art/ui/win_${E.SIDES[winner]}.jpg`;
+  $("overImg").style.filter = lost ? "grayscale(.85) brightness(.7)" : "";
+  $("overGlyph").textContent = overGlyphChar(winner);
+  $("overGlyph").classList.toggle("glyph-chu", winner === E.CHU);
+  $("overGlyph").classList.toggle("glyph-qin", winner === E.QIN);
+  $("overReasonTitle").textContent = t(`over.reasons.${st.reason}.title`, p);
+  $("overLine").textContent = t(`over.reasons.${st.reason}.${lost ? "lose" : "win"}`, p);
+  $("overBody").textContent = t(`over.reasons.${st.reason}.body`, p);
+  $("overStatTurnLabel").textContent = t("tracks.turn");
+  $("overStatTurn").textContent = st.turn;
+  $("overStatSealsLabel").textContent = t("tracks.seals");
+  $("overStatSeals").textContent = `${Object.keys(st.seals).length}${t("tracks.of")}${st.options.seals}`;
+  $("overStatMieLabel").textContent = t("tracks.mie");
+  $("overStatMie").textContent = `${Object.keys(st.mie).length}${t("tracks.of")}${st.options.mie}`;
+  $("overStatMandateLabel").textContent = t("over.mandate");
+  $("overStatMandate").textContent = mandateText(st.mandate);
+  $("over").classList.toggle("winner-chu", winner === E.CHU);
+  $("over").classList.toggle("winner-qin", winner === E.QIN);
+  $("over").setAttribute("aria-label", t("over.winner", { side: sideName(winner) }));
   show("over");
 }
 
@@ -923,13 +957,37 @@ function connect(params) {
   if (room.ws) { try { room.ws.close(); } catch {} }
   const name = store.get("zh.name", "").trim() || t("setup.defaultName");
   const ws = new WebSocket(wsUrl({ ...params, name, lang }));
-  Object.assign(room, { ws, code: params.room || null, me: null, seats: [], settings: null, phase: null, fatal: false });
+  Object.assign(room, { ws, code: params.room || null, me: null, seats: [], settings: null, phase: null, fatal: false, chat: [] });
   game.room = true; game.spectator = false; game.st = null; game.ui = freshUi();
-  $("lobbyErr").hidden = true; $("lobbyHint").textContent = t("lobby.connecting"); $("lobbyCode").textContent = room.code || ""; $("lobbySeats").innerHTML = ""; $("lobbyActions").innerHTML = "";
+  $("lobbyGate").hidden = true; $("lobbyRoom").hidden = false;
+  $("lobbyErr").hidden = true; $("lobbyHint").textContent = t("lobby.connecting"); $("lobbyCode").textContent = room.code || ""; $("lobbySeats").innerHTML = ""; $("lobbyActions").innerHTML = ""; $("lobbyChat").innerHTML = "";
   show("lobby");
   ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch { return; } onRoomMsg(m); };
   ws.onclose = () => { if (room.ws === ws) { room.ws = null; if (!room.fatal) { $("lobbyErr").textContent = t("lobby.closed"); $("lobbyErr").hidden = false; } } };
 }
+// `src/room.js` reads the seat's name off the WebSocket's own connect URL
+// (see its `name = clean(url.searchParams.get("name"))`) — there is no later
+// "rename" message, so the seat is taken the instant the socket opens. A
+// multiplayer room with no saved name (landing's own name field was removed,
+// #12) must ask first: pendingRoom holds the create/join params until the
+// gate's form is confirmed, and only then does `connect` ever run.
+let pendingRoom = null;
+function maybeConnect(params) {
+  if (store.get("zh.name", "").trim()) { connect(params); return; }
+  pendingRoom = params;
+  $("lobbyName").value = "";
+  $("lobbyRoom").hidden = true;
+  $("lobbyGate").hidden = false;
+  show("lobby");
+}
+$("lobbyGateForm").onsubmit = (ev) => {
+  ev.preventDefault();
+  const name = $("lobbyName").value.trim();
+  if (!name) { $("lobbyName").focus(); return; }
+  store.set("zh.name", name);
+  const params = pendingRoom; pendingRoom = null;
+  connect(params || {});
+};
 function leaveRoom() {
   if (room.ws) { try { room.ws.close(); } catch {} }
   room.ws = null; game.room = false; game.st = null;
@@ -964,9 +1022,11 @@ function onRoomMsg(m) {
       if (room.chat.length > 50) room.chat.shift();
       if (!m.sys) $("logBody").hidden = false;
       if (game.st) renderLog(game.st);
+      renderLobbyChat();
       break;
     case "log":
       room.chat = m.entries.map((e) => (e.sys ? e.text : `${room.seats[e.seat]?.name ?? ""}: ${e.text}`)).slice(-50);
+      renderLobbyChat();
       break;
     case "error":
       if (m.fatal) {
@@ -979,32 +1039,131 @@ function onRoomMsg(m) {
     default: break;
   }
 }
+// The lobby's own chat: `room.chat` is the same running log `renderLog`
+// (the table's, #5's) reads from — this just reads that same array while
+// you are still in the lobby, in this file's own small element.
+function renderLobbyChat() {
+  const el = $("lobbyChat");
+  el.innerHTML = room.chat.map((line) => `<div>${esc(line)}</div>`).join("");
+  el.scrollTop = el.scrollHeight;
+}
+let lobbyCopyTimer = 0;
+$("lobbyCopy").onclick = async () => {
+  const url = `${location.origin}${location.pathname}?room=${room.code}`;
+  try { await navigator.clipboard.writeText(url); } catch { return; }
+  const btn = $("lobbyCopy");
+  const original = btn.textContent;
+  btn.textContent = t("lobby.copied");
+  clearTimeout(lobbyCopyTimer);
+  lobbyCopyTimer = setTimeout(() => { btn.textContent = original; }, 1500);
+};
+$("lobbyChatForm").onsubmit = (ev) => {
+  ev.preventDefault();
+  const text = $("lobbyChatIn").value.trim();
+  if (text) send({ type: "chat", text });
+  $("lobbyChatIn").value = "";
+};
+// Seats and actions update the existing DOM nodes in place, keyed by seat
+// idx / action id, instead of `innerHTML = ""` + rebuild — a room message
+// arrives on every chat line, ready toggle and settings change, and tearing
+// the buttons down each time flashed and dropped :hover/:focus (orchestrator,
+// #6 follow-up; same reasoning as #20's fix to `seg()`, which this still
+// calls unchanged for the level segmented control).
+// A seat card carries its own colour by SIDE, not by "is this you" — the
+// definitive lobby art (owner, C2_Lobby) is Qin-black-bronze / Chu-red-gold
+// regardless of who is sitting there, matching the same two colours the
+// result screen already uses per side. The host-only bot toggle lives
+// *inside* the relevant seat's row (empty seat -> Add bot, bot seat ->
+// Remove bot), not in the button stack below, per the same definitive
+// layout — that stack, in the fix before this one, still stacked
+// start/removeBot/swap/leave into ~224px and pushed the level control and
+// chat off a 390x669 screen.
+function renderLobbySeats() {
+  const el = $("lobbySeats");
+  const seen = new Set();
+  const emptySide = room.seats.length ? 1 - room.seats[0].side : 1;
+  const rows = room.seats.length >= 2 ? room.seats : [...room.seats, { idx: "empty", side: emptySide, empty: true }];
+  for (const s of rows) {
+    seen.add(String(s.idx));
+    let d = el.querySelector(`[data-idx="${s.idx}"]`);
+    if (!d) { d = document.createElement("div"); d.dataset.idx = s.idx; d.innerHTML = `<div class="seat-info"></div>`; el.appendChild(d); }
+    const cls = "seat " + (s.side === E.QIN ? "q" : "c") + (s.empty ? " empty" : !s.connected ? " away" : "");
+    if (d.className !== cls) d.className = cls;
+    let html;
+    if (s.empty) {
+      html = `<div class="sd">${overGlyphChar(s.side)}</div><div class="who">${esc(t("lobby.empty"))}</div>`;
+    } else {
+      const tags = [s.side === room.me ? t("lobby.you") : "", s.idx === 0 ? t("lobby.host") : "", s.ai ? t("lobby.bot") : "", !s.connected && !s.ai ? t("lobby.away") : ""].filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join("");
+      html = `<div class="sd">${overGlyphChar(s.side)}</div><div class="who">${esc(s.name)}${tags}</div><span class="status">${s.ready || s.idx === 0 ? t("lobby.ready") : t("lobby.notReady")}</span>`;
+    }
+    const info = d.querySelector(".seat-info");
+    if (info.innerHTML !== html) info.innerHTML = html;
+    let seatBtn = d.querySelector(".seat-btn");
+    const wantBtn = room.isHost && room.phase !== "over" && (s.empty || (s.ai && s.idx !== 0));
+    if (wantBtn) {
+      const label = s.empty ? t("lobby.addBot") : t("lobby.removeBot");
+      const onClick = s.empty ? () => send({ type: "addBot" }) : () => send({ type: "removeBot" });
+      if (!seatBtn) seatBtn = btn(d, label, onClick, "seat-btn");
+      else { if (seatBtn.textContent !== label) seatBtn.textContent = label; seatBtn.onclick = onClick; }
+    } else if (seatBtn) seatBtn.remove();
+  }
+  el.querySelectorAll("[data-idx]").forEach((d) => { if (!seen.has(d.dataset.idx)) d.remove(); });
+}
+// Shared in-place sync for a row of keyed buttons — same reasoning as the
+// seats above, just factored out since both the pinned primary action
+// (#lobbyActions: Start/Ready/Rematch, one button) and the paired secondary
+// row (#lobbySecondary: Swap + Leave, or just Leave) need it.
+function syncButtons(container, desired) {
+  const seen = new Set();
+  for (const [key, label, onClick, cls, disabled] of desired) {
+    seen.add(key);
+    let b = container.querySelector(`[data-key="${key}"]`);
+    if (!b) { b = btn(container, label, onClick, cls, null, disabled); b.dataset.key = key; }
+    else {
+      if (b.textContent !== label) b.textContent = label;
+      b.onclick = onClick;
+      if (b.className !== cls) b.className = cls;
+      if (b.disabled !== disabled) b.disabled = disabled;
+    }
+  }
+  let node = container.firstElementChild;
+  for (const [key] of desired) {
+    if (!node || node.dataset.key !== key) { const want = container.querySelector(`[data-key="${key}"]`); container.insertBefore(want, node); node = want; }
+    node = node.nextElementSibling;
+  }
+  container.querySelectorAll("[data-key]").forEach((b) => { if (!seen.has(b.dataset.key)) b.remove(); });
+}
+function renderLobbyActions() {
+  let primary = null;
+  const secondary = [];
+  if (room.phase === "over") {
+    if (room.isHost) primary = ["rematch", t("lobby.rematch"), () => send({ type: "rematch" }), "primary", false];
+  } else if (room.isHost) {
+    const full = room.seats.length >= 2;
+    primary = ["start", t("lobby.start"), () => send({ type: "start" }), "primary", !full];
+    secondary.push(["swap", t("lobby.swap"), () => send({ type: "swap" }), "", false]);
+  } else if (!game.spectator) {
+    const me = room.seats.find((s) => s.side === room.me);
+    primary = ["ready", me?.ready ? t("lobby.notReady") : t("lobby.ready"), () => send({ type: "ready", ready: !me?.ready }), "primary", false];
+  }
+  secondary.push(["leave", t("lobby.leave"), () => { send({ type: "leave" }); leaveRoom(); toLanding(); }, "", false]);
+  syncButtons($("lobbyActions"), primary ? [primary] : []);
+  syncButtons($("lobbySecondary"), secondary);
+}
 function renderLobby() {
   $("lobbyCode").textContent = room.code || "";
   $("lobbyHint").textContent = room.isHost ? t("lobby.hint") : t("lobby.waiting");
-  const el = $("lobbySeats"); el.innerHTML = "";
-  for (const s of room.seats) {
-    const d = document.createElement("div");
-    d.className = "seat" + (!s.connected ? " away" : "");
-    const tags = [s.side === room.me ? t("lobby.you") : "", s.idx === 0 ? t("lobby.host") : "", s.ai ? t("lobby.bot") : "", !s.connected && !s.ai ? t("lobby.away") : ""].filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join("");
-    d.innerHTML = `<div class="sd ${s.side === 0 ? "q" : "c"}">${esc(sideName(s.side))}</div><div class="who">${esc(s.name)}${tags}</div><span>${s.ready || s.idx === 0 ? t("lobby.ready") : t("lobby.notReady")}</span>`;
-    el.appendChild(d);
-  }
-  seg($("lobbyLevel"), [["easy", t("setup.easy")], ["normal", t("setup.normal")], ["hard", t("setup.hard")]], room.settings?.level || "normal", (v) => { if (room.isHost) send({ type: "settings", level: v }); });
-  const a = $("lobbyActions"); a.innerHTML = "";
-  if (room.phase === "over") {
-    if (room.isHost) btn(a, t("lobby.rematch"), () => send({ type: "rematch" }), "primary");
-  } else if (room.isHost) {
-    const hasBot = room.seats.some((s) => s.ai), full = room.seats.length >= 2;
-    btn(a, t("lobby.start"), () => send({ type: "start" }), "primary", null, !full);
-    if (hasBot) btn(a, t("lobby.removeBot"), () => send({ type: "removeBot" }));
-    else if (!full) btn(a, t("lobby.addBot"), () => send({ type: "addBot" }));
-    btn(a, t("lobby.swap"), () => send({ type: "swap" }));
-  } else if (!game.spectator) {
-    const me = room.seats.find((s) => s.side === room.me);
-    btn(a, me?.ready ? t("lobby.notReady") : t("lobby.ready"), () => send({ type: "ready", ready: !me?.ready }), "primary");
-  }
-  btn(a, t("lobby.leave"), () => { send({ type: "leave" }); leaveRoom(); toLanding(); });
+  renderLobbyChat();
+  renderLobbySeats();
+  // The bot-strength control only matters when a bot could actually be
+  // seated (there's one now, or a seat is still open for one) — with two
+  // human players it's dead space, and on a short phone every row of dead
+  // space is a row that pushes Start below the fold (owner, C2_Lobby retry).
+  const hasBot = room.seats.some((s) => s.ai), full = room.seats.length >= 2;
+  const showLevel = room.isHost && room.phase !== "over" && (hasBot || !full);
+  $("lobbyLevelField").hidden = !showLevel;
+  if (showLevel) seg($("lobbyLevel"), [["easy", t("setup.easy")], ["normal", t("setup.normal")], ["hard", t("setup.hard")]], room.settings?.level || "normal", (v) => { if (room.isHost) send({ type: "settings", level: v }); });
+  renderLobbyActions();
 }
 setInterval(() => {
   if (!game.room || !game.st || game.st.winner != null || !room.deadline) return;
@@ -1016,8 +1175,8 @@ setInterval(() => {
 const params = new URLSearchParams(location.search);
 setLang(params.get("lang") || store.get("zh.lang", (navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
 if (params.has("resume") && loadSolo()) resumeSolo();
-else if (params.get("create") === "1") connect({ create: "1" });
-else if (params.get("room")) { const code = params.get("room").toUpperCase(); connect({ room: code, token: sess.get("zh.token." + code) || "" }); }
+else if (params.get("create") === "1") maybeConnect({ create: "1" });
+else if (params.get("room")) { const code = params.get("room").toUpperCase(); maybeConnect({ room: code, token: sess.get("zh.token." + code) || "" }); }
 else {
   // The landing's Qin/Chu/Random taps preselect a side and land here; the
   // level (bot strength) is still picked on this screen.
