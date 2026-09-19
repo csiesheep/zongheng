@@ -140,8 +140,15 @@ body:not(.table-lock) .advisor-banner {
    保持清楚") -- it already carries a light halo of its own (style.css's
    text-shadow), this only makes sure it paints above the gold, not under it. */
 .node.adv-target .nm { z-index: 4; }
+/* Default corner is bottom-right, swapped from #26's own bottom-left so it
+   never fights the stability tag (.node .stab, style.css) that now lives in
+   the default bottom-left corner; a node whose city name anchors left
+   trades corners with it — the tag moves to bottom-right (style.css's own
+   .node.anchor-left .stab) and this stays bottom-left, matching #26's rule
+   ("兩個下角都排,籤放在遠離城名的那一個"). */
 .node .adv-badge {
-  position: absolute; bottom: -4px; left: -6px; min-width: 15px; height: 15px;
+  position: absolute; bottom: -4px; right: -6px; min-width: 15px; height: 15px;
   border-radius: 8px; background: #e9b92e; color: #1a1a1a; text-align: center;
   font: 700 9px/15px var(--sans); padding: 0 3px; z-index: 5;
 }
+.node.anchor-left .adv-badge { right: auto; left: -6px; }
