@@ -39,7 +39,16 @@ body.setup-random {
   --bg: #f7f3e8; --text: #1a1a1a; --text-dim: #4a463c; --text-soft: #33302a;
   --gold: #1a1a1a; --gold-line: #1a1a1a; --field-bg: #ffffff;
 }
-body.setup-qin, body.setup-chu, body.setup-random { background: var(--bg); color: var(--text); }
+/* The setup screen never scrolls, even on iOS with the address/tool bars
+   showing: 100vh is a fallback for browsers without svh support only (it is
+   NOT the height that applies once svh is understood), 100svh is the "small
+   viewport" height — i.e. with the bars showing, the worst case (#20). The
+   .bar header plus #setup (flex: 1 1 auto, min-height: 0) then share that
+   fixed height instead of #setup pushing past it. */
+body.setup-qin, body.setup-chu, body.setup-random {
+  background: var(--bg); color: var(--text);
+  height: 100vh; height: 100svh; overflow: hidden;
+}
 
 .bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 0; gap: 8px; }
 .bar .hub { color: var(--gold); text-decoration: none; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; }
@@ -56,12 +65,23 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
    field and a description that follows the pick, with Back/Start pinned to
    the bottom — see C2_SetupQin/Setup/SetupRandom. The whole screen already
    re-skins by body.setup-qin/chu/random (shared --bg/--text/--gold tokens). */
-.setup-view { display: flex; flex-direction: column; gap: 16px; flex: 1 1 auto; min-height: 0; padding-top: 18px; }
-.setup-h1 { margin: 0; font: 900 26px var(--serif); color: var(--gold); }
-.setup-view .field { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+/* container-type: size gives the tile art and the gaps below something
+   stable to size against (cqh) that already reflects the real, shrunk
+   space (it's computed from the flex box's actual height, not a raw
+   viewport unit) — so it degrades smoothly on a short svh viewport instead
+   of overflowing. Yield order (#20): tile art shrinks first (150px down to
+   a 96px floor), then the gaps between fields, and only then — on the
+   shortest phones — the description disappears (see the max-height
+   container query below); the pills/name field/footer never shrink. */
+.setup-view {
+  display: flex; flex-direction: column; gap: clamp(6px, 3.4cqh, 16px); flex: 1 1 auto; min-height: 0;
+  padding-top: 18px; overflow: hidden; container-type: size; container-name: setup;
+}
+.setup-h1 { margin: 0; flex: none; font: 900 26px var(--serif); color: var(--gold); }
+.setup-view .field { display: flex; flex-direction: column; gap: 8px; margin: 0; flex: none; }
 .field-label { font: 600 11px/1 var(--serif); letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
 .tiles { display: flex; gap: 8px; }
-.tile { flex: 1; height: 150px; padding: 0; position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--gold-line); opacity: 0.72; background: #15130f; cursor: pointer; }
+.tile { flex: 1; height: clamp(96px, 24cqh, 150px); padding: 0; position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--gold-line); opacity: 0.72; background: #15130f; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .tile.chu { background: #3a0a07; }
 .tile.random { background: #ece4d0; }
 .tile[aria-pressed="true"] { border: 3px solid var(--gold); opacity: 1; }
@@ -75,12 +95,21 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .tile .ttag { font: 400 10.5px/1.2 var(--serif); color: #fff; }
 .tile.random .tname, .tile.random .ttag { color: #1a1a1a; }
 .pills { display: flex; gap: 8px; }
-.pills button { flex: 1; height: 46px; border-radius: 10px; background: none; color: var(--text); border: 1px solid var(--gold-line); font: 600 14px var(--serif); }
+.pills button { flex: 1; height: 46px; border-radius: 10px; background: none; color: var(--text); border: 1px solid var(--gold-line); font: 600 14px var(--serif); -webkit-tap-highlight-color: transparent; }
 .pills button[aria-pressed="true"] { background: var(--gold); color: var(--bg); border-color: var(--gold); }
 .setup-view input { height: 46px; box-sizing: border-box; padding: 0 12px; border: 1px solid var(--gold-line); border-radius: 10px; background: var(--field-bg); font: 400 16px var(--serif); color: var(--text); }
-.setup-desc { margin: 0; font: 400 12px/1.5 var(--serif); color: var(--text-dim); }
-.setup-footer { display: flex; gap: 8px; margin-top: auto; padding-top: 8px; }
-.setup-footer button { height: 52px; border-radius: 10px; font: 600 15px var(--serif); }
+.setup-desc { margin: 0; font: 400 12px/1.5 var(--serif); color: var(--text-dim); overflow: hidden; }
+/* Last to give way (#20): on the shortest phones (roughly an iPhone SE with
+   the toolbars showing), drop the description text before anything else is
+   touched — the tiles, pills, name field and footer keep their size. */
+@container setup (max-height: 520px) {
+  .setup-desc { display: none; }
+}
+.setup-footer {
+  display: flex; gap: 8px; margin-top: auto; padding-top: 8px; flex: none;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.setup-footer button { height: 52px; border-radius: 10px; font: 600 15px var(--serif); -webkit-tap-highlight-color: transparent; }
 #btnBack { flex: none; padding: 0 16px; border: 1px solid var(--gold-line); background: none; color: var(--text); }
 .setup-footer .primary { flex: 1; border: none; background: var(--gold); color: var(--bg); }
 .actions { display: flex; flex-direction: column; gap: 10px; }
