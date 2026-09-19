@@ -84,6 +84,13 @@ body:has(#lobby:not([hidden])), body:has(#over:not([hidden])) {
    around it. */
 #lobbyHint { flex: none; margin: 0 0 8px; }
 @media (max-height: 640px) { #lobbyHint { display: none; } }
+/* The English hint text wraps one line taller than the Chinese one (#21),
+   so the same viewport-height floor that works for Chinese leaves English
+   short by a few px on the owner's own phone height (390x669) — give
+   English its own, higher floor instead of raising the shared one (which
+   would hide the hint on Chinese viewports that already have room to
+   spare). */
+@media (max-height: 700px) { html:lang(en) #lobbyHint { display: none; } }
 
 /* ---------- lobby: seats ---------- */
 /* Colour follows the SIDE seated there, not "is this you" — the definitive
