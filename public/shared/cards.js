@@ -68,7 +68,7 @@ export const CARDS = [
       for (const id of ch[0]) E.remove(st, C, id, 1);
     } },
   { id: "simacuo", num: 10, zh: "司馬錯伐蜀", en: "Sima Cuo Takes Shu", era: "reform", side: Q, ops: 3, remove: true, year: 316,
-    text: "秦在巴蜀放 3;若秦控制漢中,改放 4。",
+    text: "秦在巴蜀放 3;若秦控制漢中,改放 4。此後西土記分時秦 +1。",
     effect(st) {
       E.place(st, Q, "bashu", E.controller(st, "hanzhong") === Q ? 4 : 3);
       if (st.options.westBonus) E.addEffect(st, { card: "simacuo", side: Q, kind: "score", region: "west", who: Q, delta: 1, until: "game" });
@@ -105,7 +105,7 @@ export const CARDS = [
     text: "指定 1 個據點,本回合內不可對其征伐或遊說。",
     effect(st, side, ch) { if (!ch.length) return pick(C, all()); E.addEffect(st, { card: "mozhe", side: C, kind: "protect", space: ch[0][0], until: "turn" }); } },
   { id: "chumieyue", num: 21, zh: "楚滅越", en: "Chu Conquers Yue", era: "reform", side: C, ops: 2, remove: true, year: 306,
-    text: "楚在吳越放 2;此後南方記分時楚 +1。",
+    text: "楚在吳越放 2。",
     effect(st) { E.place(st, C, "wuyue", 2); if (st.options.yue !== "none") E.addEffect(st, { card: "chumieyue", side: C, kind: "score", region: "south", who: C, delta: 1, until: "game" }); } },
 
   // ---------- 變法期・中立 ----------

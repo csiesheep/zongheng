@@ -153,6 +153,22 @@ test("荊軻 taxes Qin's ops for the turn and costs Chu its best card; 逐客令
   assert.equal(E.opsOf(a, CHU, "mozhe"), 1);
 });
 
+test("司馬錯伐蜀 leaves Qin a lasting +1 on West scorings; 楚滅越 is two points and nothing more", () => {
+  const west = (e) => e.card === "simacuo" && e.kind === "score" && e.region === "west" && e.who === QIN && e.delta === 1;
+  const a = play(atAction([["simacuo"], []]), QIN, "simacuo");
+  assert.ok(a.effects.some(west));
+  const st = atAction([[], ["chumieyue"]], { actor: CHU, phasing: CHU });
+  const before = inf(st, "wuyue")[CHU];
+  const b = play(st, CHU, "chumieyue");
+  assert.equal(inf(b, "wuyue")[CHU], before + 2);
+  assert.ok(!b.effects.some((e) => e.card === "chumieyue"));
+  // The first drafts stay reachable for the harness.
+  const old = { options: { ...E.DEFAULT_OPTIONS, westBonus: false, yue: "lasting" } };
+  assert.ok(!play(atAction([["simacuo"], []], old), QIN, "simacuo").effects.some(west));
+  const c = play(atAction([[], ["chumieyue"]], { ...old, actor: CHU, phasing: CHU }), CHU, "chumieyue");
+  assert.ok(c.effects.some((e) => e.card === "chumieyue" && e.kind === "score" && e.region === "south" && e.delta === 1));
+});
+
 test("every card has English text, and no English text is left without a card", async () => {
   const { default: CARD_EN } = await import("../public/i18n/cards.en.js");
   for (const c of E.CARDS) assert.ok(CARD_EN[c.id] && CARD_EN[c.id].length > 5, `${c.id} has no English text`);

@@ -48,12 +48,13 @@ export const REFORM = [
 // `hangu`: Qin's starting influence in 函谷關 (stability 3): 2 leaves Qin with one
 // controlled home space at the start against Chu's two, 3 makes it two each.
 // `wuguo`: "any" lets 五國伐秦 strike any West space; "nonbg" keeps it out of 關中.
-// `yue`: "lasting" keeps 楚滅越's +1 on every South scoring, "none" drops it.
-// `westBonus`: 司馬錯伐蜀 also gives Qin +1 on every West scoring, the mirror of 楚滅越.
+// `yue`: "lasting" gives 楚滅越 a +1 on every South scoring, "none" leaves it at the two points.
+// `westBonus`: 司馬錯伐蜀 also gives Qin +1 on every West scoring (the granary of 蜀).
 // Defaults are the rules as decided on 2026-09-18 from the harness (plan note,
 // Balance log); the first drafts stay reachable as cells: sealAt "control",
-// comp 2, hangu 2, wuguo "any".
-export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: false, yue: "lasting" };
+// comp 2, hangu 2, wuguo "any", and round 2's westBonus false with yue "lasting"
+// (Qin 39 % over 1,000 games; the pair below brought it to 50 %).
+export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none" };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 
 // ---------- RNG (mulberry32) ----------
