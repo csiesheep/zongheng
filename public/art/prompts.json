@@ -1,0 +1,541 @@
+{
+  "score_jin": {
+    "key": "score_jin",
+    "w": 768,
+    "h": 1024,
+    "seed": 5001,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: the central plains of the Three Jin: three walled rammed-earth cities on a wide plain, the Yellow River winding between them, distant low hills. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "score_west": {
+    "key": "score_west",
+    "w": 768,
+    "h": 1024,
+    "seed": 5002,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: the land within the passes: a fortified gate tower closing a narrow mountain pass between steep cliffs, a broad river valley beyond. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "score_south": {
+    "key": "score_south",
+    "w": 768,
+    "h": 1024,
+    "seed": 5003,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: the south of Chu: misty marshes and lakes along a great river, reeds, a few small boats, forested hills fading into mist. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "score_east": {
+    "key": "score_east",
+    "w": 768,
+    "h": 1024,
+    "seed": 5004,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: the east: a great sacred mountain rising above a rich plain, and beyond it a sea coast with salt pans and fishing boats. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "score_north": {
+    "key": "score_north",
+    "w": 768,
+    "h": 1024,
+    "seed": 7005,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: the northern frontier: open steppe under a big sky, low beacon mounds of pounded earth with smoke signals, a herd of horses. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere. No pagodas, no temples, no multi-storey towers."
+  },
+  "shangyang": {
+    "key": "shangyang",
+    "w": 768,
+    "h": 1024,
+    "seed": 5006,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a stern reformer standing on a platform proclaiming new laws to rows of farmers and soldiers, officials holding bundles of bamboo slips, a square bronze measuring vessel beside him. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "ximu": {
+    "key": "ximu",
+    "w": 768,
+    "h": 1024,
+    "seed": 5007,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a tall wooden pole at the gate of a city market, a man carrying it away on his shoulder, an official holding out a reward of gold ingots, a crowd watching. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "hexi": {
+    "key": "hexi",
+    "w": 768,
+    "h": 1024,
+    "seed": 5008,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: soldiers crossing a wide river on boats and rafts toward a fortified bank, chariots waiting on the far shore, waves drawn as curling lines. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "zhangyi": {
+    "key": "zhangyi",
+    "w": 768,
+    "h": 1024,
+    "seed": 5009,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a smooth diplomat bowing before an enthroned king in a palace hall, attendants at both sides, a horizontal row of five small palaces along the top register. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "simacuo": {
+    "key": "simacuo",
+    "w": 768,
+    "h": 1024,
+    "seed": 5010,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: an army marching along wooden plank roads built into sheer cliffs, soldiers and pack oxen in a line, mountains in stacked zigzag patterns. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "hangu": {
+    "key": "hangu",
+    "w": 768,
+    "h": 1024,
+    "seed": 5011,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a massive two-storey gate tower closing a narrow gorge, guards with crossbows on the wall, a road disappearing into the ravine. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "keqing": {
+    "key": "keqing",
+    "w": 768,
+    "h": 1024,
+    "seed": 5012,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: foreign scholars and advisers arriving at a royal court by carriage, received by an official at the palace gate, servants carrying cases of bamboo slips. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "envoy": {
+    "key": "envoy",
+    "w": 768,
+    "h": 1024,
+    "seed": 5013,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: an envoy riding in a canopied carriage holding a tasselled diplomatic staff, escorted by two horsemen, travelling along a road. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "wuqi": {
+    "key": "wuqi",
+    "w": 768,
+    "h": 1024,
+    "seed": 5014,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: a reformer in armour addressing nobles in a palace courtyard, the nobles in long robes looking displeased, soldiers drilling behind. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "suqin": {
+    "key": "suqin",
+    "w": 768,
+    "h": 1024,
+    "seed": 5015,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: a strategist wearing six official seals hanging from his belt, standing before six kings seated in a vertical column of pavilions. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "weiwei": {
+    "key": "weiwei",
+    "w": 768,
+    "h": 1024,
+    "seed": 5016,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: a strategist seated in a small covered carriage directing troops toward the walls of a great city, while an enemy army turns back in a hurry. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "maling": {
+    "key": "maling",
+    "w": 768,
+    "h": 1024,
+    "seed": 7017,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: a night ambush in a narrow wooded ravine: crossbowmen hidden on both slopes loosing volleys of bolts at an army below, a great tree stripped of its bark in the middle. No text, no characters, no seals, no calligraphy, no writing anywhere. The vermilion lacquer ground fills the whole image from edge to edge, with no white margin and no frame."
+  },
+  "jixia": {
+    "key": "jixia",
+    "w": 768,
+    "h": 1024,
+    "seed": 5018,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: an academy of scholars in long robes seated on mats in debate under a pavilion by a city gate, bamboo slips spread out, one scholar gesturing. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "wuguo": {
+    "key": "wuguo",
+    "w": 768,
+    "h": 1024,
+    "seed": 5019,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: the armies of five states with five different banners advancing together toward a mountain pass gate. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "mozhe": {
+    "key": "mozhe",
+    "w": 768,
+    "h": 1024,
+    "seed": 5020,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: defenders in plain dark clothes on a city wall operating defensive machines: a counterweight beam, large shields and a multi-bolt crossbow, the attackers' ladders pushed away. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "chumieyue": {
+    "key": "chumieyue",
+    "w": 768,
+    "h": 1024,
+    "seed": 5021,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: war boats with oarsmen and warriors on a wide river among reeds, defeating tattooed short-haired warriors of the far south-east, water birds and waves. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "youshui": {
+    "key": "youshui",
+    "w": 768,
+    "h": 1024,
+    "seed": 5022,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a wandering persuader in travelling robes speaking before a lord seated in a simple hall, gesturing with one hand, a bundle of bamboo slips under his arm. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "zhizi": {
+    "key": "zhizi",
+    "w": 768,
+    "h": 1024,
+    "seed": 5023,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: two young princes exchanged as hostages at a river border, two carriages facing each other across a bridge, escorts on both banks. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "shuoke": {
+    "key": "shuoke",
+    "w": 768,
+    "h": 1024,
+    "seed": 5024,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a lone travelling adviser walking a road with a staff and a bundle on his back, a walled city far ahead. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "huanghe": {
+    "key": "huanghe",
+    "w": 768,
+    "h": 1024,
+    "seed": 5025,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a great river bursting its dyke, brown flood water sweeping over fields and thatched villages, people fleeing to high ground. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "tiangou": {
+    "key": "tiangou",
+    "w": 768,
+    "h": 1024,
+    "seed": 5026,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a solar eclipse over a walled city, a black disc with a thin ring of light in a dark sky, people beating drums and looking up in fear. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "yetie": {
+    "key": "yetie",
+    "w": 768,
+    "h": 1024,
+    "seed": 5027,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: an iron foundry: smiths working bellows at a glowing furnace, casting moulds, finished crossbow trigger mechanisms and iron blades laid out on a bench. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "zhouzuo": {
+    "key": "zhouzuo",
+    "w": 768,
+    "h": 1024,
+    "seed": 5028,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a royal envoy presenting sacrificial meat on a ritual stand to a kneeling lord, bronze tripod vessels, a solemn ceremony. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "daji": {
+    "key": "daji",
+    "w": 768,
+    "h": 1024,
+    "seed": 5029,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a great famine: cracked dry fields, withered crops, thin farmers leading children along a road away from an empty granary. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "zhangyi2": {
+    "key": "zhangyi2",
+    "w": 768,
+    "h": 1024,
+    "seed": 7030,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a diplomat offering a plain rolled bundle of silk to a king, the king leaning forward greedily, courtiers whispering behind. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere. The solid black ground fills the whole image from edge to edge, with no white margin."
+  },
+  "yiyang": {
+    "key": "yiyang",
+    "w": 768,
+    "h": 1024,
+    "seed": 5031,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: troops storming a walled city with scaling ladders, archers on the ramparts, a general on a chariot beating a war drum. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "huaiwang": {
+    "key": "huaiwang",
+    "w": 768,
+    "h": 1024,
+    "seed": 5032,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a king in ceremonial robes seized at a frontier pass, surrounded by soldiers with dagger-axes, the gate closing behind his carriage. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "baiqi": {
+    "key": "baiqi",
+    "w": 768,
+    "h": 1024,
+    "seed": 5033,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a fearsome general standing in armour on a war chariot, sword raised, ranks of infantry behind him in strict rows. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "yueyi": {
+    "key": "yueyi",
+    "w": 768,
+    "h": 1024,
+    "seed": 5034,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a general leading the allied armies of five states, a row of five different banners, troops marching toward a walled coastal city. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "poying": {
+    "key": "poying",
+    "w": 768,
+    "h": 1024,
+    "seed": 5035,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: soldiers breaching the walls of a great southern capital, water flooding through a broken dyke into the city, palace roofs burning. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "yuanjiao": {
+    "key": "yuanjiao",
+    "w": 768,
+    "h": 1024,
+    "seed": 5036,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a minister pointing at a large map spread on the floor before a king; on one side an envoy carries gifts to a far country, on the other soldiers attack a nearby city. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "xidi": {
+    "key": "xidi",
+    "w": 768,
+    "h": 1024,
+    "seed": 5037,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a king seated high on a throne receiving a crown and jade insignia, ministers prostrating in rows, tall ritual bronze vessels on each side. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "hufu": {
+    "key": "hufu",
+    "w": 768,
+    "h": 1024,
+    "seed": 5038,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: a king in a short nomad tunic and trousers on horseback drawing a bow at full gallop, mounted archers behind him, steppe grass. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "mengchang": {
+    "key": "mengchang",
+    "w": 768,
+    "h": 1024,
+    "seed": 5039,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: a generous lord at a feast with his many retainers; at night one retainer crows like a rooster before a closed pass gate so that the guards open it. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "hezong": {
+    "key": "hezong",
+    "w": 768,
+    "h": 1024,
+    "seed": 5040,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: the allied armies of six states breaking through a mountain pass, chariots charging, allied banners in a vertical column, the defenders retreating. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "tiandan": {
+    "key": "tiandan",
+    "w": 768,
+    "h": 1024,
+    "seed": 5041,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: a herd of oxen with blades tied to their horns and burning reeds on their tails charging at night into an enemy camp, soldiers following behind. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "wanbi": {
+    "key": "wanbi",
+    "w": 768,
+    "h": 1024,
+    "seed": 5042,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: an envoy holding a round jade disc high beside a palace pillar, threatening to smash it, a king on his throne reaching out in alarm. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "yuyu": {
+    "key": "yuyu",
+    "w": 768,
+    "h": 1024,
+    "seed": 5043,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: a general leading troops up a steep mountain to seize the high ground above a besieged fortress, the enemy below in the valley. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "quyuan": {
+    "key": "quyuan",
+    "w": 768,
+    "h": 1024,
+    "seed": 5044,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: an exiled poet-minister in a tall cap and a long-sleeved robe standing alone on a river bank, reeds and water ripples, orchids at his feet. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "huangjintai": {
+    "key": "huangjintai",
+    "w": 768,
+    "h": 1024,
+    "seed": 5045,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: a king on a high terrace heaped with gold, welcoming talented men who arrive from afar on horseback and on foot. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "qimiesong": {
+    "key": "qimiesong",
+    "w": 768,
+    "h": 1024,
+    "seed": 7046,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a large army overrunning a small walled state, a toppled royal banner, wooden siege ladders. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere. No pagodas, no temples, no multi-storey towers."
+  },
+  "shanglv": {
+    "key": "shanglv",
+    "w": 768,
+    "h": 1024,
+    "seed": 5047,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a merchant caravan of ox carts and pack horses loaded with silk, salt and bronze goods passing a toll gate, river boats alongside. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "mianchi": {
+    "key": "mianchi",
+    "w": 768,
+    "h": 1024,
+    "seed": 5048,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: two kings meeting on a terrace seated facing each other, one playing a long zither, the other striking a clay pot, ministers recording on bamboo slips. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "yili": {
+    "key": "yili",
+    "w": 768,
+    "h": 1024,
+    "seed": 5049,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a plague: a quiet village with doors shut, a masked shaman performing an exorcism rite with a staff, smoke from burning herbs. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "changcheng": {
+    "key": "changcheng",
+    "w": 768,
+    "h": 1024,
+    "seed": 7050,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: labourers building a long rammed-earth frontier wall across hills with wooden frames and rammers, the wall is a low smooth rampart of yellow pounded earth without battlements, no bricks, no stone. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "ximin": {
+    "key": "ximin",
+    "w": 768,
+    "h": 1024,
+    "seed": 5051,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: families resettled to the frontier: a long line of people with carts, oxen and bundles walking toward new fields and rammed-earth houses. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "changping": {
+    "key": "changping",
+    "w": 768,
+    "h": 1024,
+    "seed": 5052,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a great battle: ranks of infantry with bronze dagger-axes and crossbows encircle a hilltop camp of enemy soldiers, four-horse war chariots on the flanks, long banners streaming, arranged in horizontal registers. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "miezhou": {
+    "key": "miezhou",
+    "w": 768,
+    "h": 1024,
+    "seed": 5053,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: soldiers carrying great bronze tripod cauldrons on poles out of a royal ancestral temple, an old king bowing at the gate. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "lvbuwei": {
+    "key": "lvbuwei",
+    "w": 768,
+    "h": 1024,
+    "seed": 7054,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a rich merchant-chancellor seated among scholars compiling books of bamboo slips, stacks of bamboo bundles, servants bringing more bamboo bundles on trays. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere. The solid black ground fills the whole image from edge to edge, with no white margin. No signboards, no plaques."
+  },
+  "zhengguoqu": {
+    "key": "zhengguoqu",
+    "w": 768,
+    "h": 1024,
+    "seed": 5055,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: labourers digging a great irrigation canal with spades and baskets, a long channel of water drawn as parallel wavy lines crossing fields of grain, an engineer directing with a measuring rod. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "fanjian": {
+    "key": "fanjian",
+    "w": 768,
+    "h": 1024,
+    "seed": 7056,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a spy whispering into the ear of a king behind a screen, a purse of gold changing hands; outside the hall a loyal general is led away. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere. The solid black ground fills the whole image from edge to edge, with no white margin."
+  },
+  "wangjian": {
+    "key": "wangjian",
+    "w": 768,
+    "h": 1024,
+    "seed": 5057,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: an old general on a chariot leading a vast army, endless rows of soldiers receding in registers, a southern city on the horizon. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "hanfei": {
+    "key": "hanfei",
+    "w": 768,
+    "h": 1024,
+    "seed": 7058,
+    "prompt": "A Chinese stone rubbing illustration: white engraved lines on a solid matte black ground, flat and two-dimensional, in the manner of Qin and Han pictorial stone reliefs, figures in profile, stylised, inside a thin border line. Scene: a philosopher presenting bundles of bamboo slips to a king; in a side panel the same man sits alone in a prison cell. Warring States period dress and bronze weapons, hair in topknots. No text, no characters, no seals, no calligraphy, no writing anywhere. The solid black ground fills the whole image from edge to edge, with no white margin."
+  },
+  "xinlingjun": {
+    "key": "xinlingjun",
+    "w": 768,
+    "h": 1024,
+    "seed": 5059,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: a noble lord holding up a bronze tiger tally before a general's tent, a strongman behind him with a heavy iron hammer, an army waiting. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "maosui": {
+    "key": "maosui",
+    "w": 768,
+    "h": 1024,
+    "seed": 5060,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: a bold retainer with his hand on his sword stepping up the palace stairs toward a king, his companions waiting below, a bronze basin ready for a blood oath. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "lianpo": {
+    "key": "lianpo",
+    "w": 768,
+    "h": 1024,
+    "seed": 5061,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: two veteran generals in armour guarding a fortified rampart, one old with a long white beard, one mounted with cavalry, the enemy army halted in the distance. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "chunshenjun": {
+    "key": "chunshenjun",
+    "w": 768,
+    "h": 1024,
+    "seed": 5062,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: a chancellor in splendid robes receiving guests who wear pearl-decorated shoes in a grand hall. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "jingke": {
+    "key": "jingke",
+    "w": 768,
+    "h": 1024,
+    "seed": 7063,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: an assassin lunging with a dagger from a plain unrolled strip of blank silk at a king, who pulls away around a bronze pillar with his sleeve torn, an open box on the floor. No text, no characters, no seals, no calligraphy, no writing anywhere. The vermilion lacquer ground fills the whole image from edge to edge, with no white margin and no frame. The silk strip is completely blank."
+  },
+  "liuguo": {
+    "key": "liuguo",
+    "w": 768,
+    "h": 1024,
+    "seed": 7064,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: six kings gathered around an altar swearing a covenant over a bronze vessel, six plain single-colour banners without any emblems, a sacrificial ox. No text, no characters, no seals, no calligraphy, no writing anywhere. The vermilion lacquer ground fills the whole image from edge to edge, with no white margin and no frame."
+  },
+  "lixin": {
+    "key": "lixin",
+    "w": 768,
+    "h": 1024,
+    "seed": 5065,
+    "prompt": "A Warring States Chu lacquer painting: flat stylised figures in black, gold and ochre on a glossy vermilion red lacquer ground, flowing cloud scrolls in the margins, in the manner of painted lacquerware from the Chu tombs, elegant elongated proportions, fine even outlines, no shading, no perspective. Scene: an army pursuing and routing the troops of a rash young general, soldiers fleeing, camps overrun. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "duojiang": {
+    "key": "duojiang",
+    "w": 768,
+    "h": 1024,
+    "seed": 5066,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a famous general in armour riding out of one camp and over to the opposing camp, where a lord welcomes him with a cup of wine. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "xizuo": {
+    "key": "xizuo",
+    "w": 768,
+    "h": 1024,
+    "seed": 5067,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a spy in plain clothes listening behind a lattice screen at night while two ministers talk by lamplight. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "zhukeling": {
+    "key": "zhukeling",
+    "w": 768,
+    "h": 1024,
+    "seed": 5068,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: foreign advisers and guests expelled from a city, leaving through the gate with their carts and belongings, guards watching. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "dunbing": {
+    "key": "dunbing",
+    "w": 768,
+    "h": 1024,
+    "seed": 5069,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: an army bogged down before an unbreakable walled city, siege camps in the rain, tired soldiers sitting by their tents, the wall towering above. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "mibing": {
+    "key": "mibing",
+    "w": 768,
+    "h": 1024,
+    "seed": 5070,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a peace conference: envoys of several states seated in a circle under an open pavilion, weapons laid down and bound in bundles outside. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "jianbing": {
+    "key": "jianbing",
+    "w": 768,
+    "h": 1024,
+    "seed": 5071,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: a large army absorbing a tiny walled town, the small lord handing over his seal box and a map at the gate. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "jiuding": {
+    "key": "jiuding",
+    "w": 768,
+    "h": 1024,
+    "seed": 5072,
+    "prompt": "A Chinese ink wash painting on pale warm paper, sparse composition with generous empty space, black ink with light touches of grey-blue and ochre, loose confident brushwork. Scene: nine large bronze tripod cauldrons with monster-mask decoration standing in three rows in a dim ancestral temple, a shaft of light, incense smoke, touches of verdigris green. Warring States period, around 300 BC, rammed-earth walls, bronze weapons, bamboo slips, no paper scrolls. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "x_c2_qin": {
+    "key": "x_c2_qin",
+    "w": 768,
+    "h": 1024,
+    "seed": 6201,
+    "prompt": "A bronze tiger tally of ancient China: a crouching tiger figure split lengthwise into two matching halves lying side by side, fine gold-inlaid line decoration along the body, dark bronze with green patina, on matte black stone, dramatic raking side light, top-down studio photograph, deep shadows. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "x_c2_chu": {
+    "key": "x_c2_chu",
+    "w": 768,
+    "h": 1024,
+    "seed": 6202,
+    "prompt": "A Warring States Chu lacquer sculpture: a tall slender phoenix with antlers standing on the back of a crouching tiger, painted in vermilion, black and gold lacquer with fine patterns, in front of a deep vermilion lacquer wall, dramatic raking side light, studio photograph. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "x_c2_map": {
+    "key": "x_c2_map",
+    "w": 1024,
+    "h": 1024,
+    "seed": 6203,
+    "prompt": "A night landscape painted in pale silver-grey ink on very dark indigo-black paper: faint mountains along the left and top edges, a thin pale river winding from the upper left to the lower right, drifting mist, very large empty dark areas in the centre, top-down map-like view, quiet and sparse. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "x_c2_qintex": {
+    "key": "x_c2_qintex",
+    "w": 1024,
+    "h": 512,
+    "seed": 6204,
+    "prompt": "A close-up of a dark bronze surface cast with a dense interlaced dragon pattern in low relief, almost black with a faint green patina, even raking light, seamless texture, no objects. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "x_c2_chutex": {
+    "key": "x_c2_chutex",
+    "w": 1024,
+    "h": 512,
+    "seed": 6205,
+    "prompt": "A close-up of a glossy vermilion red lacquer surface painted with fine flowing cloud scrolls in slightly darker red and thin gold lines, even light, seamless texture, no objects. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  }
+}
