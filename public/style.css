@@ -168,7 +168,7 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 /* Rules, to the left of the language button, in the same voice as the
    hub link (gold, no fill) — a full 44px tap target even though the
    short label is small. */
-.landing-bar .rules { min-height: 44px; padding: 0 2px; display: inline-flex; align-items: center; color: var(--gold); font: 700 12px var(--serif); text-decoration: none; letter-spacing: 1px; }
+.landing-bar .rules { min-height: 44px; min-width: 44px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; color: var(--gold); font: 700 12px var(--serif); text-decoration: none; letter-spacing: 1px; }
 .langBtn { min-width: 44px; min-height: 44px; border-radius: 18px; background: none; border: 1px solid var(--gold); color: var(--gold); font: 700 12px var(--serif); padding: 4px 12px; }
 .sides { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; position: relative; }
 /* Qin's content sits toward the top of its block and Chu's toward the
@@ -241,6 +241,21 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .mp-card .ghost { border-color: #1a1a1a; color: #1a1a1a; }
 .mp-card #btnCreate { background: #1a1a1a; color: #fff; }
 .mp-card #btnJoin { background: var(--chu-btn); color: #fff; }
+
+/* The tutorial entry (#15): inside the white mp-card, ABOVE the
+   [Multiplayer][code][Join] row (the mp-card comment above already expected
+   this), full width, 44px, gold #f4d98a with a dark border/text, per the
+   owner's Tut_LandingA mockup — not the plain ghost button outside the card
+   that the first build shipped (issue #15 review, item 5). A small unread
+   dot sits on top until zh.tutorialSeen is set (landing.js) — never tied to
+   zh.solo. */
+.tut-btn {
+  position: relative; height: 44px; box-sizing: border-box; border-radius: 8px;
+  border: 1.5px solid #1a1a1a; background: #f4d98a; color: #1a1a1a;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font: 600 14px var(--serif); text-decoration: none;
+}
+.tut-btn-dot { position: absolute; top: -4px; right: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px #0c0b0a; }
 
 /* table: a fixed one-screen layout, header -> mandate -> map -> stat line
    -> prompt -> hand (C2_Game order). body.table-lock (see app.js's show())

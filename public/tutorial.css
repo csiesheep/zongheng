@@ -1,0 +1,193 @@
+/* The tutorial's own styles (#15): the coach card appended into #table, the
+   spotlight on the map/hand, and the two full-page overlays (opening card,
+   completion page). Loaded after style.css on play.html; nothing here
+   touches a selector style.css already owns — only new classes tutorial-ui.js
+   adds. Colours/fonts reuse style.css's own tokens (--gold, --serif, --kai…)
+   so a tutorial screen and a real game screen never look like two products. */
+
+/* #table needs a positioning context for the coach card below on a phone —
+   desktop.css only sets this inside its own >=1024px block. Harmless at
+   any width: it only matters to an absolutely-positioned descendant, and
+   the only one is this tutorial's own panel. */
+#table { position: relative; }
+
+/* ---------- the coach card ---------- */
+/* Appended once as #table's LAST child. On a phone (<1024px) it floats,
+   position:absolute, pinned to #map's own top or bottom edge in PIXELS
+   (pinCoach() in tutorial-ui.js measures #map's rect against #table's own
+   and writes top/bottom inline — the two boxes aren't the same once #table
+   also holds the topbar above and the hand below): it can never push the
+   "Back"/"Skip" row off screen because it never takes a flex row of its
+   own (issue #15 review, item 1). max-height + overflow-y is the
+   last-resort backstop for a pathologically long localized string: it
+   scrolls inside the card rather than spill past the viewport.
+   tut-pin-top/tut-pin-bottom (also set by pinCoach()) track which edge it
+   hugs, so it never sits on top of the very space it's teaching.
+   On desktop (>=1024px, #7's frame) this whole rule is overridden further
+   down: the panel becomes a normal grid child in the sidebar instead of
+   floating over the map (the orchestrator's note on this same issue). */
+.tut-coach {
+  position: absolute; left: 8px; right: 8px; z-index: 15;
+  max-height: calc(100% - 16px); overflow-y: auto; -webkit-overflow-scrolling: touch;
+  margin: 0; padding: 8px 12px 10px; border-radius: 12px;
+  border: 1px solid var(--gold-line); background: rgba(21, 19, 15, 0.97); color: var(--text);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  display: flex; flex-direction: column; gap: 5px;
+}
+/* Escape valve for a map too short to let the panel avoid its own target at
+   either edge (pinCoach()'s bothCover case, found at 375x553) — falls back
+   into #table's normal flex column below the map/hand instead of floating
+   over either, which can never cover a map target and lets the page's own
+   scroll (checkOverflow()'s table-overflow) reach it. Higher specificity
+   than .tut-coach alone so it wins regardless of source order. */
+.tut-coach.tut-pin-flow { position: static; left: auto; right: auto; top: auto; bottom: auto; margin: 6px 8px 0; max-height: none; }
+@media (min-width: 1024px) {
+  .tut-coach {
+    position: static; grid-area: coach; left: auto; right: auto; top: auto; bottom: auto;
+    margin: 0 14px; max-height: 320px; box-shadow: none;
+  }
+  /* Issue #15 review round 3, item 2: the coach panel and the card sheet
+     both wanted desktop.css's "prompt" grid cell and stacked ON TOP of
+     each other in the sidebar, the panel hiding the sheet's own Confirm/
+     Done button. #table's own grid (desktop.css, #7) is overridden here —
+     scoped to a tutorial actually running (:has(#tutCoach), so a real game
+     never sees this) — with one extra row so the coach and the sheet each
+     get their own, stacked top to bottom instead of layered. */
+  body[data-view="table"]:has(#tutCoach) #table {
+    grid-template-areas:
+      "map topbar"
+      "map statline"
+      "map coach"
+      "map prompt"
+      "map hand"
+      "map chat"
+      "map foot";
+    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto;
+  }
+}
+.tut-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; }
+.tut-dots { display: flex; align-items: center; gap: 4px; }
+.tut-dot { width: 6px; height: 6px; border-radius: 3px; background: #3a362c; transition: width 0.15s, background 0.15s; }
+.tut-dot.done { background: var(--gold-line); }
+.tut-dot.current { width: 16px; background: var(--gold); }
+/* Issue #15 review round 3, item 5: both were under the 44px touch-target
+   floor (Skip was 44x30, or 87x30 in English) — real hit area now, kept
+   visually compact with padding rather than a big button. */
+.tut-skip {
+  background: none; border: none; padding: 0 4px; min-height: 44px; min-width: 44px;
+  display: inline-flex; align-items: center; justify-content: flex-end;
+  font: 400 11px var(--serif); color: var(--text-dim); text-decoration: underline;
+}
+.tut-head { display: flex; align-items: baseline; gap: 8px; background: none; border: none; padding: 0; margin: 0; text-align: left; min-height: 30px; width: 100%; }
+.tut-h-zh { font: 900 19px var(--serif); color: var(--gold); }
+.tut-h-en { font: 600 13px var(--serif); color: #fff; }
+.tut-chevron { margin-left: auto; color: var(--text-dim); font-size: 11px; }
+.tut-text { margin: 0; font: 400 12.5px/1.5 var(--serif); color: var(--text); }
+.tut-text[hidden] { display: none; }
+.tut-do {
+  font: 600 12.5px/1.35 var(--serif); color: var(--gold);
+  border: 1.5px dashed var(--gold-line); border-radius: 8px; padding: 6px 10px;
+}
+.tut-actions { display: flex; }
+.tut-back { flex: none; min-height: 44px; padding: 0 12px; border-radius: 8px; background: none; border: 1px solid var(--gold-line); color: var(--text); font: 600 12.5px var(--serif); }
+.tut-back:disabled { opacity: 0.4; }
+/* Issue #15 review round 4: shown only when the expanded panel would cover
+   its own target (pinCoach() decides) — tapping it is the ONLY thing that
+   collapses the prose; nothing does that automatically. Full-width, its
+   own row, and a real 44px+ target like every other button here. */
+.tut-gotit { width: 100%; min-height: 44px; border: none; box-sizing: border-box; font: 600 13px var(--serif); }
+.tut-gotit[hidden] { display: none; }
+
+/* ---------- sheet simplification (issue #15 review round 3, item 1's fix) ---------- */
+/* The use row, order row and chip "expand" toggle are all preset already
+   in every lesson but "event" — restrictSheet() (tutorial-ui.js) only adds
+   this class then. Hiding these is what actually fixes the "Confirm/Done
+   off screen, page locked" dead end: it's the tallest, least useful part
+   of the sheet in a lesson where the player never gets to choose it. */
+#sheet.tut-sheet-simple .sheet-grid,
+#sheet.tut-sheet-simple .rowb.order,
+#sheet.tut-sheet-simple .chip-expand {
+  display: none;
+}
+
+/* ---------- spotlighting: only the taught tap/card stays live ---------- */
+.map.tut-dim::after { content: ""; position: absolute; inset: 0; z-index: 2; background: rgba(12, 11, 10, 0.55); pointer-events: none; }
+/* Issue #15 review round 3, item 4: a dashed 2px outline was too faint on
+   the light map art, and app.js's OWN "legal target" styling (.node.lit,
+   set whenever the underlying engine mode considers a space reachable —
+   often several at once, e.g. every campaign target) stayed on every
+   OTHER reachable space too, competing with the one real target — restrictMap()
+   now strips .lit from anything not .tut-lit, and this is a solid ring
+   plus a short glow instead of a dashed line, visible against either map
+   background and readable even with the pulse mid-cycle. */
+.node.tut-lit .disc {
+  outline: 3px solid var(--gold); outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--gold), 0 0 10px 3px rgba(216, 181, 106, 0.85);
+  animation: tut-pulse 1.4s ease-in-out infinite;
+}
+@keyframes tut-pulse { 0%, 100% { outline-color: var(--gold); } 50% { outline-color: #fff3d2; } }
+.card.tut-lit { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--gold) !important; opacity: 1 !important; }
+.hand .card:not(.tut-lit) { opacity: 0.32; }
+
+/* ---------- full-page overlays: the opening card and the completion page ---------- */
+.tut-overlay {
+  position: fixed; inset: 0; z-index: 60; background: rgba(6, 5, 4, 0.72);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+.tut-modal {
+  width: 100%; max-width: 350px; padding: 22px 20px 18px; border-radius: 14px;
+  background: var(--bg); color: var(--text); border: 1.5px solid var(--gold);
+  box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 4px var(--gold-line), 0 20px 60px rgba(0, 0, 0, 0.7);
+  display: flex; flex-direction: column; gap: 12px; align-items: center; text-align: center;
+}
+.tut-kicker { font: 600 11px var(--serif); letter-spacing: 3px; color: var(--text-dim); text-transform: uppercase; }
+.tut-modal-title { margin: 0; font: 900 26px var(--serif); letter-spacing: 4px; color: var(--gold); }
+.tut-modal-sub { margin: 0; font: 600 14px var(--serif); color: #fff; }
+.tut-modal-sub:empty { display: none; }
+.tut-modal-text { margin: 0; font: 400 14px/1.55 var(--serif); color: var(--text); }
+.tut-modal-row { display: flex; gap: 8px; align-self: stretch; }
+.tut-btn-ghost, .tut-btn-primary {
+  flex: 1; min-height: 50px; box-sizing: border-box; padding: 0 14px; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font: 600 15px var(--serif); text-decoration: none; cursor: pointer;
+}
+.tut-btn-ghost { background: none; color: var(--text); border: 1px solid var(--gold-line); }
+.tut-btn-primary { background: var(--gold); color: var(--bg); border: 1px solid var(--gold); flex: 2; }
+
+/* The completion page: a normal (non-modal) full page, scrollable if a short
+   phone needs it — this is the end of the session, not a moment the C2
+   no-scroll rule is protecting. Same picture as the real win/lose page
+   (#6's over-art/over-shade/over-h1): art + gradient + big title over the
+   image (issue #15 review, item 6 — this was plain text on black before).
+   Kept as its own tut-done-* classes rather than reusing screens.css's
+   over-* ones, since #6's rules are keyed off #over.winner-qin/-chu, a
+   different element than this overlay. */
+.tut-done { background: var(--bg); align-items: flex-start; padding: 0; }
+.tut-done-inner { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.tut-done-art { position: relative; height: 46vh; height: 46svh; min-height: 220px; max-height: 380px; overflow: hidden; flex: none; }
+.tut-done-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 40%; }
+.tut-done-shade { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(6, 5, 4, 0.25), rgba(6, 5, 4, 0.25) 55%, var(--bg)); }
+.tut-done-h1 { position: absolute; left: 0; right: 0; bottom: 14px; margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.tut-done-title { font: 900 30px var(--serif); letter-spacing: 5px; padding-left: 5px; color: var(--gold); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
+.tut-done-sub { font: 600 15px var(--serif); color: #fff; }
+.tut-done-sub:empty { display: none; }
+.tut-done-body { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; text-align: center; }
+.tut-done-lead { margin: 0; font: 400 14px/1.55 var(--serif); color: var(--text); }
+.tut-done-ends { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font: 400 12.5px/1.4 var(--serif); color: var(--text-dim); text-align: left; }
+.tut-done-also { margin: 0; font: 400 12px/1.5 var(--serif); color: var(--text-dim); }
+.tut-done-actions { padding: 0 20px 24px; display: flex; flex-direction: column; gap: 8px; }
+.tut-done-actions .tut-btn-primary { width: 100%; }
+.tut-done-row { display: flex; gap: 8px; }
+.tut-done-row .tut-btn-ghost { flex: 1; }
+/* Issue #15 review round 3, item 7: the button row fell just past the
+   bottom on a short English phone (390x669) — the page can scroll to it
+   (this isn't the C2 no-scroll rule), but the owner wants it to fit
+   without scrolling there too. Trim the art and the gaps, not the buttons
+   themselves (they stay >=44px). */
+@media (max-height: 700px) {
+  .tut-done-art { height: 38vh; height: 38svh; min-height: 160px; }
+  .tut-done-inner { gap: 8px; }
+  .tut-done-body { gap: 8px; }
+  .tut-done-actions { gap: 6px; padding: 0 20px 14px; }
+}

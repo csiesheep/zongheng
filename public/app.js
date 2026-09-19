@@ -13,6 +13,7 @@ import en from "./i18n/en.js";
 import zh from "./i18n/zh-Hant.js";
 import CARD_EN from "./i18n/cards.en.js";
 import { mountAdvisorToggle, decorate as decorateAdvisor } from "./advisor-ui.js";
+import * as Tut from "./tutorial-ui.js";
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);
@@ -195,7 +196,7 @@ function startSolo() {
 // tab, does not lose an hour of play.
 const SAVE = "zh.solo";
 function saveSolo() {
-  if (game.room || !game.st) return;
+  if (game.room || !game.st || Tut.active()) return; // tutorial never reads/writes zh.solo (#15)
   if (game.st.winner != null) { try { localStorage.removeItem(SAVE); } catch {} return; }
   store.set(SAVE, JSON.stringify({ st: game.st, me: game.me, level: game.level, rng: game.rng.getState(), seenLog: game.seenLog || 0 }));
 }
@@ -212,6 +213,9 @@ function resumeSolo() {
 }
 function humanAct(action) {
   if (game.spectator) return;
+  // The tutorial's gate (#15): refuses anything but the current lesson's own
+  // move, legal or not, so a script step is the only thing that can land.
+  if (Tut.active() && !Tut.allowsAction(action)) { game.ui.err = t("tutorial.wrong"); render(); return; }
   // Everything logged after this point is "what happened since you last acted".
   game.seenLog = game.st.logSeq || 0;
   if (game.room) { send({ type: "act", action }); game.ui = freshUi(); render(); return; }
@@ -220,12 +224,12 @@ function humanAct(action) {
   game.ui = freshUi();
   saveSolo();
   render();
-  botLoop();
+  if (Tut.active()) Tut.afterAction(); else botLoop();
 }
 let botTimer = 0;
 function botLoop() {
   clearTimeout(botTimer);
-  if (game.room) return;
+  if (game.room || Tut.active()) return;
   const st = game.st;
   if (st.winner != null) { saveSolo(); renderOver(); return; }
   // `?auto` (a development aid) lets the bot play the human seat too, so a
@@ -258,7 +262,7 @@ function render() {
   // In a room the state on hand is already this seat's view.
   const v = game.room ? game.st : E.view(game.st, game.me);
   game.lastView = v; // layoutTable() re-renders the hand off this if it flips full<->chip
-  $("barMid").textContent = `${t("tracks.turn")} ${v.turn} · ${game.spectator ? "" : sideName(game.me)}`;
+  $("barMid").textContent = Tut.active() ? Tut.barText() : `${t("tracks.turn")} ${v.turn} · ${game.spectator ? "" : sideName(game.me)}`;
   renderTopBar(v);
   if (game.spectator) {
     setSheetOpen(false);
@@ -293,11 +297,12 @@ function render() {
   // it's going to be before layoutTable() can measure the chrome it leaves
   // for the map/hand — see the "advisorBanner" id added to that sum below.
   decorateAdvisor(v, {
-    solo: !game.room && !game.spectator, side: game.me, uiCard: game.ui.card,
+    solo: !game.room && !game.spectator && !Tut.active(), side: game.me, uiCard: game.ui.card,
     pickedSpaces: (game.ui.picks && game.ui.picks.length ? game.ui.picks : game.ui.points) || [],
     t, spaceName, stateName, regionName, cardName, sep,
   });
   layoutTable(); // the map's real box depends on the hand's, so both are sized together, then fitMap() scales the map's content
+  Tut.decorate(); // no-op unless a tutorial is running (#15)
 }
 // The map's scale is the viewport-width ratio (DESIGN_W is the mockup's own
 // canvas width) UNLESS that would leave no room at all for a shown hand, in
@@ -372,7 +377,12 @@ function layoutTable() {
   // twice.
   const advBanner = document.getElementById("advisorBanner");
   const advBannerAsRow = advBanner && advBanner.parentElement === table ? advBanner.getBoundingClientRect().height : 0;
-  const chrome = ["topbar", "statline", "prompt", "sheet"].reduce((sum, id) => sum + $(id).getBoundingClientRect().height, 0) + advBannerAsRow;
+  // tutCoach (#15) is a floating panel INSIDE #map's own box (position:
+  // absolute, see tutorial.css) — it never takes a row of its own, so it's
+  // deliberately left out of this budget; #map's own overflow:hidden clips
+  // it to that box regardless. $(id) is null-guarded because tutCoach only
+  // exists while a tutorial is actually running.
+  const chrome = ["topbar", "statline", "prompt", "sheet"].reduce((sum, id) => sum + ($(id) ? $(id).getBoundingClientRect().height : 0), 0) + advBannerAsRow;
   // #table's own top/bottom padding, plus one flex column gap per boundary
   // between its VISIBLE children (a hidden/empty row like #sheet or #chatForm
   // takes no box and no gap) — measured, not guessed, so a wrong constant
@@ -397,7 +407,16 @@ function layoutTable() {
   };
   let scale, mapH, handH, mode = "full", overflow = false;
   if (!hasHand) {
-    scale = widthScale; mapH = Math.round(DESIGN_H * scale); handH = 0;
+    // Letterbox to whatever height is actually left (chrome can still eat
+    // most of a short viewport even with no hand row, e.g. a tutorial
+    // action lesson's sheet) — never below FLOOR_SCALE; if even the floor
+    // doesn't fit, fall back to scroll instead of quietly overflowing (#15
+    // review round 4: English 390x669's confirm button was landing past the
+    // bottom edge because this branch never looked at spaceForMapAndHand).
+    scale = Math.min(widthScale, Math.max(FLOOR_SCALE, spaceForMapAndHand / DESIGN_H));
+    mapH = Math.round(DESIGN_H * scale);
+    handH = 0;
+    if (mapH > spaceForMapAndHand) overflow = true;
   } else {
     const full = configFor(CARD_H + HAND_GUTTER); // 207: 96x176 card + its own headroom
     if (full.handH - HAND_GUTTER >= CARD_FULL_MIN) {
@@ -1264,7 +1283,11 @@ setInterval(() => {
 // ---------- boot ----------
 const params = new URLSearchParams(location.search);
 setLang(params.get("lang") || store.get("zh.lang", (navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
-if (params.has("resume") && loadSolo()) resumeSolo();
+if (params.has("tutorial")) {
+  // Hand the whole page over to the tutorial (#15): it owns game.st/game.ui
+  // from here, app.js only renders what it's told and asks before acting.
+  Tut.start({ E, t, game, freshUi, render, show, layoutTable, $, esc, getLang: () => lang });
+} else if (params.has("resume") && loadSolo()) resumeSolo();
 else if (params.get("create") === "1") maybeConnect({ create: "1" });
 else if (params.get("room")) { const code = params.get("room").toUpperCase(); maybeConnect({ room: code, token: sess.get("zh.token." + code) || "" }); }
 else {
