@@ -74,14 +74,14 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
    shortest phones — the description disappears (see the max-height
    container query below); the pills/name field/footer never shrink. */
 .setup-view {
-  display: flex; flex-direction: column; gap: clamp(6px, 3.4cqh, 16px); flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column; gap: 12px; gap: clamp(6px, 3.4cqh, 16px); flex: 1 1 auto; min-height: 0;
   padding-top: 18px; overflow: hidden; container-type: size; container-name: setup;
 }
 .setup-h1 { margin: 0; flex: none; font: 900 26px var(--serif); color: var(--gold); }
 .setup-view .field { display: flex; flex-direction: column; gap: 8px; margin: 0; flex: none; }
 .field-label { font: 600 11px/1 var(--serif); letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
 .tiles { display: flex; gap: 8px; }
-.tile { flex: 1; height: clamp(96px, 24cqh, 150px); padding: 0; position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--gold-line); opacity: 0.72; background: #15130f; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tile { flex: 1; height: 120px; height: clamp(96px, 24cqh, 150px); padding: 0; position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--gold-line); opacity: 0.72; background: #15130f; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .tile.chu { background: #3a0a07; }
 .tile.random { background: #ece4d0; }
 .tile[aria-pressed="true"] { border: 3px solid var(--gold); opacity: 1; }
@@ -365,8 +365,8 @@ body.sheet-open { overflow: hidden; height: 100svh; }
 .sheet-chip .ops.c { background: var(--chu-gold); color: #6f120d; }
 .sheet-chip .ops.n, .sheet-chip .ops.s { background: var(--gold); color: var(--bg); }
 .sheet-chip .chip-nm { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.sheet-chip .nm-zh { font-family: var(--kai); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sheet-chip .nm-en { font-size: 10px; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sheet-chip .nm-zh { font-family: var(--kai); font-size: 13px; font-weight: 700; overflow-wrap: break-word; }
+.sheet-chip .nm-en { font-size: 10px; opacity: 0.8; overflow-wrap: break-word; }
 .chip-expand { flex: none; min-height: 32px; padding: 0 10px; font-size: 12px; border-radius: 16px; }
 .sheet-head { display: flex; gap: 12px; }
 .sheet-img { flex: none; width: 96px; height: 128px; object-fit: cover; border-radius: 10px; border: 1.5px solid var(--gold-line); }
