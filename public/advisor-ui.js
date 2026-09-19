@@ -36,7 +36,7 @@ function persist() { try { localStorage.setItem(STORE_KEY, enabled ? "1" : "0");
 let toggle = null; // { root, label, track, dot } -- built once by mountAdvisorToggle
 let banner = null; // { root, title, why } -- built once, lazily, by ensureBanner
 let ro = null; // ResizeObserver, repositions the banner without a fresh decorate() call
-let lastCtx = null; // the most recent {view, meta}, so the switch's own click can redecorate
+let lastCtx = null; // the most recent {view, meta, switchVisible}, so the switch's own click can redecorate
 let gen = 0; // invalidates a scheduled advise() the moment the position moves on
 let lastScrolledCard = undefined;
 const cache = { fp: null, adv: null };
@@ -73,7 +73,12 @@ export function mountAdvisorToggle(host) {
     enabled = !enabled;
     persist();
     syncToggleUI(lastCtx && lastCtx.meta);
-    if (lastCtx) applyDecorations(lastCtx.view, lastCtx.meta, true);
+    // Bug found while testing (#18): this used to call applyDecorations()
+    // without its 4th argument, so `active` (which needs switchVisible)
+    // was always falsy here and a click on the switch with no OTHER
+    // render() in between (e.g. right at the very first decision) silently
+    // did nothing until the next unrelated render.
+    if (lastCtx) applyDecorations(lastCtx.view, lastCtx.meta, true, lastCtx.switchVisible);
   });
   host.appendChild(root);
   toggle = { root, label, track, dot };
@@ -119,18 +124,52 @@ function ensureBanner() {
 // phone) and capped to the hand's own width (390px on desktop's sidebar).
 function positionBanner() {
   if (!banner) return;
-  const hand = document.getElementById("hand");
   const table = document.getElementById("table");
-  if (!hand || !table) return;
-  const hr = hand.getBoundingClientRect();
+  const hand = document.getElementById("hand");
+  const map = document.getElementById("map");
+  if (!table) return;
   const tr = table.getBoundingClientRect();
-  const width = Math.min(390, Math.max(200, hr.width || tr.width || 320));
-  banner.root.style.width = width + "px";
-  banner.root.style.left = Math.max(tr.left, hr.left) + "px";
+  const hr = hand ? hand.getBoundingClientRect() : null;
+  const prompt = document.getElementById("prompt");
+  const sheet = document.getElementById("sheet");
+  const pr = prompt ? prompt.getBoundingClientRect() : null;
+  // #sheet sits between #prompt and #hand in the DOM, and while a card's
+  // map-active use (place/campaign/lobby target picking) is open it stays
+  // visible as a small chip strip right there -- so the real "bottom of
+  // what's above the hand" is whichever of the two extends lower, not
+  // always #prompt.
+  const sr = sheet && !sheet.hidden && sheet.getBoundingClientRect().height > 0 ? sheet.getBoundingClientRect() : null;
+  const aboveHandBottom = Math.max(pr ? pr.bottom : 0, sr ? sr.bottom : 0);
   const h = banner.root.offsetHeight || 54;
-  let top = hr.top - h - 6;
-  const minTop = tr.top + 4;
-  if (top < minTop) top = minTop;
+  // Above the hand, in the gap between whatever sits right above it and the
+  // hand row -- but on a real phone that gap is only a few px (#table's own
+  // row-gap), nowhere near this banner's own height, so sitting there would
+  // print gold text directly over real instructions. Only use that spot
+  // when it is actually tall enough. Otherwise: on #7's desktop sidebar
+  // (>=1024px) the hand has real headroom of its own (its grid area is
+  // often several hundred px tall), so this drops the banner just inside
+  // the hand's own top edge instead -- still in the sidebar, between the
+  // prompt and the cards, per the desktop brief, rather than jumping all
+  // the way to the map on the OTHER side of the frame. On the phone
+  // column, the hand's own box is exactly card-height (no headroom to
+  // spare), so it falls back to just inside the map's own bottom edge
+  // instead (the same spot used when there is no hand row at all, e.g.
+  // the opening placement) -- the map is the one part of that column that
+  // never carries text this has to compete with.
+  const handVisible = !!(hand && !hand.hidden && hr && hr.height > 0);
+  const gapAboveHand = handVisible && aboveHandBottom ? hr.top - aboveHandBottom : -1;
+  const fitsAboveHand = handVisible && gapAboveHand >= h + 10;
+  const desktop = window.innerWidth >= 1024;
+  const mr = map ? map.getBoundingClientRect() : tr;
+  let anchor, top;
+  if (fitsAboveHand) { anchor = hr; top = hr.top - h - 6; }
+  else if (handVisible && desktop) { anchor = hr; top = hr.top + 6; }
+  else { anchor = mr; top = mr.bottom - h - 6; }
+  const width = Math.min(390, Math.max(200, anchor.width || tr.width || 320));
+  banner.root.style.width = width + "px";
+  banner.root.style.left = Math.max(tr.left, anchor.left) + "px";
+  const minTop = tr.top + 4, maxTop = tr.bottom - h - 4;
+  top = Math.max(minTop, Math.min(top, maxTop));
   banner.root.style.top = top + "px";
 }
 
@@ -167,7 +206,10 @@ function bannerTitle(adv, meta) {
     const counts = {};
     for (const id of adv.targets) counts[id] = (counts[id] || 0) + 1;
     const ids = Object.keys(counts);
-    return ids.map((id) => t("advisor.suggestSetup", { n: counts[id], space: meta.spaceName(id) })).join(meta.sep());
+    // Each line is already its own full sentence ("Place {n} ... in
+    // {space}."), so multiple spaces are joined with a space, not the
+    // language's list separator (which would double up the punctuation).
+    return ids.map((id) => t("advisor.suggestSetup", { n: counts[id], space: meta.spaceName(id) })).join(" ");
   }
   if (adv.card == null) return null;
   const use = adv.use || "event";
@@ -191,8 +233,20 @@ function decorateHand(adv, view, meta) {
   el.classList.add("adv-pick");
   if (lastScrolledCard !== adv.card) {
     lastScrolledCard = adv.card;
-    try { el.scrollIntoView({ block: "nearest", inline: "nearest" }); } catch {}
+    scrollWithin(hand, el);
   }
+}
+// Only the hand's own horizontal scrollbar moves -- never `scrollIntoView`,
+// which can also walk up and move the PAGE's own scroll position (real bug
+// found while testing: a suggested card just past the fold moved
+// document.documentElement's scrollTop, which fought #table's own
+// no-scroll lock on a short viewport).
+function scrollWithin(container, el) {
+  try {
+    const cr = container.getBoundingClientRect(), er = el.getBoundingClientRect();
+    if (er.left < cr.left) container.scrollLeft -= (cr.left - er.left) + 8;
+    else if (er.right > cr.right) container.scrollLeft += (er.right - cr.right) + 8;
+  } catch {}
 }
 function decorateSheet(adv, meta) {
   const sheet = document.getElementById("sheet");
@@ -317,7 +371,7 @@ export function decorate(view, meta) {
   const tableEl = document.getElementById("table");
   const tableShown = !!tableEl && !tableEl.hidden;
   const switchVisible = !!(meta && meta.solo) && !TUTORIAL && tableShown;
-  lastCtx = { view, meta };
+  lastCtx = { view, meta, switchVisible };
   if (toggle) {
     toggle.root.hidden = !switchVisible;
     syncToggleUI(meta);
