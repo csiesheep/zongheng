@@ -105,6 +105,15 @@ export const NODE_ANCHOR = { bashu: "right", shangdang: "right", ying: "top", wu
 // but keyed to their own current language); `esc` is the caller's own HTML
 // escaper. Only the English break/small rules and the battleground star are
 // decided here, off the id and `lang`.
+// The stability tag: a small square badge in the disc's corner carrying
+// E.SPACE[id].stability, drawn identically on the table and the rules page
+// (owner design "A 數字籤", #26) — see .node .stab in style.css for its
+// look and the anchor-left corner swap. Decorative, so aria-hidden; the
+// number is also read out through whatever the caller uses for the tap
+// target's accessible name (app.js: the hit button's title/aria-label).
+export function stabilityTagHTML(sp) {
+  return `<span class="stab" aria-hidden="true">${sp.stability}</span>`;
+}
 export function nodeLabelHTML(id, name, lang, esc) {
   const star = E.SPACE[id].battleground ? "★" : "";
   if (lang === "en" && NODE_BREAK_EN[id]) {
