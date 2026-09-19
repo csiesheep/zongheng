@@ -18,7 +18,7 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; min-height: 100%; }
-body { background: var(--bg); color: var(--text); font-family: var(--serif); display: flex; flex-direction: column; min-height: 100vh; font-size: 14px; }
+body { background: var(--bg); color: var(--text); font-family: var(--serif); display: flex; flex-direction: column; min-height: 100vh; min-height: 100svh; font-size: 14px; }
 button { font-family: var(--serif); cursor: pointer; }
 button:disabled { opacity: 0.45; cursor: default; }
 
@@ -247,7 +247,7 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
    gives #table the rest of the viewport and forbids scrolling; the map is
    the one flexible piece, so it shrinks first on a short phone. Below the
    map's own opaque art still paints in the seated side's court colour. */
-body.table-lock { height: 100svh; overflow: hidden; }
+body.table-lock { height: 100svh; min-height: 0; overflow: hidden; }
 body.table-lock #table { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 /* Round 5's last-resort escape hatch (layoutTable() in app.js): when even a
    chip-row hand can't fit alongside the map's floor spec (~375x553), it sets
@@ -369,7 +369,7 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    Neutral/Scoring are full pages, not a strip under the map) so the table
    behind it can't scroll; Cancel/Confirm/re-tapping the card closes it and
    returns to the table, which un-hides the page scroll again. */
-body.sheet-open { overflow: hidden; height: 100svh; }
+body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .sheet.overlay { position: fixed; inset: 0; z-index: 40; margin: 0; max-height: none; height: 100svh; border-radius: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); }
 .sheet .rowb { display: flex; flex-wrap: wrap; gap: 6px; }
 .sheet .rowb.order { gap: 8px; }
