@@ -99,9 +99,11 @@ test("#16 an ops choice that breaks a rule is refused with that rule's message, 
   // 遼東 touches nothing Qin holds or reaches: rulebook 三、四種行動, placement
   // needs influence there already or an adjacent space under control.
   const viaChoose = thrown(() => E.apply(opsPending(), { type: "choose", side: QIN, choice: { use: "place", points: ["liaodong"] } }));
+  assert.ok(viaChoose, "placing in 遼東 out of nowhere must be refused");
   assert.match(viaChoose.message, /liaodong is not reachable/);
   // 關中 has no Chu influence in it, so there is nothing to campaign against.
   const noEnemy = thrown(() => E.apply(opsPending(), { type: "choose", side: QIN, choice: { use: "campaign", target: "guanzhong" } }));
+  assert.ok(noEnemy, "a campaign against nobody must be refused");
   assert.match(noEnemy.message, /no enemy influence/);
 });
 
