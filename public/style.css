@@ -25,8 +25,15 @@ button:disabled { opacity: 0.45; cursor: default; }
 /* Seated side re-skins the accent used by primary controls and the hand, and
    the block below the map (the whole court's own colour: black for Qin,
    lacquer red for Chu). */
-body.side-chu { --accent: var(--chu-gold); --accent-ink: #6f120d; --accent-font: var(--kai); --accent-weight: 700; --table-bg: #4f0e0a; }
-body.side-qin { --accent: var(--qin-text); --accent-ink: var(--bg); --accent-font: var(--serif); --accent-weight: 900; --table-bg: var(--bg); }
+/* #28: the court's own colour block below the map now carries that side's
+   patterned ground (qintex.jpg / chutex.jpg) under a same-hue scrim. Scrim
+   alpha (0.70 / 0.72) is measured, not guessed — see the canvas sampling in
+   the #28 issue comment: the texture's brightest 1% pixels, composited with
+   this scrim, still meet 4.5:1 against every text colour drawn over #table
+   (the tightest is --text-dim). Lower alpha would show more pattern but
+   fail contrast; higher would wash it out toward flat colour. */
+body.side-chu { --accent: var(--chu-gold); --accent-ink: #6f120d; --accent-font: var(--kai); --accent-weight: 700; --table-bg: linear-gradient(rgba(79, 14, 10, 0.70), rgba(79, 14, 10, 0.70)), url(art/ui/chutex.jpg); }
+body.side-qin { --accent: var(--qin-text); --accent-ink: var(--bg); --accent-font: var(--serif); --accent-weight: 900; --table-bg: linear-gradient(rgba(12, 11, 10, 0.72), rgba(12, 11, 10, 0.72)), url(art/ui/qintex.jpg); }
 
 /* The solo setup screen re-skins its whole page by which side is picked:
    Qin default black, Chu lacquer red, Random a light parchment (ink on
@@ -54,6 +61,20 @@ body.setup-random {
 body.setup-qin, body.setup-chu, body.setup-random {
   background: var(--bg); color: var(--text);
   min-height: 100vh; min-height: 100svh;
+}
+/* #28: Qin/Chu setup pages wear their own patterned ground (Random stays
+   flat parchment — no side picked yet). Same measured-scrim approach as
+   #table above; no background-attachment:fixed (breaks on iOS). Longhand
+   background-image here only layers on top of the shorthand `background`
+   set just above (same specificity, later in source wins for this one
+   sub-property) — it does not touch the min-height rule. */
+body.setup-qin {
+  background-image: linear-gradient(rgba(12, 11, 10, 0.72), rgba(12, 11, 10, 0.72)), url(art/ui/qintex.jpg);
+  background-size: cover; background-position: center; background-repeat: no-repeat;
+}
+body.setup-chu {
+  background-image: linear-gradient(rgba(79, 14, 10, 0.40), rgba(79, 14, 10, 0.40)), url(art/ui/chutex.jpg);
+  background-size: cover; background-position: center; background-repeat: no-repeat;
 }
 
 .bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 0; gap: 8px; }
@@ -273,7 +294,7 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 /* No horizontal padding here: the map needs the phone's full width to hit
    its disc/text/tap-target minimums (see fitMap in app.js), so every OTHER
    row carries its own 8px side padding instead of #table doing it for all. */
-#table { padding: 6px 0; gap: 4px; background: var(--table-bg); }
+#table { padding: 6px 0; gap: 4px; background: var(--table-bg); background-size: cover; background-position: center; background-repeat: no-repeat; }
 .topbar { flex: none; padding: 1px 8px; font-size: 12px; color: var(--text-dim); }
 .tb-turn { font-size: 12px; }
 .tb-turn b { color: var(--text); font-weight: 600; }
