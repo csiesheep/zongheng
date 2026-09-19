@@ -79,7 +79,7 @@ export default {
   tutorial: {
     button: "Tutorial · 5 minutes",
     intro: { kicker: "Tutorial · about 5 minutes", title: "Into the Warring States", sub: "First steps in the Warring States", text: "You play Qin. In ten short steps you take a space, use a card four ways, fight one campaign, and destroy the state of Han. The other side follows a script, so nothing can go wrong.", start: "Start", notNow: "Not now" },
-    skip: "Skip the tutorial", back: "Back", stepOf: "Step {n} of {total}",
+    skip: "Skip the tutorial", back: "Back", stepOf: "Step {n} of {total}", topbar: "Tutorial {n}/{total}", gotIt: "Got it",
     wrong: "Tap the highlighted spot.",
     steps: {
       map: { title: "The map", text: "26 spaces in five regions plus Zhou; a star marks a battleground. The disc shows Qin's and Chu's influence.", do: "Tap {space}" },

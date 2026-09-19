@@ -72,7 +72,7 @@ export default {
   tutorial: {
     button: "教學 · 5 分鐘",
     intro: { kicker: "教學 · 約 5 分鐘", title: "初入戰國", sub: "", text: "你扮演秦。十個小步驟裡,你會拿下一個據點、學會一張牌的四種用法、打一次征伐,還會滅掉韓。對方照劇本走,不會出錯。", start: "開始", notNow: "先不要" },
-    skip: "跳過教學", back: "上一步", stepOf: "第 {n} / {total} 課",
+    skip: "跳過教學", back: "上一步", stepOf: "第 {n} / {total} 課", topbar: "教學 · 第 {n} / {total} 課", gotIt: "知道了",
     wrong: "要點亮著的地方。",
     steps: {
       map: { title: "地圖", text: "26 個據點,分五個記分區加上周室;★ 是要衝。圓盤兩色是秦、楚的影響力。", do: "點{space}" },
