@@ -21,33 +21,38 @@ body:has(#lobby:not([hidden])), body:has(#over:not([hidden])) {
 
 /* ---------- lobby: fills the screen, no page scroll ---------- */
 /* The room code/seats/chat can grow (more seats, a longer chat) past what a
-   short phone shows; rather than let that push Start off screen (or the
-   whole page scroll, hiding it), only `.lobby-scroll` scrolls — Start (and
-   the name gate's Enter) stay pinned in view via the flex column below. */
+   short phone shows; the chat log itself shrinks first (see `.lobby-chat`
+   below), then the hint hides, and only below the owner's stated floor does
+   `#lobbyRoom` itself start to scroll (see the @media below) — Start (and
+   the name gate's Enter) stay in the normal flow throughout, never pinned
+   via fixed/absolute over other content. */
 #lobby.view {
   display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; overflow: hidden;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
-#lobbyGate, #lobbyRoom { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
-/* No inner scroll box (owner, C2_Lobby retry: "沒有任何內部捲動區" — the
-   whole point of the seat/action redesign in this fix). `.lobby-chat` still
-   scrolls *itself* when the transcript grows past a few lines, same as any
-   chat log; that's not the "middle of the lobby scrolls" bug being fixed
-   here — everything around it (seats, level, swap/leave, chat input, Start)
-   stays laid out, none of it inside a scrolling ancestor. The chat log is
-   the one flexible child (flex-shrink, min ~1 line) so it gives up space
-   first on a short phone, per the same comment. */
-.lobby-scroll { flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-#lobbySeats, #lobbyLevelField, #lobbySecondary, #lobbyChatForm { flex: none; }
-#lobbyActions, #lobbyErr { flex: none; }
-#lobbyActions { margin-top: 8px; }
-/* Below this there's nothing left to shrink (chat is already at one line);
-   owner's floor is 375x553 — let the whole lobby page scroll there instead
-   of clipping content or reintroducing an inner scroll box. */
+/* ONE flex column, not a scrolling sub-box plus a separately-sized button
+   row: two independently-sized boxes is exactly what produced the English
+   overlap the owner caught (375x667/375x553 — the longer English hint text
+   made `.lobby-scroll`'s automatic min-height (reset to 0 by its own
+   `overflow: hidden`) shrink the box below what its own children actually
+   needed, while those children kept their real layout height — the chat
+   input row's true bottom edge (per getBoundingClientRect) ended up below
+   where the next flex sibling, `#lobbyActions`, started). With everything —
+   title through Start — as siblings in the SAME column, `#lobbyActions`
+   uses `margin-top: auto` to sit at the bottom (auto margins can't go
+   negative, so if there's truly no space left it becomes 0 and Start just
+   follows the last row directly, in-flow — never on top of it). */
+#lobbyGate, #lobbyRoom { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow-y: hidden; }
+#lobbySeats, #lobbyLevelField, #lobbySecondary, #lobbyChatForm, #lobbyErr { flex: none; }
+#lobbyActions { flex: none; margin-top: auto; padding-top: 8px; }
+/* Below this there's nothing left to shrink (the chat log is already at one
+   line and the hint is already hidden — see below); owner's floor is
+   375x553 — let the whole lobby scroll there instead of clipping content.
+   `overflow-y: auto` (not `hidden`) is what makes this an honest, single
+   scroll region instead of the two-box mismatch above. */
 @media (max-height: 600px) {
-  #lobby.view { overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .lobby-scroll { overflow: visible; }
+  #lobbyRoom { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 }
 
 /* ---------- lobby: the name gate asked before a room is joined ---------- */
@@ -103,7 +108,7 @@ body:has(#lobby:not([hidden])), body:has(#over:not([hidden])) {
 .seat .tag { font-size: 10px; color: #fff; border: 1px solid rgba(255, 255, 255, 0.55); border-radius: 999px; padding: 1px 6px; margin-left: 6px; }
 .seat .status { flex: none; font: 400 12px var(--serif); color: #fff; }
 .seat .seat-btn {
-  flex: none; min-height: 36px; padding: 0 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.25);
+  flex: none; min-height: 44px; padding: 0 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.55); color: #fff; font: 600 12px var(--serif);
 }
 
