@@ -189,7 +189,7 @@ function startSolo() {
   game.botLine = ""; game.seenLog = 0;
   game.botName = S.names[E.SIDES[1 - game.me]][0];
   game.auto = new URLSearchParams(location.search).has("auto");
-  $("logBody").hidden = true;
+  setLogOpen(false);
   show("table"); render(); botLoop();
 }
 // A solo game is kept in this browser so a reload, or a phone that drops the
@@ -990,12 +990,15 @@ function fmtLog(l) {
   return s === key ? "" : s;
 }
 function renderLog(v) {
-  const body = $("logBody");
-  $("logToggle").textContent = `${t("buttons.log")} (${body.hidden ? t("buttons.show") : t("buttons.hide")})`;
+  syncLogToggleLabel();
+  // #27: the title in the panel's own sticky header (not the #logToggle
+  // label above, which stays as-is) names what's actually inside it — the
+  // room's chat is mixed into the same feed there, so it says so.
+  $("logTitle").textContent = game.room ? t("buttons.logChat") : t("buttons.log");
   const lines = v.log.slice(-60).map(fmtLog).filter(Boolean).reverse();
   $("chatForm").hidden = !game.room || game.spectator;
   const said = game.room ? room.chat.slice(-8).reverse().map((s) => `<div class="say">${esc(s)}</div>`).join("") : "";
-  body.innerHTML = said + (game.botLine ? `<div class="bot">${esc(game.botLine)}</div>` : "") + lines.map((s) => `<div>${esc(s)}</div>`).join("");
+  $("logLines").innerHTML = said + (game.botLine ? `<div class="bot">${esc(game.botLine)}</div>` : "") + lines.map((s) => `<div>${esc(s)}</div>`).join("");
   // Under the prompt: what happened since this seat last acted.
   const NEWS = new Set(["headline", "play", "place", "campaign", "lobby", "score", "tire", "seal", "unseal", "mie", "restore", "reform", "jiuding", "bog", "skip", "era", "turn"]);
   const news = v.log.filter((l) => l.i > (game.seenLog || 0) && NEWS.has(l.type)).map(fmtLog).filter(Boolean).slice(-7);
@@ -1014,8 +1017,32 @@ $("chatForm").onsubmit = (ev) => {
   if (text) send({ type: "chat", text });
   $("chatIn").value = "";
 };
-$("logToggle").onclick = () => { $("logBody").hidden = !$("logBody").hidden; if (game.st) renderLog(E.view(game.st, game.me)); };
-$("sideFootBtn").onclick = () => { $("logBody").hidden = !$("logBody").hidden; if (game.st) renderLog(game.room ? game.st : E.view(game.st, game.me)); };
+// #logToggle's own label is the only one of the panel's buttons that names
+// open/closed state (#sideFootBtn always just reads "Log and chat" — see
+// renderLog); every path that opens or closes the panel must keep it in
+// sync, not just the two that already called renderLog, or it goes stale
+// until the next render (#27 follow-up: closing from the header's own
+// button or the scrim left it reading "(Hide)" while the panel was shut).
+function syncLogToggleLabel() {
+  const hidden = $("logBody").hidden;
+  $("logToggle").textContent = `${t("buttons.log")} (${hidden ? t("buttons.show") : t("buttons.hide")})`;
+}
+// #27: the panel used to be the only way to close itself (#logToggle in the
+// prompt row), and once the log grew past a few lines it covered its own
+// toggle button along with the whole prompt row and hand underneath — no way
+// left to close it or play a card except reloading. It now closes itself
+// from three places: its own sticky-header close button, a full-viewport
+// scrim behind it, and (unchanged) #logToggle / #sideFootBtn. Every one of
+// those paths runs through here so #logToggle's own label never goes stale.
+function setLogOpen(open) {
+  $("logBody").hidden = !open;
+  $("logScrim").hidden = !open;
+  syncLogToggleLabel();
+}
+$("logClose").onclick = () => setLogOpen(false);
+$("logScrim").onclick = () => setLogOpen(false);
+$("logToggle").onclick = () => { setLogOpen($("logBody").hidden); if (game.st) renderLog(E.view(game.st, game.me)); };
+$("sideFootBtn").onclick = () => { setLogOpen($("logBody").hidden); if (game.st) renderLog(game.room ? game.st : E.view(game.st, game.me)); };
 
 // The result screen's whole colour follows the WINNER, not your own seat
 // (owner, 2026-09-19: "for win page, the background should be the winner's
@@ -1129,7 +1156,7 @@ function onRoomMsg(m) {
     case "say":
       room.chat.push(m.sys ? m.text : `${room.seats[m.seat]?.name ?? ""}: ${m.text}`);
       if (room.chat.length > 50) room.chat.shift();
-      if (!m.sys) $("logBody").hidden = false;
+      if (!m.sys) setLogOpen(true);
       if (game.st) renderLog(game.st);
       renderLobbyChat();
       break;

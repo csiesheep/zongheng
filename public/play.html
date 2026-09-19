@@ -95,7 +95,14 @@
     <div class="sidefoot-text" id="sideFootText"></div>
     <button id="sideFootBtn" type="button" class="small"></button>
   </section>
-  <div id="logBody" class="logbody" hidden></div>
+  <div id="logScrim" class="logscrim" hidden></div>
+  <div id="logBody" class="logbody" hidden>
+    <div class="logbody-head">
+      <span class="logbody-title" id="logTitle"></span>
+      <button type="button" id="logClose" class="small logbody-close" data-t="buttons.hide"></button>
+    </div>
+    <div class="logbody-content" id="logLines"></div>
+  </div>
 </main>
 
 <main id="over" class="view over-view" hidden>
