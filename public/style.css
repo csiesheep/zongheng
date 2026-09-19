@@ -429,12 +429,19 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    bigger lift only for the handful of nodes this close to an edge — none
    of the others (checked: Wuyue at y=378 already clears at -2px). */
 .node.stab-hi .stab { bottom: 2px; }
-/* The hit layer sits directly in .map (NOT scaled — #mapInner is the only
-   thing fitMap() transforms), so a 44x44 button here is always a true
-   44x44 css px regardless of how small the map's own art renders. Percent
-   positioning keeps it tracking the visual disc at any scale. */
-.hit-layer { position: absolute; inset: 0; z-index: 3; }
-.hit { position: absolute; width: 44px; height: 44px; transform: translate(-50%, -50%); padding: 0; border: none; background: none; cursor: default; }
+/* #7/#32: .hit-layer used to sit flush with .map's own box (inset:0) and
+   position each button by percentage of THAT box, which drifted away from
+   the visual disc (inside .map-inner, a fixed design canvas fitMap()
+   scales and centres) any time .map's aspect ratio wasn't DESIGN_W:
+   DESIGN_H — always true on desktop. It now gets the identical box as
+   .map-inner (same top/left/transform-origin rule; fitMap() in app.js
+   gives both the same width/height/transform every render), so a button
+   positioned at a city's own DESIGN_W/DESIGN_H px (see renderMap()) lands
+   exactly on that city's disc at any scale. 47x47 (HIT_SIZE in app.js) is
+   the design-px size that stays >=44 real css px even at the map's floor
+   scale (~0.9506); on desktop's larger scale it only grows. */
+.hit-layer { position: absolute; top: 50%; left: 50%; transform-origin: center center; z-index: 3; }
+.hit { position: absolute; width: 47px; height: 47px; transform: translate(-50%, -50%); padding: 0; border: none; background: none; cursor: default; }
 .hit:not(:disabled) { cursor: pointer; }
 .card:disabled { opacity: 0.85; }
 /* Below the map: one condensed stat row, then the prompt, then the hand. */

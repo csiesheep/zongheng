@@ -726,10 +726,21 @@ function cardInfo(L, card) {
 // Touch targets are a physical requirement, not a design one: they must
 // stay >=44x44 real px no matter how much the map's own art is scaled down
 // on a narrow phone. So each city is two elements — a VISUAL node (disc +
-// label, lives inside #mapInner and is scaled with everything else) and a
-// separate, invisible HIT button (lives in #hitLayer, a plain overlay that
-// is never transformed, positioned by percentage so it tracks the visual
-// disc at any scale while staying a true 44x44 css px in size).
+// label, lives inside #mapInner) and a separate, invisible HIT button
+// (lives in #hitLayer). #7/#32: the two used to live in different coordinate
+// systems — #mapInner is a fixed DESIGN_W x DESIGN_H canvas, scaled and
+// centred inside #map by fitMap(); #hitLayer's buttons were positioned by
+// percentage of #map's OWN box, which only matches #mapInner's box when
+// #map's aspect ratio happens to equal DESIGN_W:DESIGN_H — never true on
+// desktop, and untrue on a squashed/stretched phone viewport too. Fixed by
+// giving #hitLayer the exact same box as #mapInner (fitMap() now sizes and
+// transforms both identically) and positioning each hit button in the same
+// DESIGN_W/DESIGN_H px coordinates as its node, so a button is always
+// centred on its own disc and scales with it. HIT_SIZE (47 design px) is
+// picked so that at FLOOR_SCALE (~0.9506) the rendered button is still
+// >=44 real css px (47 * 0.9506 = 44.68); on desktop's larger scale it only
+// grows, same as the disc it covers.
+const HIT_SIZE = 47;
 function renderMap(v) {
   const el = $("mapInner");
   const hitEl = $("hitLayer");
@@ -767,7 +778,7 @@ function renderMap(v) {
     const hb = document.createElement("button");
     hb.type = "button";
     hb.className = "hit";
-    hb.style.cssText = `left:${(x / DESIGN_W * 100).toFixed(3)}%;top:${(y / DESIGN_H * 100).toFixed(3)}%`;
+    hb.style.cssText = `left:${x}px;top:${y}px`;
     hb.disabled = !lit;
     hb.title = `${spaceName(sp.id)} · ${sp.stability}`;
     hb.onclick = () => mode.onTap(sp.id);
@@ -781,10 +792,14 @@ function renderMap(v) {
 // for a lack of height, so a real phone always renders the map at (at
 // least) true size: 30/34px discs, 13px city names, 44x44 tap targets.
 function fitMap(scale) {
-  const inner = $("mapInner");
-  inner.style.width = DESIGN_W + "px";
-  inner.style.height = DESIGN_H + "px";
-  inner.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  // #hitLayer gets the exact same box + transform as #mapInner (see the
+  // #7/#32 note above renderMap()) so both live in the same coordinate
+  // system: DESIGN_W x DESIGN_H, centred in #map, scaled together.
+  for (const el of [$("mapInner"), $("hitLayer")]) {
+    el.style.width = DESIGN_W + "px";
+    el.style.height = DESIGN_H + "px";
+    el.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }
 }
 window.addEventListener("resize", () => { if (!$("table").hidden && game.st) { layoutBar(); layoutTable(); } });
 
