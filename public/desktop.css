@@ -101,6 +101,21 @@
      instead of being clipped. */
   body:has(#rules) .page-card { height: min(844px, 100vh); overflow-y: auto; }
 
+  /* #28: on the mobile column this same texture is painted straight onto
+     <body> (style.css: body.setup-qin/chu), but here the card sits ON TOP
+     of body with its own opaque background (line above), so the card itself
+     needs the same scrim+texture or the frame ends with a flat colour hole
+     where the outer .d-tex band's pattern stops. Same measured alpha as the
+     mobile rule — the card's own text sits on the same tokens either way. */
+  body.setup-qin .page-card {
+    background-image: linear-gradient(rgba(12, 11, 10, 0.72), rgba(12, 11, 10, 0.72)), url(art/ui/qintex.jpg);
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+  }
+  body.setup-chu .page-card {
+    background-image: linear-gradient(rgba(79, 14, 10, 0.40), rgba(79, 14, 10, 0.40)), url(art/ui/chutex.jpg);
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+  }
+
   /* The table: the signed-off max-1280x765 frame (owner: "ensure that we
      don't do full screen. we set a max width"). Width is capped at 1280px
      outright; height at 765px via the aspect-ratio below. When the
