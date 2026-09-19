@@ -26,6 +26,9 @@ h2 { font-family: var(--display); font-weight: 400; letter-spacing: 3px; margin:
 .actions .row input { flex: 1; min-width: 0; background: none; border: 1.5px solid var(--bronze); color: var(--silk); font: 16px var(--body); padding: 0 10px; letter-spacing: 3px; }
 .actions button, .actions .link { min-height: 46px; border: 1.5px solid var(--bronze); background: none; color: var(--silk); font-size: 16px; letter-spacing: 2px; padding: 0 14px; }
 .actions .primary { background: var(--bronze); color: var(--lacquer); font-family: var(--display); font-size: 20px; letter-spacing: 6px; }
+.actions a.primary { display: block; text-align: center; text-decoration: none; line-height: 44px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.bar .back { font-family: var(--display); font-size: 15px; letter-spacing: 2px; padding: 8px 10px 8px 0; min-height: 44px; display: inline-flex; align-items: center; }
 .actions .link { display: block; text-align: center; line-height: 44px; color: var(--bronze-light); text-decoration: underline; border: none; }
 .field { margin-bottom: 16px; }
 .label { font-size: 12px; letter-spacing: 2px; color: var(--bronze-light); margin-bottom: 6px; }

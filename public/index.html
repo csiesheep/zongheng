@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Zongheng 縱橫</title>
-<meta name="description" content="縱橫 Zongheng: a two-player Warring States card-driven strategy game, Qin against Chu. Under construction.">
+<meta name="description" content="縱橫 Zongheng: a two-player Warring States card-driven strategy game, Qin against Chu. Solo against a bot, or a room with a friend.">
 <link rel="canonical" href="https://games.csiesheep.com/zongheng/">
 <meta name="theme-color" content="#1c1a17">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -18,7 +18,7 @@
 <header class="bar">
   <a class="hub" href="https://games.csiesheep.com/" data-t="nav.hub"></a>
   <span id="barMid"></span>
-  <span><a class="hub" id="rulesLink" href="rules.html" target="_blank" rel="noopener" data-t="nav.rules"></a> <button id="langBtn" type="button" data-t="nav.lang"></button></span>
+  <span><a class="hub" id="rulesLink" href="rules.html" data-t="nav.rules"></a> <button id="langBtn" type="button" data-t="nav.lang"></button></span>
 </header>
 
 <main id="landing" class="view">
@@ -26,63 +26,24 @@
   <p class="tagline" id="tagline"></p>
   <p class="about" id="about"></p>
   <div class="actions">
-    <button id="btnResume" class="primary" data-t="landing.resume" hidden></button>
-    <button id="btnPlay" class="primary" data-t="landing.play"></button>
+    <a id="btnResume" class="primary" href="play.html?resume" data-t="landing.resume" hidden></a>
+    <a id="btnRoom" class="primary" href="play.html" hidden></a>
+    <a id="btnPlay" class="primary" href="play.html?play" data-t="landing.play"></a>
     <div class="row">
+      <label for="landName" class="sr" data-t="landing.name"></label>
       <input id="landName" maxlength="16" spellcheck="false">
     </div>
     <div class="row">
-      <button id="btnCreate" data-t="landing.create"></button>
+      <button id="btnCreate" type="button" data-t="landing.create"></button>
+      <label for="joinCode" class="sr" data-t="landing.code"></label>
       <input id="joinCode" maxlength="4" autocapitalize="characters" spellcheck="false">
-      <button id="btnJoin" data-t="landing.join"></button>
+      <button id="btnJoin" type="button" data-t="landing.join"></button>
     </div>
     <a href="rules.html" class="link" data-t="landing.rulesLink"></a>
-  </div>
-  <p class="soon" id="soon"></p>
-</main>
-
-<main id="lobby" class="view" hidden>
-  <h2 data-t="lobby.title"></h2>
-  <div class="code" id="lobbyCode"></div>
-  <p class="about" id="lobbyHint"></p>
-  <div id="lobbySeats" class="seats"></div>
-  <div class="field"><div class="label" data-t="setup.level"></div><div class="seg" id="lobbyLevel"></div></div>
-  <div class="actions" id="lobbyActions"></div>
-  <p class="soon" id="lobbyErr" hidden></p>
-</main>
-
-<main id="setup" class="view" hidden>
-  <h2 data-t="setup.title"></h2>
-  <div class="field"><div class="label" data-t="setup.side"></div><div class="seg" id="segSide"></div></div>
-  <div class="field"><div class="label" data-t="setup.level"></div><div class="seg" id="segLevel"></div></div>
-  <div class="actions">
-    <button id="btnStart" class="primary" data-t="setup.start"></button>
-    <button id="btnBack" data-t="setup.back"></button>
-  </div>
-</main>
-
-<main id="table" class="view" hidden>
-  <section class="tracks" id="tracks"></section>
-  <section class="map" id="map"></section>
-  <section class="prompt" id="prompt"></section>
-  <section class="sheet" id="sheet"></section>
-  <section class="hand" id="hand"></section>
-  <form id="chatForm" class="chat" hidden><input id="chatIn" maxlength="200" autocomplete="off"><button type="submit" class="small" data-t="buttons.send"></button></form>
-  <section class="log"><button id="logToggle" class="small"></button><div id="logBody" hidden></div></section>
-</main>
-
-<main id="over" class="view" hidden>
-  <h2 id="overTitle"></h2>
-  <p id="overReason"></p>
-  <p id="overMandate"></p>
-  <div class="actions">
-    <button id="btnAgain" class="primary" data-t="buttons.playAgain"></button>
-    <button id="btnBoard" data-t="buttons.board"></button>
-    <button id="btnHome" data-t="buttons.home"></button>
   </div>
 </main>
 
 <footer class="credit" id="credit"></footer>
-<script type="module" src="app.js"></script>
+<script type="module" src="landing.js"></script>
 </body>
 </html>

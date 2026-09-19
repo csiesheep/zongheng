@@ -83,6 +83,7 @@ export const CELLS = [
   ["hangu3", { options: { hangu: 3 } }],
   ["westBonus", { options: { westBonus: true } }],
   ["noYue", { options: { yue: "none" } }],
+  ["westBonus+noYue", { options: { westBonus: true, yue: "none" } }],
   ["westBonus+comp1", { options: { westBonus: true, comp: 1 } }],
   ["cap+wuguo", { options: { sealAt: "cap", wuguo: "nonbg" } }],
   ["cap+hangu3+wuguo", { options: { sealAt: "cap", hangu: 3, wuguo: "nonbg" } }],
@@ -103,6 +104,7 @@ function parseArgs(argv) {
     else if (a === "--json") cfg.json = true;
     else if (a.startsWith("--out=")) cfg.out = a.slice(6);
     else if (a === "--resume") cfg.resume = true;
+    else if (a.startsWith("--chunk=")) cfg.chunk = Math.max(1, Number(a.slice(8)) || 10);
     else if (a.startsWith("--jobs=")) cfg.jobs = Number(a.slice(7));
     else if (/^\d+$/.test(a)) cfg.games = Number(a);
     else if (a.includes("=")) {
@@ -159,8 +161,8 @@ function merge(a, b) {
 
 // Each cell runs as several short child processes (CHUNK games each, seeds
 // in sequence), so a crash costs a couple of minutes and a retry, not the cell.
-const CHUNK = 10;
 async function runCells(cfg) {
+  const CHUNK = cfg.chunk || 10; // games per child process (`--chunk=5`)
   const cells = CELLS.filter(([name]) => !cfg.only || cfg.only.includes(name));
   const queue = [];
   for (const [name, cell] of cells) {
@@ -182,10 +184,21 @@ async function runCells(cfg) {
     results.set(name, s0.result);
     pending.set(name, pending.get(name) - s0.done.length);
   }
+  // A chunk is done when every one of its seeds lies in a finished range, so a
+  // batch can be resumed with a different chunk size without counting a game twice.
+  const covered = (name) => {
+    const seeds = new Set();
+    for (const d of state[name].done) { const [s0, n0] = String(d).split(":").map(Number); for (let k = 0; k < (n0 || 10); k++) seeds.add(s0 + k); }
+    return seeds;
+  };
+  const coveredBy = Object.fromEntries(cells.map(([name]) => [name, covered(name)]));
   for (let i = queue.length - 1; i >= 0; i--) {
-    const start = queue[i].args.find((a) => a.startsWith("seed=")).slice(5);
-    if (state[queue[i].name].done.includes(start)) queue.splice(i, 1);
+    const start = Number(queue[i].args.find((a) => a.startsWith("seed=")).slice(5)), n = Number(queue[i].args[0]);
+    let all = true;
+    for (let k = 0; k < n; k++) if (!coveredBy[queue[i].name].has(start + k)) { all = false; break; }
+    if (all) queue.splice(i, 1);
   }
+  for (const [name] of cells) pending.set(name, queue.filter((q) => q.name === name).length);
   for (const q of queue) state[q.name].printed = false; // more games to add: print again when they are in
   const worker = async () => {
     while (queue.length) {
@@ -196,7 +209,7 @@ async function runCells(cfg) {
       try { chunk = await runChild(args); } catch { chunk = await runOneByOne(args); }
       results.set(name, merge(results.get(name), chunk));
       pending.set(name, pending.get(name) - 1);
-      state[name].done.push(args.find((a) => a.startsWith("seed=")).slice(5));
+      state[name].done.push(`${args.find((a) => a.startsWith("seed=")).slice(5)}:${args[0]}`);
       state[name].result = results.get(name);
       if (statePath) writeFileSync(statePath, JSON.stringify(state));
       // `--out=file` keeps what is finished on disk: a long batch outlives the shell that started it.

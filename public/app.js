@@ -1,8 +1,10 @@
-// The client. Views on one page (landing / setup / table / over) picked by
-// what is happening, so the build works at any prefix. Solo mode runs the
-// engine and the bot right here; the bot acts on a short timer so the table
-// reads as two people taking turns. Rooms (a socket to the Durable Object)
-// come in M4 and reuse the same renderers on the view the room sends.
+// The game page (play.html): setup, lobby, table and result, picked by the
+// query string the landing page (index.html, landing.js) sends here:
+// ?play a new solo game, ?resume the saved one, ?create=1 a new room,
+// ?room=ABCD a room to join or return to. The bar's return link goes back to
+// the landing at any time: a solo game is saved in this browser, a room seat
+// is kept for this tab. Solo mode runs the engine and the bot right here;
+// rooms reuse the same renderers on the view the Durable Object sends.
 //
 // Plain on purpose: the look is to be redesigned; this is the play flow.
 import * as E from "./shared/engine.js";
@@ -39,9 +41,6 @@ function setLang(l) {
   document.documentElement.lang = lang;
   document.title = lang === "en" ? "Zongheng 縱橫" : "縱橫 Zongheng";
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
-  for (const id of ["tagline", "about", "soon", "credit"]) $(id).textContent = S[id];
-  $("hero").textContent = S.title;
-  $("joinCode").placeholder = t("landing.code");
   $("chatIn").placeholder = t("lobby.say");
   renderSetup();
   if (game.st) { render(); if (game.st.winner != null) renderOver(); }
@@ -50,22 +49,17 @@ $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" :
 
 // ---------- views ----------
 function show(view) {
-  for (const v of ["landing", "setup", "lobby", "table", "over"]) $(v).hidden = v !== view;
-  if (view === "landing") $("btnResume").hidden = !loadSolo();
+  for (const v of ["setup", "lobby", "table", "over"]) $(v).hidden = v !== view;
   window.scrollTo(0, 0);
 }
-$("btnPlay").onclick = () => show("setup");
-$("btnResume").onclick = () => resumeSolo();
-$("btnBack").onclick = () => show("landing");
-$("btnHome").onclick = () => { if (game.room) leaveRoom(); game.st = null; $("barMid").textContent = ""; show("landing"); };
+// The landing is its own page. Going back never loses anything: the solo game
+// is saved on every move, and a room keeps this tab's seat (the bot covers it
+// after the grace period until the tab returns).
+const toLanding = () => { location.href = "./"; };
+$("btnBack").onclick = toLanding;
+$("btnHome").onclick = toLanding;
 $("btnAgain").onclick = () => (game.room ? show("lobby") : show("setup"));
 $("btnBoard").onclick = () => { show("table"); render(); };
-$("landName").value = store.get("zh.name", "");
-$("btnCreate").onclick = () => connect({ create: "1" });
-$("btnJoin").onclick = () => {
-  const code = $("joinCode").value.trim().toUpperCase();
-  if (code.length === 4) connect({ room: code, token: sess.get("zh.token." + code) || "" });
-};
 
 // ---------- setup ----------
 const setup = { side: store.get("zh.side", "chu"), level: store.get("zh.level", "normal") };
@@ -511,8 +505,7 @@ function wsUrl(params) {
 function send(msg) { if (room.ws && room.ws.readyState === 1) room.ws.send(JSON.stringify(msg)); }
 function connect(params) {
   if (room.ws) { try { room.ws.close(); } catch {} }
-  const name = $("landName").value.trim() || t("setup.defaultName");
-  store.set("zh.name", name);
+  const name = store.get("zh.name", "").trim() || t("setup.defaultName");
   const ws = new WebSocket(wsUrl({ ...params, name, lang }));
   Object.assign(room, { ws, code: params.room || null, me: null, seats: [], settings: null, phase: null, fatal: false });
   game.room = true; game.spectator = false; game.st = null; game.ui = freshUi();
@@ -524,13 +517,13 @@ function connect(params) {
 function leaveRoom() {
   if (room.ws) { try { room.ws.close(); } catch {} }
   room.ws = null; game.room = false; game.st = null;
-  history.replaceState(null, "", location.pathname);
+  try { sessionStorage.removeItem("zh.lastRoom"); } catch {}
 }
 function onRoomMsg(m) {
   switch (m.type) {
     case "joined":
       room.code = m.code; room.me = m.side; room.token = m.token;
-      if (m.token) sess.set("zh.token." + m.code, m.token);
+      if (m.token) { sess.set("zh.token." + m.code, m.token); sess.set("zh.lastRoom", m.code); }
       game.spectator = m.side == null; game.me = m.side ?? 0;
       history.replaceState(null, "", `?room=${m.code}`);
       break;
@@ -560,7 +553,11 @@ function onRoomMsg(m) {
       room.chat = m.entries.map((e) => (e.sys ? e.text : `${room.seats[e.seat]?.name ?? ""}: ${e.text}`)).slice(-50);
       break;
     case "error":
-      if (m.fatal) { room.fatal = true; $("lobbyErr").textContent = t("errors." + m.key); $("lobbyErr").hidden = false; show("lobby"); }
+      if (m.fatal) {
+        room.fatal = true;
+        try { sessionStorage.removeItem("zh.lastRoom"); } catch {}
+        $("lobbyErr").textContent = t("errors." + m.key); $("lobbyErr").hidden = false; show("lobby");
+      }
       else if (game.st) { game.ui.err = m.key ? t("errors." + m.key) : m.message; render(); }
       break;
     default: break;
@@ -591,7 +588,7 @@ function renderLobby() {
     const me = room.seats.find((s) => s.side === room.me);
     btn(a, me?.ready ? t("lobby.notReady") : t("lobby.ready"), () => send({ type: "ready", ready: !me?.ready }), "primary");
   }
-  btn(a, t("lobby.leave"), () => { send({ type: "leave" }); leaveRoom(); show("landing"); });
+  btn(a, t("lobby.leave"), () => { send({ type: "leave" }); leaveRoom(); toLanding(); });
 }
 setInterval(() => {
   if (!game.room || !game.st || game.st.winner != null || !room.deadline) return;
@@ -602,7 +599,7 @@ setInterval(() => {
 // ---------- boot ----------
 const params = new URLSearchParams(location.search);
 setLang(params.get("lang") || store.get("zh.lang", (navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
-$("landName").placeholder = t("landing.name");
-$("btnResume").hidden = !loadSolo();
-if (params.has("play")) show("setup");
+if (params.has("resume") && loadSolo()) resumeSolo();
+else if (params.get("create") === "1") connect({ create: "1" });
 else if (params.get("room")) { const code = params.get("room").toUpperCase(); connect({ room: code, token: sess.get("zh.token." + code) || "" }); }
+else show("setup");
