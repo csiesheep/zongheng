@@ -79,8 +79,16 @@
    layoutTable() measures right after placeBanner() moves this here (while
    it still only holds the "thinking" placeholder) must be the same size
    it ends up after the real text arrives, or the map/hand sizing done
-   from that measurement would be wrong a moment later. */
-.advisor-banner.adv-slot-hand { flex: none; margin: 0 8px 4px; max-height: 60px; overflow: hidden; }
+   from that measurement would be wrong a moment later.
+   #29 addendum (owner): a max-height cap alone doesn't do this -- the
+   "thinking" placeholder (a one-line title, empty why) rendered well
+   UNDER 60px, so when the real answer arrived a moment later (async, see
+   applyDecorations()' setTimeout in advisor-ui.js, which never re-runs
+   app.js's own layoutTable()) the box grew and the hand row below it
+   shifted down by exactly that growth, with nothing re-measuring to
+   correct it. A fixed height (not max) reserves the box's own final size
+   from the very first "thinking" frame, so nothing moves later. */
+.advisor-banner.adv-slot-hand { flex: none; height: 60px; margin: 0 8px 4px; overflow: hidden; }
 /* Slot: replaces #promptText's own spot when there's no room for a row of
    its own (#5's chip-mode hand, the opening placement's own sheet row that
    doesn't fit either, or the sidebar when even the hand's own grid can't
@@ -112,8 +120,12 @@
    row, spanning every column, so the actual cards flow into the rows
    below it instead of this covering them. */
 @media (min-width: 1024px) {
+  /* #29 addendum: same fixed-height reservation as .adv-slot-hand above,
+     and for the same reason -- the placeholder and the real answer must
+     render at the same height, or the cards below shift down once the real
+     text replaces "thinking" a moment later. */
   body[data-view="table"] .hand .advisor-banner.adv-slot-desktop {
-    grid-column: 1 / -1; max-height: 70px; overflow: hidden; margin-bottom: 6px;
+    grid-column: 1 / -1; height: 70px; overflow: hidden; margin-bottom: 6px;
   }
 }
 /* Belt-and-suspenders: whatever the switch/banner's own `hidden` attribute

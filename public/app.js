@@ -45,7 +45,12 @@ const regionName = (r) => (lang === "en" ? E.REGIONS[r].en : E.REGIONS[r].zh);
 const regionShortName = (r) => t("regionShort." + r);
 const stateName = (s) => (lang === "en" ? E.STATES[s].en : E.STATES[s].zh);
 const cardName = (id) => (id === E.JIUDING ? (lang === "en" ? "The Nine Cauldrons" : "九鼎") : lang === "en" ? E.CARD[id].en : E.CARD[id].zh);
-const cardText = (id) => (id === E.JIUDING ? (lang === "en" ? "4 ops; 5 if all of it lands in the Three Jin or Zhou. Then it passes face down." : "4 點;全部用在三晉或周室視為 5。用後蓋著交給對手。") : lang === "en" ? CARD_EN[id] ?? E.CARD[id].text : E.CARD[id].text);
+// #29: the card sheet shows BOTH languages' card text at once regardless of
+// the UI's own language (the same convention cardName already keeps for
+// bilingual names) — cardText() is the old single-language reader, still
+// used by nothing else once renderPromptAndSheet moved to the pair below.
+const cardTextZh = (id) => (id === E.JIUDING ? "4 點;全部用在三晉或周室視為 5。用後蓋著交給對手。" : E.CARD[id].text);
+const cardTextEn = (id) => (id === E.JIUDING ? "4 ops; 5 if all of it lands in the Three Jin or Zhou. Then it passes face down." : CARD_EN[id] ?? E.CARD[id].text);
 const sep = () => (lang === "en" ? ", " : "、");
 const mandateText = (m) => (m > 0 ? `${sideName(0)} +${m}` : m < 0 ? `${sideName(1)} +${-m}` : "0");
 const list = (ids, f) => ids.map(f).join(sep());
@@ -583,6 +588,18 @@ function layoutTable() {
 function setSheetOpen(open) {
   $("sheet").classList.toggle("overlay", open);
   document.body.classList.toggle("sheet-open", open);
+  // #29 item 1 (owner: "頂列留著,牌頁從頂列下面開始,不要蓋住 .bar"): the
+  // overlay used to be `position:fixed;inset:0`, covering the top bar
+  // (ZONGHENG/Advisor/Rules/中文) along with everything else. .bar's own
+  // height isn't a constant (the advisor switch, or a long turn/mandate
+  // line, can widen it — see layoutBar()'s own 55px giving-way rule), so
+  // this measures it fresh each time the overlay opens rather than
+  // hardcoding a guess; style.css's .sheet.overlay reads the same
+  // `--bar-h` back as its own `top`.
+  if (open) {
+    const barH = document.querySelector(".bar")?.getBoundingClientRect().height || 0;
+    document.documentElement.style.setProperty("--bar-h", barH + "px");
+  }
 }
 function wantsCardOverlay(v) {
   if (v.winner != null) return false;
@@ -786,23 +803,55 @@ function note(parent, text) { const d = document.createElement("div"); d.classNa
 const cardZh = (id) => (id === E.JIUDING ? "九鼎" : E.CARD[id].zh);
 const cardEn = (id) => (id === E.JIUDING ? "The Nine Cauldrons" : E.CARD[id].en);
 const opsLabel = (id) => (id === E.JIUDING ? "4" : E.CARD[id].scoring ? "S" : String(E.CARD[id].ops));
+// #29: the "uses.*" table already carries both languages (one entry per
+// i18n file) — the five-use grid on the full card page shows BOTH at once,
+// same bilingual convention as card names, so it reads the raw imported
+// modules directly instead of going through t()/S (which only ever holds
+// the CURRENT ui language).
+const useZh = (u) => zh.uses[u];
+const useEn = (u) => en.uses[u];
 
-// The full card sheet: art, ops badge, both names, era/number/year, and the
-// card's own text — the same on every card, only the surrounding colour
-// (sheet-q/c/n/s, set by the caller) tells its owner apart.
+// The full card sheet's own scrollable middle — #29's C2_Card* mockups pin
+// [Cancel]/[Confirm] at the very bottom no matter how long the card's own
+// text runs; everything between the fixed image+name header and that
+// footer lives in this one flex:1 child instead (style.css's .sheet-mid),
+// so IT scrolls internally on a short viewport while the header and footer
+// never move. Callers append the text box / scoring panel / use grid /
+// order row / hint line into the div this returns, not into `sh` directly.
+function sheetMid(sh) {
+  const d = document.createElement("div"); d.className = "sheet-mid"; sh.appendChild(d); return d;
+}
+// The full card sheet's fixed header: art, ops badge, both names, era/
+// number/year — the same on every card, only the surrounding colour
+// (sheet-q/c/n/s, set by the caller) tells its owner apart. Text-only (see
+// cardTextBox below); always appended straight to `sh`, never into the
+// scrollable sheetMid(), so it never scrolls out of view either.
 function cardHeader(sh, id) {
   const meta = id === E.JIUDING ? null : E.CARD[id];
   const info = meta ? `${t("eras." + meta.era)}${meta.num ? ` · No. ${meta.num}` : ""}${meta.year ? ` · ${lang === "en" ? meta.year + " BC" : "前" + meta.year + "年"}` : ""}` : "";
+  // The round badge reads the scoring region's own "計" (issue #29's design:
+  // a scoring card's badge is not the hand tile's plain "S") — a header-only
+  // override, opsLabel() itself (shared with the hand tile) is untouched.
+  const badge = meta && meta.scoring ? "計" : opsLabel(id);
   const head = document.createElement("div"); head.className = "sheet-head";
   head.innerHTML =
     `<img class="sheet-img" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
-    `<div class="sheet-meta"><span class="sheet-badge">${esc(opsLabel(id))}</span>` +
+    `<div class="sheet-meta"><span class="sheet-badge">${esc(badge)}</span>` +
     `<div class="sheet-name-zh" lang="zh-Hant">${esc(cardZh(id))}</div>` +
     `<div class="sheet-name-en">${esc(cardEn(id))}</div>` +
     (info ? `<div class="sheet-info">${esc(info)}</div>` : "") + `</div>`;
   sh.appendChild(head);
-  const text = document.createElement("div"); text.className = "sheet-text"; text.textContent = cardText(id);
-  sh.appendChild(text);
+}
+// The card-text box (#29: both languages always shown, Chinese above
+// English, in its own bordered parchment/lacquer/bronze panel per side) —
+// appended wherever the caller's own scrollable middle is (sheetMid()'s
+// div for the full browsing/event/reform/pre-order states, `sh` directly
+// for the short headline/bog confirmations, which have no other content to
+// share a scroll region with).
+function cardTextBox(parent, id) {
+  const box = document.createElement("div"); box.className = "sheet-textbox";
+  box.innerHTML = `<p class="sheet-text-zh" lang="zh-Hant">${esc(cardTextZh(id))}</p><p class="sheet-text-en">${esc(cardTextEn(id))}</p>`;
+  parent.appendChild(box);
 }
 // The mini chip used instead of the full card header while the map is in
 // play (placing points, picking a campaign/lobby target) — C2_Place and
@@ -819,13 +868,49 @@ function cardChip(sh, id) {
   wrap.appendChild(expand);
   sh.appendChild(wrap);
 }
+// The acting seat's own confirm phrase (#29's design: "令尹曰可" for a Chu
+// court, "制曰可" for Qin's — the SEATED player's own turn of phrase, not
+// the open card's owner; C2_CardEnemy confirms with the Chu viewer's own
+// "令尹曰可" even though the open card is Qin's Bai Qi) plus the plain
+// English "Confirm", used by the full card page's own Confirm button
+// (browsing/event/reform/place-pre-order) — everywhere else (headline,
+// bog, the compact place/campaign/lobby footers) keeps its own plain label.
+function confirmPhrase() {
+  const chu = game.me === E.CHU;
+  const zhWord = chu ? "令尹曰可" : "制曰可";
+  return `<span lang="zh-Hant" class="confirm-zh">${esc(zhWord)}</span><span class="confirm-en">${esc(t("buttons.confirm"))}</span>`;
+}
 // A Cancel + Confirm footer pair, used everywhere a card sheet asks for a
-// final commit (event/reform, place, campaign/lobby).
-function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel) {
+// final commit (event/reform, place, campaign/lobby). `richHTML` marks the
+// full card page's own Confirm (confirmPhrase() above) — every other caller
+// keeps passing a plain translated label, unescaped changes here.
+function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel, richHTML) {
   const r = row(sh, "sheet-footer");
   btn(r, t("buttons.cancel"), onCancel || (() => { game.ui = freshUi(); render(); }));
-  btn(r, confirmLabel, onConfirm, "primary", null, confirmDisabled);
+  if (richHTML) {
+    const c = document.createElement("button");
+    c.type = "button"; c.className = "primary"; c.disabled = !!confirmDisabled; c.innerHTML = confirmLabel;
+    c.onclick = onConfirm;
+    r.appendChild(c);
+  } else {
+    btn(r, confirmLabel, onConfirm, "primary", null, confirmDisabled);
+  }
   return r;
+}
+// The five-use grid's own button: both languages stacked (zh 600/16px, en
+// 400/11px — #29's design, same bilingual convention as the hand tile and
+// card name), not the plain single-language text btn() gives every other
+// sheet button. Still a plain <button>, so decorateSheet()'s
+// ".sheet-grid button" selector and tutorial.css's own hiding rule need no
+// change.
+function useBtn(parent, use, onClick, pressed, disabled) {
+  const b = document.createElement("button");
+  b.type = "button"; b.disabled = disabled;
+  b.setAttribute("aria-pressed", String(pressed));
+  b.innerHTML = `<span lang="zh-Hant">${esc(useZh(use))}</span><span class="use-en">${esc(useEn(use))}</span>`;
+  b.onclick = onClick;
+  parent.appendChild(b);
+  return b;
 }
 
 // A scoring card's sheet gets the region's actual tally (E.regionTally),
@@ -881,7 +966,9 @@ function renderPromptAndSheet(v) {
     setPrompt(t("prompt.headline"));
     if (ui.card) {
       cardHeader(sh, ui.card);
-      if (ui.card !== E.JIUDING && E.CARD[ui.card].scoring) scoringPanel(sh, v, E.CARD[ui.card].scoring);
+      const mid = sheetMid(sh);
+      cardTextBox(mid, ui.card);
+      if (ui.card !== E.JIUDING && E.CARD[ui.card].scoring) scoringPanel(mid, v, E.CARD[ui.card].scoring);
       footer(sh, t("buttons.headline"), () => humanAct({ type: "headline", card: ui.card }), false, () => { game.ui = freshUi(); render(); });
     }
     return;
@@ -892,6 +979,7 @@ function renderPromptAndSheet(v) {
   if (L.bog && L.bog.length) {
     setPrompt(t("uses.bog"));
     cardHeader(sh, ui.card);
+    cardTextBox(sheetMid(sh), ui.card);
     footer(sh, t("buttons.confirm"), () => humanAct({ type: "play", card: ui.card, use: "bog" }), false);
     return;
   }
@@ -909,18 +997,29 @@ function renderPromptAndSheet(v) {
   // while map-active), so they're always reachable rather than landing
   // exactly in the state that gets compacted away.
   const showFullCard = !mapActive || ui.chipExpanded;
+  // #29: the full card page's own scrollable middle — everything from the
+  // text box down to the hint line goes in here (`mid`), never `sh`
+  // directly, so [Cancel]/[Confirm] (appended to `sh` after this, see the
+  // footer() calls below) stay pinned at the bottom of the overlay no
+  // matter how long the card's own text or the enemy order row runs. Only
+  // set when the full card is actually shown; the compact chip path
+  // (mapActive && !chipExpanded) keeps its old flat, unwrapped layout.
+  let mid = null;
   if (!showFullCard) {
     cardChip(sh, ui.card);
   } else {
     cardHeader(sh, ui.card);
-    if (mapActive) btn(sh, t("buttons.collapse"), () => { ui.chipExpanded = false; render(); }, "small");
+    mid = sheetMid(sh);
+    if (mapActive) btn(mid, t("buttons.collapse"), () => { ui.chipExpanded = false; render(); }, "small");
+    cardTextBox(mid, ui.card);
   }
-  if (ui.card !== E.JIUDING && E.CARD[ui.card].scoring) scoringPanel(sh, v, E.CARD[ui.card].scoring);
-  const uses = row(sh, "rowb sheet-grid");
+  const target = showFullCard ? mid : sh;
+  if (ui.card !== E.JIUDING && E.CARD[ui.card].scoring) scoringPanel(target, v, E.CARD[ui.card].scoring);
+  const uses = row(target, "rowb sheet-grid");
   const usable = (u) => (u === "event" ? info.uses.event : u === "reform" ? info.uses.reform : !!info.uses[u]);
   for (const u of ["event", "place", "campaign", "lobby", "reform"]) {
     if (ui.card === E.JIUDING && (u === "event" || u === "reform")) continue;
-    btn(uses, t(`uses.${u}`), () => { ui.use = u; ui.points = []; ui.target = null; ui.err = ""; render(); }, "", ui.use === u, !usable(u));
+    useBtn(uses, u, () => { ui.use = u; ui.points = []; ui.target = null; ui.err = ""; render(); }, ui.use === u, !usable(u));
   }
   // #24 round 2, fix #3 (owner): "their card"'s ops-first/event-first order
   // and 說客's pairing used to only render once a map-needing use was
@@ -941,21 +1040,31 @@ function renderPromptAndSheet(v) {
   const targetPreviewComing = !showFullCard && (ui.use === "campaign" || ui.use === "lobby") && ui.target;
   if (info.enemy) {
     if (showFullCard) {
-      const r = row(sh, "rowb order");
+      const r = row(mid, "rowb order");
       for (const o of ["opsFirst", "eventFirst"]) btn(r, t(`uses.${o}`), () => { ui.order = o; ui.points = []; render(); }, "", ui.order === o);
-      note(sh, t("preview.enemyEvent"));
     } else if (!targetPreviewComing) {
       note(sh, t(`advisor.suggestOrder.${ui.order}`));
     }
   }
   if (ui.card === "shuoke" && info.uses.pair && info.uses.pair.length) {
     if (showFullCard) {
-      const r = row(sh);
-      note(sh, t("uses.pair"));
+      const r = row(mid);
+      note(mid, t("uses.pair"));
       for (const c of info.uses.pair) btn(r, `${cardName(c)} (${E.opsOf(game.st, me, c)})`, () => { ui.pair = ui.pair === c ? null : c; ui.points = []; render(); }, "", ui.pair === c);
     } else if (ui.pair && !targetPreviewComing) {
       note(sh, `${t("uses.pair")} ${cardName(ui.pair)} (${E.opsOf(game.st, me, ui.pair)})`);
     }
+  }
+  // #29's design: one line naming what KIND of card this is for the player
+  // right now — own event, a shared neutral card, the other side's card
+  // (whose event still fires), or a scoring card. Only on the full card
+  // page (the `sheet.hint.*` copy assumes the reader can already see the
+  // use grid/order row above it); the compact chip already has its own
+  // target-preview notes doing the same job in less space.
+  if (showFullCard) {
+    const meta = ui.card === E.JIUDING ? null : E.CARD[ui.card];
+    const kind = meta && meta.scoring ? "score" : info.enemy ? "enemy" : meta && meta.side != null ? "own" : "neutral";
+    note(mid, t("sheet.hint." + kind));
   }
   const base = { type: "play", card: ui.card, use: ui.use };
   if (ui.pair) base.pair = ui.pair;
@@ -964,18 +1073,20 @@ function renderPromptAndSheet(v) {
   // before picking a use at all — the sheet is a full-screen overlay here
   // (wantsCardOverlay), so the hand underneath isn't tappable either. A
   // permanent Cancel, same reset every other Cancel on this sheet falls
-  // back to.
+  // back to. #29: Confirm sits right beside it now too (disabled until a
+  // use that doesn't need the map is actually picked), rather than Cancel
+  // standing alone.
   const cancelToFresh = () => { game.ui = freshUi(); render(); };
-  if (!ui.use) { setPrompt(""); btn(sh, t("buttons.cancel"), cancelToFresh); return; }
+  if (!ui.use) { setPrompt(""); footer(sh, confirmPhrase(), () => {}, true, cancelToFresh, true); return; }
   if (ui.use === "event" || ui.use === "reform") {
     setPrompt("");
-    footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)}`, () => humanAct(base), false);
+    footer(sh, confirmPhrase(), () => humanAct(base), false, cancelToFresh, true);
     return;
   }
   if (ui.use === "place") {
     if (info.enemy && ui.order === "eventFirst" && !ui.pair) {
       setPrompt(t("uses.eventFirst"));
-      footer(sh, t("buttons.confirm"), () => humanAct(base), false);
+      footer(sh, confirmPhrase(), () => humanAct(base), false, cancelToFresh, true);
       return;
     }
     const { spent } = placementTrial(v, me, ui.points);

@@ -473,7 +473,17 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    behind it can't scroll; Cancel/Confirm/re-tapping the card closes it and
    returns to the table, which un-hides the page scroll again. */
 body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
-.sheet.overlay { position: fixed; inset: 0; z-index: 40; margin: 0; max-height: none; height: 100svh; border-radius: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); }
+/* #29: overflow moved from the whole overlay to .sheet-mid alone (see
+   above) — every overlay state now routes its variable-length content
+   (card text, the enemy order row, a scoring tally) through that one
+   scrollable middle, so this outer box no longer needs (or wants) its own
+   scroll: letting it ALSO scroll would mean scrolling past the pinned
+   footer, exactly what the give-way rule below is supposed to prevent.
+   #29 item 1: `top` starts below the top bar (`--bar-h`, set by
+   setSheetOpen() in app.js) instead of the old `inset: 0`, which used to
+   cover .bar (ZONGHENG/Advisor/Rules/中文) along with the rest of the
+   viewport. */
+.sheet.overlay { position: fixed; top: var(--bar-h, 0px); left: 0; right: 0; bottom: 0; z-index: 40; margin: 0; max-height: none; height: auto; border-radius: 0; overflow: hidden; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); }
 .sheet .rowb { display: flex; flex-wrap: wrap; gap: 6px; }
 .sheet .rowb.order { gap: 8px; }
 .sheet button { min-height: 44px; padding: 0 12px; background: none; border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font-size: 13px; }
@@ -491,14 +501,38 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .sheet-chip .nm-zh { font-family: var(--kai); font-size: 13px; font-weight: 700; overflow-wrap: break-word; }
 .sheet-chip .nm-en { font-size: 10px; opacity: 0.8; overflow-wrap: break-word; }
 .chip-expand { flex: none; min-height: 32px; padding: 0 10px; font-size: 12px; border-radius: 16px; }
-.sheet-head { display: flex; gap: 12px; }
-.sheet-img { flex: none; width: 96px; height: 128px; object-fit: cover; border-radius: 10px; border: 1.5px solid var(--gold-line); }
-.sheet-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.sheet-badge { width: 28px; height: 28px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 14px; line-height: 28px; text-align: center; }
-.sheet-name-zh { font-family: var(--kai); font-size: 18px; font-weight: 700; letter-spacing: 1px; }
-.sheet-name-en { font-size: 12px; font-weight: 600; }
-.sheet-info { font-size: 10.5px; opacity: 0.75; margin-top: 2px; }
-.sheet-text { font-size: 12.5px; line-height: 1.5; padding-top: 6px; border-top: 1px solid var(--gold-line); }
+.sheet-head { flex: none; display: flex; gap: 14px; padding: 4px 0 0; }
+/* #29's own numbers (C2_CardNeutral.dc.html): 186x248, double ring (a thin
+   border plus two concentric box-shadow rings — the sheet's own background
+   colour for the inner one, the border colour again for the outer). Below
+   ~620px of real viewport height (the shortest of the three hard-condition
+   phones is 664-669) this clamp shrinks the art in step with height, down
+   to the issue's own 150x200 floor — 30svh crosses 186px at 620svh and
+   150px at 500svh, and 150 * (248/186) is exactly 200, so the aspect-ratio
+   box below lands on the floor's exact height too, not just its width. */
+.sheet-img {
+  flex: none; width: clamp(150px, 30svh, 186px); aspect-ratio: 186 / 248; height: auto;
+  object-fit: cover; border-radius: 12px; border: 1.5px solid var(--sheet-line, var(--gold-line));
+  box-shadow: 0 0 0 3px var(--sheet-ring, var(--bg)), 0 0 0 4px var(--sheet-line, var(--gold-line));
+}
+.sheet-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.sheet-badge { flex: none; width: 36px; height: 36px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 18px; line-height: 36px; text-align: center; }
+.sheet-name-zh { font-family: var(--serif); font-size: 24px; line-height: 1.15; font-weight: 600; letter-spacing: 1px; margin: 0; }
+.sheet-name-en { font-size: 13px; font-weight: 600; }
+.sheet-info { font-size: 11px; line-height: 1.5; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--sheet-line, var(--gold-line)); }
+/* The card-text panel (#29): its own bordered/tinted box (parchment for a
+   neutral/scoring card, lacquer for Chu, bronze-black for Qin — the same
+   three backgrounds .sheet-n/.sheet-c/.sheet-q already paint the header
+   with), both languages always shown, Chinese above English. */
+.sheet-textbox { flex: none; margin: 0; padding: 12px; border-radius: 10px; border: 1px solid var(--sheet-line, var(--gold-line)); background: var(--sheet-box, var(--field-bg)); display: flex; flex-direction: column; gap: 6px; }
+.sheet-text-zh { margin: 0; font: 400 14px/1.55 var(--serif); }
+.sheet-text-en { margin: 0; font: 400 12.5px/1.5 var(--serif); }
+/* The full card page's own scrollable middle (#29 — see sheetMid() in
+   app.js): everything between the fixed head above and the pinned footer
+   below lives here, so a long card's text or the enemy order row scrolls
+   on its own without ever pushing Cancel/Confirm out of the viewport. Only
+   present while the full card (not the compact chip) is on screen. */
+.sheet-mid { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
 /* The scoring card's own tally (E.regionTally): spaces held, battlegrounds,
    the level reached, and base+bonus=total for each side. */
 .score-panel { display: flex; flex-direction: column; gap: 6px; }
@@ -507,11 +541,36 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .score-panel .srow.c { background: rgba(163, 26, 21, 0.14); }
 .score-panel .lvl { opacity: 0.8; }
 .score-panel .tot { font-weight: 700; }
-.sheet-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
-.sheet-grid button { padding: 0 4px; }
-.sheet-footer { display: flex; gap: 8px; margin-top: 2px; }
+/* #29's own numbers: 5 columns, 6px gap, each button 52px tall with two
+   stacked lines (zh 600/16px, en 400/11px — useBtn() in app.js, same
+   bilingual convention as the hand tile/card name). Still >=44px wide at
+   the design's own 390px width (five buttons, 6px gaps, in a ~358px row:
+   (358 - 4*6)/5 ≈ 67px each). */
+/* #sheet-qualified (not just ".sheet-grid"): ".sheet .rowb" above (two
+   classes) otherwise beats a plain one-class ".sheet-grid" on specificity
+   alone and silently wins the `display` property, leaving the five
+   buttons flex-wrapped at their own text width instead of five equal grid
+   columns — found while measuring button widths for #29 (they came out
+   35-58px, not the required >=44, because they were never really a grid
+   at all). */
+#sheet .sheet-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.sheet-grid button { flex: none; height: 52px; min-height: 52px; padding: 0 2px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; overflow: hidden; }
+.sheet-grid button span:first-child { font: 600 15px/1.1 var(--serif); }
+.sheet-grid button .use-en { font: 400 10.5px/1.1 var(--serif); }
+.sheet-footer { flex: none; display: flex; gap: 8px; margin-top: 2px; }
 .sheet-footer button { flex: 1; border-radius: 22px; }
 .sheet-footer button.primary { flex: 2; }
+/* #29's own footer: always [Cancel] (110px, line border) + [Confirm]
+   (flex-grow, solid, the seated court's own confirm phrase + "Confirm" —
+   confirmPhrase() in app.js) pinned at the very bottom of the full card
+   page — scoped to ":has(.sheet-head)" so the compact chip's own smaller
+   Done/Cancel/target-confirm rows (place-in-progress, campaign/lobby with
+   a target picked) keep their old, tighter sizing untouched. */
+.sheet:has(.sheet-head) .sheet-footer button { height: 52px; min-height: 52px; border-radius: 26px; }
+.sheet:has(.sheet-head) .sheet-footer button:first-child { flex: none; width: 110px; }
+.sheet:has(.sheet-head) .sheet-footer button.primary { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; letter-spacing: 1px; }
+.sheet:has(.sheet-head) .sheet-footer .confirm-zh { font-family: var(--accent-font); font-weight: var(--accent-weight); font-size: 17px; letter-spacing: 2px; }
+.sheet:has(.sheet-head) .sheet-footer .confirm-en { font-family: var(--serif); font-weight: 700; font-size: 14px; letter-spacing: 1px; }
 /* #24: the sheet's own use-row gives way on a short viewport while the map
    is actively in play and a target's already being picked — the card chip
    + preview note + Cancel/Confirm are all that's still useful there (round
@@ -571,26 +630,52 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 /* The sheet's own background follows the selected card's owner: Chu opens
    on lacquer red, Qin on black, neutral and scoring cards on parchment —
    the surrounding page (and header) keep the seated side's own colour. */
-.sheet-q { background: var(--bg); color: var(--qin-text); }
+/* Per-side palette (#29's five C2_Card* mockups): --sheet-line/--sheet-ring
+   feed the image's double ring (see .sheet-img above), --sheet-box the
+   card-text panel's own background. Qin's card name stays plain serif
+   (weight bumped to 900, per the mockup) — only Chu's switches to the kai
+   script font, matching C2_CardChu.dc.html vs. C2_CardQin/Neutral/Score
+   all using 'Noto Serif TC' for the name. */
+.sheet-q {
+  background: var(--bg); color: var(--qin-text);
+  --sheet-line: var(--gold-line); --sheet-ring: var(--bg); --sheet-box: var(--qin-bg);
+}
 .sheet-q .sheet-badge { background: var(--qin-text); color: var(--bg); }
 .sheet-q .sheet-name-zh, .sheet-q .sheet-name-en { color: var(--qin-text); }
-.sheet-q .sheet-text, .sheet-q .sheet-info { color: var(--text-soft); }
+.sheet-q .sheet-name-zh { font-weight: 900; }
+.sheet-q .sheet-info { color: var(--text-dim); }
+.sheet-q .sheet-text-zh { color: #ffffff; }
+.sheet-q .sheet-text-en { color: var(--text); }
 .sheet-q button { border-color: var(--gold-line); color: var(--qin-text); }
 .sheet-q button[aria-pressed="true"], .sheet-q button.primary { background: var(--qin-text); border-color: var(--qin-text); color: var(--bg); }
-.sheet-q .note { color: var(--text-soft); }
-.sheet-c { background: #4f0e0a; color: #fff3d2; }
+.sheet-q .sheet-grid button:not([aria-pressed="true"]) { background: var(--qin-bg); }
+.sheet-q .note { color: var(--text-dim); }
+.sheet-c {
+  background: #4f0e0a; color: #fff3d2;
+  --sheet-line: var(--gold); --sheet-ring: #4f0e0a; --sheet-box: var(--chu-bg);
+}
 .sheet-c .sheet-badge { background: var(--chu-gold); color: #6f120d; }
 .sheet-c .sheet-name-zh, .sheet-c .sheet-name-en { color: var(--chu-gold); }
-.sheet-c .sheet-text, .sheet-c .sheet-info { color: #fff3d2; }
+.sheet-c .sheet-name-zh { font-family: var(--kai); font-weight: 700; }
+.sheet-c .sheet-info { color: #f1d3c4; }
+.sheet-c .sheet-text-zh { color: #ffffff; }
+.sheet-c .sheet-text-en { color: var(--text); }
 .sheet-c button { border-color: var(--gold); color: #fff3d2; }
 .sheet-c button[aria-pressed="true"], .sheet-c button.primary { background: var(--chu-gold); border-color: var(--chu-gold); color: #6f120d; }
+.sheet-c .sheet-grid button:not([aria-pressed="true"]) { background: rgba(142, 26, 18, 0.55); }
 .sheet-c .note { color: #fff3d2; }
-.sheet-n, .sheet-s { background: #f7f3e8; color: var(--neutral-ink); }
+.sheet-n, .sheet-s {
+  background: #f7f3e8; color: var(--neutral-ink);
+  --sheet-line: var(--neutral-ink); --sheet-ring: #f7f3e8; --sheet-box: var(--neutral-bg);
+}
 .sheet-n .sheet-badge, .sheet-s .sheet-badge { background: var(--neutral-ink); color: #fff; }
 .sheet-n .sheet-name-zh, .sheet-n .sheet-name-en, .sheet-s .sheet-name-zh, .sheet-s .sheet-name-en { color: var(--neutral-ink); }
-.sheet-n .sheet-text, .sheet-n .sheet-info, .sheet-s .sheet-text, .sheet-s .sheet-info { color: #4a463c; }
+.sheet-n .sheet-info, .sheet-s .sheet-info { color: #4a463c; }
+.sheet-n .sheet-text-zh, .sheet-s .sheet-text-zh { color: var(--neutral-ink); }
+.sheet-n .sheet-text-en, .sheet-s .sheet-text-en { color: #4a463c; }
 .sheet-n button, .sheet-s button { border-color: #8a8060; color: var(--neutral-ink); }
 .sheet-n button[aria-pressed="true"], .sheet-s button[aria-pressed="true"], .sheet-n button.primary, .sheet-s button.primary { background: var(--neutral-ink); border-color: var(--neutral-ink); color: #fff; }
+.sheet-n .sheet-grid button:not([aria-pressed="true"]), .sheet-s .sheet-grid button:not([aria-pressed="true"]) { background: #ffffff; }
 .sheet-n .note, .sheet-s .note { color: #4a463c; }
 
 /* Hand: art on top, a circular ops badge and both names (zh + en — the
