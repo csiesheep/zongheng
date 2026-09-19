@@ -65,12 +65,13 @@
 
   /* The result page: backdrop is the WINNER's territory regardless of seat
      (owner: "for win page, the background should be the winner's nation
-     background") — renderOver() sets win-qin/win-chu independently of the
-     seat's side-qin/side-chu. */
-  body[data-view="over"].win-qin .d-tex-a { top: 0; bottom: 0; height: auto; opacity: 0.55; }
-  body[data-view="over"].win-qin .d-tex-b { opacity: 0; }
-  body[data-view="over"].win-chu .d-tex-b { top: 0; bottom: 0; height: auto; opacity: 0.6; }
-  body[data-view="over"].win-chu .d-tex-a { opacity: 0; }
+     background") — #6's renderOver() sets winner-qin/winner-chu on #over
+     itself (screens.css uses the same classes for the card's own colour),
+     independently of the seat's side-qin/side-chu. */
+  body:has(#over.winner-qin:not([hidden])) .d-tex-a { top: 0; bottom: 0; height: auto; opacity: 0.55; }
+  body:has(#over.winner-qin:not([hidden])) .d-tex-b { opacity: 0; }
+  body:has(#over.winner-chu:not([hidden])) .d-tex-b { top: 0; bottom: 0; height: auto; opacity: 0.6; }
+  body:has(#over.winner-chu:not([hidden])) .d-tex-a { opacity: 0; }
 
   /* ---------- the page-card shell ---------- */
   .page-card {
