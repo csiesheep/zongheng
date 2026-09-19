@@ -1,0 +1,80 @@
+/* Desktop landing (design A, issue #11): the phone layout becomes a
+   centred 430px column on a wide, blurred court backdrop. Everything in
+   this file is scoped to >=768px — below that, index.html must render
+   pixel-identical to what it did before this file existed.
+
+   The gold seam behind the column has to line up with the Qin/Chu split
+   *inside* the column. That split is an exact 50/50 flex division of
+   .sides (see style.css: both .side-tap are `flex: 1 1 0`), which is not
+   a fixed number — it moves with viewport height, the bar's height, and
+   the controls' height. Duplicating all of that in a CSS calc() would be
+   fragile and would drift the moment any of those change, so landing.js
+   measures the real boundary with getBoundingClientRect() and writes it
+   into the --seam-y custom property that the rules below read. */
+
+.desktop-frame { display: none; }
+
+@media (min-width: 768px) {
+  body.landing-body {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  /* Full-viewport backdrop behind the column. Fixed, so it never
+     participates in the body's flex layout or in document scroll size. */
+  .desktop-frame {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: #060504;
+    pointer-events: none;
+  }
+  .desktop-tex-qin,
+  .desktop-tex-chu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background-size: cover;
+    background-position: center;
+  }
+  .desktop-tex-qin {
+    top: 0;
+    height: var(--seam-y, 50%);
+    background-image: url(art/ui/qintex.jpg);
+    opacity: 0.4;
+  }
+  .desktop-tex-chu {
+    top: var(--seam-y, 50%);
+    bottom: 0;
+    background-image: url(art/ui/chutex.jpg);
+    opacity: 0.5;
+  }
+  .desktop-vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(6, 5, 4, 0.1) 25%, rgba(6, 5, 4, 0.8) 100%);
+  }
+  .desktop-seam {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: var(--seam-y, 50%);
+    height: 4px;
+    background: rgba(216, 181, 106, 0.4);
+  }
+
+  /* The phone layout itself, untouched, just narrowed into a column and
+     lifted above the backdrop. */
+  .landing-page {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    width: 430px;
+    background: var(--bg);
+    box-shadow: 0 0 0 1px #8a7a52, 0 0 80px 10px rgba(0, 0, 0, 0.85);
+  }
+}
