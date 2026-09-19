@@ -133,7 +133,29 @@
     border-radius: 14px;
     background: #0c0b0a;
   }
-  body[data-view="table"] .page-card .bar { flex: none; }
+  /* #30: same continuous-ground idea as the mobile column (style.css:
+     body[data-view="table"].side-qin/.side-chu) — here the card itself is
+     the opaque surface (it sits ON TOP of the outer .d-frame backdrop, same
+     as the setup-qin/setup-chu override just above), so IT needs the
+     texture instead of body; #table stays transparent (style.css) either
+     way. Same --table-bg var as the mobile rule and the (untouched) grid
+     areas below, so no new alpha to justify. */
+  body[data-view="table"].side-chu .page-card,
+  body[data-view="table"].side-qin .page-card {
+    background: var(--table-bg); background-size: cover; background-position: center; background-repeat: no-repeat;
+  }
+  /* #30 (owner, desktop screenshot: "太高了,矮一點"): 40px with a mouse
+     driving instead of the touch-device 48px (style.css) — the 44px tap
+     target floor is a touch-device rule, so desktop's own controls (below)
+     shrink to 30-32px along with it. */
+  body[data-view="table"] .bar { flex: none; height: 40px; padding: 0 14px; box-sizing: border-box; }
+  body[data-view="table"] .bar .hub,
+  body[data-view="table"] .bar .back,
+  body[data-view="table"] .bar-right button {
+    min-height: 0; height: 32px; min-width: 0; padding: 0 9px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  body[data-view="table"] #advisorSlot .adv-toggle { height: 32px; }
   body[data-view="table"] #table {
     flex: 1 1 auto;
     min-height: 0;

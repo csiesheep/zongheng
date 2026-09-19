@@ -26,9 +26,9 @@
 </div>
 <div class="page-card" id="pageCard">
 <header class="bar">
-  <a class="hub back" id="backLink" href="./" data-t="nav.back"></a>
+  <a class="hub back" id="backLink" href="./"><span class="back-chevron" aria-hidden="true">‹</span><span class="back-label"></span></a>
   <span id="barMid"></span>
-  <span class="bar-right"><span id="advisorSlot"></span><a class="hub" id="rulesLink" href="rules.html" target="_blank" rel="noopener" data-t="nav.rules"></a> <button id="langBtn" type="button" data-t="nav.lang"></button></span>
+  <span class="bar-right"><button id="logToggle" type="button" class="small" aria-expanded="false"></button><span id="advisorSlot"></span><a class="hub" id="rulesLink" href="rules.html" target="_blank" rel="noopener" data-t="nav.rules"></a> <button id="langBtn" type="button" data-t="nav.lang"></button></span>
 </header>
 
 <main id="lobby" class="view" hidden>
@@ -85,7 +85,6 @@
   <section class="statline" id="statline"></section>
   <section class="prompt" id="prompt">
     <div class="prompt-text" id="promptText"></div>
-    <button id="logToggle" class="small prompt-log"></button>
   </section>
   <section class="sheet" id="sheet"></section>
   <section class="hand" id="hand"></section>

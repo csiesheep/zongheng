@@ -55,6 +55,19 @@ const sep = () => (lang === "en" ? ", " : "、");
 const mandateText = (m) => (m > 0 ? `${sideName(0)} +${m}` : m < 0 ? `${sideName(1)} +${-m}` : "0");
 const list = (ids, f) => ids.map(f).join(sep());
 
+// #30: the header's back link is "‹ Name" as one i18n string (nav.back) —
+// fine while it's plain text, but the top-bar giveaway order now needs to
+// drop everything after the chevron on its own (① the advisor switch's
+// label goes first, ② this is the last resort) without a second i18n key
+// for just the chevron. Splitting nav.back's own text in JS (chevron, then
+// whatever follows the first run of whitespace) keeps it to the one string
+// i18n already has in both languages ("‹ 縱橫" / "‹ Zongheng") instead of
+// adding a key neither translator has been asked for.
+function renderBackLink() {
+  const full = t("nav.back");
+  $("backLink").querySelector(".back-label").textContent = full.replace(/^\S+\s*/, "");
+  $("backLink").setAttribute("aria-label", full);
+}
 function setLang(l) {
   lang = LANGS[l] ? l : "en";
   S = LANGS[lang];
@@ -62,6 +75,7 @@ function setLang(l) {
   document.documentElement.lang = lang;
   document.title = lang === "en" ? "Zongheng 縱橫" : "縱橫 Zongheng";
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
+  renderBackLink();
   $("chatIn").placeholder = t("lobby.say");
   $("lobbyChatIn").placeholder = t("lobby.say");
   renderSetup();
@@ -270,26 +284,51 @@ function describeAction(a) {
 }
 
 // ---------- rendering ----------
-// #24 addendum (owner, after Rules moved back into the header next to the
-// advisor switch): the header row -- back link, #barMid, [advisor][Rules]
-// [lang] -- must stay one line at 360/375/390px, both languages, advisor
-// switch on or off (this issue's own guard 2, `.bar` <= 55px). #barMid just
-// repeats the in-game topbar's own "Turn N · Side" line, so it's the first
-// thing to give way: with nothing else to shrink to, a squeeze wraps ITS
-// text onto a second line (the back link and the [advisor][Rules][lang]
-// span are all real buttons/links that refuse to shrink below their own
-// min-content), which is exactly what grows `.bar` past 55px. Measuring
-// after showing it and un-hiding again if it turns out to fit avoids
-// guessing a width breakpoint that would depend on the current language's
-// string lengths. The tutorial's own "Lesson n/10" reuses the same
-// #barMid slot and has no other home for it -- and the advisor switch
-// never shows during a tutorial, so there's always room -- so this never
-// touches it there.
+// #30: the table's own header row is now [‹ Name] …… [Log][Advisor][Rules]
+// [lang], one line, 48px on a touch device / 40px once desktop.css's
+// >=1024px rule takes over (body[data-view="table"] .bar, style.css +
+// desktop.css) -- #barMid's old "Turn N · Side" text is GONE from ordinary
+// play (render() below no longer writes it; the next line already repeats
+// it), so it no longer needs a squeeze priority of its own there. #barMid
+// still holds two things this function must never squeeze away: the
+// tutorial's "Lesson n/10" (its only home, and the advisor switch never
+// shows during a tutorial so there's always room), and a room's live
+// per-turn countdown clock (the setInterval near the bottom of this file) --
+// for that second one only, if the row still doesn't fit, hiding it is the
+// first thing to give way, same as it always was.
+// When #barMid isn't enough (or has nothing in it), two more steps, applied
+// by measuring after each one and only taking the next if still over
+// budget -- guessing a width breakpoint would depend on the current
+// language's string lengths, which is exactly what grew `.bar` past its
+// budget in the first place (#24):
+//   1. drop the advisor switch's own label, keep just its track (.bar-tight)
+//   2. drop everything after the back link's chevron (.bar-tighter)
+// Overflow shows up two different ways depending on what's left to give:
+// while #barMid (or an un-shrunk label) still has room to wrap, the ROW
+// grows taller (its own children stack, .bar's height passes budget); once
+// nothing left CAN wrap (every remaining child is a real button/link that
+// refuses to shrink below min-content), the row instead just bleeds past
+// the viewport's right edge at the SAME height (`flex-wrap` was never set,
+// so nothing forces a second line) -- caught #30 round 1 at 360px English
+// with the advisor on: .bar stayed 48px while #langBtn's own right edge
+// sat past `innerWidth`. Checking both keeps this from only firing on the
+// first kind.
+function barOverflowing(bar, budget) {
+  if (bar.getBoundingClientRect().height > budget + 1) return true;
+  const right = bar.getBoundingClientRect().right;
+  for (const k of bar.children) if (k.getBoundingClientRect().right > right + 0.5) return true;
+  return false;
+}
 function layoutBar() {
   const bar = document.querySelector(".bar"), mid = $("barMid");
-  if (!bar || !mid || Tut.active()) return;
+  if (!bar || !mid) return;
+  const tut = Tut.active();
+  const budget = window.matchMedia("(min-width: 1024px)").matches ? 40 : 48;
   mid.hidden = false;
-  if (bar.getBoundingClientRect().height > 55) mid.hidden = true;
+  bar.classList.remove("bar-tight", "bar-tighter");
+  if (!tut && mid.textContent && barOverflowing(bar, budget)) mid.hidden = true;
+  if (barOverflowing(bar, budget)) bar.classList.add("bar-tight");
+  if (barOverflowing(bar, budget)) bar.classList.add("bar-tighter");
 }
 function render() {
   // The whole page's accent (buttons, pressed hand card, the block below the
@@ -299,7 +338,12 @@ function render() {
   // In a room the state on hand is already this seat's view.
   const v = game.room ? game.st : E.view(game.st, game.me);
   game.lastView = v; // layoutTable() re-renders the hand off this if it flips full<->chip
-  $("barMid").textContent = Tut.active() ? Tut.barText() : `${t("tracks.turn")} ${v.turn} · ${game.spectator ? "" : sideName(game.me)}`;
+  // #30 (owner, iPhone repro): "Turn N · Side" duplicated the topbar's own
+  // "Turn N · Era · Action X/Y" line right below it — dropped from ordinary
+  // play; the tutorial's "Lesson n/10" is #barMid's only remaining content
+  // here (a room's countdown clock writes its own text on top of this from
+  // its own setInterval, independently of render()).
+  $("barMid").textContent = Tut.active() ? Tut.barText() : "";
   layoutBar();
   renderTopBar(v);
   if (game.spectator) {
@@ -1260,15 +1304,21 @@ $("chatForm").onsubmit = (ev) => {
   if (text) send({ type: "chat", text });
   $("chatIn").value = "";
 };
-// #logToggle's own label is the only one of the panel's buttons that names
-// open/closed state (#sideFootBtn always just reads "Log and chat" — see
+// #logToggle's own state is the only one of the panel's buttons that names
+// open/closed (#sideFootBtn always just reads "Log and chat" — see
 // renderLog); every path that opens or closes the panel must keep it in
 // sync, not just the two that already called renderLog, or it goes stale
 // until the next render (#27 follow-up: closing from the header's own
 // button or the scrim left it reading "(Hide)" while the panel was shut).
+// #30: now that this button lives in the top bar next to Advisor/Rules/lang
+// instead of the prompt row, its own label is always just "Log"/"紀錄" (no
+// "(Show)"/"(Hide)" suffix, which never fit the bar's other three-word
+// labels) — open/closed is carried by aria-expanded instead, same as any
+// other disclosure control.
 function syncLogToggleLabel() {
   const hidden = $("logBody").hidden;
-  $("logToggle").textContent = `${t("buttons.log")} (${hidden ? t("buttons.show") : t("buttons.hide")})`;
+  $("logToggle").textContent = t("buttons.log");
+  $("logToggle").setAttribute("aria-expanded", String(!hidden));
 }
 // #27: the panel used to be the only way to close itself (#logToggle in the
 // prompt row), and once the log grew past a few lines it covered its own
