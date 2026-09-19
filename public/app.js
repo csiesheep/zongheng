@@ -240,6 +240,7 @@ function render() {
   if (!$("table").hidden) paintBody("table");
   // In a room the state on hand is already this seat's view.
   const v = game.room ? game.st : E.view(game.st, game.me);
+  game.lastView = v; // layoutTable() re-renders the hand off this if it flips full<->chip
   $("barMid").textContent = `${t("tracks.turn")} ${v.turn} · ${game.spectator ? "" : sideName(game.me)}`;
   renderTopBar(v);
   if (game.spectator) {
@@ -281,6 +282,12 @@ const DESIGN_DISC = 30, DESIGN_BIG_DISC = 34; // keep in sync with .node .disc /
 const MIN_DISC = 28, MIN_BIG_DISC = 32; // the owner's C2 touch/legibility floor at any width
 const FLOOR_SCALE = Math.max(MIN_DISC / DESIGN_DISC, MIN_BIG_DISC / DESIGN_BIG_DISC) * 1.01; // +1% safety margin over the exact minimum
 const CARD_H = 176, HAND_GUTTER = 31; // 96x176 card + the C2_Game hand row's own headroom (207 total)
+// Below CARD_FULL_MIN the full card's own art has shrunk too far to read —
+// the hand switches to a fixed-height chip row instead (round 5) rather than
+// keep shrinking a "half-squashed" card. CHIP_GUTTER is the chip row's own
+// headroom, same idea as HAND_GUTTER above but smaller (a chip has no image
+// to letterbox around).
+const CARD_FULL_MIN = 120, CHIP_H = 56, CHIP_GUTTER = 16;
 function layoutTable() {
   const table = $("table");
   if (table.hidden) return;
@@ -305,24 +312,44 @@ function layoutTable() {
   const visibleKids = [...table.children].filter((c) => getComputedStyle(c).display !== "none").length;
   const gapsAndPadding = parseFloat(tcs.paddingTop) + parseFloat(tcs.paddingBottom) + Math.max(0, visibleKids - 1) * parseFloat(tcs.rowGap || 0);
   const spaceForMapAndHand = availH - chrome - gapsAndPadding;
-  const handWanted = hasHand ? CARD_H + HAND_GUTTER : 0; // 207, the C2_Game hand row height
-  // Shrink scale, if it must, only far enough to give the hand its full
-  // wanted height — never below FLOOR_SCALE, never above the natural
-  // width-fit (that would overflow sideways).
-  const scale = hasHand
-    ? Math.min(widthScale, Math.max(FLOOR_SCALE, (spaceForMapAndHand - handWanted) / DESIGN_H))
-    : widthScale;
-  const mapH = Math.round(DESIGN_H * scale);
-  // Whatever's left after the map took its (possibly floor-scale) height is
-  // the hand's real height — capped at what it wanted, never forced above
-  // what's actually left (that would push the table past the viewport and
-  // force a scroll, which C2 does not allow).
-  const handH = hasHand ? Math.max(0, Math.min(handWanted, spaceForMapAndHand - mapH)) : 0;
+  // The tallest scale that still leaves `wanted` px for the hand — never
+  // below FLOOR_SCALE (the map's own spec), never above widthScale (that
+  // would overflow sideways).
+  const configFor = (wanted) => {
+    const s = Math.min(widthScale, Math.max(FLOOR_SCALE, (spaceForMapAndHand - wanted) / DESIGN_H));
+    const mh = Math.round(DESIGN_H * s);
+    return { scale: s, mapH: mh, handH: Math.max(0, Math.min(wanted, spaceForMapAndHand - mh)) };
+  };
+  let scale, mapH, handH, mode = "full", overflow = false;
+  if (!hasHand) {
+    scale = widthScale; mapH = Math.round(DESIGN_H * scale); handH = 0;
+  } else {
+    const full = configFor(CARD_H + HAND_GUTTER); // 207: 96x176 card + its own headroom
+    if (full.handH - HAND_GUTTER >= CARD_FULL_MIN) {
+      ({ scale, mapH, handH } = full);
+    } else {
+      const chip = configFor(CHIP_H + CHIP_GUTTER); // 72: a fixed 56px chip row
+      mode = "chip";
+      if (chip.handH >= CHIP_H + CHIP_GUTTER - 2) {
+        ({ scale, mapH, handH } = chip);
+      } else {
+        // Even a chip row doesn't fit alongside the map's floor spec (e.g.
+        // 375x553) — give both their true minimum and let the PAGE scroll
+        // instead of squeezing either below spec (owner's round 5, #3).
+        scale = FLOOR_SCALE; mapH = Math.round(DESIGN_H * scale); handH = CHIP_H + CHIP_GUTTER; overflow = true;
+      }
+    }
+  }
+  document.body.classList.toggle("table-overflow", overflow);
+  // Re-render the hand only when its mode actually changes — a fixed-size
+  // chip/card doesn't need re-measuring after a plain resize.
+  if (hasHand && hand.dataset.mode !== mode) { hand.dataset.mode = mode; if (game.lastView) renderHand(game.lastView, mode); }
   hand.style.flex = `0 0 ${handH}px`;
-  document.documentElement.style.setProperty("--card-h", Math.max(0, handH - HAND_GUTTER) + "px");
+  document.documentElement.style.setProperty("--card-h", Math.max(CARD_FULL_MIN, handH - HAND_GUTTER) + "px");
   // Any height neither the map's floor nor the hand's want needed goes back
-  // to the map instead of sitting blank below it.
-  const mapFinalH = Math.max(mapH, spaceForMapAndHand - handH);
+  // to the map instead of sitting blank below it (skipped in overflow mode:
+  // both are already pinned to their true minimum there).
+  const mapFinalH = overflow ? mapH : Math.max(mapH, spaceForMapAndHand - handH);
   $("map").style.flex = `0 0 ${mapFinalH}px`;
   fitMap(scale);
 }
@@ -810,20 +837,27 @@ function renderPending(v, p, setPrompt, sh) {
   }
 }
 
-function renderHand(v) {
-  const el = $("hand"); el.innerHTML = "";
+// mode: "full" (96x176, image + both names) or "chip" (a fixed 56px row —
+// round badge + both names, no image) — picked by layoutTable() from how
+// much height is actually available, never guessed here. A card's own
+// colour/side styling (.card:has(.ops.q) etc. in style.css) applies to both
+// shapes, so only the .chip modifier class and the markup inside differ.
+function renderHand(v, mode) {
+  const el = $("hand");
+  mode = mode || el.dataset.mode || "full";
+  el.dataset.mode = mode;
+  el.innerHTML = "";
   const me = game.me, ui = game.ui;
   const hand = v.hands[me] || [];
   const canPick = v.winner == null && (E.legal(v, me).kind === "action" || E.legal(v, me).kind === "headline");
-  // Image on top, circular ops badge + both names below — the same shape
-  // for Qin, Chu, neutral and scoring cards; only colour tells them apart.
+  const chip = mode === "chip";
   const tile = (id, cls = "") => {
     const kind = cardSide(id);
     const b = document.createElement("button");
-    b.type = "button"; b.className = `card ${cls}`;
+    b.type = "button"; b.className = `card ${chip ? "chip " : ""}${cls}`.trim();
     b.setAttribute("aria-pressed", String(ui.card === id));
-    b.innerHTML = `<img class="cardimg" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
-      `<span class="ci"><span class="ops ${kind}">${esc(opsLabel(id))}</span><span class="nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span></span>`;
+    const ci = `<span class="ci"><span class="ops ${kind}">${esc(opsLabel(id))}</span><span class="nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span></span>`;
+    b.innerHTML = chip ? ci : `<img class="cardimg" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` + ci;
     b.disabled = !canPick;
     b.onclick = () => { game.ui = freshUi(ui.card === id ? null : id); render(); };
     el.appendChild(b);

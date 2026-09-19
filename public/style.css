@@ -229,6 +229,12 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
    map's own opaque art still paints in the seated side's court colour. */
 body.table-lock { height: 100svh; overflow: hidden; }
 body.table-lock #table { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+/* Round 5's last-resort escape hatch (layoutTable() in app.js): when even a
+   chip-row hand can't fit alongside the map's floor spec (~375x553), it sets
+   this instead of shrinking either one further — the page scrolls like any
+   normal page rather than clip or violate a drawn-size minimum. */
+body.table-lock.table-overflow { height: auto; min-height: 100svh; overflow: visible; }
+body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: visible; }
 /* No horizontal padding here: the map needs the phone's full width to hit
    its disc/text/tap-target minimums (see fitMap in app.js), so every OTHER
    row carries its own 8px side padding instead of #table doing it for all. */
@@ -241,6 +247,19 @@ body.table-lock #table { flex: 1 1 auto; min-height: 0; display: flex; flex-dire
 .mandate { position: relative; height: 10px; border-left: 2px solid #777; border-right: 2px solid var(--chu-btn); margin: 3px 0; }
 .mandate .mid { position: absolute; left: 50%; top: 0; width: 1px; height: 10px; background: var(--gold); }
 .mandate .dot { position: absolute; top: 0; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--gold); }
+/* Short viewport (owner's round 5, #2): the turn/era line, the mandate bar
+   and the mandate number used to stack as three lines (~51px) — squash them
+   into one ~30px row instead, with the mandate bar flattened into this row's
+   own bottom edge ("the tick line as this row's baseline") rather than
+   dropped. Same three child elements as always, just laid out differently;
+   #topbar's own id/children are untouched for #7/#15 to build on. */
+@media (max-height: 719px) {
+  .topbar { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 7px; }
+  .topbar .mandate { position: absolute; left: 8px; right: 8px; bottom: 0; height: 3px; margin: 0; border-left: none; border-right: none; background: #777; }
+  .topbar .mandate .mid { height: 3px; }
+  .topbar .mandate .dot { top: -3px; width: 8px; height: 8px; }
+  .topbar .tb-mandate { margin-top: 0; }
+}
 /* The map: width comes from the column, height from whatever's left after
    every flex:none sibling took its share — see fitMap() in app.js, which
    scales a fixed design canvas (DESIGN_W/DESIGN_H) to fit inside without
@@ -424,6 +443,19 @@ body.sheet-open { overflow: hidden; height: 100svh; }
 .card .ops.s { background: var(--neutral-ink); color: #fff; }
 .card:has(.ops.s) { background: var(--neutral-bg); color: var(--neutral-ink); }
 .card.jiuding { background: #d9c58f; color: var(--neutral-ink); }
+/* Round 5's short-viewport hand: when even a squeezed full card would drop
+   below CARD_FULL_MIN (see app.js), the hand switches to a fixed 56px chip
+   row instead of a half-squashed card — badge + both names, no image, width
+   follows its own content (never truncated). The .card:has(.ops.*) side
+   colouring above already applies to it unchanged; only the shape differs. */
+.card.chip {
+  flex-direction: row; align-items: center; width: auto; min-width: 96px; max-width: 190px;
+  height: 56px; padding: 0 10px;
+}
+.card.chip .ci { flex: 1 1 auto; padding: 0; align-items: center; gap: 8px; }
+.card.chip .ops { width: 26px; height: 26px; font-size: 12px; line-height: 26px; }
+.card.chip .nm-zh { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.card.chip .nm-en { font-size: 11px; white-space: nowrap; }
 .chat { flex: none; display: flex; gap: 6px; padding: 2px 8px; }
 .chat input { flex: 1; min-width: 0; min-height: 44px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font: 14px var(--serif); padding: 0 10px; }
 /* The log opens as a bottom sheet over the whole page (C2_Log) rather than
