@@ -14,6 +14,11 @@ import zh from "./i18n/zh-Hant.js";
 import CARD_EN from "./i18n/cards.en.js";
 import { mountAdvisorToggle, decorate as decorateAdvisor } from "./advisor-ui.js";
 import * as Tut from "./tutorial-ui.js";
+import {
+  DESIGN_W, DESIGN_H, NODE_POS, nodeCenter, regionMembers, isCapital,
+  renderRegionBlobs, renderRoads, REGION_LABEL_POS,
+  NODE_BREAK_EN, NODE_SMALL_EN, NODE_ANCHOR, nodeLabelHTML,
+} from "./map-draw.js";
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);
@@ -492,39 +497,12 @@ function renderStatLine(v) {
     col(t("tracks.jiuding"), esc(sideName(v.jiuding.holder)) + (v.jiuding.faceDown ? ` (${esc(t("tracks.faceDown"))})` : ""));
 }
 
-// A fixed design canvas, scaled to fit whatever box the flex layout gives
-// the map (see fitMap()) — laid out generously enough that a 13px bold
-// English city name (the widest label on the board, e.g. "Guanzhong") never
-// overlaps its neighbour once max-width/ellipsis caps it (see .node .nm).
-// NODE_POS is each city's centre, not a corner, so nodeCenter() is trivial.
-// Width kept close to the map's real on-screen width (so fitMap()'s scale
-// stays near 1 and the 30/34px disc spec actually renders that size); the
-// height has plenty of room to spread rows out and avoid overlap instead.
-// The design canvas is the C2_Game mockup's own size (390x408) — fitMap()
-// scales it by the viewport-width ratio ONLY (never shrinks it further for
-// lack of height), so a real phone renders discs/text at true size. Every
-// city fits inside this exact box; NODE_ANCHOR moves crowded ones' labels
-// off to a side instead of needing more room.
-const DESIGN_W = 390, DESIGN_H = 408;
-const NODE_POS = {
-  dai: [64, 26], zhongshan: [148, 24], ji: [244, 24], liaodong: [307, 34],
-  yiqu: [36, 86], hedong: [136, 82], handan: [234, 80], linzi: [332, 88],
-  hangu: [96, 136], shangdang: [186, 130], jimo: [342, 138],
-  guanzhong: [50, 182], yiyang: [140, 176], daliang: [244, 168], ju: [312, 172],
-  luoyi: [140, 228], xue: [338, 220],
-  hanzhong: [36, 252], xinzheng: [196, 244], song: [282, 244],
-  bashu: [66, 306],
-  qianzhong: [102, 360], chencai: [168, 336], ying: [220, 388], huaisi: [280, 342], wuyue: [340, 378],
-};
-const nodeCenter = (id) => NODE_POS[id];
-// Region membership comes straight from the board data (E.SPACE[id].region),
-// never a hand-copied list — a probe that patches a space's region should
-// see the blob move with it.
-function regionMembers() {
-  const by = {};
-  for (const sp of E.SPACES) (by[sp.region] ??= []).push(sp.id);
-  return by;
-}
+// DESIGN_W/H, NODE_POS/nodeCenter, regionMembers(), isCapital(),
+// renderRoads()/renderRegionBlobs(), REGION_LABEL_POS, NODE_BREAK_EN/
+// NODE_SMALL_EN/NODE_ANCHOR and nodeLabelHTML() now live in map-draw.js
+// (shared with rules.js — see the import at the top of this file); nothing
+// about how the table draws the map changed, only where the definitions are.
+
 // While a scoring card is open in the sheet, its region lights up on the
 // map and the rest fade — set by renderPromptAndSheet, read by renderMap.
 let scoreHighlight = null;
@@ -600,68 +578,6 @@ function cardInfo(L, card) {
   return { id: card, ops, enemy: !!c.uses.enemy, uses: c.uses };
 }
 
-// The region blobs: a soft, borderless tint that hugs the roads between a
-// region's own cities (no bounding box), one colour per region, membership
-// read live from E.SPACE[id].region. Scoring a region (a scoring card open
-// in the sheet) brightens it and fades the rest.
-function renderRegionBlobs(members) {
-  const within = (ids) => {
-    const pairs = [];
-    for (const id of ids) for (const nb of E.SPACE[id].adj) if (ids.includes(nb) && id < nb) pairs.push([id, nb]);
-    return pairs;
-  };
-  let svg = `<svg class="region-blobs" viewBox="0 0 ${DESIGN_W} ${DESIGN_H}">`;
-  for (const [r, ids] of Object.entries(members)) {
-    const cls = "blob-" + r + (scoreHighlight ? (scoreHighlight === r ? " active" : " faded") : "");
-    svg += `<g class="blob ${cls}">`;
-    for (const [a, b] of within(ids)) {
-      const [x1, y1] = nodeCenter(a), [x2, y2] = nodeCenter(b);
-      svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="46" stroke-linecap="round"></line>`;
-    }
-    for (const id of ids) { const [x, y] = nodeCenter(id); svg += `<circle cx="${x}" cy="${y}" r="28"></circle>`; }
-    svg += `</g>`;
-  }
-  svg += `</svg>`;
-  return svg;
-}
-function renderRoads() {
-  const seen = new Set();
-  let svg = `<svg class="roads" viewBox="0 0 ${DESIGN_W} ${DESIGN_H}">`;
-  for (const sp of E.SPACES) for (const nb of sp.adj) {
-    const key = [sp.id, nb].sort().join("|");
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const [x1, y1] = nodeCenter(sp.id), [x2, y2] = nodeCenter(nb);
-    svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`;
-  }
-  return svg + `</svg>`;
-}
-// Hand-picked so the tag sits in open water, never over a city or another
-// tag (owner: per-region position is fine, membership must stay data-driven
-// — and it is, via regionMembers()). One colour per region, matching its blob.
-const REGION_LABEL_POS = {
-  north: [282, 66], west: [30, 152], jin: [176, 202], zhou: [184, 162], east: [340, 274], south: [235, 306],
-};
-// No ellipsis anywhere on the map (owner). Long English names that have a
-// natural break (a space or hyphen) go on two lines; the rest just render
-// smaller (11px vs 13px) — both explicitly OK'd. Chinese names are always
-// short enough for one line at the default size. A handful of cities anchor
-// their label off a side instead of straight below, by hand, because the
-// default spot collides with a neighbour once the real (untruncated) width
-// is on screen — this is a label position, not a change to who's in a
-// region, so it's fine per the same rule as REGION_LABEL_POS.
-const NODE_BREAK_EN = { hangu: ["Hangu", "Pass"], bashu: ["Ba-", "Shu"], chencai: ["Chen-", "Cai"], huaisi: ["Huai-", "Si"], wuyue: ["Wu-", "Yue"] };
-const NODE_SMALL_EN = new Set(["zhongshan", "liaodong", "shangdang", "guanzhong", "daliang", "hanzhong", "xinzheng", "qianzhong"]);
-const NODE_ANCHOR = { bashu: "right", shangdang: "right", ying: "top", wuyue: "top", yiyang: "left", linzi: "left", ji: "left", liaodong: "right", hangu: "right" };
-function nodeLabelHTML(id) {
-  const star = E.SPACE[id].battleground ? "★" : "";
-  if (lang === "en" && NODE_BREAK_EN[id]) {
-    const [l1, l2] = NODE_BREAK_EN[id];
-    return `<span class="nm two-line">${star}${esc(l1)}<br>${esc(l2)}</span>`;
-  }
-  const small = lang === "en" && NODE_SMALL_EN.has(id);
-  return `<span class="nm${small ? " sm" : ""}">${star}${esc(spaceName(id))}</span>`;
-}
 // Touch targets are a physical requirement, not a design one: they must
 // stay >=44x44 real px no matter how much the map's own art is scaled down
 // on a narrow phone. So each city is two elements — a VISUAL node (disc +
@@ -674,7 +590,7 @@ function renderMap(v) {
   const hitEl = $("hitLayer");
   hitEl.innerHTML = "";
   const members = regionMembers();
-  el.innerHTML = renderRoads() + renderRegionBlobs(members);
+  el.innerHTML = renderRoads() + renderRegionBlobs(members, scoreHighlight);
   for (const r of Object.keys(REGION_LABEL_POS)) {
     if (!members[r]) continue;
     const [x, y] = REGION_LABEL_POS[r];
@@ -687,7 +603,7 @@ function renderMap(v) {
   const mode = currentMode(v);
   for (const sp of E.SPACES) {
     const [x, y] = NODE_POS[sp.id], [q, c] = E.infOf(v, sp.id), ctl = E.controller(v, sp.id);
-    const cap = sp.state && E.STATES[sp.state].capital === sp.id;
+    const cap = isCapital(sp.id);
     const big = sp.battleground || cap;
     const empty = !q && !c;
     const anchor = NODE_ANCHOR[sp.id];
@@ -699,7 +615,7 @@ function renderMap(v) {
     vis.innerHTML = `<span class="disc${cap ? " sq" : ""}">${empty ? "" : `<i class="q">${q || ""}</i><i class="c">${c || ""}</i>`}</span>` +
       (picked ? `<span class="badge">+${picked}</span>` : "") +
       (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
-      nodeLabelHTML(sp.id);
+      nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc);
     el.appendChild(vis);
     const hb = document.createElement("button");
     hb.type = "button";
