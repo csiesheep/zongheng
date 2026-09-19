@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;700;900&display=swap">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="screens.css">
 </head>
 <body>
 <header class="bar">
@@ -22,13 +23,37 @@
 </header>
 
 <main id="lobby" class="view" hidden>
-  <h2 data-t="lobby.title"></h2>
-  <div class="code" id="lobbyCode"></div>
-  <p class="about" id="lobbyHint"></p>
-  <div id="lobbySeats" class="seats"></div>
-  <div class="field"><div class="label" data-t="setup.level"></div><div class="seg" id="lobbyLevel"></div></div>
-  <div class="actions" id="lobbyActions"></div>
-  <p class="soon" id="lobbyErr" hidden></p>
+  <div id="lobbyGate" class="gate" hidden>
+    <h2 data-t="lobby.title"></h2>
+    <p class="about" data-t="lobby.gateHint"></p>
+    <form id="lobbyGateForm">
+      <div class="field">
+        <label for="lobbyName" class="field-label" data-t="landing.name"></label>
+        <input id="lobbyName" class="gate-input" maxlength="16" spellcheck="false" autocomplete="off">
+      </div>
+      <button id="lobbyGateGo" type="submit" class="primary" data-t="lobby.join"></button>
+    </form>
+  </div>
+  <div id="lobbyRoom">
+    <div class="lobby-scroll">
+      <h2 data-t="lobby.title"></h2>
+      <div class="code-row">
+        <div class="code" id="lobbyCode"></div>
+        <button id="lobbyCopy" type="button" data-t="lobby.copy"></button>
+      </div>
+      <p class="about" id="lobbyHint"></p>
+      <div id="lobbySeats" class="seats"></div>
+      <div class="field"><div class="label" data-t="setup.level"></div><div class="seg" id="lobbyLevel"></div></div>
+      <div id="lobbyChat" class="lobby-chat" aria-live="polite"></div>
+      <form id="lobbyChatForm" class="lobby-chat-form">
+        <label for="lobbyChatIn" class="sr" data-t="lobby.say"></label>
+        <input id="lobbyChatIn" maxlength="200" autocomplete="off">
+        <button type="submit" class="small" data-t="buttons.send"></button>
+      </form>
+    </div>
+    <div class="actions" id="lobbyActions"></div>
+    <p class="soon" id="lobbyErr" hidden></p>
+  </div>
 </main>
 
 <main id="setup" class="view setup-view" hidden>
@@ -56,14 +81,36 @@
   <section class="log"><button id="logToggle" class="small"></button><div id="logBody" hidden></div></section>
 </main>
 
-<main id="over" class="view" hidden>
-  <h2 id="overTitle"></h2>
-  <p id="overReason"></p>
-  <p id="overMandate"></p>
-  <div class="actions">
+<main id="over" class="view over-view" hidden>
+  <div class="over-scroll">
+    <div class="over-art">
+      <img id="overImg" src="" alt="">
+      <div class="over-shade" aria-hidden="true"></div>
+      <div class="over-head">
+        <span id="overGlyph" class="over-glyph" lang="zh-Hant"></span>
+        <h1 class="over-h1">
+          <span id="overReasonTitle" class="over-title" lang="zh-Hant"></span>
+          <span id="overLine" class="over-line"></span>
+        </h1>
+      </div>
+    </div>
+    <div class="over-body">
+      <p id="overBody" class="over-desc"></p>
+      <div class="over-stats">
+        <div><span id="overStatTurnLabel"></span><b id="overStatTurn"></b></div>
+        <div><span id="overStatSealsLabel"></span><b id="overStatSeals"></b></div>
+        <div><span id="overStatMieLabel"></span><b id="overStatMie"></b></div>
+        <div><span id="overStatMandateLabel"></span><b id="overStatMandate"></b></div>
+      </div>
+    </div>
+  </div>
+  <div class="over-footer">
     <button id="btnAgain" class="primary" data-t="buttons.playAgain"></button>
-    <button id="btnBoard" data-t="buttons.board"></button>
-    <button id="btnHome" data-t="buttons.home"></button>
+    <div class="row">
+      <button id="btnBoard" data-t="buttons.board"></button>
+      <button id="btnSwap" data-t="buttons.swap"></button>
+      <button id="btnHome" data-t="buttons.home"></button>
+    </div>
   </div>
 </main>
 

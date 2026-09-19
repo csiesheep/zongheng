@@ -23,7 +23,7 @@ export default {
     qin: { headline: "連橫", sub: "逐一吞併六國。", cta: "以秦開局" },
     chu: { headline: "合縱", sub: "把六國綁在一起。", cta: "以楚開局" },
   },
-  lobby: { say: "說點什麼", title: "房間", hint: "把房號給朋友,或讓電腦補上另一邊。斷線的人由電腦代打,回來即可接手。", you: "你", host: "房主", bot: "電腦", away: "離線", ready: "已就緒", notReady: "尚未就緒", addBot: "加入電腦", removeBot: "移除電腦", swap: "換邊", start: "開局", leave: "離開", rematch: "再戰(換邊)", waiting: "等房主開局。", connecting: "連線中…", closed: "連線已中斷。", clock: "{s} 秒" },
+  lobby: { say: "說點什麼", title: "房間", hint: "把房號給朋友,或讓電腦補上另一邊。斷線的人由電腦代打,回來即可接手。", you: "你", host: "房主", bot: "電腦", away: "離線", ready: "已就緒", notReady: "尚未就緒", addBot: "加入電腦", removeBot: "移除電腦", swap: "換邊", start: "開局", leave: "離開", rematch: "再戰(換邊)", waiting: "等房主開局。", connecting: "連線中…", closed: "連線已中斷。", clock: "{s} 秒", gateHint: "入座後沒有改名的機會,先取個名字。", join: "入座", copy: "複製連結", copied: "已複製" },
   setup: {
     defaultName: "玩家", title: "與電腦對弈", side: "你的陣營", random: "隨機", randomTag: "任一陣營", level: "電腦強度", easy: "簡單", normal: "普通", hard: "困難", start: "開局", back: "返回",
     desc: {
@@ -45,7 +45,19 @@ export default {
   uses: { event: "事件", place: "放置", campaign: "征伐", lobby: "遊說", reform: "變法", bog: "棄牌(頓兵)", pair: "搭配", opsFirst: "先行動點", eventFirst: "先事件" },
   buttons: { send: "送出", board: "看棋盤", result: "結果", confirm: "確認", done: "完成", cancel: "取消", skip: "略過", playAgain: "再來一局", swap: "換邊", home: "回首頁", headline: "蓋下標題牌", show: "展開", hide: "收起", log: "紀錄" },
   preview: { campaign: "移除對方 {removed},放置己方 {placed};疲敝 {w}。", lobby: "局勢 {edge}:最多移除 {n}。", locked: "疲敝封鎖中。", enemyEvent: "這是對方的牌:事件也會觸發。" },
-  over: { winner: "{side}獲勝", reasons: { unification: "三國同滅", alliance: "四國相印", mandate: "天命達 20", collapse: "天下土崩", scoring: "回合結束時手上留有記分卡", scoringBoth: "雙方都留著記分卡", final: "終局結算", tie: "天命平手,楚勝" }, mandate: "終局天命" },
+  over: {
+    winner: "{side}獲勝", mandate: "終局天命",
+    reasons: {
+      unification: { title: "秦并天下", body: "三國盡滅,天下再無缺口歸秦。", win: "你贏了。天下已歸秦所有。", lose: "你輸了。秦并天下。" },
+      alliance: { title: "合縱成", body: "四方相印盡合,秦再無可乘之隙。", win: "你贏了。合縱已成。", lose: "你輸了。合縱已成,你被困其中。" },
+      mandate: { title: "天命歸{winner}", body: "天命積滿二十,天下已為{winner}所決。", win: "你贏了。天命在你。", lose: "你輸了。天命歸於{winner}。" },
+      collapse: { title: "天下先向{loser}崩", body: "疲敝先耗盡,{winner}未耗盡自己的氣力。", win: "你贏了。對手先撐不住。", lose: "你輸了。你先撐不住。" },
+      scoring: { title: "記分未清", body: "回合結束時記分卡仍在手上,結算歸於{winner}。", win: "你贏了。對手手上還握著記分卡。", lose: "你輸了。記分卡還留在你手上。" },
+      scoringBoth: { title: "記分兩不清", body: "雙方回合結束時都還握著記分卡,結算仍歸{winner}。", win: "你贏了。雙方都還握著記分卡,結算仍算你贏。", lose: "你輸了。雙方都還握著記分卡,結算算你輸。" },
+      final: { title: "終局論定", body: "第八回合終了,天命偏向{winner}。", win: "你贏了。終局時天命在你這邊。", lose: "你輸了。終局時天命偏向{winner}。" },
+      tie: { title: "天命持平,歸{winner}", body: "天命持平,依規則判給{winner}。", win: "你贏了。天命持平,依規則判你勝。", lose: "你輸了。天命持平,依規則判{winner}勝。" },
+    },
+  },
   log: {
     setup: "{side}起始配置:{spaces}。", turn: "第 {turn} 回合,{era}。", headline: "標題:{qin}、{chu};{first}先結算。", play: "{side}打出{card}({use})。",
     place: "{side}在{spaces}放置。", campaign: "{side}以 {ops} 點征伐{target}:移除 {removed},放置 {placed}。", lobby: "{side}遊說{target}:移除 {removed}。",

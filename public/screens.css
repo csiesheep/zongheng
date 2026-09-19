@@ -1,0 +1,124 @@
+/* Lobby (seating) and result (win/lose) screens — issue #6. Everything here
+   is new; the shared tokens (--gold, --gold-line, --text, --serif, --kai,
+   --field-bg, --neutral-bg, --chu-gold, --qin-text, ...) come from style.css's
+   :root, loaded before this file. This file does not touch style.css or the
+   table's own classes (.tracks/.map/.prompt/.sheet/.hand/.log/#table). */
+
+/* Small-viewport units, not vh: iOS Safari's `100vh` is the height with the
+   toolbar HIDDEN, taller than what's actually on screen while it's showing
+   (owner report, iPhone: the solo setup's Start button was pushed off
+   screen by style.css's `body { min-height: 100vh }`). `svh` tracks the
+   toolbar; the `vh` line right before it is only the fallback for browsers
+   that don't know `svh` yet. Scoped to :has(#lobby)/:has(#over) so it only
+   overrides body's height while one of THESE two screens is showing — the
+   table and setup screens (not this issue's area) keep style.css's own
+   sizing untouched. An explicit `height` (not just `min-height`) is what
+   actually caps the page so the content below can be made to scroll
+   internally instead of pushing the bottom controls past the fold. */
+body:has(#lobby:not([hidden])), body:has(#over:not([hidden])) {
+  height: 100vh; height: 100svh; min-height: 0;
+}
+
+/* ---------- lobby: fills the screen, no page scroll ---------- */
+/* The room code/seats/chat can grow (more seats, a longer chat) past what a
+   short phone shows; rather than let that push Start off screen (or the
+   whole page scroll, hiding it), only `.lobby-scroll` scrolls — Start (and
+   the name gate's Enter) stay pinned in view via the flex column below. */
+#lobby.view {
+  display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; overflow: hidden;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+#lobbyGate, #lobbyRoom { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.lobby-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+#lobbyActions, #lobbyErr { flex: none; }
+#lobbyActions { margin-top: 10px; }
+
+/* ---------- lobby: the name gate asked before a room is joined ---------- */
+/* `src/room.js` reads the seat's name off the connect URL — there is no
+   rename message afterward — so this has to run and be confirmed BEFORE
+   `connect()` ever opens the WebSocket (see app.js's `maybeConnect`). Same
+   shape as the solo setup's own name field. */
+.gate { gap: 12px; padding-top: 4px; }
+.gate .field { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.gate-input {
+  height: 46px; box-sizing: border-box; padding: 0 12px; border: 1px solid var(--gold-line);
+  border-radius: 10px; background: var(--field-bg); font: 400 16px var(--serif); color: var(--text);
+}
+#lobbyGateForm { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+#lobbyGateGo {
+  flex: none; margin-top: auto; min-height: 48px; border: none; border-radius: 10px;
+  background: var(--gold); color: var(--bg); font: 600 15px var(--serif);
+}
+
+/* ---------- lobby: room code, seats, chat ---------- */
+.code-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.code-row .code { margin: 0; }
+#lobbyCopy {
+  flex: none; min-height: 44px; padding: 0 14px; border-radius: 10px; background: none; color: var(--text);
+  border: 1px solid var(--gold-line); font: 600 13px var(--serif);
+}
+.lobby-chat {
+  max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px;
+  margin-bottom: 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--gold-line);
+  font-size: 12.5px; line-height: 1.5; color: var(--text-dim);
+}
+.lobby-chat:empty { display: none; }
+.lobby-chat-form { display: flex; gap: 6px; margin-bottom: 4px; }
+.lobby-chat-form input {
+  flex: 1; min-width: 0; min-height: 44px; background: none; border: 1px solid var(--gold-line);
+  border-radius: 8px; color: var(--text); font: 14px var(--serif); padding: 0 10px;
+}
+
+/* ---------- result screen: colour follows the WINNER, not your seat ---------- */
+/* owner, 2026-09-19: "for win page, the background should be the winner's
+   nation background" — set via #over.winner-qin/.winner-chu (renderOver in
+   app.js), independent of body.side-qin/side-chu (which still colours the
+   table by your own seat and is untouched here). */
+/* Same fixed-viewport, internal-scroll shape as the lobby (see the
+   body:has() rule above): `.over-scroll` (the art + the paragraph/stats)
+   scrolls if it must, `.over-footer`'s four buttons stay pinned in view. */
+#over.view.over-view {
+  display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; overflow: hidden;
+  padding: 0; max-width: 640px; box-sizing: border-box;
+}
+#over.winner-chu { background: #4f0e0a; color: #fff3d2; }
+#over.winner-qin { background: #0c0b0a; color: #efe6d2; }
+.over-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.over-art { position: relative; height: 46vh; height: 46svh; min-height: 220px; max-height: 430px; overflow: hidden; }
+.over-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 40%; }
+#over.winner-chu .over-shade { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(6, 5, 4, 0.25), rgba(6, 5, 4, 0.25) 55%, #4f0e0a); }
+#over.winner-qin .over-shade { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(6, 5, 4, 0.4), rgba(6, 5, 4, 0.4) 55%, #0c0b0a); }
+.over-head {
+  position: absolute; left: 0; right: 0; bottom: 14px; display: flex; flex-direction: column;
+  align-items: center; gap: 8px; padding: 0 16px; text-align: center;
+}
+.over-glyph { font-size: clamp(48px, 15vw, 64px); line-height: 1; }
+.over-glyph.glyph-chu { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
+.over-glyph.glyph-qin { font-family: var(--serif); font-weight: 900; color: var(--qin-text); }
+.over-h1 { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.over-title { font: 900 clamp(24px, 7vw, 34px)/1.15 var(--serif); letter-spacing: 6px; padding-left: 6px; color: var(--gold); }
+.over-line { font: 600 16px/1.3 var(--serif); color: #fff; }
+.over-body { padding: 14px 20px 0; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.over-desc { margin: 0; font: 400 14px/1.55 var(--serif); text-align: center; }
+.over-stats {
+  display: flex; justify-content: space-between; width: 100%; padding: 12px 4px; box-sizing: border-box;
+  border-top: 1px solid var(--gold-line); border-bottom: 1px solid var(--gold-line);
+}
+#over.winner-chu .over-stats { border-color: #d8b56a; }
+#over.winner-qin .over-stats { border-color: #8a7a52; }
+.over-stats > div { display: flex; flex-direction: column; gap: 5px; align-items: center; min-width: 0; }
+.over-stats span { font: 400 10.5px/1 var(--serif); }
+#over.winner-chu .over-stats span { color: #f1d3c4; }
+#over.winner-qin .over-stats span { color: #b9b09a; }
+.over-stats b { font: 600 15px/1 var(--serif); color: #fff; white-space: nowrap; }
+.over-footer {
+  flex: none; padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;
+}
+.over-footer button {
+  min-height: 48px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; font: 600 14px var(--serif);
+}
+.over-footer #btnAgain { border: none; background: var(--gold); color: #0c0b0a; }
+.over-footer .row { display: flex; gap: 8px; }
+.over-footer .row button { flex: 1; min-width: 0; background: none; color: #efe6d2; border: 1px solid var(--gold-line); }
