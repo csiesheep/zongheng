@@ -21,6 +21,13 @@
 .adv-toggle {
   height: 44px; padding: 0 4px; border: none; background: none;
   display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+  /* #24: an inline-flex box's own baseline (used to align it against its
+     inline siblings, #langBtn here) shifts with its content -- dropping the
+     label at 375px wide (below) moved that baseline just enough to push
+     #langBtn ~3px lower and grow .bar past the 55px guard, even though
+     nothing wraps. Anchoring to the line's middle instead makes the row's
+     own height independent of which of this button's children are shown. */
+  vertical-align: middle;
 }
 .adv-toggle-label {
   font-family: var(--kai); font-weight: 900; font-size: 13px; color: var(--text-dim);
@@ -39,6 +46,18 @@
 .adv-toggle.on .adv-toggle-dot { left: 12px; background: #e9b92e; }
 /* A very short viewport (#5's 28px topbar row) still gives the switch a
    real 44px tap target -- the button's own box, not the visible track. */
+/* #24 (diagnosed by a side session, folded into the ruling): at 375px wide
+   English, "Advisor" + the track needed ~145px but the header's right-hand
+   span (rulesLink already hidden here by relegateRulesLink) only has ~140,
+   wrapping #langBtn to a second line and growing .bar from 54/55px to 98.
+   Under 380px the switch drops the word and keeps just the track -- still
+   a real 44px target (min-width below), and syncToggleUI() above always
+   sets aria-label regardless of width, so the drop loses no information a
+   screen reader would have had. */
+@media (max-width: 379.98px) {
+  .adv-toggle-label { display: none; }
+  .adv-toggle { min-width: 44px; justify-content: center; padding: 0; gap: 0; }
+}
 
 /* ---------- the suggestion banner: always a solid, flow-positioned box ---------- */
 .advisor-banner {
