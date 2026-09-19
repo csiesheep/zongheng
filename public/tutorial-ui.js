@@ -204,6 +204,20 @@ export function decorate() {
   // is replaced end to end by the coach panel.
   $("prompt").hidden = true;
 
+  // If the PREVIOUS decorate() left body.table-overflow on, style.css's own
+  // rule for it switches #table from a fixed, viewport-driven flex column
+  // (flex:1 1 auto, overflow:hidden) to one sized to its own content
+  // (flex:none, height:auto) — table.clientHeight then just tracks
+  // scrollHeight and always reads "fits", which is circular. updateCoach()
+  // below calls app.js's layoutTable() a second time (after restrictSheet()
+  // has simplified the sheet), and THAT call reads table.clientHeight for
+  // its own budget — force the constrained mode back on first so it always
+  // measures against the real viewport, never against last cycle's own
+  // conclusion (found on a real device sim: 375x553, English, the "hand"
+  // lesson — the lit card landed 40px below the fold with no scrollbar to
+  // reach it, because the previous lesson had left this class set).
+  document.body.classList.remove("table-overflow");
+
   restrictMap(step, ui);
   restrictHand(step, ui);
   restrictSheet(step, ui);
@@ -556,6 +570,18 @@ function pinCoach() {
 function checkOverflow() {
   const table = ctx.$("table");
   if (window.matchMedia("(min-width: 1024px)").matches) return; // desktop's frame has its own fixed aspect ratio, unrelated escape hatch
+  // table.clientHeight is only a fixed, viewport-driven number while
+  // body.table-overflow is OFF (style.css's rule for that class switches
+  // #table from flex:1/overflow:hidden to flex:none/height:auto, so once
+  // it's on, clientHeight just tracks scrollHeight and always reads "no
+  // overflow"). A tutorial lesson calls layoutTable() twice per decorate()
+  // (render()'s own tail call, then again after restrictSheet() has
+  // simplified the sheet) — if the class was left on from the previous
+  // lesson, the SECOND call would measure against that already-collapsed
+  // clientHeight and undersize the map/hand. Force the constrained mode
+  // back on before measuring so every check starts from the same fixed
+  // reference frame regardless of what the last render left behind.
+  document.body.classList.remove("table-overflow");
   const overflowing = table.scrollHeight > table.clientHeight + 1;
   document.body.classList.toggle("table-overflow", overflowing);
 }
