@@ -439,9 +439,20 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    positioned at a city's own DESIGN_W/DESIGN_H px (see renderMap()) lands
    exactly on that city's disc at any scale. 47x47 (HIT_SIZE in app.js) is
    the design-px size that stays >=44 real css px even at the map's floor
-   scale (~0.9506); on desktop's larger scale it only grows. */
+   scale (~0.9506); on desktop's larger scale it only grows.
+   clip-path: circle(50%) turns the square button into a circular click
+   region (browsers hit-test through clip-path, verified with
+   elementFromPoint): jimo/ju (NODE_POS 30/34px apart, the closest pair on
+   the board) put a square 47x47 box's corner over the OTHER city's disc —
+   a real overlap, not just two hit boxes touching. Two 47px-diameter
+   CIRCLES centred on the same two points are 1.66px short of touching at
+   all, and even where two circles do overlap elsewhere on a tighter pair,
+   the lens sits on the empty road between the cities, never inside
+   either one's own disc (checked against every pair on the board: the
+   circular case tolerates up to ~61px before any disc is covered, well
+   past the 47px this map actually uses). */
 .hit-layer { position: absolute; top: 50%; left: 50%; transform-origin: center center; z-index: 3; }
-.hit { position: absolute; width: 47px; height: 47px; transform: translate(-50%, -50%); padding: 0; border: none; background: none; cursor: default; }
+.hit { position: absolute; width: 47px; height: 47px; transform: translate(-50%, -50%); clip-path: circle(50%); padding: 0; border: none; background: none; cursor: default; }
 .hit:not(:disabled) { cursor: pointer; }
 .card:disabled { opacity: 0.85; }
 /* Below the map: one condensed stat row, then the prompt, then the hand. */
