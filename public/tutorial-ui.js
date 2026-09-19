@@ -15,6 +15,15 @@ import en from "./i18n/en.js";
 import zh from "./i18n/zh-Hant.js";
 
 const QIN = E.QIN;
+// Issue #31: tutorial.css's own rules that dim/spotlight existing table
+// elements (the hand's cards, etc.) are scoped to this class so a lesson's
+// look never leaks into a normal game. Added the moment a lesson starts;
+// removed on every way out. Every "out" path today is a full navigation
+// (skipOut/skipToDone's own href, the done page's "與電腦對弈" link) which
+// resets the whole document anyway, but the class is still added/removed
+// explicitly rather than relied on implicitly, since a future in-page exit
+// (no reload) would otherwise silently reintroduce this same bug.
+const TUT_BODY_CLASS = "tut-on";
 const SEEN_KEY = "zh.tutorialSeen";
 export function markSeen() { try { localStorage.setItem(SEEN_KEY, "1"); } catch {} }
 export function seen() { try { return localStorage.getItem(SEEN_KEY) === "1"; } catch { return false; } }
@@ -68,6 +77,7 @@ function enterStep(i) {
 export function start(hooks) {
   ctx = hooks;
   on = true;
+  document.body.classList.add(TUT_BODY_CLASS);
   markSeen();
   stepIdx = 0;
   ctx.game.room = false;
@@ -160,7 +170,7 @@ function goBack() {
   ctx.game.st = replayTo(target);
   enterStep(target);
 }
-function skipOut() { location.href = "./"; } // intro card's "not now" only — back to landing
+function skipOut() { document.body.classList.remove(TUT_BODY_CLASS); location.href = "./"; } // intro card's "not now" only — back to landing
 function skipToDone() { showDone(); } // coach panel's "skip the tutorial" (issue #15 review): straight to the completion page, not landing
 function tapAdvance() {
   if (stepIdx + 1 >= STEPS.length) { showDone(); return; }
@@ -729,6 +739,10 @@ function buildDone() {
     `</div></div></div>`;
   document.body.appendChild(elDone);
   elDone.querySelector("#tutDReplay").onclick = () => { elDone.hidden = true; ctx.game.st = createTutorial(); enterStep(0); };
+  // "與電腦對弈" / "Play now" — a real navigation (href) into a normal game,
+  // which reloads the page anyway, but drop the class explicitly first
+  // (issue #31) rather than lean on the reload to do it.
+  elDone.querySelector("#tutDPlay").addEventListener("click", () => document.body.classList.remove(TUT_BODY_CLASS));
 }
 function showDone() {
   if (!elDone) buildDone();
