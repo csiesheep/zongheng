@@ -7,7 +7,7 @@ import CARD_EN from "./i18n/cards.en.js";
 import {
   DESIGN_W, DESIGN_H, NODE_POS, regionMembers, isCapital,
   renderRegionBlobs, renderRoads, REGION_LABEL_POS, NODE_ANCHOR, nodeLabelHTML,
-  stabilityTagHTML,
+  stabilityTagHTML, NODE_STAB_RIGHT, NODE_STAB_HI,
 } from "./map-draw.js";
 
 const $ = (id) => document.getElementById(id);
@@ -153,7 +153,8 @@ function ruleNodeHTML(sp) {
   const cap = isCapital(sp.id);
   const big = sp.battleground || cap;
   const anchor = NODE_ANCHOR[sp.id];
-  const cls = "node empty" + (big ? " big" : "") + (anchor ? ` anchor-${anchor}` : "");
+  const cls = "node empty" + (big ? " big" : "") + (anchor ? ` anchor-${anchor}` : "") +
+    (NODE_STAB_RIGHT.has(sp.id) ? " stab-r" : "") + (NODE_STAB_HI.has(sp.id) ? " stab-hi" : "");
   return `<div class="${cls}" style="left:${x}px;top:${y}px">` +
     `<span class="disc${cap ? " sq" : ""}"></span>` +
     stabilityTagHTML(sp) +

@@ -152,3 +152,6 @@ body:not(.table-lock) .advisor-banner {
   font: 700 9px/15px var(--sans); padding: 0 3px; z-index: 5;
 }
 .node.anchor-left .adv-badge { right: auto; left: -6px; }
+/* Shangdang's tag also moved to bottom-right (#26b, style.css's .stab-r) —
+   its own .adv-badge trade lives next to that rule in style.css, not here,
+   since it isn't an anchor-left node. */

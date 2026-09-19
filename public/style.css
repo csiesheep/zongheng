@@ -391,9 +391,30 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    name anchors left (NODE_ANCHOR, see map-draw.js) swaps it to bottom-right
    so the tag never sits under the name. It's decorative (the number is
    already in the hit button's title/aria-label), so aria-hidden in the
-   markup, not just visually — see stabilityTagHTML() in map-draw.js. */
-.node .stab { position: absolute; left: -8px; bottom: -5px; width: 15px; height: 15px; box-sizing: border-box; border-radius: 3px; background: #f7f3e8; border: 1.5px solid #5d4a1a; color: #3a2d0c; font: 700 10px/12px var(--sans); text-align: center; z-index: 3; }
+   markup, not just visually — see stabilityTagHTML() in map-draw.js.
+   bottom raised from -5px to -2px (#26b, owner on a real phone): at -5px
+   the tag's own whitespace (not ink) overlapped 12-13 cities' own name box
+   by ~3px on every big disc whose name sits straight below it — measured,
+   not eyeballed, see the falsification in this commit's message. */
+.node .stab { position: absolute; left: -8px; bottom: -2px; width: 15px; height: 15px; box-sizing: border-box; border-radius: 3px; background: #f7f3e8; border: 1.5px solid #5d4a1a; color: #3a2d0c; font: 700 10px/12px var(--sans); text-align: center; z-index: 3; }
 .node.anchor-left .stab { left: auto; right: -8px; }
+/* Two per-node exceptions the -2px default alone can't fix (map-draw.js's
+   NODE_STAB_RIGHT / NODE_STAB_HI — same idea as NODE_ANCHOR: hand-picked,
+   membership stays data-driven everywhere else):
+   - .stab-r: Shangdang's tag (bottom-left, like every other non-anchor-left
+     node) still landed on Hangu Pass's name no matter how far it was
+     raised, because Hangu Pass's name reaches toward it from the west.
+     Moving it to the OTHER bottom corner clears it; also swaps its
+     adv-badge to the left the same way anchor-left already does (they're
+     the same "which corner is free" trade, just triggered by a different
+     node needing it, so .adv-badge picks up the same modifier class). */
+.node.stab-r .stab { left: auto; right: -8px; }
+.node.stab-r .adv-badge { right: auto; left: -6px; }
+/* - .stab-hi: Ying sits close enough to the map's own bottom edge (y=388 of
+   408) that even the -2px default's tag still ran 4px past it. A second,
+   bigger lift only for the handful of nodes this close to an edge — none
+   of the others (checked: Wuyue at y=378 already clears at -2px). */
+.node.stab-hi .stab { bottom: 2px; }
 /* The hit layer sits directly in .map (NOT scaled — #mapInner is the only
    thing fitMap() transforms), so a 44x44 button here is always a true
    44x44 css px regardless of how small the map's own art renders. Percent
