@@ -297,7 +297,7 @@ function render() {
   // it's going to be before layoutTable() can measure the chrome it leaves
   // for the map/hand — see the "advisorBanner" id added to that sum below.
   decorateAdvisor(v, {
-    solo: !game.room && !game.spectator, side: game.me, uiCard: game.ui.card,
+    solo: !game.room && !game.spectator && !Tut.active(), side: game.me, uiCard: game.ui.card,
     pickedSpaces: (game.ui.picks && game.ui.picks.length ? game.ui.picks : game.ui.points) || [],
     t, spaceName, stateName, regionName, cardName, sep,
   });
