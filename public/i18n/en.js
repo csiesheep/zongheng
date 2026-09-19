@@ -46,7 +46,7 @@ export default {
     over: "Game over.",
   },
   uses: { event: "Event", place: "Place", campaign: "Campaign", lobby: "Lobby", reform: "Reform", bog: "Discard (bogged)", pair: "Pair with", opsFirst: "Ops first", eventFirst: "Event first" },
-  buttons: { send: "Send", board: "View the board", result: "Result", confirm: "Confirm", done: "Done", cancel: "Cancel", skip: "Skip", playAgain: "Play again", swap: "Swap sides", home: "Home", headline: "Commit headline", show: "Show", hide: "Hide", log: "Log" },
+  buttons: { send: "Send", board: "View the board", result: "Result", confirm: "Confirm", done: "Done", cancel: "Cancel", skip: "Skip", playAgain: "Play again", swap: "Swap sides", home: "Home", headline: "Commit headline", show: "Show", hide: "Hide", log: "Log", expand: "Card", collapse: "Collapse" },
   preview: { campaign: "Removes {removed} of theirs, places {placed} of yours; weariness {w}.", lobby: "Edge {edge}: removes up to {n}.", locked: "Locked by weariness.", enemyEvent: "This is their card: its event will happen too." },
   over: { winner: "{side} wins", reasons: { unification: "Three states destroyed", alliance: "Four seals held", mandate: "The Mandate reached 20", collapse: "The realm collapsed", scoring: "A scoring card was held at the turn's end", scoringBoth: "Both held scoring cards", final: "Final scoring", tie: "Level Mandate, the tie goes to Chu" }, mandate: "Final Mandate" },
   log: {
@@ -58,6 +58,8 @@ export default {
     endTurn: "Turn {turn} ends; weariness {weariness}.", over: "Game over: {side}, {reason}.",
   },
   useNames: { event: "event", place: "place", campaign: "campaign", lobby: "lobby", reform: "reform", bog: "bog" },
+  scoringLevel: { none: "None", presence: "Presence", domination: "Domination", control: "Control" },
+  regionShort: { west: "West", jin: "Three Jin", zhou: "Zhou", east: "East", south: "South", north: "North" },
   tutorial: {
     button: "Tutorial · 5 minutes",
     intro: { kicker: "Tutorial · about 5 minutes", title: "Into the Warring States", sub: "First steps in the Warring States", text: "You play Qin. In ten short steps you take a space, use a card four ways, fight one campaign, and destroy the state of Han. The other side follows a script, so nothing can go wrong.", start: "Start", notNow: "Not now" },

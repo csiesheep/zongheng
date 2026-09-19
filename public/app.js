@@ -27,6 +27,9 @@ const t = (key, p = {}) => String(key.split(".").reduce((o, k) => (o ? o[k] : un
 const sideName = (s) => t(`sides.${E.SIDES[s]}`);
 const spaceName = (id) => (lang === "en" ? E.SPACE[id].en : E.SPACE[id].zh);
 const regionName = (r) => (lang === "en" ? E.REGIONS[r].en : E.REGIONS[r].zh);
+// The map's own region tag needs a SHORT name ("West", not "the West") so it
+// fits its little pill; zh's board name is already short enough to reuse.
+const regionShortName = (r) => (lang === "en" ? t("regionShort." + r) : E.REGIONS[r].zh);
 const stateName = (s) => (lang === "en" ? E.STATES[s].en : E.STATES[s].zh);
 const cardName = (id) => (id === E.JIUDING ? (lang === "en" ? "The Nine Cauldrons" : "九鼎") : lang === "en" ? E.CARD[id].en : E.CARD[id].zh);
 const cardText = (id) => (id === E.JIUDING ? (lang === "en" ? "4 ops; 5 if all of it lands in the Three Jin or Zhou. Then it passes face down." : "4 點;全部用在三晉或周室視為 5。用後蓋著交給對手。") : lang === "en" ? CARD_EN[id] ?? E.CARD[id].text : E.CARD[id].text);
@@ -60,6 +63,11 @@ function show(view) {
   for (const v of ["setup", "lobby", "table", "over"]) $(v).hidden = v !== view;
   window.scrollTo(0, 0);
   paintBody(view);
+  // The table is a fixed one-screen layout (header -> mandate -> map ->
+  // stat line -> prompt -> hand): it never scrolls, on 375x667 or 390x844,
+  // by giving #table the rest of the viewport height via flex and letting
+  // the map (the one flexible piece) shrink first.
+  document.body.classList.toggle("table-lock", view === "table");
 }
 // The landing is its own page. Going back never loses anything: the solo game
 // is saved on every move, and a room keeps this tab's seat (the bot covers it
@@ -233,51 +241,125 @@ function render() {
   // In a room the state on hand is already this seat's view.
   const v = game.room ? game.st : E.view(game.st, game.me);
   $("barMid").textContent = `${t("tracks.turn")} ${v.turn} · ${game.spectator ? "" : sideName(game.me)}`;
-  renderTracks(v);
+  renderTopBar(v);
   if (game.spectator) {
+    setSheetOpen(false);
     renderMap({ ...v, winner: 0 }); // nothing lit
+    renderStatLine(v);
     $("prompt").textContent = ""; $("sheet").innerHTML = ""; $("hand").innerHTML = "";
     renderLog(v);
+    fitMap(); // after every sibling has its final flex size, so the map's own box is final too
     return;
   }
+  // Computed before renderMap so a scoring card selected this same render
+  // already lights up its region, not one render-cycle late.
+  scoreHighlight = game.ui.card != null && game.ui.card !== E.JIUDING && E.CARD[game.ui.card].scoring ? E.CARD[game.ui.card].scoring : null;
   renderMap(v);
-  renderPromptAndSheet(v);
+  renderStatLine(v);
+  renderPromptAndSheet(v); // sets #sheet's className outright, so setSheetOpen must come after this, not before
   renderHand(v);
   renderLog(v);
+  // The card sheet covers the whole screen while you're just looking at a
+  // card or confirming something that doesn't need the map (like the
+  // C2_Card* mockups) — but once a use needs the map (place/campaign/lobby
+  // target picking), it shrinks back to a strip so the map stays tappable,
+  // matching C2_Place/C2_Campaign.
+  setSheetOpen(wantsCardOverlay(v));
+  layoutHand(); // the map's real box depends on this, so it runs before fitMap()
+  fitMap(); // last: after every sibling (incl. the sheet's open/closed state) has its final flex size
+}
+// The hand keeps its C2_Game height (207px) as long as the map can still
+// have its minimum; only on a viewport that truly can't fit both does the
+// hand give ground — and even then the card's name never shrinks or
+// truncates (see .card .cardimg's flex:1/.ci's flex:none), only its art.
+const HAND_H = 207, HAND_MIN = 128, MAP_MIN = 130;
+function layoutHand() {
+  const table = $("table");
+  if (table.hidden) return;
+  const avail = table.clientHeight;
+  if (!avail) return;
+  const chrome = ["topbar", "statline", "prompt", "sheet"].reduce((sum, id) => sum + $(id).getBoundingClientRect().height, 0);
+  const gapsAndPadding = 40; // #table's own padding + the flex column's gaps
+  const remaining = avail - chrome - gapsAndPadding;
+  const handH = remaining - HAND_H >= MAP_MIN ? HAND_H : Math.max(HAND_MIN, remaining - MAP_MIN);
+  $("hand").style.height = handH + "px";
+}
+function setSheetOpen(open) {
+  $("sheet").classList.toggle("overlay", open);
+  document.body.classList.toggle("sheet-open", open);
+}
+function wantsCardOverlay(v) {
+  if (v.winner != null) return false;
+  const ui = game.ui;
+  const L = E.legal(v, game.me);
+  if (L.kind === "wait" || L.kind === "pending") return false;
+  if (L.kind === "headline") return !!ui.card;
+  if (L.bog && L.bog.length) return !!ui.card;
+  if (!ui.card) return false;
+  if (!ui.use) return true; // browsing the card, choosing a use
+  if (ui.use === "event" || ui.use === "reform") return true; // no map needed
+  if (ui.use === "place") {
+    const info = cardInfo(L, ui.card);
+    return !!(info && info.enemy && ui.order === "eventFirst" && !ui.pair); // the pre-order step, before tapping the map
+  }
+  return false; // campaign/lobby target picking, or place once ops are known: the map is in play
 }
 
-function renderTracks(v) {
-  const w = v.weariness;
-  const boxes = [5, 4, 3, 2, 1].map((k) => `<span class="box${k <= 2 ? " bad" : ""}${k === w ? " on" : ""}">${t("weariness." + k)}</span>`).join("");
-  const reformBoxes = (side) => [1, 2, 3, 4, 5, 6].map((k) => `<span class="box${k <= v.reform[side] ? " on" : ""}">${k}</span>`).join("");
-  const seals = Object.keys(v.seals).map(stateName).join(" ") || "–";
-  const mie = Object.keys(v.mie).map(stateName).join(" ") || "–";
+// Above the map: just the turn and the Mandate tug-of-war bar (C2_Game's
+// header + mandate strip, condensed — the seat portrait row is #6's).
+function renderTopBar(v) {
   const pos = Math.max(2, Math.min(98, 50 - (v.mandate / E.MANDATE_TO_WIN) * 50));
   const phase = v.phase === "setup" ? "" : ` · ${t("tracks.round")} ${v.round}${t("tracks.of")}${v.rounds}`;
-  $("tracks").innerHTML =
-    `<div class="wide"><b>${t("tracks.turn")} ${v.turn}</b> · ${v.era ? t("eras." + v.era) : ""}${phase}</div>` +
-    `<div class="wide">${t("tracks.mandate")} <b>${mandateText(v.mandate)}</b><div class="mandate"><span class="mid"></span><span class="dot" style="left:${pos}%"></span></div></div>` +
-    `<div class="wide">${t("tracks.weariness")} <span class="boxes">${boxes}</span></div>` +
-    `<div class="q">${sideName(0)} ${t("tracks.reform")} <span class="boxes">${reformBoxes(0)}</span></div>` +
-    `<div class="c">${sideName(1)} ${t("tracks.reform")} <span class="boxes">${reformBoxes(1)}</span></div>` +
-    `<div class="q">${t("tracks.mie")}: ${mie} · ${v.handCounts[0]} ♠</div>` +
-    `<div class="c">${t("tracks.seals")}: ${seals} · ${v.handCounts[1]} ♠</div>` +
-    // Per state: how many of its spaces Qin controls, and who holds the capital.
-    `<div class="wide states">${Object.entries(E.STATES).map(([id, s]) => {
-      const sp = E.spacesOfState(id), qc = sp.filter((x) => E.controller(v, x) === 0).length, cap = E.controller(v, s.capital);
-      return `<span class="${v.mie[id] ? "q" : v.seals[id] ? "c" : ""}">${stateName(id)} ${qc}/${sp.length}${cap === 1 ? " ◎" + sideName(1) : cap === 0 ? " ◎" + sideName(0) : ""}</span>`;
-    }).join(" ")}</div>` +
-    `<div class="wide">${t("tracks.jiuding")}: ${sideName(v.jiuding.holder)}${v.jiuding.faceDown ? ` (${t("tracks.faceDown")})` : ""}</div>`;
+  $("topbar").innerHTML =
+    `<div class="tb-turn"><b>${t("tracks.turn")} ${v.turn}</b>${v.era ? " · " + t("eras." + v.era) : ""}${phase}</div>` +
+    `<div class="mandate"><span class="mid"></span><span class="dot" style="left:${pos}%"></span></div>` +
+    `<div class="tb-mandate">${t("tracks.mandate")} <b>${mandateText(v.mandate)}</b></div>`;
+}
+// Below the map: one condensed row (C2_Game's 5-column stat strip) —
+// weariness, reform, seals, destroyed, cauldrons. Per-state detail and
+// hand counts stay in the log instead of taking permanent screen space.
+function renderStatLine(v) {
+  const seals = Object.keys(v.seals).length, mie = Object.keys(v.mie).length;
+  const col = (label, val) => `<div><span class="sl-label">${esc(label)}</span><span class="sl-val">${val}</span></div>`;
+  $("statline").innerHTML =
+    col(t("tracks.weariness"), esc(t("weariness." + v.weariness))) +
+    col(t("tracks.reform"), `${v.reform[0]} · ${v.reform[1]}`) +
+    col(t("tracks.seals"), `${seals} / 4`) +
+    col(t("tracks.mie"), `${mie} / 3`) +
+    col(t("tracks.jiuding"), esc(sideName(v.jiuding.holder)) + (v.jiuding.faceDown ? ` (${esc(t("tracks.faceDown"))})` : ""));
 }
 
-const REGION_BOX = { north: [60, 0, 298, 70], west: [0, 72, 104, 278], jin: [108, 72, 142, 160], zhou: [108, 236, 50, 34], east: [254, 72, 104, 160], south: [108, 274, 250, 76] };
+// A fixed design canvas, scaled to fit whatever box the flex layout gives
+// the map (see fitMap()) — laid out generously enough that a 13px bold
+// English city name (the widest label on the board, e.g. "Guanzhong") never
+// overlaps its neighbour once max-width/ellipsis caps it (see .node .nm).
+// NODE_POS is each city's centre, not a corner, so nodeCenter() is trivial.
+// Width kept close to the map's real on-screen width (so fitMap()'s scale
+// stays near 1 and the 30/34px disc spec actually renders that size); the
+// height has plenty of room to spread rows out and avoid overlap instead.
+const DESIGN_W = 370, DESIGN_H = 500;
 const NODE_POS = {
-  dai: [70, 26], zhongshan: [150, 26], ji: [230, 26], liaodong: [306, 26],
-  yiqu: [6, 84], hangu: [54, 116], guanzhong: [6, 150], hanzhong: [6, 220], bashu: [54, 252],
-  hedong: [114, 80], handan: [196, 80], shangdang: [155, 118], yiyang: [114, 156], daliang: [196, 156], xinzheng: [155, 196],
-  luoyi: [110, 238], linzi: [262, 80], jimo: [308, 114], ju: [262, 148], xue: [308, 182], song: [262, 196],
-  qianzhong: [112, 312], chencai: [170, 280], ying: [170, 314], huaisi: [240, 280], wuyue: [300, 314],
+  dai: [67, 30], zhongshan: [151, 27], ji: [245, 27], liaodong: [324, 38],
+  yiqu: [40, 100], hedong: [139, 96], handan: [236, 92], linzi: [333, 102],
+  hangu: [88, 158], shangdang: [187, 154], jimo: [341, 158],
+  guanzhong: [40, 210], yiyang: [141, 202], daliang: [243, 194], ju: [310, 198],
+  luoyi: [141, 262], xue: [336, 252],
+  hanzhong: [40, 290], xinzheng: [195, 280], song: [280, 280],
+  bashu: [70, 352],
+  qianzhong: [110, 414], chencai: [169, 384], ying: [222, 436], huaisi: [280, 390], wuyue: [340, 426],
 };
+const nodeCenter = (id) => NODE_POS[id];
+// Region membership comes straight from the board data (E.SPACE[id].region),
+// never a hand-copied list — a probe that patches a space's region should
+// see the blob move with it.
+function regionMembers() {
+  const by = {};
+  for (const sp of E.SPACES) (by[sp.region] ??= []).push(sp.id);
+  return by;
+}
+// While a scoring card is open in the sheet, its region lights up on the
+// map and the rest fade — set by renderPromptAndSheet, read by renderMap.
+let scoreHighlight = null;
 
 // What tapping the map does right now: the lit spaces, the picks so far, the cost badges.
 function placementTrial(v, side, points) {
@@ -350,33 +432,120 @@ function cardInfo(L, card) {
   return { id: card, ops, enemy: !!c.uses.enemy, uses: c.uses };
 }
 
+// The region blobs: a soft, borderless tint that hugs the roads between a
+// region's own cities (no bounding box), one colour per region, membership
+// read live from E.SPACE[id].region. Scoring a region (a scoring card open
+// in the sheet) brightens it and fades the rest.
+function renderRegionBlobs(members) {
+  const within = (ids) => {
+    const pairs = [];
+    for (const id of ids) for (const nb of E.SPACE[id].adj) if (ids.includes(nb) && id < nb) pairs.push([id, nb]);
+    return pairs;
+  };
+  let svg = `<svg class="region-blobs" viewBox="0 0 ${DESIGN_W} ${DESIGN_H}">`;
+  for (const [r, ids] of Object.entries(members)) {
+    const cls = "blob-" + r + (scoreHighlight ? (scoreHighlight === r ? " active" : " faded") : "");
+    svg += `<g class="blob ${cls}">`;
+    for (const [a, b] of within(ids)) {
+      const [x1, y1] = nodeCenter(a), [x2, y2] = nodeCenter(b);
+      svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="46" stroke-linecap="round"></line>`;
+    }
+    for (const id of ids) { const [x, y] = nodeCenter(id); svg += `<circle cx="${x}" cy="${y}" r="28"></circle>`; }
+    svg += `</g>`;
+  }
+  svg += `</svg>`;
+  return svg;
+}
+function renderRoads() {
+  const seen = new Set();
+  let svg = `<svg class="roads" viewBox="0 0 ${DESIGN_W} ${DESIGN_H}">`;
+  for (const sp of E.SPACES) for (const nb of sp.adj) {
+    const key = [sp.id, nb].sort().join("|");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const [x1, y1] = nodeCenter(sp.id), [x2, y2] = nodeCenter(nb);
+    svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`;
+  }
+  return svg + `</svg>`;
+}
+// Hand-picked so the tag sits in open water, never over a city or another
+// tag (owner: per-region position is fine, membership must stay data-driven
+// — and it is, via regionMembers()). One colour per region, matching its blob.
+const REGION_LABEL_POS = {
+  north: [282, 86], west: [30, 180], jin: [216, 250], zhou: [136, 176], east: [340, 306], south: [235, 360],
+};
+// No ellipsis anywhere on the map (owner). Long English names that have a
+// natural break (a space or hyphen) go on two lines; the rest just render
+// smaller (11px vs 13px) — both explicitly OK'd. Chinese names are always
+// short enough for one line at the default size. A handful of cities anchor
+// their label off a side instead of straight below, by hand, because the
+// default spot collides with a neighbour once the real (untruncated) width
+// is on screen — this is a label position, not a change to who's in a
+// region, so it's fine per the same rule as REGION_LABEL_POS.
+const NODE_BREAK_EN = { hangu: ["Hangu", "Pass"], bashu: ["Ba-", "Shu"], chencai: ["Chen-", "Cai"], huaisi: ["Huai-", "Si"], wuyue: ["Wu-", "Yue"] };
+const NODE_SMALL_EN = new Set(["zhongshan", "liaodong", "shangdang", "guanzhong", "daliang", "hanzhong", "xinzheng", "qianzhong"]);
+const NODE_ANCHOR = { shangdang: "top" };
+function nodeLabelHTML(id) {
+  const star = E.SPACE[id].battleground ? "★" : "";
+  if (lang === "en" && NODE_BREAK_EN[id]) {
+    const [l1, l2] = NODE_BREAK_EN[id];
+    return `<span class="nm two-line">${star}${esc(l1)}<br>${esc(l2)}</span>`;
+  }
+  const small = lang === "en" && NODE_SMALL_EN.has(id);
+  return `<span class="nm${small ? " sm" : ""}">${star}${esc(spaceName(id))}</span>`;
+}
 function renderMap(v) {
-  const el = $("map"); el.innerHTML = "";
-  for (const [r, [x, y, w, h]] of Object.entries(REGION_BOX)) {
-    const d = document.createElement("div");
-    d.className = `region region-${r}` + (E.REGIONS[r].home ? " home" : "");
-    d.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
-    d.innerHTML = `<span>${esc(regionName(r))}</span>`;
-    el.appendChild(d);
+  const el = $("mapInner");
+  const members = regionMembers();
+  el.innerHTML = renderRoads() + renderRegionBlobs(members);
+  for (const r of Object.keys(REGION_LABEL_POS)) {
+    if (!members[r]) continue;
+    const [x, y] = REGION_LABEL_POS[r];
+    const lbl = document.createElement("span");
+    lbl.className = `region-label rl-${r}` + (scoreHighlight && scoreHighlight !== r ? " faded" : "");
+    lbl.style.cssText = `left:${x}px; top:${y}px`;
+    lbl.textContent = regionShortName(r);
+    el.appendChild(lbl);
   }
   const mode = currentMode(v);
   for (const sp of E.SPACES) {
     const [x, y] = NODE_POS[sp.id], [q, c] = E.infOf(v, sp.id), ctl = E.controller(v, sp.id);
+    const cap = sp.state && E.STATES[sp.state].capital === sp.id;
+    const big = sp.battleground || cap;
+    const empty = !q && !c;
+    const anchor = NODE_ANCHOR[sp.id];
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "node" + (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (mode.lit.has(sp.id) ? " lit" : "") + (mode.picked[sp.id] ? " picked" : "");
+    b.className = "node" + (big ? " big" : "") + (empty ? " empty" : "") + (anchor ? ` anchor-${anchor}` : "") +
+      (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (mode.lit.has(sp.id) ? " lit" : "") + (mode.picked[sp.id] ? " picked" : "");
     b.style.cssText = `left:${x}px;top:${y}px`;
-    const cap = sp.state && E.STATES[sp.state].capital === sp.id;
-    b.innerHTML = `<span class="nm${cap ? " cap" : ""}">${sp.battleground ? "★" : ""}${esc(spaceName(sp.id))}</span>` +
-      `<span class="cnt">${q ? `<i class="q">${q}</i>` : ""}${c ? `<i class="c">${c}</i>` : ""}</span>` +
+    b.innerHTML = `<span class="disc${cap ? " sq" : ""}">${empty ? "" : `<i class="q">${q || ""}</i><i class="c">${c || ""}</i>`}</span>` +
       (mode.picked[sp.id] ? `<span class="badge">+${mode.picked[sp.id]}</span>` : "") +
-      (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "");
+      (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
+      nodeLabelHTML(sp.id);
     b.disabled = !mode.lit.has(sp.id);
     b.title = `${spaceName(sp.id)} · ${sp.stability}`;
     b.onclick = () => mode.onTap(sp.id);
     el.appendChild(b);
   }
+  // Not fitMap() here: the map's box isn't at its final flex-allocated size
+  // until every sibling (stat line, prompt, sheet, hand) has been rendered
+  // too, so the caller (render()) fits it once everything else is in place.
 }
+// The map box's actual size comes from the flex layout (it's the one piece
+// that shrinks first on a short phone); the design canvas is scaled
+// uniformly to fit inside it and centred, so node spacing/text size are
+// never distorted and never overflow the box regardless of screen height.
+function fitMap() {
+  const box = $("map"), inner = $("mapInner");
+  const availW = box.clientWidth, availH = box.clientHeight;
+  if (!availW || !availH) return;
+  const scale = Math.min(availW / DESIGN_W, availH / DESIGN_H);
+  inner.style.width = DESIGN_W + "px";
+  inner.style.height = DESIGN_H + "px";
+  inner.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+window.addEventListener("resize", () => { if (!$("table").hidden && game.st) fitMap(); });
 
 function btn(parent, label, onClick, cls = "", pressed = null, disabled = false) {
   const b = document.createElement("button");
@@ -411,6 +580,21 @@ function cardHeader(sh, id) {
   const text = document.createElement("div"); text.className = "sheet-text"; text.textContent = cardText(id);
   sh.appendChild(text);
 }
+// The mini chip used instead of the full card header while the map is in
+// play (placing points, picking a campaign/lobby target) — C2_Place and
+// C2_Campaign show a small strip here, not the full art+text sheet, so the
+// map stays the point. "Expand" swaps in the full header without leaving
+// this mode (see wantsCardOverlay/mapActive in renderPromptAndSheet).
+function cardChip(sh, id) {
+  const wrap = document.createElement("div"); wrap.className = "sheet-chip";
+  wrap.innerHTML = `<span class="ops ${cardSide(id)}">${esc(opsLabel(id))}</span>` +
+    `<span class="chip-nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span>`;
+  const expand = document.createElement("button");
+  expand.type = "button"; expand.className = "chip-expand"; expand.textContent = t("buttons.expand");
+  expand.onclick = () => { game.ui.chipExpanded = true; render(); };
+  wrap.appendChild(expand);
+  sh.appendChild(wrap);
+}
 // A Cancel + Confirm footer pair, used everywhere a card sheet asks for a
 // final commit (event/reform, place, campaign/lobby).
 function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel) {
@@ -420,6 +604,19 @@ function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel) {
   return r;
 }
 
+// A scoring card's sheet gets the region's actual tally (E.regionTally),
+// not a guess: spaces held, battlegrounds, the level it reaches, the
+// battleground bonus, and the total each side would score right now.
+function scoringPanel(sh, v, region) {
+  const [q, c] = E.regionTally(v, region);
+  const wrap = document.createElement("div"); wrap.className = "score-panel";
+  const row1 = (side, r) => `<div class="srow ${side === 0 ? "q" : "c"}"><b>${esc(sideName(side))}</b>` +
+    `<span>${r.spaces}/${E.spacesOf(region).length} · ${r.bg} ★</span>` +
+    `<span class="lvl">${esc(t("scoringLevel." + r.level))}</span>` +
+    `<span class="tot">${r.base}${r.bonus ? ` + ${r.bonus}` : ""} = <b>${r.total}</b></span></div>`;
+  wrap.innerHTML = row1(0, q) + row1(1, c);
+  sh.appendChild(wrap);
+}
 function renderPromptAndSheet(v) {
   const p = $("prompt"), sh = $("sheet");
   sh.innerHTML = "";
@@ -442,6 +639,7 @@ function renderPromptAndSheet(v) {
     setPrompt(t("prompt.headline"));
     if (ui.card) {
       cardHeader(sh, ui.card);
+      if (ui.card !== E.JIUDING && E.CARD[ui.card].scoring) scoringPanel(sh, v, E.CARD[ui.card].scoring);
       footer(sh, t("buttons.headline"), () => humanAct({ type: "headline", card: ui.card }), false, () => { game.ui = freshUi(); render(); });
     }
     return;
@@ -457,7 +655,17 @@ function renderPromptAndSheet(v) {
   }
   const info = cardInfo(L, ui.card);
   if (!info) { setPrompt(t("prompt.yourAction")); return; }
-  cardHeader(sh, ui.card);
+  // While the map is in play (placing points, picking a campaign/lobby
+  // target) the sheet shrinks to a mini chip so the map stays visible and
+  // tappable (C2_Place/C2_Campaign) — "Expand" swaps in the full card.
+  const mapActive = ui.use === "campaign" || ui.use === "lobby" || (ui.use === "place" && !(info.enemy && ui.order === "eventFirst" && !ui.pair));
+  if (mapActive && !ui.chipExpanded) {
+    cardChip(sh, ui.card);
+  } else {
+    cardHeader(sh, ui.card);
+    if (mapActive) btn(sh, t("buttons.collapse"), () => { ui.chipExpanded = false; render(); }, "small");
+  }
+  if (ui.card !== E.JIUDING && E.CARD[ui.card].scoring) scoringPanel(sh, v, E.CARD[ui.card].scoring);
   const uses = row(sh, "rowb sheet-grid");
   const usable = (u) => (u === "event" ? info.uses.event : u === "reform" ? info.uses.reform : !!info.uses[u]);
   for (const u of ["event", "place", "campaign", "lobby", "reform"]) {

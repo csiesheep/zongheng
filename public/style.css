@@ -222,55 +222,103 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .mp-card #btnCreate { background: #1a1a1a; color: #fff; }
 .mp-card #btnJoin { background: var(--chu-btn); color: #fff; }
 
-/* table: everything below the map's own opaque background paints in the
-   seated side's court colour (black for Qin, lacquer red for Chu — see
-   body.side-qin/side-chu's --table-bg). */
-#table { padding: 8px 8px 20px; background: var(--table-bg); }
-.tracks { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 12px; padding: 4px 4px 8px; color: var(--text-dim); }
-.tracks .wide { grid-column: 1 / -1; }
-.tracks b { color: var(--text); font-weight: 600; }
-.tracks .boxes { display: inline-flex; gap: 2px; vertical-align: middle; margin-left: 4px; }
-.tracks .box { border: 1px solid var(--gold-line); padding: 0 4px; line-height: 16px; font-size: 11px; color: var(--gold-line); border-radius: 3px; }
-.tracks .box.on { background: var(--gold); color: var(--bg); }
-.tracks .box.bad { border-color: var(--chu-btn); color: var(--bad); }
-.tracks .box.bad.on { background: var(--chu-btn); color: var(--neutral-bg); }
-.tracks .q { color: var(--qin-text); border-left: 3px solid var(--qin-bg); padding-left: 4px; }
-.tracks .c { color: #f0b9ad; border-left: 3px solid var(--chu-bg); padding-left: 4px; }
-.mandate { position: relative; height: 12px; border-left: 2px solid #777; border-right: 2px solid var(--chu-btn); margin: 4px 0; }
-.mandate .mid { position: absolute; left: 50%; top: 0; width: 1px; height: 12px; background: var(--gold); }
-.mandate .dot { position: absolute; top: 1px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--gold); }
-.map { position: relative; width: 358px; height: 350px; margin: 0 auto; background: url(art/ui/map.jpg) center/cover, var(--neutral-bg); overflow: hidden; border-radius: 8px; }
-.map::before { content: ""; position: absolute; inset: 0; background: rgba(250, 248, 242, 0.62); pointer-events: none; }
-/* Each region is a soft, borderless tint (no outline — the label pill and
-   the node colouring carry the boundary instead). */
-.region { position: absolute; border-radius: 10px; }
-.region span { position: absolute; right: 4px; bottom: 1px; font: 900 10px/1.5 var(--sans); letter-spacing: 1.5px; color: #fff; padding: 1px 6px; border-radius: 4px; }
-.region-west { background: rgba(43, 43, 43, 0.15); } .region-west span { background: #2b2b2b; }
-.region-jin { background: rgba(183, 121, 31, 0.2); } .region-jin span { background: #7a4d0c; }
-.region-zhou { background: rgba(216, 181, 106, 0.28); } .region-zhou span { background: #7a5c10; }
-.region-east { background: rgba(47, 125, 120, 0.2); } .region-east span { background: #1d5651; }
-.region-south { background: rgba(163, 26, 21, 0.16); } .region-south span { background: #7d130e; }
-.region-north { background: rgba(74, 111, 165, 0.2); } .region-north span { background: #2f4d7a; }
-.node { position: absolute; width: 46px; height: 30px; padding: 0; border: 1.5px solid var(--gold-line); border-radius: 6px; background: var(--neutral-bg); color: var(--neutral-ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-family: var(--serif); }
-.node .nm { font-family: var(--kai); font-size: 10px; line-height: 11px; white-space: nowrap; }
-.node .nm.cap { color: var(--gold-line); border-bottom: 1px solid var(--gold-line); }
-.node .cnt { display: flex; gap: 3px; height: 12px; }
-.node .cnt i { width: 12px; height: 12px; border-radius: 50%; font-size: 8px; line-height: 12px; text-align: center; font-weight: 700; font-style: normal; }
-.node .cnt i.q { background: var(--qin-bg); color: var(--qin-text); } .node .cnt i.c { background: var(--chu-bg); color: var(--chu-gold); }
-.node.ctlq { border: 2.5px solid var(--qin-bg); }
-.node.ctlc { border: 2.5px solid var(--chu-btn); }
-.node.lit { background: #cfe0d6; box-shadow: 0 0 0 2px var(--gold); cursor: pointer; }
-.node.picked { background: #f1d7c8; }
-.node .badge { position: absolute; top: -6px; right: -6px; min-width: 14px; height: 14px; border-radius: 7px; background: var(--gold-line); color: #fff; font-size: 9px; line-height: 14px; text-align: center; padding: 0 3px; }
-.node .cost { position: absolute; top: -6px; left: -6px; width: 14px; height: 14px; border-radius: 7px; background: var(--gold); color: var(--bg); font-size: 9px; line-height: 14px; text-align: center; }
-.node:disabled { cursor: default; opacity: 1; color: var(--neutral-ink); }
+/* table: a fixed one-screen layout, header -> mandate -> map -> stat line
+   -> prompt -> hand (C2_Game order). body.table-lock (see app.js's show())
+   gives #table the rest of the viewport and forbids scrolling; the map is
+   the one flexible piece, so it shrinks first on a short phone. Below the
+   map's own opaque art still paints in the seated side's court colour. */
+body.table-lock { height: 100svh; overflow: hidden; }
+body.table-lock #table { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+#table { padding: 6px 8px; gap: 4px; background: var(--table-bg); }
+.topbar { flex: none; padding: 1px 4px; font-size: 12px; color: var(--text-dim); }
+.tb-turn { font-size: 12px; }
+.tb-turn b { color: var(--text); font-weight: 600; }
+.tb-mandate { font-size: 11px; text-align: right; margin-top: 1px; }
+.tb-mandate b { color: var(--text); }
+.mandate { position: relative; height: 10px; border-left: 2px solid #777; border-right: 2px solid var(--chu-btn); margin: 3px 0; }
+.mandate .mid { position: absolute; left: 50%; top: 0; width: 1px; height: 10px; background: var(--gold); }
+.mandate .dot { position: absolute; top: 0; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--gold); }
+/* The map: width comes from the column, height from whatever's left after
+   every flex:none sibling took its share — see fitMap() in app.js, which
+   scales a fixed design canvas (DESIGN_W/DESIGN_H) to fit inside without
+   ever distorting or overflowing it, letterboxing instead of stretching. */
+.map { position: relative; flex: 1 1 auto; min-height: 130px; overflow: hidden; border-radius: 8px; background: url(art/ui/map_light.jpg) center/cover, var(--neutral-bg); }
+.map::before { content: ""; position: absolute; inset: 0; background: rgba(250, 248, 242, 0.55); pointer-events: none; z-index: 0; }
+.map-inner { position: absolute; top: 50%; left: 50%; transform-origin: center center; }
+.map-inner svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+/* Roads: every adjacency on the board, a thin dark line. */
+.roads line { stroke: #4a4032; stroke-width: 2; stroke-opacity: 0.55; }
+/* Each region is a soft, borderless tint that hugs its own roads and
+   cities (built from E.SPACE[id].region, not a hand-drawn box) — scoring
+   that region brightens it and fades the rest. */
+.blob { opacity: 0.22; }
+.blob.faded { opacity: 0.06; }
+.blob.active { opacity: 0.4; }
+.blob-west { fill: #2b2b2b; stroke: #2b2b2b; }
+.blob-jin { fill: #b7791f; stroke: #b7791f; }
+.blob-zhou { fill: #d8b56a; stroke: #d8b56a; }
+.blob-east { fill: #2f7d78; stroke: #2f7d78; }
+.blob-south { fill: #a31c15; stroke: #a31c15; }
+.blob-north { fill: #4a6fa5; stroke: #4a6fa5; }
+/* Region tags: one fixed spot per region (hand-tuned to sit in open water,
+   never over a city), each in its own region's colour, short names only. */
+.region-label { position: absolute; z-index: 2; font: 700 13px/1.3 var(--sans); letter-spacing: 0.5px; color: #fff; padding: 2px 8px; border-radius: 5px; white-space: nowrap; transform: translate(-50%, -50%); }
+.region-label.faded { opacity: 0.35; }
+.rl-west { background: #2b2b2b; } .rl-jin { background: #7a4d0c; } .rl-zhou { background: #7a5c10; }
+.rl-east { background: #1d5651; } .rl-south { background: #7d130e; } .rl-north { background: #2f4d7a; }
+/* Cities: a split two-tone disc (Qin left, Chu right, empty = a plain grey
+   ring until someone has influence there), the name below in dark ink with
+   a light halo so it reads over the map at any tint. NODE_POS is each
+   city's centre, so the button centres itself over it. */
+/* min-width/min-height keep the tap target >=44px even when the disc+name
+   are visually smaller (letterboxed on a short phone) — verified by the
+   orchestrator against the C2 touch-target rule. */
+/* The button is exactly the disc's hit area (>=44x44), centred on NODE_POS;
+   the name is a separate absolutely-positioned child that floats off one
+   side of it (bottom by default, or .anchor-top/left/right — see
+   NODE_ANCHOR) WITHOUT moving the button itself, so the disc always stays
+   exactly on the road/blob coordinates regardless of label length. */
+.node { position: absolute; z-index: 2; transform: translate(-50%, -50%); width: 44px; height: 44px; padding: 0; border: none; background: none; display: flex; align-items: center; justify-content: center; font-family: var(--serif); cursor: default; }
+.node .disc { width: 30px; height: 30px; border-radius: 50%; overflow: hidden; display: flex; box-shadow: 0 0 0 1.5px #86807a; background: #d8d3c8; }
+.node.big .disc { width: 34px; height: 34px; }
+.node .disc.sq { border-radius: 6px; }
+.node .disc i { flex: 1; font: 700 14px/30px var(--sans); text-align: center; font-style: normal; }
+.node.big .disc i { line-height: 34px; }
+.node .disc i.q { background: #0e0e0e; color: #fff; }
+.node .disc i.c { background: #a31c15; color: #fff; }
+.node.empty .disc { background: #e4e0d6; box-shadow: 0 0 0 1.5px #a59f8f; }
+.node .nm { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: 2px; display: block; white-space: nowrap; font: 700 13px/1.2 var(--kai); color: #1a1a1a; text-align: center; text-shadow: 0 0 3px #f7f3e8, 0 0 3px #f7f3e8, 0 0 2px #f7f3e8, 0 0 2px #f7f3e8; }
+.node .nm.sm { font-size: 11px; }
+.node .nm.two-line { font-size: 11px; line-height: 1.05; white-space: normal; width: 44px; }
+.node.anchor-top .nm { top: auto; bottom: 100%; margin-top: 0; margin-bottom: 2px; }
+.node.anchor-left .nm { left: auto; right: 100%; top: 50%; transform: translateY(-50%); margin-top: 0; margin-right: 4px; text-align: right; }
+.node.anchor-right .nm { left: 100%; top: 50%; transform: translateY(-50%); margin-top: 0; margin-left: 4px; text-align: left; }
+.node.ctlq .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #0e0e0e; }
+.node.ctlc .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #a31c15; }
+/* Placement: a dashed ring on spaces you can tap, a solid red ring on
+   spaces you've already placed in this action; a gold badge for the 2x
+   cost where the enemy controls. */
+.node.lit .disc { outline: 2px dashed var(--gold); outline-offset: 2px; cursor: pointer; }
+.node.picked .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #a31c15; }
+.node .badge { position: absolute; top: -4px; right: -6px; min-width: 15px; height: 15px; border-radius: 8px; background: #a31c15; color: #fff; font: 700 9px/15px var(--sans); text-align: center; padding: 0 3px; z-index: 3; }
+.node .cost { position: absolute; top: -4px; left: -6px; width: 15px; height: 15px; border-radius: 8px; background: var(--gold); color: #1a1a1a; font: 700 9px/15px var(--sans); text-align: center; z-index: 3; }
+.node:disabled { cursor: default; opacity: 1; }
 .card:disabled { opacity: 0.85; }
-.prompt { padding: 10px 4px 6px; font-size: 14px; line-height: 1.5; min-height: 32px; }
+/* Below the map: one condensed stat row, then the prompt, then the hand. */
+.statline { flex: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 3px 4px; font-size: 10px; }
+.statline .sl-label { display: block; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-size: 9px; white-space: nowrap; }
+.statline .sl-val { display: block; color: var(--text); font-weight: 600; font-size: 11px; line-height: 1.25; overflow-wrap: break-word; }
+.prompt { flex: none; padding: 3px 4px; font-size: 13px; line-height: 1.35; }
 .prompt .err { color: var(--bad); }
-.prompt .news { margin-top: 6px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 12px; line-height: 1.5; color: var(--text-dim); }
-.tracks .states { display: flex; flex-wrap: wrap; gap: 4px 10px; }
-.tracks .states span { white-space: nowrap; }
-.sheet { display: flex; flex-direction: column; gap: 8px; padding: 10px 10px 8px; border-radius: 10px; }
+.prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 3.6em; overflow: hidden; }
+.sheet { flex: none; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 10px; max-height: 40svh; overflow-y: auto; }
+.sheet:empty { display: none; }
+/* A card sheet covers the whole screen while it's open (C2_CardChu/Qin/
+   Neutral/Scoring are full pages, not a strip under the map) so the table
+   behind it can't scroll; Cancel/Confirm/re-tapping the card closes it and
+   returns to the table, which un-hides the page scroll again. */
+body.sheet-open { overflow: hidden; height: 100svh; }
+.sheet.overlay { position: fixed; inset: 0; z-index: 40; max-height: none; height: 100svh; border-radius: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); }
 .sheet .rowb { display: flex; flex-wrap: wrap; gap: 6px; }
 .sheet .rowb.order { gap: 8px; }
 .sheet button { min-height: 44px; padding: 0 12px; background: none; border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font-size: 13px; }
@@ -279,6 +327,15 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .sheet .note { font-size: 12px; color: var(--text-dim); }
 /* The full card sheet: art, ops badge, both names, era/no./year, its own
    text, the five-use grid, then a Cancel + Confirm footer. */
+.sheet-chip { display: flex; align-items: center; gap: 8px; }
+.sheet-chip .ops { flex: none; width: 24px; height: 24px; border-radius: 50%; font-family: var(--sans); font-size: 12px; line-height: 24px; text-align: center; font-weight: 700; }
+.sheet-chip .ops.q { background: var(--qin-text); color: var(--bg); }
+.sheet-chip .ops.c { background: var(--chu-gold); color: #6f120d; }
+.sheet-chip .ops.n, .sheet-chip .ops.s { background: var(--gold); color: var(--bg); }
+.sheet-chip .chip-nm { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sheet-chip .nm-zh { font-family: var(--kai); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sheet-chip .nm-en { font-size: 10px; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-expand { flex: none; min-height: 32px; padding: 0 10px; font-size: 12px; border-radius: 16px; }
 .sheet-head { display: flex; gap: 12px; }
 .sheet-img { flex: none; width: 96px; height: 128px; object-fit: cover; border-radius: 10px; border: 1.5px solid var(--gold-line); }
 .sheet-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -287,6 +344,14 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .sheet-name-en { font-size: 12px; font-weight: 600; }
 .sheet-info { font-size: 10.5px; opacity: 0.75; margin-top: 2px; }
 .sheet-text { font-size: 12.5px; line-height: 1.5; padding-top: 6px; border-top: 1px solid var(--gold-line); }
+/* The scoring card's own tally (E.regionTally): spaces held, battlegrounds,
+   the level reached, and base+bonus=total for each side. */
+.score-panel { display: flex; flex-direction: column; gap: 6px; }
+.score-panel .srow { display: grid; grid-template-columns: 32px 1fr auto auto; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; font-size: 12px; }
+.score-panel .srow.q { background: rgba(255, 255, 255, 0.06); }
+.score-panel .srow.c { background: rgba(163, 26, 21, 0.14); }
+.score-panel .lvl { opacity: 0.8; }
+.score-panel .tot { font-weight: 700; }
 .sheet-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
 .sheet-grid button { padding: 0 4px; }
 .sheet-footer { display: flex; gap: 8px; margin-top: 2px; }
@@ -295,21 +360,21 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 /* The sheet's own background follows the selected card's owner: Chu opens
    on lacquer red, Qin on black, neutral and scoring cards on parchment —
    the surrounding page (and header) keep the seated side's own colour. */
-.sheet-q { background: var(--bg); }
+.sheet-q { background: var(--bg); color: var(--qin-text); }
 .sheet-q .sheet-badge { background: var(--qin-text); color: var(--bg); }
 .sheet-q .sheet-name-zh, .sheet-q .sheet-name-en { color: var(--qin-text); }
 .sheet-q .sheet-text, .sheet-q .sheet-info { color: var(--text-soft); }
 .sheet-q button { border-color: var(--gold-line); color: var(--qin-text); }
 .sheet-q button[aria-pressed="true"], .sheet-q button.primary { background: var(--qin-text); border-color: var(--qin-text); color: var(--bg); }
 .sheet-q .note { color: var(--text-soft); }
-.sheet-c { background: #4f0e0a; }
+.sheet-c { background: #4f0e0a; color: #fff3d2; }
 .sheet-c .sheet-badge { background: var(--chu-gold); color: #6f120d; }
 .sheet-c .sheet-name-zh, .sheet-c .sheet-name-en { color: var(--chu-gold); }
 .sheet-c .sheet-text, .sheet-c .sheet-info { color: #fff3d2; }
 .sheet-c button { border-color: var(--gold); color: #fff3d2; }
 .sheet-c button[aria-pressed="true"], .sheet-c button.primary { background: var(--chu-gold); border-color: var(--chu-gold); color: #6f120d; }
 .sheet-c .note { color: #fff3d2; }
-.sheet-n, .sheet-s { background: #f7f3e8; }
+.sheet-n, .sheet-s { background: #f7f3e8; color: var(--neutral-ink); }
 .sheet-n .sheet-badge, .sheet-s .sheet-badge { background: var(--neutral-ink); color: #fff; }
 .sheet-n .sheet-name-zh, .sheet-n .sheet-name-en, .sheet-s .sheet-name-zh, .sheet-s .sheet-name-en { color: var(--neutral-ink); }
 .sheet-n .sheet-text, .sheet-n .sheet-info, .sheet-s .sheet-text, .sheet-s .sheet-info { color: #4a463c; }
@@ -320,15 +385,20 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 /* Hand: art on top, a circular ops badge and both names (zh + en — the
    exception to the no-mixing rule) below. Qin, Chu, neutral and scoring
    cards all share this shape — only colour, texture and font differ. */
-.hand { display: flex; gap: 6px; overflow-x: auto; padding: 4px 4px 8px; }
-.card { flex: none; width: 100px; min-height: 128px; border: 1px solid var(--gold-line); border-radius: 10px; padding: 0; display: flex; flex-direction: column; text-align: left; overflow: hidden; }
+/* The hand's own height is set from app.js (layoutTable()): ~207px by
+   default (C2_Game), shrinking only when the viewport truly can't fit that
+   plus the map's minimum — and even then only the card's ART shrinks
+   (flex:1 1 auto, min-height:0), never the name (flex:none, wraps instead
+   of an ellipsis). */
+.hand { flex: none; display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 4px 4px 6px; }
+.card { flex: none; width: 124px; height: 100%; border: 1px solid var(--gold-line); border-radius: 10px; padding: 0; display: flex; flex-direction: column; text-align: left; overflow: hidden; }
 .card[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--gold); }
-.card .cardimg { display: block; width: 100%; height: 66px; object-fit: cover; }
-.card .ci { padding: 5px 6px 6px; display: flex; align-items: flex-start; gap: 5px; }
-.card .ops { flex: none; width: 20px; height: 20px; border-radius: 50%; font-family: var(--sans); font-size: 11px; line-height: 20px; text-align: center; font-weight: 700; }
+.card .cardimg { display: block; width: 100%; flex: 1 1 auto; min-height: 0; object-fit: cover; }
+.card .ci { flex: none; padding: 6px 7px 7px; display: flex; align-items: flex-start; gap: 6px; }
+.card .ops { flex: none; width: 22px; height: 22px; border-radius: 50%; font-family: var(--sans); font-size: 11px; line-height: 22px; text-align: center; font-weight: 700; }
 .card .nm { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.card .nm-zh { font-family: var(--kai); font-size: 12px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card .nm-en { font-size: 9px; line-height: 1.2; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .nm-zh { font-family: var(--kai); font-size: 13px; line-height: 1.2; overflow-wrap: break-word; }
+.card .nm-en { font-size: 10px; line-height: 1.2; opacity: 0.85; overflow-wrap: break-word; }
 /* side colouring: neutral (n), Qin (q), Chu (c), scoring (s) */
 .card .ops.n, .card.jiuding .ops { background: var(--gold); color: var(--bg); }
 .card:has(.ops.n) { background: var(--neutral-bg); color: var(--neutral-ink); }
@@ -341,9 +411,12 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .card .ops.s { background: var(--neutral-ink); color: #fff; }
 .card:has(.ops.s) { background: var(--neutral-bg); color: var(--neutral-ink); }
 .card.jiuding { background: #d9c58f; color: var(--neutral-ink); }
-.chat { display: flex; gap: 6px; padding: 4px; }
-.chat input { flex: 1; min-width: 0; min-height: 34px; background: none; border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font: 14px var(--serif); padding: 0 8px; }
-.log .say { color: var(--text); }
-.log { padding: 4px; font-size: 12px; color: var(--text-dim); }
-.log #logBody { margin-top: 6px; max-height: 220px; overflow-y: auto; line-height: 1.5; }
-.log .bot { color: var(--gold); }
+.bottombar { flex: none; display: flex; gap: 6px; padding: 2px 4px; }
+.chat { flex: 1; display: flex; gap: 6px; }
+.chat input { flex: 1; min-width: 0; min-height: 44px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font: 14px var(--serif); padding: 0 10px; }
+/* The log opens as a bottom sheet over the whole page (C2_Log) rather than
+   pushing the fixed table layout around and forcing it to scroll. */
+.logbody { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; max-height: 60svh; overflow-y: auto; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: #15130f; border-top: 1px solid var(--gold-line); border-radius: 14px 14px 0 0; box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.5); font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+.logbody .say { color: var(--text); }
+.logbody .bot { color: var(--gold); }
