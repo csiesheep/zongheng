@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>vp</title>
+<style>
+  /* #22: a throwaway measuring page, not linked from anywhere, single file,
+     no modules. Its only job is to tell the orchestrator what a REAL phone's
+     viewport units actually resolve to (the emulator's window resize can't
+     reproduce a mobile browser's own toolbar behaviour) — see the issue's
+     "模擬視窗量不出這件事". Nothing here is meant to look nice. */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #111; color: #eee; font-family: monospace; }
+  body { padding: 8px 8px 56px; }
+  .top { font-size: 15vw; line-height: 1.05; font-weight: 900; margin: 0 0 6px; }
+  .top .lbl { font-size: 3.4vw; color: #9f9; display: block; }
+  .row { font-size: 4.2vw; line-height: 1.6; border-top: 1px solid #444; padding-top: 4px; margin-top: 6px; }
+  .row b { color: #ff6; }
+  .ua { font-size: 3vw; word-break: break-all; color: #ccc; margin-top: 10px; }
+  /* Four invisible probes, one per viewport-height unit, so JS can read
+     their rendered pixel height back via getBoundingClientRect(). */
+  .probe { position: absolute; left: -9999px; top: 0; width: 1px; visibility: hidden; }
+  #p-vh  { height: 100vh; }
+  #p-svh { height: 100svh; }
+  #p-dvh { height: 100dvh; }
+  #p-lvh { height: 100lvh; }
+  /* A 40px strip pinned to the true bottom of the fixed viewport, and a
+     second strip drawn at "100svh minus 40px" — on a real phone, comparing
+     where these two land against what's actually visible (and against each
+     other) is the whole point of this page. */
+  .bar { position: fixed; left: 0; right: 0; height: 40px; display: flex; align-items: center; justify-content: center; font: 900 16px monospace; letter-spacing: 3px; z-index: 5; }
+  #bottomBar { bottom: 0; background: #c22; color: #fff; }
+  #svhBar { position: absolute; top: calc(100svh - 40px); background: #26c; color: #fff; }
+</style>
+</head>
+<body>
+  <div class="top"><span class="lbl">innerWidth × innerHeight</span><span id="inner">–</span></div>
+  <div class="top"><span class="lbl">visualViewport.height</span><span id="vvh">–</span></div>
+  <div class="row"><span class="lbl">document.documentElement.clientHeight</span> <b id="clientH">–</b></div>
+  <div class="row"><span class="lbl">screen.height</span> <b id="screenH">–</b></div>
+  <div class="row">100vh = <b id="u-vh">–</b>px &nbsp; 100svh = <b id="u-svh">–</b>px</div>
+  <div class="row">100dvh = <b id="u-dvh">–</b>px &nbsp; 100lvh = <b id="u-lvh">–</b>px</div>
+  <div class="row">env(safe-area-inset-top) = <b id="sat">–</b>px &nbsp; env(safe-area-inset-bottom) = <b id="sab">–</b>px</div>
+  <div class="ua" id="ua"></div>
+
+  <div class="probe" id="p-vh"></div>
+  <div class="probe" id="p-svh"></div>
+  <div class="probe" id="p-dvh"></div>
+  <div class="probe" id="p-lvh"></div>
+
+  <div id="svhBar" class="bar">SVH</div>
+  <div id="bottomBar" class="bar">BOTTOM</div>
+
+  <!-- an element whose padding reads env(safe-area-inset-*) back into getComputedStyle -->
+  <div id="saProbe" style="position:absolute; left:-9999px; top:0; width:1px; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);"></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function update() {
+    $("inner").textContent = innerWidth + " x " + innerHeight;
+    $("vvh").textContent = (window.visualViewport ? Math.round(visualViewport.height * 100) / 100 : "n/a");
+    $("clientH").textContent = document.documentElement.clientHeight;
+    $("screenH").textContent = screen.height;
+    $("u-vh").textContent = Math.round($("p-vh").getBoundingClientRect().height * 100) / 100;
+    $("u-svh").textContent = Math.round($("p-svh").getBoundingClientRect().height * 100) / 100;
+    $("u-dvh").textContent = Math.round($("p-dvh").getBoundingClientRect().height * 100) / 100;
+    $("u-lvh").textContent = Math.round($("p-lvh").getBoundingClientRect().height * 100) / 100;
+    var sa = getComputedStyle($("saProbe"));
+    $("sat").textContent = sa.paddingTop;
+    $("sab").textContent = sa.paddingBottom;
+    $("ua").textContent = navigator.userAgent;
+  }
+  update();
+  addEventListener("resize", update);
+  addEventListener("scroll", update, { passive: true });
+  if (window.visualViewport) {
+    visualViewport.addEventListener("resize", update);
+    visualViewport.addEventListener("scroll", update);
+  }
+})();
+</script>
+</body>
+</html>
