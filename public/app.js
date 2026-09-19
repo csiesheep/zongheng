@@ -764,33 +764,71 @@ $("lobbyChatForm").onsubmit = (ev) => {
   if (text) send({ type: "chat", text });
   $("lobbyChatIn").value = "";
 };
+// Seats and actions update the existing DOM nodes in place, keyed by seat
+// idx / action id, instead of `innerHTML = ""` + rebuild — a room message
+// arrives on every chat line, ready toggle and settings change, and tearing
+// the buttons down each time flashed and dropped :hover/:focus (orchestrator,
+// #6 follow-up; same reasoning as #20's fix to `seg()`, which this still
+// calls unchanged for the level segmented control).
+function renderLobbySeats() {
+  const el = $("lobbySeats");
+  const seen = new Set();
+  for (const s of room.seats) {
+    seen.add(String(s.idx));
+    let d = el.querySelector(`[data-idx="${s.idx}"]`);
+    if (!d) { d = document.createElement("div"); d.dataset.idx = s.idx; el.appendChild(d); }
+    const cls = "seat" + (!s.connected ? " away" : "");
+    if (d.className !== cls) d.className = cls;
+    const tags = [s.side === room.me ? t("lobby.you") : "", s.idx === 0 ? t("lobby.host") : "", s.ai ? t("lobby.bot") : "", !s.connected && !s.ai ? t("lobby.away") : ""].filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join("");
+    const html = `<div class="sd ${s.side === 0 ? "q" : "c"}">${esc(sideName(s.side))}</div><div class="who">${esc(s.name)}${tags}</div><span>${s.ready || s.idx === 0 ? t("lobby.ready") : t("lobby.notReady")}</span>`;
+    if (d.innerHTML !== html) d.innerHTML = html;
+  }
+  el.querySelectorAll("[data-idx]").forEach((d) => { if (!seen.has(d.dataset.idx)) d.remove(); });
+}
+function renderLobbyActions() {
+  const a = $("lobbyActions");
+  const desired = [];
+  if (room.phase === "over") {
+    if (room.isHost) desired.push(["rematch", t("lobby.rematch"), () => send({ type: "rematch" }), "primary", false]);
+  } else if (room.isHost) {
+    const hasBot = room.seats.some((s) => s.ai), full = room.seats.length >= 2;
+    desired.push(["start", t("lobby.start"), () => send({ type: "start" }), "primary", !full]);
+    if (hasBot) desired.push(["removeBot", t("lobby.removeBot"), () => send({ type: "removeBot" }), "", false]);
+    else if (!full) desired.push(["addBot", t("lobby.addBot"), () => send({ type: "addBot" }), "", false]);
+    desired.push(["swap", t("lobby.swap"), () => send({ type: "swap" }), "", false]);
+  } else if (!game.spectator) {
+    const me = room.seats.find((s) => s.side === room.me);
+    desired.push(["ready", me?.ready ? t("lobby.notReady") : t("lobby.ready"), () => send({ type: "ready", ready: !me?.ready }), "primary", false]);
+  }
+  desired.push(["leave", t("lobby.leave"), () => { send({ type: "leave" }); leaveRoom(); toLanding(); }, "", false]);
+  const seen = new Set();
+  for (const [key, label, onClick, cls, disabled] of desired) {
+    seen.add(key);
+    let b = a.querySelector(`[data-key="${key}"]`);
+    if (!b) { b = btn(a, label, onClick, cls, null, disabled); b.dataset.key = key; }
+    else {
+      if (b.textContent !== label) b.textContent = label;
+      b.onclick = onClick;
+      if (b.className !== cls) b.className = cls;
+      if (b.disabled !== disabled) b.disabled = disabled;
+    }
+  }
+  // Reorder only the entries out of place, instead of always re-appending
+  // every button (which would itself repaint the whole row every render).
+  let node = a.firstElementChild;
+  for (const [key] of desired) {
+    if (!node || node.dataset.key !== key) { const want = a.querySelector(`[data-key="${key}"]`); a.insertBefore(want, node); node = want; }
+    node = node.nextElementSibling;
+  }
+  a.querySelectorAll("[data-key]").forEach((b) => { if (!seen.has(b.dataset.key)) b.remove(); });
+}
 function renderLobby() {
   $("lobbyCode").textContent = room.code || "";
   $("lobbyHint").textContent = room.isHost ? t("lobby.hint") : t("lobby.waiting");
   renderLobbyChat();
-  const el = $("lobbySeats"); el.innerHTML = "";
-  for (const s of room.seats) {
-    const d = document.createElement("div");
-    d.className = "seat" + (!s.connected ? " away" : "");
-    const tags = [s.side === room.me ? t("lobby.you") : "", s.idx === 0 ? t("lobby.host") : "", s.ai ? t("lobby.bot") : "", !s.connected && !s.ai ? t("lobby.away") : ""].filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join("");
-    d.innerHTML = `<div class="sd ${s.side === 0 ? "q" : "c"}">${esc(sideName(s.side))}</div><div class="who">${esc(s.name)}${tags}</div><span>${s.ready || s.idx === 0 ? t("lobby.ready") : t("lobby.notReady")}</span>`;
-    el.appendChild(d);
-  }
+  renderLobbySeats();
   seg($("lobbyLevel"), [["easy", t("setup.easy")], ["normal", t("setup.normal")], ["hard", t("setup.hard")]], room.settings?.level || "normal", (v) => { if (room.isHost) send({ type: "settings", level: v }); });
-  const a = $("lobbyActions"); a.innerHTML = "";
-  if (room.phase === "over") {
-    if (room.isHost) btn(a, t("lobby.rematch"), () => send({ type: "rematch" }), "primary");
-  } else if (room.isHost) {
-    const hasBot = room.seats.some((s) => s.ai), full = room.seats.length >= 2;
-    btn(a, t("lobby.start"), () => send({ type: "start" }), "primary", null, !full);
-    if (hasBot) btn(a, t("lobby.removeBot"), () => send({ type: "removeBot" }));
-    else if (!full) btn(a, t("lobby.addBot"), () => send({ type: "addBot" }));
-    btn(a, t("lobby.swap"), () => send({ type: "swap" }));
-  } else if (!game.spectator) {
-    const me = room.seats.find((s) => s.side === room.me);
-    btn(a, me?.ready ? t("lobby.notReady") : t("lobby.ready"), () => send({ type: "ready", ready: !me?.ready }), "primary");
-  }
-  btn(a, t("lobby.leave"), () => { send({ type: "leave" }); leaveRoom(); toLanding(); });
+  renderLobbyActions();
 }
 setInterval(() => {
   if (!game.room || !game.st || game.st.winner != null || !room.deadline) return;
