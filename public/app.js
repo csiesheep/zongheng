@@ -12,6 +12,7 @@ import * as B from "./shared/bots.js";
 import en from "./i18n/en.js";
 import zh from "./i18n/zh-Hant.js";
 import CARD_EN from "./i18n/cards.en.js";
+import { mountAdvisorToggle, decorate as decorateAdvisor } from "./advisor-ui.js";
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);
@@ -50,6 +51,10 @@ function setLang(l) {
   if (game.st) { render(); if (game.st.winner != null) renderOver(); }
 }
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
+// The advisor's own switch (issue #18): mounted once here; its own
+// visibility (solo table only) and everything it draws live in
+// advisor-ui.js, driven by the decorateAdvisor() call at render()'s tail.
+mountAdvisorToggle($("advisorSlot"));
 
 // ---------- views ----------
 // The page's whole colour follows the side: the setup screen re-skins by
@@ -262,6 +267,7 @@ function render() {
     $("promptText").textContent = ""; $("sheet").innerHTML = ""; $("hand").innerHTML = "";
     renderLog(v);
     fitMap(); // after every sibling has its final flex size, so the map's own box is final too
+    decorateAdvisor(v, { solo: false, side: game.me });
     return;
   }
   // Computed before renderMap so a scoring card selected this same render
@@ -279,6 +285,13 @@ function render() {
   // matching C2_Place/C2_Campaign.
   setSheetOpen(wantsCardOverlay(v));
   layoutTable(); // the map's real box depends on the hand's, so both are sized together, then fitMap() scales the map's content
+  // The advisor's own decoration pass (issue #18): everything it draws lives
+  // in advisor-ui.js, which no-ops (and calls advise() zero times) unless
+  // solo is true and its own switch is on.
+  decorateAdvisor(v, {
+    solo: !game.room && !game.spectator, side: game.me, uiCard: game.ui.card,
+    t, spaceName, stateName, regionName, cardName, sep,
+  });
 }
 // The map's scale is the viewport-width ratio (DESIGN_W is the mockup's own
 // canvas width) UNLESS that would leave no room at all for a shown hand, in

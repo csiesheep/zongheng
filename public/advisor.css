@@ -1,0 +1,96 @@
+/* The advisor's own UI (issue #18): the top-bar switch, the suggestion
+   banner above the hand, and the gold decorations on the card/use/target
+   #17's advise() names. Loaded after style.css/screens.css/desktop.css so
+   its rules win without !important; nothing here edits the table's own
+   layout (see advisor-ui.js: the banner is a position:fixed overlay,
+   anchored to #hand's own box, precisely so it never has to be counted in
+   layoutTable()'s chrome sum or #7's fixed grid areas).
+
+   One colour throughout: gold #e9b92e (owner: "改成黃金色,而不是淡黃色"),
+   never a transition (owner: colours are static, not animated). */
+
+/* ---------- the switch, mounted once inside #advisorSlot in the .bar ---------- */
+#advisorSlot { display: inline-flex; align-items: center; }
+.adv-toggle {
+  height: 44px; padding: 0 4px; border: none; background: none;
+  display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+}
+.adv-toggle-label {
+  font-family: var(--kai); font-weight: 900; font-size: 13px; color: var(--text-dim);
+  white-space: nowrap;
+}
+.adv-toggle.on .adv-toggle-label { color: #e9b92e; }
+.adv-toggle-track {
+  width: 26px; height: 16px; box-sizing: border-box; border-radius: 8px;
+  border: 1.5px solid var(--gold-line); background: none; position: relative; flex: none;
+}
+.adv-toggle.on .adv-toggle-track { border-color: #e9b92e; background: rgba(233, 185, 46, 0.28); }
+.adv-toggle-dot {
+  position: absolute; top: 1.5px; left: 1.5px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--gold-line);
+}
+.adv-toggle.on .adv-toggle-dot { left: 12px; background: #e9b92e; }
+/* A very short viewport (#5's 28px topbar row) still gives the switch a
+   real 44px tap target -- the button's own box, not the visible track. */
+
+/* ---------- the suggestion banner ---------- */
+.advisor-banner {
+  position: fixed; z-index: 45; box-sizing: border-box;
+  border: 1px solid #e9b92e; background: rgba(233, 185, 46, 0.1);
+  border-radius: 10px; padding: 7px 11px; pointer-events: none;
+}
+.advisor-banner-title {
+  font: 600 13px/1.3 var(--serif); color: #e9b92e; margin: 0 0 2px;
+  overflow-wrap: break-word;
+}
+.advisor-banner-why {
+  font: 400 11.5px/1.4 var(--serif); color: var(--text); overflow-wrap: break-word;
+}
+/* Belt-and-suspenders: whatever the switch/banner's own `hidden` attribute
+   says, neither may show outside the table view -- app.js's render() (and
+   so this file's decorate()) is only called right after entering the
+   table, never on the way OUT to setup/lobby/over, so table-lock (already
+   toggled by the existing, untouched show()) is the one signal guaranteed
+   to flip the instant that happens. */
+body:not(.table-lock) #advisorSlot .adv-toggle,
+body:not(.table-lock) .advisor-banner {
+  display: none !important;
+}
+
+/* ---------- gold decoration: hand card / sheet use-button / order-button ---------- */
+.card.adv-pick {
+  box-shadow: 0 0 0 2px #e9b92e, 0 0 14px 5px rgba(233, 185, 46, 0.6);
+  border-color: #e9b92e;
+}
+.sheet-grid button.adv-pick, .rowb.order button.adv-pick {
+  box-shadow: 0 0 0 2px #e9b92e, 0 0 10px 3px rgba(233, 185, 46, 0.55);
+  border-color: #e9b92e;
+}
+
+/* ---------- gold decoration: the map target ---------- */
+.node.adv-target { z-index: 3; }
+.node.adv-target::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 84px; height: 84px;
+  transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle, transparent 25px, rgba(233, 185, 46, 0.55) 30px, rgba(233, 185, 46, 0.16) 42px, transparent 42px);
+  /* The disc's own top (where a +n placement badge or the cost badge sits)
+     stays clear of the glow (owner: "圆盤正上方留空不蓋住數字"). */
+  -webkit-mask-image: conic-gradient(transparent 0deg 34deg, #000 34deg 326deg, transparent 326deg 360deg);
+  mask-image: conic-gradient(transparent 0deg 34deg, #000 34deg 326deg, transparent 326deg 360deg);
+}
+.node.adv-target::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 38px; height: 38px;
+  transform: translate(-50%, -50%); border-radius: 50%; border: 3.5px solid #e9b92e;
+  pointer-events: none; z-index: 1;
+}
+.node.big.adv-target::after { width: 42px; height: 42px; }
+.node.adv-target .disc { position: relative; z-index: 2; }
+/* The city name must stay legible over the glow (owner: "城名要疊在光暈上面
+   保持清楚") -- it already carries a light halo of its own (style.css's
+   text-shadow), this only makes sure it paints above the gold, not under it. */
+.node.adv-target .nm { z-index: 4; }
+.node .adv-badge {
+  position: absolute; bottom: -4px; left: -6px; min-width: 15px; height: 15px;
+  border-radius: 8px; background: #e9b92e; color: #1a1a1a; text-align: center;
+  font: 700 9px/15px var(--sans); padding: 0 3px; z-index: 5;
+}
