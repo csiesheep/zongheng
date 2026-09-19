@@ -75,6 +75,14 @@ function checkShape(st, side, k) {
   assert.ok(Array.isArray(adv.targets), "targets must be an array");
   for (const t of adv.targets) assert.ok(SPACE[t], `${t} is not a space on the board`);
   assert.ok(REASON_KEYS.includes(adv.reason.key), `unknown reason key ${adv.reason.key}`);
+  // Playing the scoring card is never "get this region ready" -- the region is
+  // being scored right now (orchestrator, #17).
+  if (adv.use === "score") {
+    assert.ok(["mandate", "mustPlayScoring"].includes(adv.reason.key),
+      `a scoring card was played and the reason was ${adv.reason.key}`);
+  }
+  // The other headline is face down, so any story about the turn is a guess.
+  if (adv.use === "headline") assert.equal(adv.reason.key, "best", "a headline's reason rests on a guess");
   assert.equal(typeof adv.reason.params, "object");
   for (const id of [adv.reason.params.space].filter(Boolean)) assert.ok(SPACE[id], `params.space ${id} is not a space`);
   for (const id of [adv.reason.params.state].filter(Boolean)) assert.ok(E.STATES[id], `params.state ${id} is not a state`);
@@ -165,40 +173,74 @@ test("advisor: reason takeControl -- the engine agrees a space changed hands", (
   assert.notEqual(adv2.reason.key, "takeControl");
 });
 
-test("advisor: reason battleground -- the space it names is a 要衝", () => {
-  // 邯鄲 is a battleground in the rulebook's table; at 承平 nothing is locked,
-  // so a campaign reaches it, and taking it turns 三晉 from presence into
-  // domination -- which only works because the space carries a 要衝.
+test("advisor: a 要衝 that changes hands is takeControl, not battleground", () => {
+  // orchestrator, #17: control outranks everything else that can be said, so a
+  // campaign that takes 邯鄲 -- a battleground, and the move that turns 三晉
+  // from presence into domination -- still reads as taking control.
   const backdrop = { ...QIN_HOME, ...CHU_HOME, hedong: [3, 0], shangdang: [0, 4] };
   const st = board([["hexi"], ["mozhe"]], { ...backdrop, handan: [2, 1] }, { turn: 3, round: 2, weariness: 5 });
-  assert.ok(SPACE.handan.battleground, "邯鄲 is a 要衝");
+  assert.ok(SPACE.handan.battleground, "邯鄲 is a 要衝 in the rulebook's table");
   assert.equal(E.controller(st, "handan"), null);
   const adv = advise(E.view(st, QIN), QIN, E.makeRng(13));
+  assert.equal(adv.reason.key, "takeControl");
+  assert.equal(adv.reason.params.space, "handan");
+  const after = E.apply(st, adv.action);
+  assert.equal(E.controller(after, "handan"), QIN, "the engine must agree the 要衝 changed hands");
+});
+
+test("advisor: reason battleground -- aimed at a 要衝 without taking it", () => {
+  // 河東 holds Qin at its cap with nowhere else to reach, and at 禍結 三晉 is
+  // shut to campaigns, so the only ops this card has is a campaign on 宋 --
+  // a 要衝 with no state behind it, where 4 Chu points keep control whatever
+  // one op removes. Nothing changes hands, and the 要衝 is all there is to say.
+  const inf = { hedong: [4, 4], song: [0, 4] };
+  const patch = { turn: 3, round: 2, weariness: 3 };
+  const st = board([["envoy"], ["mozhe"]], inf, patch);
+  assert.ok(SPACE.song.battleground, "宋 is a 要衝");
+  assert.equal(E.legal(st, QIN).cards[0].uses.place, null, "there is nowhere to place");
+  const adv = advise(E.view(st, QIN), QIN, E.makeRng(2));
   assert.equal(adv.reason.key, "battleground");
   assert.ok(SPACE[adv.reason.params.space].battleground, "the named space must be a 要衝");
   const after = E.apply(st, adv.action);
-  assert.equal(E.controller(after, "handan"), QIN, "the engine must agree the 要衝 changed hands");
-  // Twin: two more Chu points in 邯鄲 put it out of reach of the same 2 ops,
-  // so no 要衝 changes hands and the key must move.
-  const st2 = board([["hexi"], ["mozhe"]], { ...backdrop, handan: [2, 3] }, { turn: 3, round: 2, weariness: 5 });
-  const adv2 = advise(E.view(st2, QIN), QIN, E.makeRng(13));
-  assert.notEqual(adv2.reason.key, "battleground");
-  const after2 = E.apply(st2, adv2.action);
-  assert.equal(E.controller(after2, "handan"), null, "邯鄲 really did not move");
+  for (const sp of E.SPACES) {
+    assert.equal(E.controller(after, sp.id), E.controller(st, sp.id), `${sp.id} changed hands`);
+  }
+  // Twin: the same position with 薛 in 宋's place. 薛 is not a 要衝, so with
+  // nothing else moving the advisor has nothing to name.
+  const st2 = board([["envoy"], ["mozhe"]], { hedong: [4, 4], xue: [0, 4] }, patch);
+  assert.ok(!SPACE.xue.battleground, "薛 is not a 要衝");
+  const adv2 = advise(E.view(st2, QIN), QIN, E.makeRng(2));
+  assert.deepStrictEqual(adv2.targets, ["xue"]);
+  assert.equal(adv2.reason.key, "best");
 });
 
-test("advisor: reason mustPlayScoring -- last round with the scoring card still in hand", () => {
-  // The rulebook: a scoring card left in hand at the end of the turn loses the
-  // game, so on the last action round it has to go.
-  const st = atAction([["score_west", "keqing", "hexi"], ["mozhe", "wuqi"]], { round: 6, rounds: 6 });
-  const adv = advise(E.view(st, QIN), QIN, E.makeRng(21));
-  assert.equal(adv.card, "score_west");
-  assert.equal(adv.use, "score");
-  assert.equal(adv.reason.key, "mustPlayScoring");
-  assert.equal(adv.reason.params.region, "west");
-  // Twin: no scoring card in hand at all, so the condition cannot hold.
-  const st2 = atAction([["keqing", "hexi"], ["mozhe", "wuqi"]], { round: 6, rounds: 6 });
+test("advisor: playing the scoring card reads from what the region pays", () => {
+  // orchestrator, #17: the region is being scored right now, so this is never
+  // scoringSoon. What it pays decides: a region that pays says Mandate, a
+  // region that costs says the card simply had to leave the hand.
+  const held = ["keqing", "hexi"], theirs = ["mozhe", "wuqi"];
+  const last = { round: 6, rounds: 6 };
+  for (const [card, region, want] of [["score_west", "west", "mandate"], ["score_jin", "jin", "mandate"],
+    ["score_south", "south", "mustPlayScoring"], ["score_east", "east", "mustPlayScoring"],
+    ["score_north", "north", "mustPlayScoring"]]) {
+    const st = atAction([[card, ...held], theirs], last);
+    const [q, c] = E.regionTally(st, region); // the engine's own tally, not the advisor's
+    const net = q.total - c.total;
+    assert.equal(net > 0, want === "mandate", `${region} net ${net} does not match the case`);
+    const adv = advise(E.view(st, QIN), QIN, E.makeRng(21));
+    assert.equal(adv.card, card);
+    assert.equal(adv.use, "score");
+    assert.equal(adv.reason.key, want, `${card} (net ${net})`);
+    assert.equal(adv.reason.params.region, region);
+    if (want === "mandate") assert.equal(adv.reason.params.n, net, "the Mandate moves by what the region paid");
+  }
+  // 北疆 is the boundary above: a net of exactly 0 is not a reason to celebrate.
+  const [nq, nc] = E.regionTally(atAction([["score_north", ...held], theirs], last), "north");
+  assert.equal(nq.total - nc.total, 0, "北疆 is the net-zero case, so it tests the boundary");
+  // Twin: no scoring card in hand at all, so neither branch can be reached.
+  const st2 = atAction([[...held], theirs], last);
   const adv2 = advise(E.view(st2, QIN), QIN, E.makeRng(21));
+  assert.notEqual(adv2.use, "score");
   assert.notEqual(adv2.reason.key, "mustPlayScoring");
 });
 

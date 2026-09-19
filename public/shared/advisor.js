@@ -24,7 +24,7 @@
 // points the bot was maximising, and `best` is what is left when nothing moved
 // enough to name.
 import * as E from "./engine.js";
-import { answer, decide, determinize, evaluate, simulate } from "./bots.js";
+import { decide, determinize, evaluate, simulate } from "./bots.js";
 
 const { QIN, CHU, SPACE, SPACES, STATES, SCORED_REGIONS, CARD, JIUDING, REFORM } = E;
 
@@ -125,8 +125,12 @@ function reasonFor(st, action, side, rng, targets, L) {
   if (action.type === "play" && action.use === "bog") {
     return { key: "bogDiscard", params: { card: action.card, n: (L.bog ?? []).length } };
   }
+  // A headline sits face down until both are in, so everything the position
+  // would say about how this turn resolves rests on a guess at the other
+  // side's card. A guess is not a reason (orchestrator, #17).
+  if (action.type === "headline") return floor(targets);
   let st1;
-  try { st1 = resolve(st, action, side, rng); } catch { return floor(targets); }
+  try { st1 = simulate(st, action, rng); } catch { return floor(targets); }
   if (st1.winner != null) return st1.winner === side ? winReason(st1, side) : floor(targets);
 
   const t0 = {}, t1 = {};
@@ -134,6 +138,18 @@ function reasonFor(st, action, side, rng, targets, L) {
   evaluate(st1, side, t1);
   const d = (k) => (t1[k] || 0) - (t0[k] || 0);
   const opp = 1 - side;
+
+  // Playing the scoring card is not "getting the region ready": the region is
+  // being scored right now. What it pays decides which it is -- a region that
+  // pays says Mandate, a region that costs says the card simply had to go
+  // before the turn ended (orchestrator, #17).
+  if (useOf(action) === "score") {
+    const region = CARD[action.card].scoring;
+    const net = t1[`$net:${region}`] ?? 0;
+    return net > 0
+      ? { key: "mandate", params: { region, card: action.card, n: d("mandate"), total: st1.mandate } }
+      : { key: "mustPlayScoring", params: { card: action.card, region, n: Math.max(0, st.rounds - st.round) } };
+  }
 
   // Which spaces changed hands, by the engine's own control rule.
   const gained = [], broke = [];
@@ -143,39 +159,42 @@ function reasonFor(st, action, side, rng, targets, L) {
     if (b === side) gained.push(sp.id);
     else if (a === opp) broke.push(sp.id);
   }
-  // A region's control-level movement belongs to whichever key owns the space
-  // that moved, and a 要衝 is the more specific claim, so it is served first.
-  const bgSpaces = [...gained, ...broke].filter((id) => SPACE[id].battleground);
+  // A space changing hands outranks everything else that can be said about
+  // the move, 要衝 included (orchestrator, #17): the region's whole movement,
+  // control level and battleground bonus together, goes to the key that owns
+  // the space that moved. `battleground` is then only for a move that aims at
+  // a 要衝 without taking it.
   const scored = (ids) => [...new Set(ids.map((id) => SPACE[id].region))].filter((x) => SCORED_REGIONS.includes(x));
-  const bgRegions = scored(bgSpaces);
-  const takeRegions = scored(gained.filter((id) => !SPACE[id].battleground)).filter((x) => !bgRegions.includes(x));
-  const breakRegions = scored(broke.filter((id) => !SPACE[id].battleground))
-    .filter((x) => !bgRegions.includes(x) && !takeRegions.includes(x));
-  const base = (rs) => rs.reduce((a, x) => a + d(`region:${x}:base`), 0);
+  const gainRegions = scored(gained);
+  const breakRegions = scored(broke).filter((x) => !gainRegions.includes(x));
+  const worth = (rs) => rs.reduce((a, x) => a + d(`region:${x}:base`) + d(`region:${x}:bg`), 0);
   const bgBonus = SCORED_REGIONS.reduce((a, x) => a + d(`region:${x}:bg`), 0);
+  const name = (ids) => ids.find((id) => SPACE[id].battleground) ?? ids[0];
 
   const cand = [];
   const add = (key, value, params) => { if (value > 1e-9) cand.push({ key, value, params }); };
   const bgTargets = targets.filter((id) => SPACE[id].battleground);
 
-  if (bgSpaces.length || bgTargets.length) {
-    const space = bgSpaces[0] ?? bgTargets[0];
-    add("battleground", bgBonus + base(bgRegions),
-      { space, region: SPACE[space].region, n: bgSpaces.length || bgTargets.length });
-  }
   const mieFell = Object.keys(st1.mie).length < Object.keys(st.mie).length;
   if (gained.length) {
-    const space = gained.find((id) => !SPACE[id].battleground) ?? gained[0];
-    let v = base(takeRegions);
+    const space = name(gained);
+    let v = worth(gainRegions);
     if (gained.includes("luoyi")) v += d("luoyi"); // 洛邑 pays in Mandate, not in a region
     if (side === CHU && mieFell) v += d("mie"); // Chu back in the capital undoes a 滅
     add("takeControl", v, { space, region: SPACE[space].region, n: gained.length });
   }
   if (broke.length) {
-    const space = broke.find((id) => !SPACE[id].battleground) ?? broke[0];
-    let v = base(breakRegions);
+    const space = name(broke);
+    let v = worth(breakRegions);
     if (side === CHU && mieFell && !gained.length) v += d("mie");
     add("breakControl", v, { space, region: SPACE[space].region, n: broke.length });
+  }
+  if (!gained.length && !broke.length && bgTargets.length) {
+    // Nothing changed hands, so the evaluation paid nothing for the 要衝
+    // itself. It is still the one thing worth saying about where this lands,
+    // so it stands just above `best` and below every real contribution.
+    add("battleground", Math.max(1e-6, bgBonus),
+      { space: bgTargets[0], region: SPACE[bgTargets[0]].region, n: bgTargets.length });
   }
   {
     let region = null, v = 0;
@@ -247,26 +266,6 @@ function reasonFor(st, action, side, rng, targets, L) {
   if (!cand.length) return floor(targets);
   cand.sort((a, b) => b.value - a.value);
   return { key: cand[0].key, params: cand[0].params };
-}
-
-// Play the move out the way the bot plays it out, answering what it asks.
-function resolve(st, action, side, rng) {
-  if (action.type !== "headline") return simulate(st, action, rng);
-  // A headline sits face down until both are in, and nothing resolves until
-  // then; put the guessed hand's biggest card opposite it -- the same guess
-  // `bestHeadline` makes -- so the terms describe a turn that actually happens.
-  let s = E.apply(st, action);
-  const opp = 1 - side;
-  if (s.headline[opp] == null) {
-    const hand = s.hands[opp].filter((c) => c !== JIUDING);
-    if (!hand.length) return s;
-    s = E.apply(s, { type: "headline", side: opp, card: hand.reduce((a, b) => (CARD[b].ops > CARD[a].ops ? b : a)) });
-  }
-  for (let guard = 0; s.pending && s.winner == null && guard < 16; guard++) {
-    const who = s.pending.who;
-    s = E.apply(s, { type: "choose", side: who, choice: answer(s, s.pending, who, rng) });
-  }
-  return s;
 }
 
 // The move ends the game: the engine's own reason for the win is the reason.
