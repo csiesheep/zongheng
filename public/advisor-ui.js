@@ -165,7 +165,16 @@ function placeBanner(meta) {
     setSlot("adv-slot-prompt");
   };
   const overflowsTable = () => table.scrollHeight > table.clientHeight + 1;
-  const sheetHasContent = !!(sheet && !sheet.hidden && sheet.children.length > 0);
+  // #24 round 4: app.js's setPrompt() (round 2) always parks a hidden
+  // .sheet-title as #sheet's first child now, even while just browsing the
+  // hand -- sheet.children.length is never really 0 any more, so this used
+  // to see "content" that isn't actually visible (style.css collapses a
+  // sheet whose only children are all [hidden] the same way it always
+  // collapsed a truly empty one) and routed the banner into the sheet slot
+  // regardless, instead of falling through to the hand/prompt slots below
+  // and letting THEIR own overflow check decide. Only a real, visible
+  // child counts as content here now.
+  const sheetHasContent = !!(sheet && !sheet.hidden && [...sheet.children].some((c) => !c.hidden));
   const desktop = window.innerWidth >= 1024;
   if (desktop) {
     if (sheetHasContent) {
@@ -377,7 +386,15 @@ function clampPromptWhy() {
 function clearAll() {
   cache.fp = null;
   cache.hasResult = false;
-  if (banner) banner.root.hidden = true;
+  // #24 clean-up: with the switch off (or any other inactive case this
+  // covers -- spectator, room, tutorial, game over), the banner used to
+  // stay in the DOM as a hidden 0x0 node carrying whatever text it last
+  // showed -- detach it outright; placeBanner() re-appends the SAME node
+  // (never rebuilt, per this file's own promise) the next time it's active.
+  if (banner) {
+    banner.root.hidden = true;
+    if (banner.root.parentElement) banner.root.remove();
+  }
   // Real bug found while testing (round 3): the prompt-takeover slot hides
   // #promptText while it's in use -- if the switch is turned off (or a
   // spectator/room view is reached) while that slot was active, nothing
@@ -466,15 +483,6 @@ function applyDecorations(view, meta, force, switchVisible) {
   }, 0);
 }
 
-function relegateRulesLink(switchVisible) {
-  const narrow = window.innerWidth < 1024; // >=1024px is #7's desktop frame, which has room to spare
-  const relegate = switchVisible && narrow;
-  const rl = document.getElementById("rulesLink");
-  const alt = document.getElementById("rulesLinkAlt");
-  if (rl) rl.hidden = relegate;
-  if (alt) alt.hidden = !relegate;
-}
-
 // The one call app.js makes, now BEFORE its own layoutTable() (see the call
 // site): meta carries exactly what this file can't read out of app.js's own
 // closures -- { side, solo, uiCard, pickedSpaces, t, spaceName, stateName,
@@ -488,7 +496,11 @@ export function decorate(view, meta) {
     toggle.root.hidden = !switchVisible;
     syncToggleUI(meta);
   }
-  relegateRulesLink(switchVisible);
+  // Orchestrator's #24 addendum (owner, 2026-09-19): Rules stays put in the
+  // header's top-right, [Advisor toggle] [Rules] [Lang] -- #18 used to move
+  // it into the prompt row (#rulesLinkAlt, now removed) when the switch was
+  // showing on a phone; the header row gives way on its OWN axis instead
+  // (see relegateBarMid() below), so this file no longer touches it at all.
   if (meta) applyDecorations(view, meta, false, switchVisible);
   else clearAll();
 }

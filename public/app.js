@@ -265,6 +265,27 @@ function describeAction(a) {
 }
 
 // ---------- rendering ----------
+// #24 addendum (owner, after Rules moved back into the header next to the
+// advisor switch): the header row -- back link, #barMid, [advisor][Rules]
+// [lang] -- must stay one line at 360/375/390px, both languages, advisor
+// switch on or off (this issue's own guard 2, `.bar` <= 55px). #barMid just
+// repeats the in-game topbar's own "Turn N · Side" line, so it's the first
+// thing to give way: with nothing else to shrink to, a squeeze wraps ITS
+// text onto a second line (the back link and the [advisor][Rules][lang]
+// span are all real buttons/links that refuse to shrink below their own
+// min-content), which is exactly what grows `.bar` past 55px. Measuring
+// after showing it and un-hiding again if it turns out to fit avoids
+// guessing a width breakpoint that would depend on the current language's
+// string lengths. The tutorial's own "Lesson n/10" reuses the same
+// #barMid slot and has no other home for it -- and the advisor switch
+// never shows during a tutorial, so there's always room -- so this never
+// touches it there.
+function layoutBar() {
+  const bar = document.querySelector(".bar"), mid = $("barMid");
+  if (!bar || !mid || Tut.active()) return;
+  mid.hidden = false;
+  if (bar.getBoundingClientRect().height > 55) mid.hidden = true;
+}
 function render() {
   // The whole page's accent (buttons, pressed hand card, the block below the
   // map) follows whichever court you sit in; paintBody() sets this once the
@@ -274,6 +295,7 @@ function render() {
   const v = game.room ? game.st : E.view(game.st, game.me);
   game.lastView = v; // layoutTable() re-renders the hand off this if it flips full<->chip
   $("barMid").textContent = Tut.active() ? Tut.barText() : `${t("tracks.turn")} ${v.turn} · ${game.spectator ? "" : sideName(game.me)}`;
+  layoutBar();
   renderTopBar(v);
   if (game.spectator) {
     setSheetOpen(false);
@@ -371,84 +393,184 @@ function layoutTable() {
   const table = $("table");
   if (table.hidden) return;
   if (isDesktopTable()) { layoutTableDesktop(); return; }
+  // A short mobile viewport can leave body.table-overflow set from the
+  // PREVIOUS pass — in that mode #table is content-sized (flex: none), so
+  // measuring table.clientHeight while it's still set sees a taller box
+  // than the real viewport gives, decides everything fits, drops the class,
+  // and locks the page; the very next pass measures the true (shorter)
+  // height and sets it right back. #24 (diagnosed by a side session):
+  // clear it before every measurement, same as layoutTableDesktop() above
+  // already does — the tail of this function re-decides it fresh either way.
+  document.body.classList.remove("table-overflow");
   // table.clientWidth includes #table's own left/right padding, but a child
   // like .map only gets the content width inside that padding — use the
   // map's own rendered width so `scale` matches what actually gets drawn.
-  const availW = $("map").clientWidth || table.clientWidth, availH = table.clientHeight;
-  if (!availW || !availH) return;
+  const availW = $("map").clientWidth || table.clientWidth;
+  if (!availW) return;
   const widthScale = availW / DESIGN_W;
-  // "advisorBanner" (issue #18, orchestrator's 2nd-round ruling): the one
-  // spot advisor-ui.js's own layout is allowed to touch here. The element
-  // doesn't always exist (created lazily, only while a solo game has the
-  // switch on), and when it DOES exist it isn't always its own row here --
-  // advisor-ui.js also reparents it inside #prompt or #sheet in some
-  // states, and both of those are already in the list below, so it's only
-  // added again when it's sitting directly in #table as its own sibling of
-  // #hand (the "browsing the hand" state); otherwise it would be counted
-  // twice.
+  const sheetEl = $("sheet"), promptEl = $("prompt"), hand = $("hand");
+  // "advisorBanner" (issue #18/#24): the one spot advisor-ui.js's own layout
+  // is allowed to touch here — see the giving-way block below for the one
+  // exception (hiding it outright once the map-active compaction escalates
+  // that far).
   const advBanner = document.getElementById("advisorBanner");
-  const advBannerAsRow = advBanner && advBanner.parentElement === table ? advBanner.getBoundingClientRect().height : 0;
-  // tutCoach (#15) is a floating panel INSIDE #map's own box (position:
-  // absolute, see tutorial.css) — it never takes a row of its own, so it's
-  // deliberately left out of this budget; #map's own overflow:hidden clips
-  // it to that box regardless. $(id) is null-guarded because tutCoach only
-  // exists while a tutorial is actually running.
-  const chrome = ["topbar", "statline", "prompt", "sheet"].reduce((sum, id) => sum + ($(id) ? $(id).getBoundingClientRect().height : 0), 0) + advBannerAsRow;
-  // #table's own top/bottom padding, plus one flex column gap per boundary
-  // between its VISIBLE children (a hidden/empty row like #sheet or #chatForm
-  // takes no box and no gap) — measured, not guessed, so a wrong constant
-  // here can't eat into the hand's real 96x176 card height.
-  const tcs = getComputedStyle(table);
-  const hand = $("hand");
   // A phase with nothing to hold in hand (placement, campaign/lobby target
   // picking, scoring) gets zero hand row, not a blank 200px+ strip under the
   // map — the map takes back every pixel the hand isn't using.
   const hasHand = hand.children.length > 0;
+  // #24 ruling: while the map is actively in play (campaign/lobby target
+  // picking, placing points — including an event's forced placement, which
+  // can land here with a real hand still showing) a short viewport gives
+  // way, one step at a time: hand row, then prompt row, then the sheet's
+  // own use/order rows collapse to a mini chip + preview + Cancel/Confirm.
+  // Re-decided from scratch every pass (not remembered) so leaving the
+  // state, or a tall viewport that never needed it, is never stuck compact.
+  const mapActive = !!game.mapActive;
+  const sheetTitle = sheetEl.querySelector(".sheet-title");
   hand.hidden = !hasHand;
-  const visibleKids = [...table.children].filter((c) => getComputedStyle(c).display !== "none").length;
-  const gapsAndPadding = parseFloat(tcs.paddingTop) + parseFloat(tcs.paddingBottom) + Math.max(0, visibleKids - 1) * parseFloat(tcs.rowGap || 0);
-  const spaceForMapAndHand = availH - chrome - gapsAndPadding;
-  // The tallest scale that still leaves `wanted` px for the hand — never
-  // below FLOOR_SCALE (the map's own spec), never above widthScale (that
-  // would overflow sideways).
-  const configFor = (wanted) => {
-    const s = Math.min(widthScale, Math.max(FLOOR_SCALE, (spaceForMapAndHand - wanted) / DESIGN_H));
-    const mh = Math.round(DESIGN_H * s);
-    return { scale: s, mapH: mh, handH: Math.max(0, Math.min(wanted, spaceForMapAndHand - mh)) };
-  };
-  let scale, mapH, handH, mode = "full", overflow = false;
-  if (!hasHand) {
-    // Letterbox to whatever height is actually left (chrome can still eat
-    // most of a short viewport even with no hand row, e.g. a tutorial
-    // action lesson's sheet) — never below FLOOR_SCALE; if even the floor
-    // doesn't fit, fall back to scroll instead of quietly overflowing (#15
-    // review round 4: English 390x669's confirm button was landing past the
-    // bottom edge because this branch never looked at spaceForMapAndHand).
-    scale = Math.min(widthScale, Math.max(FLOOR_SCALE, spaceForMapAndHand / DESIGN_H));
-    mapH = Math.round(DESIGN_H * scale);
-    handH = 0;
-    if (mapH > spaceForMapAndHand) overflow = true;
-  } else {
-    const full = configFor(CARD_H + HAND_GUTTER); // 207: 96x176 card + its own headroom
-    if (full.handH - HAND_GUTTER >= CARD_FULL_MIN) {
-      ({ scale, mapH, handH } = full);
+  promptEl.hidden = false;
+  sheetEl.classList.remove("sheet-compact");
+  if (sheetTitle) sheetTitle.hidden = true;
+  if (advBanner) advBanner.hidden = false;
+
+  // Measures the CURRENT dom (whatever hidden/compact state is set right
+  // now) and runs the map/hand height budget against it — called once per
+  // give-way stage below, never guessing a height that isn't the real one.
+  const attempt = () => {
+    const availH = table.clientHeight;
+    if (!availH) return null;
+    // advisor-ui.js also reparents the banner inside #prompt or #sheet in
+    // some states, and both of those are already in the chrome list below,
+    // so it's only added again when it's sitting directly in #table as its
+    // own sibling of #hand (the "browsing the hand" state); otherwise it
+    // would be counted twice.
+    const advBannerAsRow = advBanner && !advBanner.hidden && advBanner.parentElement === table ? advBanner.getBoundingClientRect().height : 0;
+    // tutCoach (#15) is a floating panel INSIDE #map's own box (position:
+    // absolute, see tutorial.css) — it never takes a row of its own, so
+    // it's deliberately left out of this budget; #map's own overflow:hidden
+    // clips it to that box regardless. $(id) is null-guarded because
+    // tutCoach only exists while a tutorial is actually running.
+    // #24 round 3: #sheet becomes `position: fixed; inset: 0` (style.css's
+    // .sheet.overlay) while wantsCardOverlay() is true — its own
+    // getBoundingClientRect() then reports the FULL viewport height
+    // regardless of its real content, which blew this budget's "chrome"
+    // sum up to ~669px and forced the map/hand to their floor with
+    // table-overflow set, even though the overlay covers them anyway and
+    // nothing was actually cut off (a real "headline card open" /
+    // "card open" state measured this). An overlay isn't a normal flow
+    // row sharing this budget with the map/hand, so it contributes 0 here.
+    const chrome = ["topbar", "statline", "prompt", "sheet"].reduce((sum, id) => {
+      const el = $(id);
+      if (!el || el.hidden) return sum;
+      if (id === "sheet" && el.classList.contains("overlay")) return sum;
+      return sum + el.getBoundingClientRect().height;
+    }, 0) + advBannerAsRow;
+    // #table's own top/bottom padding, plus one flex column gap per
+    // boundary between its VISIBLE children (a hidden/empty row like
+    // #sheet or #chatForm takes no box and no gap) — measured, not
+    // guessed, so a wrong constant here can't eat into the hand's real
+    // 96x176 card height.
+    const tcs = getComputedStyle(table);
+    const visibleKids = [...table.children].filter((c) => getComputedStyle(c).display !== "none").length;
+    const gapsAndPadding = parseFloat(tcs.paddingTop) + parseFloat(tcs.paddingBottom) + Math.max(0, visibleKids - 1) * parseFloat(tcs.rowGap || 0);
+    const spaceForMapAndHand = availH - chrome - gapsAndPadding;
+    // The tallest scale that still leaves `wanted` px for the hand — never
+    // below FLOOR_SCALE (the map's own spec), never above widthScale (that
+    // would overflow sideways).
+    const configFor = (wanted) => {
+      const s = Math.min(widthScale, Math.max(FLOOR_SCALE, (spaceForMapAndHand - wanted) / DESIGN_H));
+      const mh = Math.round(DESIGN_H * s);
+      return { scale: s, mapH: mh, handH: Math.max(0, Math.min(wanted, spaceForMapAndHand - mh)) };
+    };
+    const handShown = hasHand && !hand.hidden;
+    let scale, mapH, handH, mode = "full", overflow = false;
+    if (!handShown) {
+      // Letterbox to whatever height is actually left (chrome can still eat
+      // most of a short viewport even with no hand row, e.g. a tutorial
+      // action lesson's sheet) — never below FLOOR_SCALE; if even the floor
+      // doesn't fit, fall back to scroll instead of quietly overflowing
+      // (#15 review round 4).
+      scale = Math.min(widthScale, Math.max(FLOOR_SCALE, spaceForMapAndHand / DESIGN_H));
+      mapH = Math.round(DESIGN_H * scale);
+      handH = 0;
+      // #24 round 3: at a near-exact fit (scale close to spaceForMapAndHand
+      // / DESIGN_H), Math.round() can round mapH UP by a fraction of a px
+      // past the unrounded budget — a real "use picked, no target yet"
+      // state at 390x669 measured table-overflow set from exactly this,
+      // even though nothing was actually cut off (the map rendered at its
+      // true floor, everything still on screen, scrollHeight == innerHeight).
+      // A sub-pixel tolerance stops that rounding artifact from tripping
+      // the same "let the page scroll" fallback a real overflow needs.
+      if (mapH > spaceForMapAndHand + 1) overflow = true;
     } else {
-      const chip = configFor(CHIP_H + CHIP_GUTTER); // 72: a fixed 56px chip row
-      mode = "chip";
-      if (chip.handH >= CHIP_H + CHIP_GUTTER - 2) {
-        ({ scale, mapH, handH } = chip);
+      const full = configFor(CARD_H + HAND_GUTTER); // 207: 96x176 card + its own headroom
+      if (full.handH - HAND_GUTTER >= CARD_FULL_MIN) {
+        ({ scale, mapH, handH } = full);
       } else {
-        // Even a chip row doesn't fit alongside the map's floor spec (e.g.
-        // 375x553) — give both their true minimum and let the PAGE scroll
-        // instead of squeezing either below spec (owner's round 5, #3).
-        scale = FLOOR_SCALE; mapH = Math.round(DESIGN_H * scale); handH = CHIP_H + CHIP_GUTTER; overflow = true;
+        const chip = configFor(CHIP_H + CHIP_GUTTER); // 72: a fixed 56px chip row
+        mode = "chip";
+        // #24 round 3: this used to require chip.handH within 2px of the
+        // full 72 (CHIP_H+CHIP_GUTTER) or else fall through to forcing
+        // exactly 72 anyway (see the `else` below) — on a real 375x667
+        // action-hand state that fell a few px short (different game text
+        // sizes statline/topbar to slightly different real heights), that
+        // forced 72 was MORE than the true budget by ~3px and tripped an
+        // avoidable table-overflow. CHIP_H alone (the chip's actual content,
+        // no gutter) is the real floor; anything at or above that is a
+        // legible row, just with less breathing room than the 16px ideal,
+        // and using chip's own computed (already-fitting) handH here can't
+        // overshoot the budget the way a hardcoded constant can.
+        if (chip.handH >= CHIP_H) {
+          ({ scale, mapH, handH } = chip);
+        } else {
+          // Even the chip's own bare row doesn't fit alongside the map's
+          // floor spec (e.g. 375x553) — give both their true minimum and
+          // let the PAGE scroll instead of squeezing either below spec
+          // (owner's round 5, #3).
+          scale = FLOOR_SCALE; mapH = Math.round(DESIGN_H * scale); handH = CHIP_H + CHIP_GUTTER; overflow = true;
+        }
       }
     }
+    return { scale, mapH, handH, mode, overflow, spaceForMapAndHand };
+  };
+
+  let result = attempt();
+  if (!result) return;
+  if (mapActive && hasHand && !hand.hidden && result.overflow) {
+    // Stage 1: the hand row gives way first — its cards aren't needed while
+    // the map itself is what's being tapped.
+    hand.hidden = true;
+    result = attempt();
   }
+  if (mapActive && result.overflow) {
+    // Stage 2: the prompt row (its own preview line is already restated in
+    // the sheet) and the sheet's use/order rows (already chosen) give way
+    // together — the sheet-compact rule (style.css) leaves just the card
+    // chip, the preview note and Cancel/Confirm. The advisor's suggestion
+    // strip has nowhere left either; its gold rings/badges on the map carry
+    // the advice instead until this state ends.
+    promptEl.hidden = true;
+    sheetEl.classList.add("sheet-compact");
+    // #24 round 2, fix #2: the prompt row was carrying the ONLY copy of
+    // whatever question is on screen in some states (an event's forced
+    // "Pick 1 (1 left)", a pending choice) — the sheet's own preview note
+    // doesn't always restate it. Reveal the parked copy the moment prompt
+    // itself gives way, so a question is never silently dropped.
+    if (sheetTitle) sheetTitle.hidden = false;
+    if (advBanner) advBanner.hidden = true;
+    result = attempt();
+  }
+  // Still overflowing even at the deepest give-way (e.g. 375x553): fall
+  // through to table-overflow scroll rather than clip anything invisible
+  // and unreachable (#5's own rule) — result already reflects the deepest
+  // stage actually applied above.
+  const { scale, mapH, mode, overflow, spaceForMapAndHand } = result;
+  let handH = result.handH;
+  if (hand.hidden) handH = 0;
   document.body.classList.toggle("table-overflow", overflow);
   // Re-render the hand only when its mode actually changes — a fixed-size
   // chip/card doesn't need re-measuring after a plain resize.
-  if (hasHand && hand.dataset.mode !== mode) { hand.dataset.mode = mode; if (game.lastView) renderHand(game.lastView, mode); }
+  if (hasHand && !hand.hidden && hand.dataset.mode !== mode) { hand.dataset.mode = mode; if (game.lastView) renderHand(game.lastView, mode); }
   hand.style.flex = `0 0 ${handH}px`;
   document.documentElement.style.setProperty("--card-h", Math.max(CARD_FULL_MIN, handH - HAND_GUTTER) + "px");
   // Any height neither the map's floor nor the hand's want needed goes back
@@ -647,7 +769,7 @@ function fitMap(scale) {
   inner.style.height = DESIGN_H + "px";
   inner.style.transform = `translate(-50%, -50%) scale(${scale})`;
 }
-window.addEventListener("resize", () => { if (!$("table").hidden && game.st) layoutTable(); });
+window.addEventListener("resize", () => { if (!$("table").hidden && game.st) { layoutBar(); layoutTable(); } });
 
 function btn(parent, label, onClick, cls = "", pressed = null, disabled = false) {
   const b = document.createElement("button");
@@ -722,13 +844,31 @@ function scoringPanel(sh, v, region) {
 function renderPromptAndSheet(v) {
   const p = $("promptText"), sh = $("sheet");
   sh.innerHTML = "";
+  // Whether the map is actively in play right now (picking a campaign/lobby
+  // target, placing points, including an event's forced placement) — set
+  // false here and overridden by whichever branch below actually needs the
+  // map; layoutTable() (#24) reads this to decide whether a short viewport
+  // may give way (hand -> prompt -> sheet) instead of overflowing.
+  game.mapActive = false;
   // The sheet's own background follows the selected card's owner, like the
   // card-sheet mockups (a Chu card opens on lacquer red, Qin on black,
   // neutral/scoring on parchment).
   sh.className = "sheet" + (game.ui.card != null ? " sheet-" + cardSide(game.ui.card) : "");
   const me = game.me, ui = game.ui;
   const err = ui.err ? `<div class="err">${esc(ui.err)}</div>` : "";
-  const setPrompt = (html) => { p.innerHTML = html + err; };
+  // #24 round 2 (orchestrator's fix #2): every setPrompt() call also parks
+  // the same text as a hidden first line inside the sheet — layoutTable()
+  // reveals it only when it actually hides #prompt on a short viewport, so
+  // an instruction never just vanishes (e.g. an event's forced "Pick 1 (1
+  // left)" used to leave the sheet with nothing but Confirm/Cancel and no
+  // question). Never both visible at once: #prompt showing is the normal
+  // case, this is only the fallback layoutTable() reaches for.
+  const setPrompt = (html) => {
+    p.innerHTML = html + err;
+    let titleEl = sh.querySelector(".sheet-title");
+    if (!titleEl) { titleEl = document.createElement("div"); titleEl.className = "sheet-title"; titleEl.hidden = true; sh.insertBefore(titleEl, sh.firstChild); }
+    titleEl.innerHTML = html + err;
+  };
   if (v.winner != null) {
     setPrompt(`${t("prompt.over")} <b>${esc(t("over.winner", { side: sideName(v.winner) }))}</b> · ${esc(t("over.reasons." + v.reason))}`);
     btn(sh, t("buttons.result"), () => renderOver(), "primary");
@@ -761,7 +901,15 @@ function renderPromptAndSheet(v) {
   // target) the sheet shrinks to a mini chip so the map stays visible and
   // tappable (C2_Place/C2_Campaign) — "Expand" swaps in the full card.
   const mapActive = ui.use === "campaign" || ui.use === "lobby" || (ui.use === "place" && !(info.enemy && ui.order === "eventFirst" && !ui.pair));
-  if (mapActive && !ui.chipExpanded) {
+  game.mapActive = mapActive;
+  // #24 round 2, fix #3: whenever the CHIP is shown (map active, not
+  // expanded) the order/pair choice is already made — the interactive rows
+  // move to whenever the FULL card is on screen instead (browsing it before
+  // any use is picked, the place pre-order step, or "Card"/看牌 pressed
+  // while map-active), so they're always reachable rather than landing
+  // exactly in the state that gets compacted away.
+  const showFullCard = !mapActive || ui.chipExpanded;
+  if (!showFullCard) {
     cardChip(sh, ui.card);
   } else {
     cardHeader(sh, ui.card);
@@ -774,20 +922,51 @@ function renderPromptAndSheet(v) {
     if (ui.card === E.JIUDING && (u === "event" || u === "reform")) continue;
     btn(uses, t(`uses.${u}`), () => { ui.use = u; ui.points = []; ui.target = null; ui.err = ""; render(); }, "", ui.use === u, !usable(u));
   }
-  if (info.enemy && ui.use && ui.use !== "event" && ui.use !== "reform") {
-    const r = row(sh, "rowb order");
-    for (const o of ["opsFirst", "eventFirst"]) btn(r, t(`uses.${o}`), () => { ui.order = o; ui.points = []; render(); }, "", ui.order === o);
-    note(sh, t("preview.enemyEvent"));
+  // #24 round 2, fix #3 (owner): "their card"'s ops-first/event-first order
+  // and 說客's pairing used to only render once a map-needing use was
+  // already picked — exactly the state that #24's own give-way compacts
+  // away on a short screen, making them unreachable there. They're real
+  // rules choices, not decoration, so they can't just disappear: now shown
+  // on the full card (below the five uses, still defaulting to opsFirst /
+  // no pair from freshUi()) as soon as the card opens, chosen BEFORE a use
+  // is picked. The compact chip instead gets a one-line summary of
+  // whatever was already chosen; "Card"/看牌 (now always visible, fix #1)
+  // is how you get back to change it.
+  // Once a campaign/lobby target is actually picked, its own preview note
+  // (further down) already restates the state the player cares about right
+  // now — stacking the order/pair summary on top of THAT, too, was enough
+  // extra height on its own to blow the 390x669/375x667 budget on an enemy
+  // card (round 2 testing). The order/pair choice itself doesn't change
+  // once a target's chosen; "Card"/看牌 still reaches it either way.
+  const targetPreviewComing = !showFullCard && (ui.use === "campaign" || ui.use === "lobby") && ui.target;
+  if (info.enemy) {
+    if (showFullCard) {
+      const r = row(sh, "rowb order");
+      for (const o of ["opsFirst", "eventFirst"]) btn(r, t(`uses.${o}`), () => { ui.order = o; ui.points = []; render(); }, "", ui.order === o);
+      note(sh, t("preview.enemyEvent"));
+    } else if (!targetPreviewComing) {
+      note(sh, t(`advisor.suggestOrder.${ui.order}`));
+    }
   }
-  if (ui.card === "shuoke" && info.uses.pair && info.uses.pair.length && ui.use && ui.use !== "event" && ui.use !== "reform") {
-    const r = row(sh);
-    note(sh, t("uses.pair"));
-    for (const c of info.uses.pair) btn(r, `${cardName(c)} (${E.opsOf(game.st, me, c)})`, () => { ui.pair = ui.pair === c ? null : c; ui.points = []; render(); }, "", ui.pair === c);
+  if (ui.card === "shuoke" && info.uses.pair && info.uses.pair.length) {
+    if (showFullCard) {
+      const r = row(sh);
+      note(sh, t("uses.pair"));
+      for (const c of info.uses.pair) btn(r, `${cardName(c)} (${E.opsOf(game.st, me, c)})`, () => { ui.pair = ui.pair === c ? null : c; ui.points = []; render(); }, "", ui.pair === c);
+    } else if (ui.pair && !targetPreviewComing) {
+      note(sh, `${t("uses.pair")} ${cardName(ui.pair)} (${E.opsOf(game.st, me, ui.pair)})`);
+    }
   }
   const base = { type: "play", card: ui.card, use: ui.use };
   if (ui.pair) base.pair = ui.pair;
   if (info.enemy && !ui.pair) base.order = ui.order;
-  if (!ui.use) { setPrompt(""); return; }
+  // #24 round 2, fix #4 (owner): the full card page had no way to back out
+  // before picking a use at all — the sheet is a full-screen overlay here
+  // (wantsCardOverlay), so the hand underneath isn't tappable either. A
+  // permanent Cancel, same reset every other Cancel on this sheet falls
+  // back to.
+  const cancelToFresh = () => { game.ui = freshUi(); render(); };
+  if (!ui.use) { setPrompt(""); btn(sh, t("buttons.cancel"), cancelToFresh); return; }
   if (ui.use === "event" || ui.use === "reform") {
     setPrompt("");
     footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)}`, () => humanAct(base), false);
@@ -813,12 +992,28 @@ function renderPromptAndSheet(v) {
     else { const e = E.edge(v, me, ui.target); text = t("preview.lobby", { edge: e, n: Math.min(info.ops, e) }); }
     note(sh, `${spaceName(ui.target)}: ${text}`);
     footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}`, () => humanAct({ ...base, target: ui.target }), false);
+    // #24 round 3 (owner): the target's own preview note above already
+    // restates what the parked sheet-title would say ("Campaign with N
+    // ops" vs "Xinzheng: removes…") — once a target is picked, keeping
+    // both was the extra few px that pushed 390x669 back into scroll.
+    sh.querySelector(".sheet-title")?.remove();
+  } else {
+    // #24 round 2, fix #1 (owner): before a target is tapped, this branch
+    // used to render nothing at all past the chip — 0 visible buttons, no
+    // way back. A lone Cancel (the chip's own "Card"/看牌 is always there
+    // too, fix #1) is enough; there's no target yet to Confirm.
+    btn(sh, t("buttons.cancel"), cancelToFresh);
   }
 }
 
 function renderPending(v, p, setPrompt, sh) {
   const ui = game.ui;
   if (p.kind === "points") {
+    // Always the map in play (points are placed by tapping spaces) — even
+    // an event's forced placement, which can land here while the player
+    // still holds a real hand (#24's "待放置" defect: the hand row stayed
+    // up and pushed Confirm off a short screen).
+    game.mapActive = true;
     const key = p.tag === "setup" ? (p.min === v.options.comp && v.turn === 0 && game.me === 1 && !p.options.includes("ying") ? "setupBonus" : "setup") : p.min < p.n ? "pointsMin" : "points";
     setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t(`prompt.${key}`, { n: p.n, left: p.n - ui.picks.length })}`);
     const r = row(sh);
@@ -841,6 +1036,10 @@ function renderPending(v, p, setPrompt, sh) {
   }
   if (p.kind === "ops") {
     setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t("prompt.ops", { ops: p.ops })}`);
+    // Once a use is picked, the map is in play the same way it is for a
+    // normal card (place: tapping spaces; campaign/lobby: picking a target)
+    // — before that, it's just the use-buttons above, no map interaction yet.
+    game.mapActive = !!ui.opsUse;
     const r = row(sh);
     for (const u of p.allowed) btn(r, t(`uses.${u}`), () => { ui.opsUse = u; ui.points = []; ui.target = null; render(); }, "", ui.opsUse === u);
     if (ui.opsUse === "place") {
@@ -1229,6 +1428,7 @@ setInterval(() => {
   if (!game.room || !game.st || game.st.winner != null || !room.deadline) return;
   const s = Math.max(0, Math.ceil((room.deadline - Date.now()) / 1000));
   $("barMid").textContent = `${t("tracks.turn")} ${game.st.turn} · ${game.spectator ? "" : sideName(game.me)} · ${t("lobby.clock", { s })}`;
+  layoutBar();
 }, 1000);
 
 // ---------- boot ----------
@@ -1249,3 +1449,19 @@ else {
   renderSetup();
   show("setup");
 }
+// #24 round 2, fix #5: the very first paint into the table view can land
+// before the webfonts finish loading — a fallback font's metrics measured
+// .bar at 64px (not 54) on a real English 390-wide phone, one whole
+// give-way stage too tall, until the NEXT render() (any click) re-measured
+// with the real font and fixed itself. Re-running layoutBar() catches that
+// first frame without waiting for a click. Three independent triggers,
+// belt-and-suspenders: document.fonts.ready is the direct signal, but this
+// session's own dev sandbox has no route to fonts.googleapis.com at all —
+// it resolves "ready" immediately over a font that never actually loads,
+// so it alone couldn't be verified end to end here. window's own "load"
+// and a couple of short delayed re-checks cover a real device regardless
+// of exactly which resource the race was against.
+try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layoutBar()); } catch {}
+window.addEventListener("load", () => layoutBar());
+setTimeout(() => layoutBar(), 300);
+setTimeout(() => layoutBar(), 1200);

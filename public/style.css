@@ -78,7 +78,21 @@ body.setup-chu {
 }
 
 .bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 0; gap: 8px; }
-.bar .hub { color: var(--gold); text-decoration: none; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; }
+/* #24 addendum: Rules (also a .hub link, back in the header next to the
+   advisor switch and lang button) needs the same real 44px tap target
+   those two already have via their own min-height -- its own text is only
+   16px tall, which fails the "three real 44px targets" requirement even
+   though nothing overlaps or wraps. */
+.bar .hub { color: var(--gold); text-decoration: none; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; min-height: 44px; display: inline-flex; align-items: center; }
+/* #24: this span's children (the advisor switch, the rules link, the lang
+   button) used to lay out as plain inline content, so .bar's own height
+   depended on their INLINE BASELINES, not their box heights -- hiding the
+   advisor switch's label at 375px wide (advisor.css) shifted its baseline
+   just enough to push #langBtn ~3px lower and grow .bar past the 55px
+   guard even though nothing wrapped. A flex row centers each child by its
+   own box height instead, so .bar's height stays the same 44px-plus-padding
+   regardless of which of these children are shown or how wide they are. */
+.bar-right { display: inline-flex; align-items: center; gap: 8px; }
 .bar button, .small { background: none; border: 1px solid var(--gold-line); color: var(--gold); font-size: 12px; padding: 5px 9px; min-height: 44px; min-width: 44px; border-radius: 8px; }
 #barMid { font-size: 12px; color: var(--text-dim); }
 .view { padding: 16px 14px 24px; max-width: 640px; width: 100%; margin: 0 auto; }
@@ -426,7 +440,17 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 /* Below the map: one condensed stat row, then the prompt, then the hand. */
 .statline { flex: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 3px 8px; font-size: 10px; }
 .statline .sl-label { display: block; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-size: 9px; white-space: nowrap; }
-.statline .sl-val { display: block; color: var(--text); font-weight: 600; font-size: 11px; line-height: 1.25; overflow-wrap: break-word; }
+/* #24 (found while walking a real 390x669 game, not one of this issue's
+   three named defects, but it broke the same "never scroll" promise):
+   "Qin (face down)" in the Cauldrons column doesn't fit its ~74px slot at
+   11px and used to wrap to 2 lines, growing .statline from 33px to 47px --
+   enough, on its own, to push the map past its floor spec and force
+   table-overflow during a campaign/lobby/place target pick even after the
+   hand/prompt/sheet give-way (#24) had already done everything it could.
+   One line + ellipsis keeps the row's height fixed; the value is still a
+   read-only status readout, not something a phone player edits or must
+   read in full without expanding it. */
+.statline .sl-val { display: block; color: var(--text); font-weight: 600; font-size: 11px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* The log toggle sits in the prompt row instead of owning a row of its
    own (~57px) — that height goes back to the map. */
 .prompt { flex: none; display: flex; align-items: flex-start; gap: 8px; padding: 3px 8px; font-size: 13px; line-height: 1.35; }
@@ -436,6 +460,14 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 3.6em; overflow: hidden; }
 .sheet { flex: none; display: flex; flex-direction: column; gap: 6px; margin: 0 8px; padding: 8px 10px; border-radius: 10px; max-height: 40svh; overflow-y: auto; }
 .sheet:empty { display: none; }
+/* #24 round 3: setPrompt() (round 2's fix #2) always parks its text as a
+   hidden .sheet-title, first child of the sheet -- so #sheet is no longer
+   :empty even in the browsing-the-hand state, where it holds nothing else.
+   That one hidden div's own padding (8px/10px) was enough on its own to
+   push the hand row 16px further down and overflow a short viewport that
+   used to fit exactly. A sheet whose only children are all [hidden] must
+   collapse the same way an actually-empty one already does. */
+.sheet:not(:has(> :not([hidden]))) { display: none; }
 /* A card sheet covers the whole screen while it's open (C2_CardChu/Qin/
    Neutral/Scoring are full pages, not a strip under the map) so the table
    behind it can't scroll; Cancel/Confirm/re-tapping the card closes it and
@@ -480,6 +512,62 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .sheet-footer { display: flex; gap: 8px; margin-top: 2px; }
 .sheet-footer button { flex: 1; border-radius: 22px; }
 .sheet-footer button.primary { flex: 2; }
+/* #24: the sheet's own use-row gives way on a short viewport while the map
+   is actively in play and a target's already being picked — the card chip
+   + preview note + Cancel/Confirm are all that's still useful there (round
+   2, fix #3: the order/pair rows moved to the full card page instead of
+   living here at all, so they no longer need a rule of their own — see
+   renderPromptAndSheet's showFullCard). Scoped to :has(.sheet-chip) so this
+   never touches the grid while the full card is on screen instead (chip
+   expanded, or the place pre-order step) — round 2 caught the chip's own
+   "Card"/看牌 button getting hidden by this same rule with nothing left to
+   press it with (fix #1); it's a plain sibling of the grid now, never
+   targeted here, so it's always visible whenever the chip is. Same idea as
+   tutorial.css's own #sheet.tut-sheet-simple for a lesson; kept separate so
+   the tutorial's own gating logic doesn't have to change to pick this up. */
+#sheet.sheet-compact:has(.sheet-chip) .sheet-grid {
+  display: none;
+}
+/* #24 round 2, fix #2: the question a hidden #prompt was carrying (an
+   event's forced pick, a pending choice) parked here by setPrompt() —
+   hidden by default, layoutTable() reveals it only when #prompt itself
+   gives way, so the two are never both showing the same line. */
+.sheet-title { font-size: 12.5px; line-height: 1.3; }
+.sheet-title .err { color: var(--bad); }
+/* Measured on a real English 390x669 campaign target (#24 round 1 of this
+   fix): the default 8px/6px sheet padding+gap left the deepest give-way
+   stage exactly 1px short of the map's floor spec, tripping table-overflow
+   on a viewport the ruling says must never scroll. The compact sheet's own
+   three rows (chip + preview note + Cancel/Confirm) don't need the same
+   breathing room as the full card sheet, so this trims a real margin back
+   in rather than live on a 1px knife-edge. */
+#sheet.sheet-compact {
+  gap: 1px;
+  padding: 4px 10px;
+}
+/* #24 round 2: the sheet-title (fix #2) and the order/pair one-line summary
+   (fix #3) can both be showing at once on an enemy card's compact chip (an
+   event's forced choice AND its order, e.g. "Placing 1 ops (1 left)…" +
+   "Spend the ops first…") — two two-line blocks together no longer fit
+   next to the map's floor spec. The title's OWN first clause already
+   carries the actionable part ("Placing N ops (M left)"); the rest is
+   supplementary and, only here, clipped to keep this to one line rather
+   than shrinking the map or the map's own chrome further. Not the "don't
+   cut a sentence" rule #18 set for the advisor's OWN text (a different,
+   narrower promise about its reasoning line) — this is the same kind of
+   graceful degradation .statline's own cauldrons value already uses. */
+#sheet.sheet-compact .sheet-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* An enemy card's compact chip can stack the order/pair summary AND a
+   target's own preview note (round 2: "Campaign with 3 ops" + "Spend the
+   ops first…" + "Linzi: removes 3…") — tighter line-height buys back a
+   little more of what the reduced gap/padding above already reclaimed. */
+#sheet.sheet-compact .note {
+  line-height: 1.2;
+}
 /* The sheet's own background follows the selected card's owner: Chu opens
    on lacquer red, Qin on black, neutral and scoring cards on parchment —
    the surrounding page (and header) keep the seated side's own colour. */
