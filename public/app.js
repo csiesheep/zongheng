@@ -124,9 +124,14 @@ function renderSideTiles() {
     const glyph = v === "qin" ? "秦" : v === "chu" ? "楚" : "?";
     const tname = v === "random" ? t("setup.random") : t(`sides.${v}`);
     const tag = v === "random" ? t("setup.randomTag") : t(`side.${v}.headline`);
-    b.querySelector(".tg").textContent = glyph;
-    b.querySelector(".tname").textContent = tname;
-    b.querySelector(".ttag").textContent = tag;
+    // textContent's setter unconditionally replaces the text node (a
+    // childList mutation) even when the string is unchanged, so guard each
+    // one — a side/level pick never changes another tile's text, and only
+    // a language switch should touch these (#20).
+    const tg = b.querySelector(".tg"), tn = b.querySelector(".tname"), tt = b.querySelector(".ttag");
+    if (tg.textContent !== glyph) tg.textContent = glyph;
+    if (tn.textContent !== tname) tn.textContent = tname;
+    if (tt.textContent !== tag) tt.textContent = tag;
   });
 }
 function renderSetup() {
