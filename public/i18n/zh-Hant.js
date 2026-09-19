@@ -86,7 +86,7 @@ export default {
     thinking: "軍師思考中",
     suggestCard: {
       event: "打出{card}的事件。",
-      place: "用{card}放置{space}。",
+      place: "用{card}在{space}放置影響力。",
       campaign: "用{card}征伐{space}。",
       lobby: "用{card}遊說{space}。",
       reform: "用{card}變法。",
@@ -95,7 +95,7 @@ export default {
     },
     suggestUse: {
       event: "打出它的事件。",
-      place: "放置到{space}。",
+      place: "在{space}放置影響力。",
       campaign: "征伐{space}。",
       lobby: "遊說{space}。",
       reform: "拿它變法。",
@@ -119,7 +119,7 @@ export default {
       mandate: "天命往我方移動{n}。",
       reform: "推進變法,解鎖新的能力。",
       dumpEnemyEvent: "現在用掉這張對手的牌,事件此時傷害最小。",
-      bogDiscard: "頓兵堅城,只能棄掉{card},事件不會發生。",
+      bogDiscard: "頓兵堅城只能棄牌。棄{card},它的事件不會發生。",
       mustPlayScoring: "記分卡留到回合結束會輸,現在打出來。",
       avoidCollapse: "疲敝已經很高,這一手不會讓它更糟。",
       best: "目前最划算的一手。",

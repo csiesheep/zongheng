@@ -122,7 +122,7 @@ export default {
       mandate: "This moves the Mandate {n} toward you.",
       reform: "This advances reform and unlocks a new power.",
       dumpEnemyEvent: "Spend this enemy card now. Its event does the least damage here.",
-      bogDiscard: "Bogged down, you can only discard {card}. Its event won't happen.",
+      bogDiscard: "Bogged down, you must discard. Drop {card}: its event won't happen.",
       mustPlayScoring: "A scoring card held at the turn's end loses. Play it now.",
       avoidCollapse: "Weariness is already high. This move won't push it further.",
       best: "The best available move right now.",
