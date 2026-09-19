@@ -27,22 +27,50 @@ function gauss(rng) {
 }
 
 // ---------- evaluation: how good is this position for `side` ----------
-export function evaluate(st, side) {
+// `terms`, when an object is passed, collects the same number split into named
+// buckets from `side`'s point of view: the advisor (advisor.js) subtracts the
+// buckets before a move from the buckets after it to say *why* the move
+// scored. The bookkeeping is a side channel: every `vq` line below is the same
+// expression in the same order as before it existed, so the returned value is
+// bit for bit what it always was, and the buckets add back up to it
+// (tests/advisor.test.js pins both). Keys starting with `$` are facts for the
+// advisor's `params`, not part of the sum. Called with no `terms` (every call
+// inside this file) the cost is one branch per bucket.
+export function evaluate(st, side, terms = null) {
   if (st.winner != null) return st.winner === side ? 1000 : -1000;
+  const sign = side === QIN ? 1 : -1;
+  const T = terms ? (k, x) => { terms[k] = (terms[k] || 0) + sign * x; } : null;
   const turnsLeft = Math.max(0, st.options.turns - st.turn) + (st.phase === "headline" ? 1 : 0.5);
   const frac = Math.min(1, turnsLeft / st.options.turns);
   let vq = st.mandate; // everything below is from Qin's point of view
+  if (T) T("mandate", st.mandate);
   for (const r of SCORED_REGIONS) {
     const [q, c] = E.regionTally(st, r);
     const card = "score_" + r;
     let exp = RATE[r] * frac;
-    if (st.hands[QIN]?.includes(card) || st.hands[CHU]?.includes(card)) exp += 0.8;
-    if (st.discard.includes(card)) exp *= 0.8;
+    const inHand = st.hands[QIN]?.includes(card) || st.hands[CHU]?.includes(card);
+    if (inHand) exp += 0.8;
+    const dumped = st.discard.includes(card);
+    if (dumped) exp *= 0.8;
     vq += exp * (q.total - c.total);
+    if (T) {
+      // The one place the bookkeeping does arithmetic of its own: the region
+      // term split into the control level, the battlegrounds, and the premium
+      // for the scoring card being in a hand. The three add back to the term.
+      const expCard = inHand ? 0.8 * (dumped ? 0.8 : 1) : 0, expBase = exp - expCard;
+      T(`region:${r}:base`, expBase * (q.base - c.base));
+      T(`region:${r}:bg`, expBase * (q.bonus - c.bonus));
+      T(`region:${r}:card`, expCard * (q.total - c.total));
+      terms[`$net:${r}`] = sign * (q.total - c.total);
+    }
   }
   const mie = Object.keys(st.mie).length, seals = Object.keys(st.seals).length;
-  vq += 3 * mie + (mie === st.options.mie - 1 ? 8 : 0);
-  vq -= 2 * seals + (seals === st.options.seals - 1 ? 8 : 0);
+  const mieHeld = 3 * mie + (mie === st.options.mie - 1 ? 8 : 0);
+  vq += mieHeld;
+  if (T) T("mie", mieHeld);
+  const sealsHeld = 2 * seals + (seals === st.options.seals - 1 ? 8 : 0);
+  vq -= sealsHeld;
+  if (T) T("seals", -sealsHeld);
   // The roads to 滅 and 相印, as points still needed; a threat grows with
   // the markers already held.
   const mieScale = 1 + 0.7 * mie, sealScale = 1 + 0.7 * seals;
@@ -51,20 +79,32 @@ export function evaluate(st, side) {
     if (!st.mie[id]) {
       let need = 0;
       for (const x of sp) { const [q, c] = E.infOf(st, x), S = SPACE[x].stability; if (q < c + S) need += c + S - q; }
-      vq += mieScale * (need <= 2 ? 2.5 : need <= 4 ? 1.2 : need <= 6 ? 0.5 : 0.1);
-    }
+      const road = mieScale * (need <= 2 ? 2.5 : need <= 4 ? 1.2 : need <= 6 ? 0.5 : 0.1);
+      vq += road;
+      if (T) { T(`mieRoad:${id}`, road); terms[`$mieNeed:${id}`] = need; }
+    } else if (T) terms[`$mieNeed:${id}`] = 0;
     if (!st.seals[id]) {
       const [q, c] = E.infOf(st, s.capital), S = SPACE[s.capital].stability;
       const need = Math.max(0, q + S - c) + (st.options.sealAt === "cap" ? Math.max(0, E.capOf(st, s.capital) - Math.max(c, q + S)) : 0);
-      vq -= sealScale * (need <= 1 ? 1.8 : need === 2 ? 1.0 : need === 3 ? 0.5 : 0.15);
-    }
+      const road = sealScale * (need <= 1 ? 1.8 : need === 2 ? 1.0 : need === 3 ? 0.5 : 0.15);
+      vq -= road;
+      if (T) { T(`sealRoad:${id}`, -road); terms[`$sealNeed:${id}`] = need; }
+    } else if (T) terms[`$sealNeed:${id}`] = 0;
   }
   const risk = (s) => (st.weariness <= 2 ? 3 * st.hands[s].filter((c) => TIRING.has(c) && CARD[c].side !== s).length : 0);
-  vq -= risk(QIN) - risk(CHU);
-  vq += REFORM_PERK[st.reform[QIN]] - REFORM_PERK[st.reform[CHU]];
+  const tiring = risk(QIN) - risk(CHU);
+  vq -= tiring;
+  if (T) { T("tiring", -tiring); terms.$tiring = st.hands[side].filter((c) => TIRING.has(c) && CARD[c].side !== side).length; }
+  const reformPerk = REFORM_PERK[st.reform[QIN]] - REFORM_PERK[st.reform[CHU]];
+  vq += reformPerk;
+  if (T) T("reform", reformPerk);
   const enemyCards = (s) => st.hands[s].filter((c) => CARD[c].side === 1 - s).length;
-  vq -= 0.4 * (enemyCards(QIN) - enemyCards(CHU));
-  vq += 0.25 * (st.hands[QIN].length - st.hands[CHU].length);
+  const enemyHeld = 0.4 * (enemyCards(QIN) - enemyCards(CHU));
+  vq -= enemyHeld;
+  if (T) { T("enemyCards", -enemyHeld); terms.$enemyCards = enemyCards(side); }
+  const handSize = 0.25 * (st.hands[QIN].length - st.hands[CHU].length);
+  vq += handSize;
+  if (T) T("handSize", handSize);
   // A scoring card must leave the hand before the turn ends: with no action
   // left this turn it is a certain loss, with one left it is urgent.
   if (st.phase === "action") {
@@ -74,19 +114,26 @@ export function evaluate(st, side) {
       const left = st.rounds - st.round + (st.actor === QIN || s === CHU ? 1 : 0);
       const pain = left < n ? 500 : left === n ? 8 * n : n;
       vq += (s === QIN ? -1 : 1) * pain;
+      if (T) T("scoringPain", (s === QIN ? -1 : 1) * pain);
     }
   }
   if (st.luoyiYields) {
     const l = E.controller(st, "luoyi");
-    if (l != null) vq += (l === QIN ? 1 : -1) * st.options.luoyi * turnsLeft * 0.8;
+    if (l != null) {
+      const yields = (l === QIN ? 1 : -1) * st.options.luoyi * turnsLeft * 0.8;
+      vq += yields;
+      if (T) T("luoyi", yields);
+    }
   }
   for (const s of SPACES) {
     const [q, c] = E.infOf(st, s.id), ctl = E.controller(st, s.id);
-    if (q > 0 && ctl !== QIN) vq += 0.15;
-    if (c > 0 && ctl !== CHU) vq -= 0.15;
+    if (q > 0 && ctl !== QIN) { vq += 0.15; if (T) T("spread", 0.15); }
+    if (c > 0 && ctl !== CHU) { vq -= 0.15; if (T) T("spread", -0.15); }
   }
   const j = st.jiuding;
-  vq += (j.holder === QIN ? 1 : -1) * (j.faceDown ? 0.8 : 1.5);
+  const cauldrons = (j.holder === QIN ? 1 : -1) * (j.faceDown ? 0.8 : 1.5);
+  vq += cauldrons;
+  if (T) T("jiuding", cauldrons);
   return side === QIN ? vq : -vq;
 }
 
@@ -115,7 +162,7 @@ export function determinize(view, side, rng) {
 }
 
 // ---------- playing a candidate out, answering what it asks ----------
-function simulate(st, action, rng) {
+export function simulate(st, action, rng) {
   let s = E.apply(st, action);
   for (let guard = 0; s.pending && s.winner == null && guard < 16; guard++) {
     const who = s.pending.who;
