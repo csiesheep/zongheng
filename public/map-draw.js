@@ -115,6 +115,25 @@ export const NODE_SMALL_EN = new Set(["zhongshan", "liaodong", "shangdang", "gua
 // different neighbour (measured, not guessed — see the issue's commit
 // message), anchor-left was the only one of the four with zero overlap.
 export const NODE_ANCHOR = { bashu: "right", shangdang: "right", ying: "top", wuyue: "top", yiyang: "left", linzi: "left", ji: "left", liaodong: "right", hangu: "right", jimo: "left" };
+// Two more hand-picked exceptions for the stability tag alone (#26b, owner
+// on a real phone), same "adjustable, measured not guessed" rule as
+// NODE_ANCHOR — neither changes a node's NAME position, only which corner
+// its .stab (and, for NODE_STAB_RIGHT, its .adv-badge) uses:
+// - NODE_STAB_RIGHT: Shangdang's tag, at the default bottom-left every
+//   other non-anchor-left node uses, still landed on Hangu Pass's name
+//   (which reaches toward it from the west) no matter how far it was
+//   raised — every anchor combination tried on either node just moved the
+//   same overlap onto a different neighbour. Swapping Shangdang's tag (and
+//   its matching adv-badge) to bottom-right clears it; see style.css's
+//   .stab-r for both rules.
+export const NODE_STAB_RIGHT = new Set(["shangdang"]);
+// - NODE_STAB_HI: Ying's disc sits close enough to the map's own bottom
+//   edge (y=388 of DESIGN_H=408) that the default -2px .stab still ran 4px
+//   past it — clipped by the map's own overflow:hidden on both the table
+//   and the rules page. A second, bigger lift (style.css's .stab-hi) only
+//   for nodes this close to an edge; Wuyue (y=378) was checked and already
+//   clears at the default -2px, so it's not in this set.
+export const NODE_STAB_HI = new Set(["ying"]);
 // `name` is the already-resolved display name (the caller's own spaceName()
 // — app.js and rules.js each have their own, reading the same E.SPACE[id]
 // but keyed to their own current language); `esc` is the caller's own HTML
