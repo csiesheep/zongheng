@@ -39,15 +39,21 @@ body.setup-random {
   --bg: #f7f3e8; --text: #1a1a1a; --text-dim: #4a463c; --text-soft: #33302a;
   --gold: #1a1a1a; --gold-line: #1a1a1a; --field-bg: #ffffff;
 }
-/* The setup screen never scrolls, even on iOS with the address/tool bars
-   showing: 100vh is a fallback for browsers without svh support only (it is
-   NOT the height that applies once svh is understood), 100svh is the "small
-   viewport" height — i.e. with the bars showing, the worst case (#20). The
-   .bar header plus #setup (flex: 1 1 auto, min-height: 0) then share that
-   fixed height instead of #setup pushing past it. */
+/* #22: on owner's own iPhone (iOS Chrome), 100svh was NOT the height that is
+   actually visible — the bottom toolbar sat on top of the page, and
+   overflow:hidden meant it couldn't even be scrolled into view (worse than
+   before #20). min-height (100vh fallback, then 100svh) only exists to
+   paint the backdrop colour edge-to-edge on a short page; it is not a cap.
+   Because body is `display:flex; flex-direction:column` (see base body
+   rule above), when the content is shorter than min-height the flex layout
+   still stretches #setup (flex: 1 1 auto, min-height: 0) to fill the
+   leftover space exactly as before — the tile/gap shrink math below still
+   runs off a definite height in that case. When real content (or a real
+   device's chrome) needs more room than min-height gives, body simply grows
+   past it and the page scrolls — never "can't see it, can't scroll to it". */
 body.setup-qin, body.setup-chu, body.setup-random {
   background: var(--bg); color: var(--text);
-  height: 100vh; height: 100svh; overflow: hidden;
+  min-height: 100vh; min-height: 100svh;
 }
 
 .bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 0; gap: 8px; }
@@ -74,7 +80,18 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
    shortest phones — the description disappears (see the max-height
    container query below); the pills/name field/footer never shrink. */
 .setup-view {
-  display: flex; flex-direction: column; gap: 12px; gap: clamp(6px, 3.4cqh, 16px); flex: 1 1 auto; min-height: 0;
+  /* #22: flex-basis 0 (not auto) so this box's own main size never depends
+     on its own content — content here (tile height, the row gap) reads
+     cqh, which reads THIS box's size, so an auto/content basis is
+     self-referential and the size-containment/cqh math collapses to the
+     zero-size fallback instead of the real leftover height. A fixed basis
+     of 0 breaks that cycle: the flex algorithm hands this item 100% of
+     whatever height is left over from body's min-height after the header,
+     non-cyclically, so cqh (and the max-height container query below) read
+     that real number both when there's room to spare (a normal phone) and
+     when there is none (content still wins via flex-shrink + min-height:0,
+     same as before #22). */
+  display: flex; flex-direction: column; gap: 12px; gap: clamp(6px, 3.4cqh, 16px); flex: 1 1 0; min-height: 0;
   padding-top: 18px; overflow: hidden; container-type: size; container-name: setup;
 }
 .setup-h1 { margin: 0; flex: none; font: 900 26px var(--serif); color: var(--gold); }
@@ -106,7 +123,10 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
   .setup-desc { display: none; }
 }
 .setup-footer {
-  display: flex; gap: 8px; margin-top: auto; padding-top: 8px; flex: none;
+  /* #22: no longer pinned to the bottom (margin-top: auto) — it now sits
+     right after the name field in document order, and the description
+     comes last, so the ordinary flex `gap` on .setup-view spaces it. */
+  display: flex; gap: 8px; flex: none;
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .setup-footer button { height: 52px; border-radius: 10px; font: 600 15px var(--serif); -webkit-tap-highlight-color: transparent; }
