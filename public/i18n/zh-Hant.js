@@ -43,7 +43,7 @@ export default {
     over: "遊戲結束。",
   },
   uses: { event: "事件", place: "放置", campaign: "征伐", lobby: "遊說", reform: "變法", bog: "棄牌(頓兵)", pair: "搭配", opsFirst: "先行動點", eventFirst: "先事件" },
-  buttons: { send: "送出", board: "看棋盤", result: "結果", confirm: "確認", done: "完成", cancel: "取消", skip: "略過", playAgain: "再來一局", swap: "換邊", home: "回首頁", headline: "蓋下標題牌", show: "展開", hide: "收起", log: "紀錄" },
+  buttons: { send: "送出", board: "看棋盤", result: "結果", confirm: "確認", done: "完成", cancel: "取消", skip: "略過", playAgain: "再來一局", swap: "換邊", home: "回首頁", headline: "蓋下標題牌", show: "展開", hide: "收起", log: "紀錄", expand: "看牌", collapse: "收起" },
   preview: { campaign: "移除對方 {removed},放置己方 {placed};疲敝 {w}。", lobby: "局勢 {edge}:最多移除 {n}。", locked: "疲敝封鎖中。", enemyEvent: "這是對方的牌:事件也會觸發。" },
   over: { winner: "{side}獲勝", reasons: { unification: "三國同滅", alliance: "四國相印", mandate: "天命達 20", collapse: "天下土崩", scoring: "回合結束時手上留有記分卡", scoringBoth: "雙方都留著記分卡", final: "終局結算", tie: "天命平手,楚勝" }, mandate: "終局天命" },
   log: {
@@ -55,6 +55,8 @@ export default {
     endTurn: "第 {turn} 回合結束;疲敝{weariness}。", over: "遊戲結束:{side},{reason}。",
   },
   useNames: { event: "事件", place: "放置", campaign: "征伐", lobby: "遊說", reform: "變法", bog: "頓兵" },
+  scoringLevel: { none: "無", presence: "存在", domination: "優勢", control: "獨佔" },
+  regionShort: { west: "西土", jin: "三晉", zhou: "周室", east: "東方", south: "南方", north: "北疆" },
   tutorial: {
     button: "教學 · 5 分鐘",
     intro: { kicker: "教學 · 約 5 分鐘", title: "初入戰國", sub: "", text: "你扮演秦。十個小步驟裡,你會拿下一個據點、學會一張牌的四種用法、打一次征伐,還會滅掉韓。對方照劇本走,不會出錯。", start: "開始", notNow: "先不要" },

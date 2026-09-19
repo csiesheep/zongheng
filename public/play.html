@@ -46,14 +46,18 @@
   </div>
 </main>
 
-<main id="table" class="view" hidden>
-  <section class="tracks" id="tracks"></section>
-  <section class="map" id="map"></section>
-  <section class="prompt" id="prompt"></section>
+<main id="table" class="view table-view" hidden>
+  <section class="topbar" id="topbar"></section>
+  <section class="map" id="map"><div class="map-inner" id="mapInner"></div><div class="hit-layer" id="hitLayer"></div></section>
+  <section class="statline" id="statline"></section>
+  <section class="prompt" id="prompt">
+    <div class="prompt-text" id="promptText"></div>
+    <button id="logToggle" class="small prompt-log"></button>
+  </section>
   <section class="sheet" id="sheet"></section>
   <section class="hand" id="hand"></section>
   <form id="chatForm" class="chat" hidden><input id="chatIn" maxlength="200" autocomplete="off"><button type="submit" class="small" data-t="buttons.send"></button></form>
-  <section class="log"><button id="logToggle" class="small"></button><div id="logBody" hidden></div></section>
+  <div id="logBody" class="logbody" hidden></div>
 </main>
 
 <main id="over" class="view" hidden>

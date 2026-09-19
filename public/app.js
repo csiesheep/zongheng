@@ -27,6 +27,9 @@ const t = (key, p = {}) => String(key.split(".").reduce((o, k) => (o ? o[k] : un
 const sideName = (s) => t(`sides.${E.SIDES[s]}`);
 const spaceName = (id) => (lang === "en" ? E.SPACE[id].en : E.SPACE[id].zh);
 const regionName = (r) => (lang === "en" ? E.REGIONS[r].en : E.REGIONS[r].zh);
+// The map's own region tag needs a SHORT name ("West", not "the West") so it
+// fits its little pill; zh's board name is already short enough to reuse.
+const regionShortName = (r) => (lang === "en" ? t("regionShort." + r) : E.REGIONS[r].zh);
 const stateName = (s) => (lang === "en" ? E.STATES[s].en : E.STATES[s].zh);
 const cardName = (id) => (id === E.JIUDING ? (lang === "en" ? "The Nine Cauldrons" : "九鼎") : lang === "en" ? E.CARD[id].en : E.CARD[id].zh);
 const cardText = (id) => (id === E.JIUDING ? (lang === "en" ? "4 ops; 5 if all of it lands in the Three Jin or Zhou. Then it passes face down." : "4 點;全部用在三晉或周室視為 5。用後蓋著交給對手。") : lang === "en" ? CARD_EN[id] ?? E.CARD[id].text : E.CARD[id].text);
@@ -60,6 +63,11 @@ function show(view) {
   for (const v of ["setup", "lobby", "table", "over"]) $(v).hidden = v !== view;
   window.scrollTo(0, 0);
   paintBody(view);
+  // The table is a fixed one-screen layout (header -> mandate -> map ->
+  // stat line -> prompt -> hand): it never scrolls, on 375x667 or 390x844,
+  // by giving #table the rest of the viewport height via flex and letting
+  // the map (the one flexible piece) shrink first.
+  document.body.classList.toggle("table-lock", view === "table");
 }
 // The landing is its own page. Going back never loses anything: the solo game
 // is saved on every move, and a room keeps this tab's seat (the bot covers it
@@ -232,52 +240,200 @@ function render() {
   if (!$("table").hidden) paintBody("table");
   // In a room the state on hand is already this seat's view.
   const v = game.room ? game.st : E.view(game.st, game.me);
+  game.lastView = v; // layoutTable() re-renders the hand off this if it flips full<->chip
   $("barMid").textContent = `${t("tracks.turn")} ${v.turn} · ${game.spectator ? "" : sideName(game.me)}`;
-  renderTracks(v);
+  renderTopBar(v);
   if (game.spectator) {
+    setSheetOpen(false);
     renderMap({ ...v, winner: 0 }); // nothing lit
-    $("prompt").textContent = ""; $("sheet").innerHTML = ""; $("hand").innerHTML = "";
+    renderStatLine(v);
+    $("promptText").textContent = ""; $("sheet").innerHTML = ""; $("hand").innerHTML = "";
     renderLog(v);
+    fitMap(); // after every sibling has its final flex size, so the map's own box is final too
     return;
   }
+  // Computed before renderMap so a scoring card selected this same render
+  // already lights up its region, not one render-cycle late.
+  scoreHighlight = game.ui.card != null && game.ui.card !== E.JIUDING && E.CARD[game.ui.card].scoring ? E.CARD[game.ui.card].scoring : null;
   renderMap(v);
-  renderPromptAndSheet(v);
+  renderStatLine(v);
+  renderPromptAndSheet(v); // sets #sheet's className outright, so setSheetOpen must come after this, not before
   renderHand(v);
   renderLog(v);
+  // The card sheet covers the whole screen while you're just looking at a
+  // card or confirming something that doesn't need the map (like the
+  // C2_Card* mockups) — but once a use needs the map (place/campaign/lobby
+  // target picking), it shrinks back to a strip so the map stays tappable,
+  // matching C2_Place/C2_Campaign.
+  setSheetOpen(wantsCardOverlay(v));
+  layoutTable(); // the map's real box depends on the hand's, so both are sized together, then fitMap() scales the map's content
+}
+// The map's scale is the viewport-width ratio (DESIGN_W is the mockup's own
+// canvas width) UNLESS that would leave no room at all for a shown hand, in
+// which case scale gives up only down to FLOOR_SCALE — the scale at which
+// the disc/name/tap-target minimums are still met (30/34px design discs ->
+// 28/32px drawn). A real 375-390px-wide phone never needs the floor; only a
+// short one (e.g. 390x669 with iOS Chrome's toolbars up) does. Below the
+// floor, it's the hand's card ART that concedes further (see CARD_H below),
+// never the map — a fixed short viewport (no scrolling allowed) has to put
+// the shortfall somewhere, and the map's drawn spec is the one thing that
+// must never move.
+const DESIGN_DISC = 30, DESIGN_BIG_DISC = 34; // keep in sync with .node .disc / .node.big .disc in style.css
+const MIN_DISC = 28, MIN_BIG_DISC = 32; // the owner's C2 touch/legibility floor at any width
+const FLOOR_SCALE = Math.max(MIN_DISC / DESIGN_DISC, MIN_BIG_DISC / DESIGN_BIG_DISC) * 1.01; // +1% safety margin over the exact minimum
+const CARD_H = 176, HAND_GUTTER = 31; // 96x176 card + the C2_Game hand row's own headroom (207 total)
+// Below CARD_FULL_MIN the full card's own art has shrunk too far to read —
+// the hand switches to a fixed-height chip row instead (round 5) rather than
+// keep shrinking a "half-squashed" card. CHIP_GUTTER is the chip row's own
+// headroom, same idea as HAND_GUTTER above but smaller (a chip has no image
+// to letterbox around).
+const CARD_FULL_MIN = 120, CHIP_H = 56, CHIP_GUTTER = 16;
+function layoutTable() {
+  const table = $("table");
+  if (table.hidden) return;
+  // table.clientWidth includes #table's own left/right padding, but a child
+  // like .map only gets the content width inside that padding — use the
+  // map's own rendered width so `scale` matches what actually gets drawn.
+  const availW = $("map").clientWidth || table.clientWidth, availH = table.clientHeight;
+  if (!availW || !availH) return;
+  const widthScale = availW / DESIGN_W;
+  const chrome = ["topbar", "statline", "prompt", "sheet"].reduce((sum, id) => sum + $(id).getBoundingClientRect().height, 0);
+  // #table's own top/bottom padding, plus one flex column gap per boundary
+  // between its VISIBLE children (a hidden/empty row like #sheet or #chatForm
+  // takes no box and no gap) — measured, not guessed, so a wrong constant
+  // here can't eat into the hand's real 96x176 card height.
+  const tcs = getComputedStyle(table);
+  const hand = $("hand");
+  // A phase with nothing to hold in hand (placement, campaign/lobby target
+  // picking, scoring) gets zero hand row, not a blank 200px+ strip under the
+  // map — the map takes back every pixel the hand isn't using.
+  const hasHand = hand.children.length > 0;
+  hand.hidden = !hasHand;
+  const visibleKids = [...table.children].filter((c) => getComputedStyle(c).display !== "none").length;
+  const gapsAndPadding = parseFloat(tcs.paddingTop) + parseFloat(tcs.paddingBottom) + Math.max(0, visibleKids - 1) * parseFloat(tcs.rowGap || 0);
+  const spaceForMapAndHand = availH - chrome - gapsAndPadding;
+  // The tallest scale that still leaves `wanted` px for the hand — never
+  // below FLOOR_SCALE (the map's own spec), never above widthScale (that
+  // would overflow sideways).
+  const configFor = (wanted) => {
+    const s = Math.min(widthScale, Math.max(FLOOR_SCALE, (spaceForMapAndHand - wanted) / DESIGN_H));
+    const mh = Math.round(DESIGN_H * s);
+    return { scale: s, mapH: mh, handH: Math.max(0, Math.min(wanted, spaceForMapAndHand - mh)) };
+  };
+  let scale, mapH, handH, mode = "full", overflow = false;
+  if (!hasHand) {
+    scale = widthScale; mapH = Math.round(DESIGN_H * scale); handH = 0;
+  } else {
+    const full = configFor(CARD_H + HAND_GUTTER); // 207: 96x176 card + its own headroom
+    if (full.handH - HAND_GUTTER >= CARD_FULL_MIN) {
+      ({ scale, mapH, handH } = full);
+    } else {
+      const chip = configFor(CHIP_H + CHIP_GUTTER); // 72: a fixed 56px chip row
+      mode = "chip";
+      if (chip.handH >= CHIP_H + CHIP_GUTTER - 2) {
+        ({ scale, mapH, handH } = chip);
+      } else {
+        // Even a chip row doesn't fit alongside the map's floor spec (e.g.
+        // 375x553) — give both their true minimum and let the PAGE scroll
+        // instead of squeezing either below spec (owner's round 5, #3).
+        scale = FLOOR_SCALE; mapH = Math.round(DESIGN_H * scale); handH = CHIP_H + CHIP_GUTTER; overflow = true;
+      }
+    }
+  }
+  document.body.classList.toggle("table-overflow", overflow);
+  // Re-render the hand only when its mode actually changes — a fixed-size
+  // chip/card doesn't need re-measuring after a plain resize.
+  if (hasHand && hand.dataset.mode !== mode) { hand.dataset.mode = mode; if (game.lastView) renderHand(game.lastView, mode); }
+  hand.style.flex = `0 0 ${handH}px`;
+  document.documentElement.style.setProperty("--card-h", Math.max(CARD_FULL_MIN, handH - HAND_GUTTER) + "px");
+  // Any height neither the map's floor nor the hand's want needed goes back
+  // to the map instead of sitting blank below it (skipped in overflow mode:
+  // both are already pinned to their true minimum there).
+  const mapFinalH = overflow ? mapH : Math.max(mapH, spaceForMapAndHand - handH);
+  $("map").style.flex = `0 0 ${mapFinalH}px`;
+  fitMap(scale);
+}
+function setSheetOpen(open) {
+  $("sheet").classList.toggle("overlay", open);
+  document.body.classList.toggle("sheet-open", open);
+}
+function wantsCardOverlay(v) {
+  if (v.winner != null) return false;
+  const ui = game.ui;
+  const L = E.legal(v, game.me);
+  if (L.kind === "wait" || L.kind === "pending") return false;
+  if (L.kind === "headline") return !!ui.card;
+  if (L.bog && L.bog.length) return !!ui.card;
+  if (!ui.card) return false;
+  if (!ui.use) return true; // browsing the card, choosing a use
+  if (ui.use === "event" || ui.use === "reform") return true; // no map needed
+  if (ui.use === "place") {
+    const info = cardInfo(L, ui.card);
+    return !!(info && info.enemy && ui.order === "eventFirst" && !ui.pair); // the pre-order step, before tapping the map
+  }
+  return false; // campaign/lobby target picking, or place once ops are known: the map is in play
 }
 
-function renderTracks(v) {
-  const w = v.weariness;
-  const boxes = [5, 4, 3, 2, 1].map((k) => `<span class="box${k <= 2 ? " bad" : ""}${k === w ? " on" : ""}">${t("weariness." + k)}</span>`).join("");
-  const reformBoxes = (side) => [1, 2, 3, 4, 5, 6].map((k) => `<span class="box${k <= v.reform[side] ? " on" : ""}">${k}</span>`).join("");
-  const seals = Object.keys(v.seals).map(stateName).join(" ") || "–";
-  const mie = Object.keys(v.mie).map(stateName).join(" ") || "–";
+// Above the map: just the turn and the Mandate tug-of-war bar (C2_Game's
+// header + mandate strip, condensed — the seat portrait row is #6's).
+function renderTopBar(v) {
   const pos = Math.max(2, Math.min(98, 50 - (v.mandate / E.MANDATE_TO_WIN) * 50));
   const phase = v.phase === "setup" ? "" : ` · ${t("tracks.round")} ${v.round}${t("tracks.of")}${v.rounds}`;
-  $("tracks").innerHTML =
-    `<div class="wide"><b>${t("tracks.turn")} ${v.turn}</b> · ${v.era ? t("eras." + v.era) : ""}${phase}</div>` +
-    `<div class="wide">${t("tracks.mandate")} <b>${mandateText(v.mandate)}</b><div class="mandate"><span class="mid"></span><span class="dot" style="left:${pos}%"></span></div></div>` +
-    `<div class="wide">${t("tracks.weariness")} <span class="boxes">${boxes}</span></div>` +
-    `<div class="q">${sideName(0)} ${t("tracks.reform")} <span class="boxes">${reformBoxes(0)}</span></div>` +
-    `<div class="c">${sideName(1)} ${t("tracks.reform")} <span class="boxes">${reformBoxes(1)}</span></div>` +
-    `<div class="q">${t("tracks.mie")}: ${mie} · ${v.handCounts[0]} ♠</div>` +
-    `<div class="c">${t("tracks.seals")}: ${seals} · ${v.handCounts[1]} ♠</div>` +
-    // Per state: how many of its spaces Qin controls, and who holds the capital.
-    `<div class="wide states">${Object.entries(E.STATES).map(([id, s]) => {
-      const sp = E.spacesOfState(id), qc = sp.filter((x) => E.controller(v, x) === 0).length, cap = E.controller(v, s.capital);
-      return `<span class="${v.mie[id] ? "q" : v.seals[id] ? "c" : ""}">${stateName(id)} ${qc}/${sp.length}${cap === 1 ? " ◎" + sideName(1) : cap === 0 ? " ◎" + sideName(0) : ""}</span>`;
-    }).join(" ")}</div>` +
-    `<div class="wide">${t("tracks.jiuding")}: ${sideName(v.jiuding.holder)}${v.jiuding.faceDown ? ` (${t("tracks.faceDown")})` : ""}</div>`;
+  $("topbar").innerHTML =
+    `<div class="tb-turn"><b>${t("tracks.turn")} ${v.turn}</b>${v.era ? " · " + t("eras." + v.era) : ""}${phase}</div>` +
+    `<div class="mandate"><span class="mid"></span><span class="dot" style="left:${pos}%"></span></div>` +
+    `<div class="tb-mandate">${t("tracks.mandate")} <b>${mandateText(v.mandate)}</b></div>`;
+}
+// Below the map: one condensed row (C2_Game's 5-column stat strip) —
+// weariness, reform, seals, destroyed, cauldrons. Per-state detail and
+// hand counts stay in the log instead of taking permanent screen space.
+function renderStatLine(v) {
+  const seals = Object.keys(v.seals).length, mie = Object.keys(v.mie).length;
+  const col = (label, val) => `<div><span class="sl-label">${esc(label)}</span><span class="sl-val">${val}</span></div>`;
+  $("statline").innerHTML =
+    col(t("tracks.weariness"), esc(t("weariness." + v.weariness))) +
+    col(t("tracks.reform"), `${v.reform[0]} · ${v.reform[1]}`) +
+    col(t("tracks.seals"), `${seals} / 4`) +
+    col(t("tracks.mie"), `${mie} / 3`) +
+    col(t("tracks.jiuding"), esc(sideName(v.jiuding.holder)) + (v.jiuding.faceDown ? ` (${esc(t("tracks.faceDown"))})` : ""));
 }
 
-const REGION_BOX = { north: [60, 0, 298, 70], west: [0, 72, 104, 278], jin: [108, 72, 142, 160], zhou: [108, 236, 50, 34], east: [254, 72, 104, 160], south: [108, 274, 250, 76] };
+// A fixed design canvas, scaled to fit whatever box the flex layout gives
+// the map (see fitMap()) — laid out generously enough that a 13px bold
+// English city name (the widest label on the board, e.g. "Guanzhong") never
+// overlaps its neighbour once max-width/ellipsis caps it (see .node .nm).
+// NODE_POS is each city's centre, not a corner, so nodeCenter() is trivial.
+// Width kept close to the map's real on-screen width (so fitMap()'s scale
+// stays near 1 and the 30/34px disc spec actually renders that size); the
+// height has plenty of room to spread rows out and avoid overlap instead.
+// The design canvas is the C2_Game mockup's own size (390x408) — fitMap()
+// scales it by the viewport-width ratio ONLY (never shrinks it further for
+// lack of height), so a real phone renders discs/text at true size. Every
+// city fits inside this exact box; NODE_ANCHOR moves crowded ones' labels
+// off to a side instead of needing more room.
+const DESIGN_W = 390, DESIGN_H = 408;
 const NODE_POS = {
-  dai: [70, 26], zhongshan: [150, 26], ji: [230, 26], liaodong: [306, 26],
-  yiqu: [6, 84], hangu: [54, 116], guanzhong: [6, 150], hanzhong: [6, 220], bashu: [54, 252],
-  hedong: [114, 80], handan: [196, 80], shangdang: [155, 118], yiyang: [114, 156], daliang: [196, 156], xinzheng: [155, 196],
-  luoyi: [110, 238], linzi: [262, 80], jimo: [308, 114], ju: [262, 148], xue: [308, 182], song: [262, 196],
-  qianzhong: [112, 312], chencai: [170, 280], ying: [170, 314], huaisi: [240, 280], wuyue: [300, 314],
+  dai: [64, 26], zhongshan: [148, 24], ji: [244, 24], liaodong: [307, 34],
+  yiqu: [36, 86], hedong: [136, 82], handan: [234, 80], linzi: [332, 88],
+  hangu: [96, 136], shangdang: [186, 130], jimo: [342, 138],
+  guanzhong: [50, 182], yiyang: [140, 176], daliang: [244, 168], ju: [312, 172],
+  luoyi: [140, 228], xue: [338, 220],
+  hanzhong: [36, 252], xinzheng: [196, 244], song: [282, 244],
+  bashu: [66, 306],
+  qianzhong: [102, 360], chencai: [168, 336], ying: [220, 388], huaisi: [280, 342], wuyue: [340, 378],
 };
+const nodeCenter = (id) => NODE_POS[id];
+// Region membership comes straight from the board data (E.SPACE[id].region),
+// never a hand-copied list — a probe that patches a space's region should
+// see the blob move with it.
+function regionMembers() {
+  const by = {};
+  for (const sp of E.SPACES) (by[sp.region] ??= []).push(sp.id);
+  return by;
+}
+// While a scoring card is open in the sheet, its region lights up on the
+// map and the rest fade — set by renderPromptAndSheet, read by renderMap.
+let scoreHighlight = null;
 
 // What tapping the map does right now: the lit spaces, the picks so far, the cost badges.
 function placementTrial(v, side, points) {
@@ -350,33 +506,130 @@ function cardInfo(L, card) {
   return { id: card, ops, enemy: !!c.uses.enemy, uses: c.uses };
 }
 
+// The region blobs: a soft, borderless tint that hugs the roads between a
+// region's own cities (no bounding box), one colour per region, membership
+// read live from E.SPACE[id].region. Scoring a region (a scoring card open
+// in the sheet) brightens it and fades the rest.
+function renderRegionBlobs(members) {
+  const within = (ids) => {
+    const pairs = [];
+    for (const id of ids) for (const nb of E.SPACE[id].adj) if (ids.includes(nb) && id < nb) pairs.push([id, nb]);
+    return pairs;
+  };
+  let svg = `<svg class="region-blobs" viewBox="0 0 ${DESIGN_W} ${DESIGN_H}">`;
+  for (const [r, ids] of Object.entries(members)) {
+    const cls = "blob-" + r + (scoreHighlight ? (scoreHighlight === r ? " active" : " faded") : "");
+    svg += `<g class="blob ${cls}">`;
+    for (const [a, b] of within(ids)) {
+      const [x1, y1] = nodeCenter(a), [x2, y2] = nodeCenter(b);
+      svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="46" stroke-linecap="round"></line>`;
+    }
+    for (const id of ids) { const [x, y] = nodeCenter(id); svg += `<circle cx="${x}" cy="${y}" r="28"></circle>`; }
+    svg += `</g>`;
+  }
+  svg += `</svg>`;
+  return svg;
+}
+function renderRoads() {
+  const seen = new Set();
+  let svg = `<svg class="roads" viewBox="0 0 ${DESIGN_W} ${DESIGN_H}">`;
+  for (const sp of E.SPACES) for (const nb of sp.adj) {
+    const key = [sp.id, nb].sort().join("|");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const [x1, y1] = nodeCenter(sp.id), [x2, y2] = nodeCenter(nb);
+    svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`;
+  }
+  return svg + `</svg>`;
+}
+// Hand-picked so the tag sits in open water, never over a city or another
+// tag (owner: per-region position is fine, membership must stay data-driven
+// — and it is, via regionMembers()). One colour per region, matching its blob.
+const REGION_LABEL_POS = {
+  north: [282, 66], west: [30, 152], jin: [176, 202], zhou: [184, 162], east: [340, 274], south: [235, 306],
+};
+// No ellipsis anywhere on the map (owner). Long English names that have a
+// natural break (a space or hyphen) go on two lines; the rest just render
+// smaller (11px vs 13px) — both explicitly OK'd. Chinese names are always
+// short enough for one line at the default size. A handful of cities anchor
+// their label off a side instead of straight below, by hand, because the
+// default spot collides with a neighbour once the real (untruncated) width
+// is on screen — this is a label position, not a change to who's in a
+// region, so it's fine per the same rule as REGION_LABEL_POS.
+const NODE_BREAK_EN = { hangu: ["Hangu", "Pass"], bashu: ["Ba-", "Shu"], chencai: ["Chen-", "Cai"], huaisi: ["Huai-", "Si"], wuyue: ["Wu-", "Yue"] };
+const NODE_SMALL_EN = new Set(["zhongshan", "liaodong", "shangdang", "guanzhong", "daliang", "hanzhong", "xinzheng", "qianzhong"]);
+const NODE_ANCHOR = { bashu: "right", shangdang: "right", ying: "top", wuyue: "top", yiyang: "left", linzi: "left", ji: "left", liaodong: "right", hangu: "right" };
+function nodeLabelHTML(id) {
+  const star = E.SPACE[id].battleground ? "★" : "";
+  if (lang === "en" && NODE_BREAK_EN[id]) {
+    const [l1, l2] = NODE_BREAK_EN[id];
+    return `<span class="nm two-line">${star}${esc(l1)}<br>${esc(l2)}</span>`;
+  }
+  const small = lang === "en" && NODE_SMALL_EN.has(id);
+  return `<span class="nm${small ? " sm" : ""}">${star}${esc(spaceName(id))}</span>`;
+}
+// Touch targets are a physical requirement, not a design one: they must
+// stay >=44x44 real px no matter how much the map's own art is scaled down
+// on a narrow phone. So each city is two elements — a VISUAL node (disc +
+// label, lives inside #mapInner and is scaled with everything else) and a
+// separate, invisible HIT button (lives in #hitLayer, a plain overlay that
+// is never transformed, positioned by percentage so it tracks the visual
+// disc at any scale while staying a true 44x44 css px in size).
 function renderMap(v) {
-  const el = $("map"); el.innerHTML = "";
-  for (const [r, [x, y, w, h]] of Object.entries(REGION_BOX)) {
-    const d = document.createElement("div");
-    d.className = `region region-${r}` + (E.REGIONS[r].home ? " home" : "");
-    d.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
-    d.innerHTML = `<span>${esc(regionName(r))}</span>`;
-    el.appendChild(d);
+  const el = $("mapInner");
+  const hitEl = $("hitLayer");
+  hitEl.innerHTML = "";
+  const members = regionMembers();
+  el.innerHTML = renderRoads() + renderRegionBlobs(members);
+  for (const r of Object.keys(REGION_LABEL_POS)) {
+    if (!members[r]) continue;
+    const [x, y] = REGION_LABEL_POS[r];
+    const lbl = document.createElement("span");
+    lbl.className = `region-label rl-${r}` + (scoreHighlight && scoreHighlight !== r ? " faded" : "");
+    lbl.style.cssText = `left:${x}px; top:${y}px`;
+    lbl.textContent = regionShortName(r);
+    el.appendChild(lbl);
   }
   const mode = currentMode(v);
   for (const sp of E.SPACES) {
     const [x, y] = NODE_POS[sp.id], [q, c] = E.infOf(v, sp.id), ctl = E.controller(v, sp.id);
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "node" + (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (mode.lit.has(sp.id) ? " lit" : "") + (mode.picked[sp.id] ? " picked" : "");
-    b.style.cssText = `left:${x}px;top:${y}px`;
     const cap = sp.state && E.STATES[sp.state].capital === sp.id;
-    b.innerHTML = `<span class="nm${cap ? " cap" : ""}">${sp.battleground ? "★" : ""}${esc(spaceName(sp.id))}</span>` +
-      `<span class="cnt">${q ? `<i class="q">${q}</i>` : ""}${c ? `<i class="c">${c}</i>` : ""}</span>` +
-      (mode.picked[sp.id] ? `<span class="badge">+${mode.picked[sp.id]}</span>` : "") +
-      (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "");
-    b.disabled = !mode.lit.has(sp.id);
-    b.title = `${spaceName(sp.id)} · ${sp.stability}`;
-    b.onclick = () => mode.onTap(sp.id);
-    el.appendChild(b);
+    const big = sp.battleground || cap;
+    const empty = !q && !c;
+    const anchor = NODE_ANCHOR[sp.id];
+    const lit = mode.lit.has(sp.id), picked = mode.picked[sp.id];
+    const vis = document.createElement("div");
+    vis.className = "node" + (big ? " big" : "") + (empty ? " empty" : "") + (anchor ? ` anchor-${anchor}` : "") +
+      (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (lit ? " lit" : "") + (picked ? " picked" : "");
+    vis.style.cssText = `left:${x}px;top:${y}px`;
+    vis.innerHTML = `<span class="disc${cap ? " sq" : ""}">${empty ? "" : `<i class="q">${q || ""}</i><i class="c">${c || ""}</i>`}</span>` +
+      (picked ? `<span class="badge">+${picked}</span>` : "") +
+      (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
+      nodeLabelHTML(sp.id);
+    el.appendChild(vis);
+    const hb = document.createElement("button");
+    hb.type = "button";
+    hb.className = "hit";
+    hb.style.cssText = `left:${(x / DESIGN_W * 100).toFixed(3)}%;top:${(y / DESIGN_H * 100).toFixed(3)}%`;
+    hb.disabled = !lit;
+    hb.title = `${spaceName(sp.id)} · ${sp.stability}`;
+    hb.onclick = () => mode.onTap(sp.id);
+    hitEl.appendChild(hb);
   }
+  // layoutTable() (the caller's caller) sizes and scales the map once every
+  // sibling has its final height — see fitMap().
 }
+// The design canvas (DESIGN_W x DESIGN_H) is the C2_Game mockup's own
+// dimensions, scaled by the viewport WIDTH ratio only — never shrunk further
+// for a lack of height, so a real phone always renders the map at (at
+// least) true size: 30/34px discs, 13px city names, 44x44 tap targets.
+function fitMap(scale) {
+  const inner = $("mapInner");
+  inner.style.width = DESIGN_W + "px";
+  inner.style.height = DESIGN_H + "px";
+  inner.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+window.addEventListener("resize", () => { if (!$("table").hidden && game.st) layoutTable(); });
 
 function btn(parent, label, onClick, cls = "", pressed = null, disabled = false) {
   const b = document.createElement("button");
@@ -411,6 +664,21 @@ function cardHeader(sh, id) {
   const text = document.createElement("div"); text.className = "sheet-text"; text.textContent = cardText(id);
   sh.appendChild(text);
 }
+// The mini chip used instead of the full card header while the map is in
+// play (placing points, picking a campaign/lobby target) — C2_Place and
+// C2_Campaign show a small strip here, not the full art+text sheet, so the
+// map stays the point. "Expand" swaps in the full header without leaving
+// this mode (see wantsCardOverlay/mapActive in renderPromptAndSheet).
+function cardChip(sh, id) {
+  const wrap = document.createElement("div"); wrap.className = "sheet-chip";
+  wrap.innerHTML = `<span class="ops ${cardSide(id)}">${esc(opsLabel(id))}</span>` +
+    `<span class="chip-nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span>`;
+  const expand = document.createElement("button");
+  expand.type = "button"; expand.className = "chip-expand"; expand.textContent = t("buttons.expand");
+  expand.onclick = () => { game.ui.chipExpanded = true; render(); };
+  wrap.appendChild(expand);
+  sh.appendChild(wrap);
+}
 // A Cancel + Confirm footer pair, used everywhere a card sheet asks for a
 // final commit (event/reform, place, campaign/lobby).
 function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel) {
@@ -420,8 +688,21 @@ function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel) {
   return r;
 }
 
+// A scoring card's sheet gets the region's actual tally (E.regionTally),
+// not a guess: spaces held, battlegrounds, the level it reaches, the
+// battleground bonus, and the total each side would score right now.
+function scoringPanel(sh, v, region) {
+  const [q, c] = E.regionTally(v, region);
+  const wrap = document.createElement("div"); wrap.className = "score-panel";
+  const row1 = (side, r) => `<div class="srow ${side === 0 ? "q" : "c"}"><b>${esc(sideName(side))}</b>` +
+    `<span>${r.spaces}/${E.spacesOf(region).length} · ${r.bg} ★</span>` +
+    `<span class="lvl">${esc(t("scoringLevel." + r.level))}</span>` +
+    `<span class="tot">${r.base}${r.bonus ? ` + ${r.bonus}` : ""} = <b>${r.total}</b></span></div>`;
+  wrap.innerHTML = row1(0, q) + row1(1, c);
+  sh.appendChild(wrap);
+}
 function renderPromptAndSheet(v) {
-  const p = $("prompt"), sh = $("sheet");
+  const p = $("promptText"), sh = $("sheet");
   sh.innerHTML = "";
   // The sheet's own background follows the selected card's owner, like the
   // card-sheet mockups (a Chu card opens on lacquer red, Qin on black,
@@ -442,6 +723,7 @@ function renderPromptAndSheet(v) {
     setPrompt(t("prompt.headline"));
     if (ui.card) {
       cardHeader(sh, ui.card);
+      if (ui.card !== E.JIUDING && E.CARD[ui.card].scoring) scoringPanel(sh, v, E.CARD[ui.card].scoring);
       footer(sh, t("buttons.headline"), () => humanAct({ type: "headline", card: ui.card }), false, () => { game.ui = freshUi(); render(); });
     }
     return;
@@ -457,7 +739,17 @@ function renderPromptAndSheet(v) {
   }
   const info = cardInfo(L, ui.card);
   if (!info) { setPrompt(t("prompt.yourAction")); return; }
-  cardHeader(sh, ui.card);
+  // While the map is in play (placing points, picking a campaign/lobby
+  // target) the sheet shrinks to a mini chip so the map stays visible and
+  // tappable (C2_Place/C2_Campaign) — "Expand" swaps in the full card.
+  const mapActive = ui.use === "campaign" || ui.use === "lobby" || (ui.use === "place" && !(info.enemy && ui.order === "eventFirst" && !ui.pair));
+  if (mapActive && !ui.chipExpanded) {
+    cardChip(sh, ui.card);
+  } else {
+    cardHeader(sh, ui.card);
+    if (mapActive) btn(sh, t("buttons.collapse"), () => { ui.chipExpanded = false; render(); }, "small");
+  }
+  if (ui.card !== E.JIUDING && E.CARD[ui.card].scoring) scoringPanel(sh, v, E.CARD[ui.card].scoring);
   const uses = row(sh, "rowb sheet-grid");
   const usable = (u) => (u === "event" ? info.uses.event : u === "reform" ? info.uses.reform : !!info.uses[u]);
   for (const u of ["event", "place", "campaign", "lobby", "reform"]) {
@@ -545,20 +837,27 @@ function renderPending(v, p, setPrompt, sh) {
   }
 }
 
-function renderHand(v) {
-  const el = $("hand"); el.innerHTML = "";
+// mode: "full" (96x176, image + both names) or "chip" (a fixed 56px row —
+// round badge + both names, no image) — picked by layoutTable() from how
+// much height is actually available, never guessed here. A card's own
+// colour/side styling (.card:has(.ops.q) etc. in style.css) applies to both
+// shapes, so only the .chip modifier class and the markup inside differ.
+function renderHand(v, mode) {
+  const el = $("hand");
+  mode = mode || el.dataset.mode || "full";
+  el.dataset.mode = mode;
+  el.innerHTML = "";
   const me = game.me, ui = game.ui;
   const hand = v.hands[me] || [];
   const canPick = v.winner == null && (E.legal(v, me).kind === "action" || E.legal(v, me).kind === "headline");
-  // Image on top, circular ops badge + both names below — the same shape
-  // for Qin, Chu, neutral and scoring cards; only colour tells them apart.
+  const chip = mode === "chip";
   const tile = (id, cls = "") => {
     const kind = cardSide(id);
     const b = document.createElement("button");
-    b.type = "button"; b.className = `card ${cls}`;
+    b.type = "button"; b.className = `card ${chip ? "chip " : ""}${cls}`.trim();
     b.setAttribute("aria-pressed", String(ui.card === id));
-    b.innerHTML = `<img class="cardimg" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
-      `<span class="ci"><span class="ops ${kind}">${esc(opsLabel(id))}</span><span class="nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span></span>`;
+    const ci = `<span class="ci"><span class="ops ${kind}">${esc(opsLabel(id))}</span><span class="nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span></span>`;
+    b.innerHTML = chip ? ci : `<img class="cardimg" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` + ci;
     b.disabled = !canPick;
     b.onclick = () => { game.ui = freshUi(ui.card === id ? null : id); render(); };
     el.appendChild(b);
@@ -594,7 +893,7 @@ function renderLog(v) {
   // Under the prompt: what happened since this seat last acted.
   const NEWS = new Set(["headline", "play", "place", "campaign", "lobby", "score", "tire", "seal", "unseal", "mie", "restore", "reform", "jiuding", "bog", "skip", "era", "turn"]);
   const news = v.log.filter((l) => l.i > (game.seenLog || 0) && NEWS.has(l.type)).map(fmtLog).filter(Boolean).slice(-7);
-  $("prompt").insertAdjacentHTML("beforeend", news.length ? `<div class="news">${news.map((s) => `<div>${esc(s)}</div>`).join("")}</div>` : "");
+  $("promptText").insertAdjacentHTML("beforeend", news.length ? `<div class="news">${news.map((s) => `<div>${esc(s)}</div>`).join("")}</div>` : "");
 }
 $("chatForm").onsubmit = (ev) => {
   ev.preventDefault();
