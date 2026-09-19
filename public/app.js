@@ -246,7 +246,7 @@ function render() {
     setSheetOpen(false);
     renderMap({ ...v, winner: 0 }); // nothing lit
     renderStatLine(v);
-    $("prompt").textContent = ""; $("sheet").innerHTML = ""; $("hand").innerHTML = "";
+    $("promptText").textContent = ""; $("sheet").innerHTML = ""; $("hand").innerHTML = "";
     renderLog(v);
     fitMap(); // after every sibling has its final flex size, so the map's own box is final too
     return;
@@ -265,24 +265,51 @@ function render() {
   // target picking), it shrinks back to a strip so the map stays tappable,
   // matching C2_Place/C2_Campaign.
   setSheetOpen(wantsCardOverlay(v));
-  layoutHand(); // the map's real box depends on this, so it runs before fitMap()
-  fitMap(); // last: after every sibling (incl. the sheet's open/closed state) has its final flex size
+  layoutTable(); // the map's real box depends on the hand's, so both are sized together, then fitMap() scales the map's content
 }
-// The hand keeps its C2_Game height (207px) as long as the map can still
-// have its minimum; only on a viewport that truly can't fit both does the
-// hand give ground — and even then the card's name never shrinks or
-// truncates (see .card .cardimg's flex:1/.ci's flex:none), only its art.
-const HAND_H = 207, HAND_MIN = 128, MAP_MIN = 130;
-function layoutHand() {
+// The map is NEVER scaled down for lack of height — its scale is the
+// viewport-width ratio only (DESIGN_W is the mockup's own canvas width), so
+// a real 375-390px phone always renders discs/text within a hair of the
+// 30/34px and 13px specs. What used to be "shrink the map" instead shrinks
+// the hand's card art first (down to CARD_MIN), and only concedes the map's
+// real height as an absolute last resort.
+const CARD_H = 176, HAND_GUTTER = 31, CARD_MIN = 90; // 96x176 card + the C2_Game hand row's own headroom (207 total)
+function layoutTable() {
   const table = $("table");
   if (table.hidden) return;
-  const avail = table.clientHeight;
-  if (!avail) return;
+  // table.clientWidth includes #table's own left/right padding, but a child
+  // like .map only gets the content width inside that padding — use the
+  // map's own rendered width so `scale` matches what actually gets drawn
+  // (a wrong wider scale here under-fills the hand below its 96x176 spec).
+  const availW = $("map").clientWidth || table.clientWidth, availH = table.clientHeight;
+  if (!availW || !availH) return;
+  const scale = availW / DESIGN_W;
+  const mapH = Math.round(DESIGN_H * scale);
   const chrome = ["topbar", "statline", "prompt", "sheet"].reduce((sum, id) => sum + $(id).getBoundingClientRect().height, 0);
-  const gapsAndPadding = 40; // #table's own padding + the flex column's gaps
-  const remaining = avail - chrome - gapsAndPadding;
-  const handH = remaining - HAND_H >= MAP_MIN ? HAND_H : Math.max(HAND_MIN, remaining - MAP_MIN);
-  $("hand").style.height = handH + "px";
+  // #table's own top/bottom padding, plus one flex column gap per boundary
+  // between its VISIBLE children (a hidden/empty row like #sheet or #chatForm
+  // takes no box and no gap) — measured, not guessed, so a wrong constant
+  // here can't eat into the hand's real 96x176 card height.
+  const tcs = getComputedStyle(table);
+  const visibleKids = [...table.children].filter((c) => getComputedStyle(c).display !== "none").length;
+  const gapsAndPadding = parseFloat(tcs.paddingTop) + parseFloat(tcs.paddingBottom) + Math.max(0, visibleKids - 1) * parseFloat(tcs.rowGap || 0);
+  const remaining = availH - chrome - gapsAndPadding;
+  // A phase with nothing to hold in hand (placement, campaign/lobby target
+  // picking, scoring) gets zero hand row, not a blank 200px+ strip under the
+  // map — the map takes back every pixel the hand isn't using.
+  const hand = $("hand");
+  const hasHand = hand.children.length > 0;
+  hand.hidden = !hasHand;
+  const handWanted = CARD_H + HAND_GUTTER; // 207, the C2_Game hand row height
+  const handH = hasHand ? Math.max(CARD_MIN + HAND_GUTTER, Math.min(handWanted, remaining - mapH)) : 0;
+  hand.style.flex = `0 0 ${handH}px`;
+  document.documentElement.style.setProperty("--card-h", Math.max(CARD_MIN, handH - HAND_GUTTER) + "px");
+  // The map's own minimum never shrinks for lack of height (only the hand's
+  // card art concedes above); anything left over after the hand took its
+  // share goes back to the map instead of sitting blank below it.
+  const mapFinalH = Math.max(mapH, remaining - handH);
+  $("map").style.flex = `0 0 ${mapFinalH}px`;
+  fitMap(scale);
 }
 function setSheetOpen(open) {
   $("sheet").classList.toggle("overlay", open);
@@ -337,16 +364,21 @@ function renderStatLine(v) {
 // Width kept close to the map's real on-screen width (so fitMap()'s scale
 // stays near 1 and the 30/34px disc spec actually renders that size); the
 // height has plenty of room to spread rows out and avoid overlap instead.
-const DESIGN_W = 370, DESIGN_H = 500;
+// The design canvas is the C2_Game mockup's own size (390x408) — fitMap()
+// scales it by the viewport-width ratio ONLY (never shrinks it further for
+// lack of height), so a real phone renders discs/text at true size. Every
+// city fits inside this exact box; NODE_ANCHOR moves crowded ones' labels
+// off to a side instead of needing more room.
+const DESIGN_W = 390, DESIGN_H = 408;
 const NODE_POS = {
-  dai: [67, 30], zhongshan: [151, 27], ji: [245, 27], liaodong: [324, 38],
-  yiqu: [40, 100], hedong: [139, 96], handan: [236, 92], linzi: [333, 102],
-  hangu: [88, 158], shangdang: [187, 154], jimo: [341, 158],
-  guanzhong: [40, 210], yiyang: [141, 202], daliang: [243, 194], ju: [310, 198],
-  luoyi: [141, 262], xue: [336, 252],
-  hanzhong: [40, 290], xinzheng: [195, 280], song: [280, 280],
-  bashu: [70, 352],
-  qianzhong: [110, 414], chencai: [169, 384], ying: [222, 436], huaisi: [280, 390], wuyue: [340, 426],
+  dai: [64, 26], zhongshan: [148, 24], ji: [244, 24], liaodong: [307, 34],
+  yiqu: [36, 86], hedong: [136, 82], handan: [234, 80], linzi: [332, 88],
+  hangu: [96, 136], shangdang: [186, 130], jimo: [342, 138],
+  guanzhong: [50, 182], yiyang: [140, 176], daliang: [244, 168], ju: [312, 172],
+  luoyi: [140, 228], xue: [338, 220],
+  hanzhong: [36, 252], xinzheng: [196, 244], song: [282, 244],
+  bashu: [66, 306],
+  qianzhong: [102, 360], chencai: [168, 336], ying: [220, 388], huaisi: [280, 342], wuyue: [340, 378],
 };
 const nodeCenter = (id) => NODE_POS[id];
 // Region membership comes straight from the board data (E.SPACE[id].region),
@@ -472,7 +504,7 @@ function renderRoads() {
 // tag (owner: per-region position is fine, membership must stay data-driven
 // — and it is, via regionMembers()). One colour per region, matching its blob.
 const REGION_LABEL_POS = {
-  north: [282, 86], west: [30, 180], jin: [216, 250], zhou: [136, 176], east: [340, 306], south: [235, 360],
+  north: [282, 66], west: [30, 152], jin: [176, 202], zhou: [184, 162], east: [340, 274], south: [235, 306],
 };
 // No ellipsis anywhere on the map (owner). Long English names that have a
 // natural break (a space or hyphen) go on two lines; the rest just render
@@ -484,7 +516,7 @@ const REGION_LABEL_POS = {
 // region, so it's fine per the same rule as REGION_LABEL_POS.
 const NODE_BREAK_EN = { hangu: ["Hangu", "Pass"], bashu: ["Ba-", "Shu"], chencai: ["Chen-", "Cai"], huaisi: ["Huai-", "Si"], wuyue: ["Wu-", "Yue"] };
 const NODE_SMALL_EN = new Set(["zhongshan", "liaodong", "shangdang", "guanzhong", "daliang", "hanzhong", "xinzheng", "qianzhong"]);
-const NODE_ANCHOR = { shangdang: "top" };
+const NODE_ANCHOR = { bashu: "right", shangdang: "right", ying: "top", wuyue: "top", yiyang: "left", linzi: "left", ji: "left", liaodong: "right", hangu: "right" };
 function nodeLabelHTML(id) {
   const star = E.SPACE[id].battleground ? "★" : "";
   if (lang === "en" && NODE_BREAK_EN[id]) {
@@ -494,8 +526,17 @@ function nodeLabelHTML(id) {
   const small = lang === "en" && NODE_SMALL_EN.has(id);
   return `<span class="nm${small ? " sm" : ""}">${star}${esc(spaceName(id))}</span>`;
 }
+// Touch targets are a physical requirement, not a design one: they must
+// stay >=44x44 real px no matter how much the map's own art is scaled down
+// on a narrow phone. So each city is two elements — a VISUAL node (disc +
+// label, lives inside #mapInner and is scaled with everything else) and a
+// separate, invisible HIT button (lives in #hitLayer, a plain overlay that
+// is never transformed, positioned by percentage so it tracks the visual
+// disc at any scale while staying a true 44x44 css px in size).
 function renderMap(v) {
   const el = $("mapInner");
+  const hitEl = $("hitLayer");
+  hitEl.innerHTML = "";
   const members = regionMembers();
   el.innerHTML = renderRoads() + renderRegionBlobs(members);
   for (const r of Object.keys(REGION_LABEL_POS)) {
@@ -514,38 +555,39 @@ function renderMap(v) {
     const big = sp.battleground || cap;
     const empty = !q && !c;
     const anchor = NODE_ANCHOR[sp.id];
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "node" + (big ? " big" : "") + (empty ? " empty" : "") + (anchor ? ` anchor-${anchor}` : "") +
-      (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (mode.lit.has(sp.id) ? " lit" : "") + (mode.picked[sp.id] ? " picked" : "");
-    b.style.cssText = `left:${x}px;top:${y}px`;
-    b.innerHTML = `<span class="disc${cap ? " sq" : ""}">${empty ? "" : `<i class="q">${q || ""}</i><i class="c">${c || ""}</i>`}</span>` +
-      (mode.picked[sp.id] ? `<span class="badge">+${mode.picked[sp.id]}</span>` : "") +
+    const lit = mode.lit.has(sp.id), picked = mode.picked[sp.id];
+    const vis = document.createElement("div");
+    vis.className = "node" + (big ? " big" : "") + (empty ? " empty" : "") + (anchor ? ` anchor-${anchor}` : "") +
+      (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (lit ? " lit" : "") + (picked ? " picked" : "");
+    vis.style.cssText = `left:${x}px;top:${y}px`;
+    vis.innerHTML = `<span class="disc${cap ? " sq" : ""}">${empty ? "" : `<i class="q">${q || ""}</i><i class="c">${c || ""}</i>`}</span>` +
+      (picked ? `<span class="badge">+${picked}</span>` : "") +
       (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
       nodeLabelHTML(sp.id);
-    b.disabled = !mode.lit.has(sp.id);
-    b.title = `${spaceName(sp.id)} · ${sp.stability}`;
-    b.onclick = () => mode.onTap(sp.id);
-    el.appendChild(b);
+    el.appendChild(vis);
+    const hb = document.createElement("button");
+    hb.type = "button";
+    hb.className = "hit";
+    hb.style.cssText = `left:${(x / DESIGN_W * 100).toFixed(3)}%;top:${(y / DESIGN_H * 100).toFixed(3)}%`;
+    hb.disabled = !lit;
+    hb.title = `${spaceName(sp.id)} · ${sp.stability}`;
+    hb.onclick = () => mode.onTap(sp.id);
+    hitEl.appendChild(hb);
   }
-  // Not fitMap() here: the map's box isn't at its final flex-allocated size
-  // until every sibling (stat line, prompt, sheet, hand) has been rendered
-  // too, so the caller (render()) fits it once everything else is in place.
+  // layoutTable() (the caller's caller) sizes and scales the map once every
+  // sibling has its final height — see fitMap().
 }
-// The map box's actual size comes from the flex layout (it's the one piece
-// that shrinks first on a short phone); the design canvas is scaled
-// uniformly to fit inside it and centred, so node spacing/text size are
-// never distorted and never overflow the box regardless of screen height.
-function fitMap() {
-  const box = $("map"), inner = $("mapInner");
-  const availW = box.clientWidth, availH = box.clientHeight;
-  if (!availW || !availH) return;
-  const scale = Math.min(availW / DESIGN_W, availH / DESIGN_H);
+// The design canvas (DESIGN_W x DESIGN_H) is the C2_Game mockup's own
+// dimensions, scaled by the viewport WIDTH ratio only — never shrunk further
+// for a lack of height, so a real phone always renders the map at (at
+// least) true size: 30/34px discs, 13px city names, 44x44 tap targets.
+function fitMap(scale) {
+  const inner = $("mapInner");
   inner.style.width = DESIGN_W + "px";
   inner.style.height = DESIGN_H + "px";
   inner.style.transform = `translate(-50%, -50%) scale(${scale})`;
 }
-window.addEventListener("resize", () => { if (!$("table").hidden && game.st) fitMap(); });
+window.addEventListener("resize", () => { if (!$("table").hidden && game.st) layoutTable(); });
 
 function btn(parent, label, onClick, cls = "", pressed = null, disabled = false) {
   const b = document.createElement("button");
@@ -618,7 +660,7 @@ function scoringPanel(sh, v, region) {
   sh.appendChild(wrap);
 }
 function renderPromptAndSheet(v) {
-  const p = $("prompt"), sh = $("sheet");
+  const p = $("promptText"), sh = $("sheet");
   sh.innerHTML = "";
   // The sheet's own background follows the selected card's owner, like the
   // card-sheet mockups (a Chu card opens on lacquer red, Qin on black,
@@ -802,7 +844,7 @@ function renderLog(v) {
   // Under the prompt: what happened since this seat last acted.
   const NEWS = new Set(["headline", "play", "place", "campaign", "lobby", "score", "tire", "seal", "unseal", "mie", "restore", "reform", "jiuding", "bog", "skip", "era", "turn"]);
   const news = v.log.filter((l) => l.i > (game.seenLog || 0) && NEWS.has(l.type)).map(fmtLog).filter(Boolean).slice(-7);
-  $("prompt").insertAdjacentHTML("beforeend", news.length ? `<div class="news">${news.map((s) => `<div>${esc(s)}</div>`).join("")}</div>` : "");
+  $("promptText").insertAdjacentHTML("beforeend", news.length ? `<div class="news">${news.map((s) => `<div>${esc(s)}</div>`).join("")}</div>` : "");
 }
 $("chatForm").onsubmit = (ev) => {
   ev.preventDefault();
