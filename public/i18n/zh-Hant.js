@@ -11,7 +11,7 @@ export default {
   // 特殊牌 st.jiuding,不是一張 CARDS 紀錄),rules.js 沒辦法像其他 71 張
   // 那樣直接從牌堆讀名字/說明。文字沿用這個檔案裡規則頁本來就有的「九鼎」
   // 那句話(見 rules.js 自己的 specialText)。
-  rules: { jiuding: "九鼎", jiudingText: "4 點行動點,全部用在三晉或周室視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。" },
+  rules: { jiuding: "九鼎", jiudingText: "4 點行動點,全部用在三晉或周視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。" },
   sides: { qin: "秦", chu: "楚" },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },
   setup: { defaultName: "玩家" },
@@ -37,7 +37,7 @@ export default {
   weariness: { 5: "承平", 4: "兵連", 3: "禍結", 2: "民困", 1: "土崩" },
   prompt: {
     setup: "放置 {n} 點起始影響力(剩 {left})。點地圖。", setupBonus: "在已有影響力處放 {n} 點補償(剩 {left})。",
-    headline: "標題階段:蓋一張牌。", yourAction: "輪到你,選一張牌。", wait: "等待 {name}…",
+    headline: "蓋一張牌當標題:雙方同時翻開,行動點高者先結算,事件一定發生。", yourAction: "輪到你,選一張牌。", wait: "等待 {name}…",
     points: "選 {n} 個(剩 {left})。", pointsMin: "最多選 {n} 個。", card: "選一張牌。", cardOptional: "選一張牌,或略過。", option: "請選擇。", ops: "使用 {ops} 點行動點:怎麼用?",
     place: "放置 {ops} 點(剩 {left})。點地圖;對手控制處每點 2。", campaign: "征伐,{ops} 點:點目標。", lobby: "遊說,{ops} 點:點目標。",
     over: "遊戲結束。",
@@ -75,7 +75,7 @@ export default {
     skip: "跳過教學", back: "上一步", stepOf: "第 {n} / {total} 課", topbar: "教學 · 第 {n} / {total} 課", gotIt: "知道了",
     wrong: "要點亮著的地方。",
     steps: {
-      map: { title: "地圖", text: "26 個據點,分五個記分區加上周室;★ 是要衝。圓盤兩色是秦、楚的影響力。", do: "點{space}" },
+      map: { title: "地圖", text: "26 個據點,分五個記分區加上周;★ 是要衝。圓盤兩色是秦、楚的影響力。", do: "點{space}" },
       control: { title: "控制", text: "我方影響力 ≥ 對方 + 安定值就控制,上限是安定值+2。{space}:{qin}≥{chu}+{stability},所以歸你控制。", do: "點{space}" },
       hand: { title: "手牌", text: "圓形徽章是點數;黑是秦的事件、紅是楚的、白是中立的。一張牌有五種用法,先學最簡單的:放置。", do: "點亮著的牌" },
       place: { title: "放置", text: "放在已有自己影響力的據點,或自己控制的據點旁邊,每點花 1;對方控制的據點每點花 2。放 {n} 點到 {space},它就歸你控制。", do: "點{space} {n} 次" },

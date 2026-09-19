@@ -39,8 +39,8 @@ export default {
   tracks: { mandate: "Mandate", weariness: "Weariness", reform: "Reform", seals: "Seals", mie: "Destroyed", jiuding: "Cauldrons", faceDown: "face down", turn: "Turn", round: "Action", of: " of " },
   weariness: { 5: "Peace", 4: "War", 3: "Strife", 2: "Misery", 1: "Collapse" },
   prompt: {
-    setup: "Place {n} free points ({left} left). Tap spaces.", setupBonus: "Place {n} bonus points where you already are ({left} left).",
-    headline: "Headline: pick one card face down.", yourAction: "Your action. Pick a card.", wait: "Waiting for {name}…",
+    setup: "Place {n} free influence ({left} left). Tap spaces.", setupBonus: "Place {n} bonus influence where you already are ({left} left).",
+    headline: "Commit one card face down as the headline: both reveal together, higher ops resolves first, and its event always happens.", yourAction: "Your action. Pick a card.", wait: "Waiting for {name}…",
     points: "Pick {n} ({left} left).", pointsMin: "Pick up to {n}.", card: "Pick a card.", cardOptional: "Pick a card, or skip.", option: "Choose.", ops: "Spend {ops} ops: how?",
     place: "Placing {ops} ops ({left} left). Tap spaces; 2 per point where the enemy holds control.", campaign: "Campaign with {ops} ops: tap a target.", lobby: "Lobby with {ops} ops: tap a target.",
     over: "Game over.",
@@ -126,7 +126,7 @@ export default {
     suggestTarget: "Target: {space}",
     suggestOrder: { opsFirst: "Spend the ops first, then let the event happen.", eventFirst: "Trigger the event first, then spend the ops." },
     suggestHeadline: "Commit {card} as the headline.",
-    suggestSetup: "Place {n} points of influence in {space}.",
+    suggestSetup: "Place {n} influence in {space}.",
     anyLegal: "Anything lit up is legal. Gold is just the advisor's pick.",
     reasons: {
       takeControl: "This takes control of {space}.",
