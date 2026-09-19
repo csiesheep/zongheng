@@ -30,9 +30,25 @@ body:has(#lobby:not([hidden])), body:has(#over:not([hidden])) {
   box-sizing: border-box;
 }
 #lobbyGate, #lobbyRoom { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
-.lobby-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+/* No inner scroll box (owner, C2_Lobby retry: "沒有任何內部捲動區" — the
+   whole point of the seat/action redesign in this fix). `.lobby-chat` still
+   scrolls *itself* when the transcript grows past a few lines, same as any
+   chat log; that's not the "middle of the lobby scrolls" bug being fixed
+   here — everything around it (seats, level, swap/leave, chat input, Start)
+   stays laid out, none of it inside a scrolling ancestor. The chat log is
+   the one flexible child (flex-shrink, min ~1 line) so it gives up space
+   first on a short phone, per the same comment. */
+.lobby-scroll { flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+#lobbySeats, #lobbyLevelField, #lobbySecondary, #lobbyChatForm { flex: none; }
 #lobbyActions, #lobbyErr { flex: none; }
-#lobbyActions { margin-top: 10px; }
+#lobbyActions { margin-top: 8px; }
+/* Below this there's nothing left to shrink (chat is already at one line);
+   owner's floor is 375x553 — let the whole lobby page scroll there instead
+   of clipping content or reintroducing an inner scroll box. */
+@media (max-height: 600px) {
+  #lobby.view { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .lobby-scroll { overflow: visible; }
+}
 
 /* ---------- lobby: the name gate asked before a room is joined ---------- */
 /* `src/room.js` reads the seat's name off the connect URL — there is no
@@ -58,13 +74,62 @@ body:has(#lobby:not([hidden])), body:has(#over:not([hidden])) {
   flex: none; min-height: 44px; padding: 0 14px; border-radius: 10px; background: none; color: var(--text);
   border: 1px solid var(--gold-line); font: 600 13px var(--serif);
 }
+/* This paragraph is the first thing given up on a short phone (see the
+   @media below) — it's a hint, not load-bearing, unlike the seats/actions
+   around it. */
+#lobbyHint { flex: none; margin: 0 0 8px; }
+@media (max-height: 640px) { #lobbyHint { display: none; } }
+
+/* ---------- lobby: seats ---------- */
+/* Colour follows the SIDE seated there, not "is this you" — the definitive
+   art (owner, C2_Lobby) is Qin black+bronze / Chu red+gold, the same two
+   colours the result screen already carries per side (screens.css above).
+   `.seat`/`.seats` are only ever used here (checked: no other screen shares
+   the class), so these rules replace style.css's own `.seat`/`.sd` rules for
+   this element outright rather than layering on top of them. */
+.seats { display: flex; flex-direction: column; gap: 6px; margin: 0 0 8px; }
+.seat {
+  display: flex; align-items: center; gap: 8px; border-radius: 10px; padding: 8px 10px; box-sizing: border-box;
+}
+.seat.q { background: #1b1a17; border: 1px solid #8a7a52; }
+.seat.c { background: #8e1a12; border: 1px solid #d8b56a; }
+.seat.away { opacity: 0.65; }
+.seat.empty { opacity: 0.8; }
+.seat .seat-info { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; }
+.seat .sd { flex: none; width: 34px; text-align: center; font-size: 24px; line-height: 1; }
+.seat.q .sd { font: 900 24px var(--serif); color: #efe6d2; }
+.seat.c .sd { font: 700 24px var(--kai); color: #d8b56a; }
+.seat .who { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 14px var(--serif); color: #fff; }
+.seat .tag { font-size: 10px; color: #fff; border: 1px solid rgba(255, 255, 255, 0.55); border-radius: 999px; padding: 1px 6px; margin-left: 6px; }
+.seat .status { flex: none; font: 400 12px var(--serif); color: #fff; }
+.seat .seat-btn {
+  flex: none; min-height: 36px; padding: 0 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.55); color: #fff; font: 600 12px var(--serif);
+}
+
+/* Bot-strength control: only shown when a bot could be seated (see app.js's
+   `showLevel`) — with two human players it's dead space that would push
+   Start below the fold on a short phone. */
+#lobbyLevelField { margin: 0 0 8px; }
+
+/* Swap + Leave side by side, one row — not stacked with Start/addBot/removeBot
+   into a single column (owner, C2_Lobby retry: that stack ran ~224px and
+   pushed the level control and chat off a 390x669 screen). Start (or Ready,
+   or Rematch) stays the one button pinned at the very bottom via
+   `#lobbyActions`, styled `.primary` by style.css's own `.actions` rule. */
+.lobby-row { display: flex; gap: 8px; margin: 0 0 8px; }
+.lobby-row button {
+  flex: 1 1 auto; min-width: 0; min-height: 44px; border-radius: 10px; background: none; color: var(--text);
+  border: 1px solid var(--gold-line); font: 600 14px var(--serif);
+}
+
 .lobby-chat {
-  max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px;
-  margin-bottom: 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--gold-line);
-  font-size: 12.5px; line-height: 1.5; color: var(--text-dim);
+  flex: 1 1 28px; min-height: 28px; max-height: 140px; overflow-y: auto; display: flex; flex-direction: column;
+  gap: 4px; padding: 8px 12px; margin-bottom: 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--gold-line); font-size: 12.5px; line-height: 1.5; color: var(--text-dim); box-sizing: border-box;
 }
 .lobby-chat:empty { display: none; }
-.lobby-chat-form { display: flex; gap: 6px; margin-bottom: 4px; }
+.lobby-chat-form { display: flex; gap: 6px; }
 .lobby-chat-form input {
   flex: 1; min-width: 0; min-height: 44px; background: none; border: 1px solid var(--gold-line);
   border-radius: 8px; color: var(--text); font: 14px var(--serif); padding: 0 10px;

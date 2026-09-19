@@ -26,7 +26,7 @@ export default {
     qin: { headline: "the Horizontal", sub: "Pick the states off one by one.", cta: "Play as Qin" },
     chu: { headline: "the Vertical", sub: "Bind the states together.", cta: "Play as Chu" },
   },
-  lobby: { say: "Say something", title: "Room", hint: "Share the code, or add the bot for the other seat. A player who drops is played by the bot until they return.", you: "you", host: "host", bot: "bot", away: "away", ready: "Ready", notReady: "Not ready", addBot: "Add bot", removeBot: "Remove bot", swap: "Swap sides", start: "Start", leave: "Leave", rematch: "Rematch (sides swap)", waiting: "Waiting for the host to start.", connecting: "Connecting…", closed: "The connection closed.", clock: "{s} s", gateHint: "There is no rename message once you are seated, so pick a name first.", join: "Enter", copy: "Copy link", copied: "Copied" },
+  lobby: { say: "Say something", title: "Room", hint: "Share the code, or add the bot for the other seat. A player who drops is played by the bot until they return.", you: "you", host: "host", bot: "bot", away: "away", empty: "Empty seat", ready: "Ready", notReady: "Not ready", addBot: "Add bot", removeBot: "Remove bot", swap: "Swap sides", start: "Start", leave: "Leave", rematch: "Rematch (sides swap)", waiting: "Waiting for the host to start.", connecting: "Connecting…", closed: "The connection closed.", clock: "{s} s", gateHint: "Pick a name before you sit down. It can't be changed in the room.", join: "Enter", copy: "Copy link", copied: "Copied" },
   setup: {
     defaultName: "Player", title: "Play vs bot", side: "Your side", random: "Random", randomTag: "either court", level: "Opponent", easy: "Easy", normal: "Normal", hard: "Hard", start: "Start", back: "Back",
     desc: {

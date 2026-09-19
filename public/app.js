@@ -770,42 +770,56 @@ $("lobbyChatForm").onsubmit = (ev) => {
 // the buttons down each time flashed and dropped :hover/:focus (orchestrator,
 // #6 follow-up; same reasoning as #20's fix to `seg()`, which this still
 // calls unchanged for the level segmented control).
+// A seat card carries its own colour by SIDE, not by "is this you" — the
+// definitive lobby art (owner, C2_Lobby) is Qin-black-bronze / Chu-red-gold
+// regardless of who is sitting there, matching the same two colours the
+// result screen already uses per side. The host-only bot toggle lives
+// *inside* the relevant seat's row (empty seat -> Add bot, bot seat ->
+// Remove bot), not in the button stack below, per the same definitive
+// layout — that stack, in the fix before this one, still stacked
+// start/removeBot/swap/leave into ~224px and pushed the level control and
+// chat off a 390x669 screen.
 function renderLobbySeats() {
   const el = $("lobbySeats");
   const seen = new Set();
-  for (const s of room.seats) {
+  const emptySide = room.seats.length ? 1 - room.seats[0].side : 1;
+  const rows = room.seats.length >= 2 ? room.seats : [...room.seats, { idx: "empty", side: emptySide, empty: true }];
+  for (const s of rows) {
     seen.add(String(s.idx));
     let d = el.querySelector(`[data-idx="${s.idx}"]`);
-    if (!d) { d = document.createElement("div"); d.dataset.idx = s.idx; el.appendChild(d); }
-    const cls = "seat" + (!s.connected ? " away" : "");
+    if (!d) { d = document.createElement("div"); d.dataset.idx = s.idx; d.innerHTML = `<div class="seat-info"></div>`; el.appendChild(d); }
+    const cls = "seat " + (s.side === E.QIN ? "q" : "c") + (s.empty ? " empty" : !s.connected ? " away" : "");
     if (d.className !== cls) d.className = cls;
-    const tags = [s.side === room.me ? t("lobby.you") : "", s.idx === 0 ? t("lobby.host") : "", s.ai ? t("lobby.bot") : "", !s.connected && !s.ai ? t("lobby.away") : ""].filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join("");
-    const html = `<div class="sd ${s.side === 0 ? "q" : "c"}">${esc(sideName(s.side))}</div><div class="who">${esc(s.name)}${tags}</div><span>${s.ready || s.idx === 0 ? t("lobby.ready") : t("lobby.notReady")}</span>`;
-    if (d.innerHTML !== html) d.innerHTML = html;
+    let html;
+    if (s.empty) {
+      html = `<div class="sd">${overGlyphChar(s.side)}</div><div class="who">${esc(t("lobby.empty"))}</div>`;
+    } else {
+      const tags = [s.side === room.me ? t("lobby.you") : "", s.idx === 0 ? t("lobby.host") : "", s.ai ? t("lobby.bot") : "", !s.connected && !s.ai ? t("lobby.away") : ""].filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join("");
+      html = `<div class="sd">${overGlyphChar(s.side)}</div><div class="who">${esc(s.name)}${tags}</div><span class="status">${s.ready || s.idx === 0 ? t("lobby.ready") : t("lobby.notReady")}</span>`;
+    }
+    const info = d.querySelector(".seat-info");
+    if (info.innerHTML !== html) info.innerHTML = html;
+    let seatBtn = d.querySelector(".seat-btn");
+    const wantBtn = room.isHost && room.phase !== "over" && (s.empty || (s.ai && s.idx !== 0));
+    if (wantBtn) {
+      const label = s.empty ? t("lobby.addBot") : t("lobby.removeBot");
+      const onClick = s.empty ? () => send({ type: "addBot" }) : () => send({ type: "removeBot" });
+      if (!seatBtn) seatBtn = btn(d, label, onClick, "seat-btn");
+      else { if (seatBtn.textContent !== label) seatBtn.textContent = label; seatBtn.onclick = onClick; }
+    } else if (seatBtn) seatBtn.remove();
   }
   el.querySelectorAll("[data-idx]").forEach((d) => { if (!seen.has(d.dataset.idx)) d.remove(); });
 }
-function renderLobbyActions() {
-  const a = $("lobbyActions");
-  const desired = [];
-  if (room.phase === "over") {
-    if (room.isHost) desired.push(["rematch", t("lobby.rematch"), () => send({ type: "rematch" }), "primary", false]);
-  } else if (room.isHost) {
-    const hasBot = room.seats.some((s) => s.ai), full = room.seats.length >= 2;
-    desired.push(["start", t("lobby.start"), () => send({ type: "start" }), "primary", !full]);
-    if (hasBot) desired.push(["removeBot", t("lobby.removeBot"), () => send({ type: "removeBot" }), "", false]);
-    else if (!full) desired.push(["addBot", t("lobby.addBot"), () => send({ type: "addBot" }), "", false]);
-    desired.push(["swap", t("lobby.swap"), () => send({ type: "swap" }), "", false]);
-  } else if (!game.spectator) {
-    const me = room.seats.find((s) => s.side === room.me);
-    desired.push(["ready", me?.ready ? t("lobby.notReady") : t("lobby.ready"), () => send({ type: "ready", ready: !me?.ready }), "primary", false]);
-  }
-  desired.push(["leave", t("lobby.leave"), () => { send({ type: "leave" }); leaveRoom(); toLanding(); }, "", false]);
+// Shared in-place sync for a row of keyed buttons — same reasoning as the
+// seats above, just factored out since both the pinned primary action
+// (#lobbyActions: Start/Ready/Rematch, one button) and the paired secondary
+// row (#lobbySecondary: Swap + Leave, or just Leave) need it.
+function syncButtons(container, desired) {
   const seen = new Set();
   for (const [key, label, onClick, cls, disabled] of desired) {
     seen.add(key);
-    let b = a.querySelector(`[data-key="${key}"]`);
-    if (!b) { b = btn(a, label, onClick, cls, null, disabled); b.dataset.key = key; }
+    let b = container.querySelector(`[data-key="${key}"]`);
+    if (!b) { b = btn(container, label, onClick, cls, null, disabled); b.dataset.key = key; }
     else {
       if (b.textContent !== label) b.textContent = label;
       b.onclick = onClick;
@@ -813,21 +827,43 @@ function renderLobbyActions() {
       if (b.disabled !== disabled) b.disabled = disabled;
     }
   }
-  // Reorder only the entries out of place, instead of always re-appending
-  // every button (which would itself repaint the whole row every render).
-  let node = a.firstElementChild;
+  let node = container.firstElementChild;
   for (const [key] of desired) {
-    if (!node || node.dataset.key !== key) { const want = a.querySelector(`[data-key="${key}"]`); a.insertBefore(want, node); node = want; }
+    if (!node || node.dataset.key !== key) { const want = container.querySelector(`[data-key="${key}"]`); container.insertBefore(want, node); node = want; }
     node = node.nextElementSibling;
   }
-  a.querySelectorAll("[data-key]").forEach((b) => { if (!seen.has(b.dataset.key)) b.remove(); });
+  container.querySelectorAll("[data-key]").forEach((b) => { if (!seen.has(b.dataset.key)) b.remove(); });
+}
+function renderLobbyActions() {
+  let primary = null;
+  const secondary = [];
+  if (room.phase === "over") {
+    if (room.isHost) primary = ["rematch", t("lobby.rematch"), () => send({ type: "rematch" }), "primary", false];
+  } else if (room.isHost) {
+    const full = room.seats.length >= 2;
+    primary = ["start", t("lobby.start"), () => send({ type: "start" }), "primary", !full];
+    secondary.push(["swap", t("lobby.swap"), () => send({ type: "swap" }), "", false]);
+  } else if (!game.spectator) {
+    const me = room.seats.find((s) => s.side === room.me);
+    primary = ["ready", me?.ready ? t("lobby.notReady") : t("lobby.ready"), () => send({ type: "ready", ready: !me?.ready }), "primary", false];
+  }
+  secondary.push(["leave", t("lobby.leave"), () => { send({ type: "leave" }); leaveRoom(); toLanding(); }, "", false]);
+  syncButtons($("lobbyActions"), primary ? [primary] : []);
+  syncButtons($("lobbySecondary"), secondary);
 }
 function renderLobby() {
   $("lobbyCode").textContent = room.code || "";
   $("lobbyHint").textContent = room.isHost ? t("lobby.hint") : t("lobby.waiting");
   renderLobbyChat();
   renderLobbySeats();
-  seg($("lobbyLevel"), [["easy", t("setup.easy")], ["normal", t("setup.normal")], ["hard", t("setup.hard")]], room.settings?.level || "normal", (v) => { if (room.isHost) send({ type: "settings", level: v }); });
+  // The bot-strength control only matters when a bot could actually be
+  // seated (there's one now, or a seat is still open for one) — with two
+  // human players it's dead space, and on a short phone every row of dead
+  // space is a row that pushes Start below the fold (owner, C2_Lobby retry).
+  const hasBot = room.seats.some((s) => s.ai), full = room.seats.length >= 2;
+  const showLevel = room.isHost && room.phase !== "over" && (hasBot || !full);
+  $("lobbyLevelField").hidden = !showLevel;
+  if (showLevel) seg($("lobbyLevel"), [["easy", t("setup.easy")], ["normal", t("setup.normal")], ["hard", t("setup.hard")]], room.settings?.level || "normal", (v) => { if (room.isHost) send({ type: "settings", level: v }); });
   renderLobbyActions();
 }
 setInterval(() => {

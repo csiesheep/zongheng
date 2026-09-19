@@ -23,7 +23,7 @@ export default {
     qin: { headline: "連橫", sub: "逐一吞併六國。", cta: "以秦開局" },
     chu: { headline: "合縱", sub: "把六國綁在一起。", cta: "以楚開局" },
   },
-  lobby: { say: "說點什麼", title: "房間", hint: "把房號給朋友,或讓電腦補上另一邊。斷線的人由電腦代打,回來即可接手。", you: "你", host: "房主", bot: "電腦", away: "離線", ready: "已就緒", notReady: "尚未就緒", addBot: "加入電腦", removeBot: "移除電腦", swap: "換邊", start: "開局", leave: "離開", rematch: "再戰(換邊)", waiting: "等房主開局。", connecting: "連線中…", closed: "連線已中斷。", clock: "{s} 秒", gateHint: "入座後沒有改名的機會,先取個名字。", join: "入座", copy: "複製連結", copied: "已複製" },
+  lobby: { say: "說點什麼", title: "房間", hint: "把房號給朋友,或讓電腦補上另一邊。斷線的人由電腦代打,回來即可接手。", you: "你", host: "房主", bot: "電腦", away: "離線", empty: "空位", ready: "已就緒", notReady: "尚未就緒", addBot: "加入電腦", removeBot: "移除電腦", swap: "換邊", start: "開局", leave: "離開", rematch: "再戰(換邊)", waiting: "等房主開局。", connecting: "連線中…", closed: "連線已中斷。", clock: "{s} 秒", gateHint: "先取個名字才能入座,入座後就不能改了。", join: "入座", copy: "複製連結", copied: "已複製" },
   setup: {
     defaultName: "玩家", title: "與電腦對弈", side: "你的陣營", random: "隨機", randomTag: "任一陣營", level: "電腦強度", easy: "簡單", normal: "普通", hard: "困難", start: "開局", back: "返回",
     desc: {
