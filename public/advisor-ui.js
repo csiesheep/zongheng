@@ -135,14 +135,23 @@ function setSlot(cls) {
 //              the cards flow into the rows below it, still inside the
 //              sidebar; falls back to the prompt slot if that would push
 //              the hand past the frame's own bottom edge.
-//   - prompt:  the phone column's hand row has already been squeezed down
-//              to its "chip" mode (#5: the map is at its own floor scale
-//              and the hand's own box has no headroom left for anything
-//              above it) -- the banner replaces the prompt's OWN text
-//              (hidden while this is active; Log/Rules stay) instead of
-//              trying to add a row that isn't there.
-//   - hand:    the ordinary case -- a plain flow row directly above #hand,
-//              inside #table, counted in layoutTable()'s own "chrome" sum.
+//   - hand:    the phone column, browsing the hand with no sheet open -- a
+//              plain flow row directly above #hand, inside #table, counted
+//              in layoutTable()'s own "chrome" sum.
+//   - prompt:  the fallback for both phone slots above, when there truly
+//              is no room: #5's "chip" mode (the map already at its floor
+//              scale, no headroom above the hand) is the owner's own named
+//              case, but a real bug found while testing this round showed
+//              the SAME squeeze during the opening placement (#sheet's own
+//              Confirm/Cancel row + the banner outgrew #table's fixed box
+//              and were silently clipped by its `overflow: hidden`, with
+//              no scrollbar anywhere to reveal it) -- so rather than
+//              special-case just the hand's chip mode, this measures
+//              #table's own scrollHeight against its clientHeight AFTER
+//              trying the sheet/hand slot and falls back whenever that
+//              doesn't fit, whichever slot triggered it. The banner
+//              replaces the prompt's OWN text in this slot (hidden while
+//              it's active; Log/Rules stay) instead of adding a row.
 function placeBanner(meta) {
   const table = document.getElementById("table");
   const hand = document.getElementById("hand");
@@ -150,54 +159,58 @@ function placeBanner(meta) {
   const prompt = document.getElementById("prompt");
   const promptText = document.getElementById("promptText");
   if (!table) return;
+  const takeOverPrompt = () => {
+    if (promptText) promptText.hidden = true;
+    prompt.appendChild(banner.root);
+    setSlot("adv-slot-prompt");
+  };
+  const overflowsTable = () => table.scrollHeight > table.clientHeight + 1;
   const sheetHasContent = !!(sheet && !sheet.hidden && sheet.children.length > 0);
+  const desktop = window.innerWidth >= 1024;
+  if (desktop) {
+    if (sheetHasContent) {
+      if (promptText) promptText.hidden = false;
+      sheet.appendChild(banner.root);
+      setSlot("adv-slot-sheet");
+      return;
+    }
+    if (hand) {
+      if (promptText) promptText.hidden = false;
+      hand.insertBefore(banner.root, hand.firstChild);
+      setSlot("adv-slot-desktop");
+      // #hand's OWN box on the desktop grid is a fixed `1fr` grid row --
+      // its getBoundingClientRect() doesn't grow with content, so the
+      // thing to check is whether the actual last card now paints past
+      // whatever sits right after the hand (#sideFoot, or #chatForm in a
+      // room), since `.hand{overflow:visible}` lets it spill there
+      // instead of clipping or scrolling (the owner's ruling: the sidebar
+      // must never scroll).
+      const last = hand.lastElementChild;
+      const contentBottom = last ? last.getBoundingClientRect().bottom : hand.getBoundingClientRect().bottom;
+      const sideFoot = document.getElementById("sideFoot"), chatForm = document.getElementById("chatForm");
+      const nextTop = sideFoot && !sideFoot.hidden ? sideFoot.getBoundingClientRect().top
+        : chatForm && !chatForm.hidden ? chatForm.getBoundingClientRect().top
+        : table.getBoundingClientRect().bottom;
+      if (contentBottom > nextTop - 2) { hand.removeChild(banner.root); takeOverPrompt(); }
+      return;
+    }
+    takeOverPrompt();
+    return;
+  }
+  // Phone column.
   if (sheetHasContent) {
     if (promptText) promptText.hidden = false;
     sheet.appendChild(banner.root);
     setSlot("adv-slot-sheet");
+    if (overflowsTable()) { sheet.removeChild(banner.root); takeOverPrompt(); }
     return;
   }
-  const desktop = window.innerWidth >= 1024;
-  if (desktop && hand) {
-    if (promptText) promptText.hidden = false;
-    hand.insertBefore(banner.root, hand.firstChild);
-    setSlot("adv-slot-desktop");
-    // #hand's OWN box on the desktop grid is a fixed `1fr` grid row -- its
-    // getBoundingClientRect() doesn't grow with content, so the thing to
-    // check is whether the actual last card now paints past whatever sits
-    // right after the hand (#sideFoot, or #chatForm in a room), since
-    // `.hand{overflow:visible}` lets it spill there instead of clipping or
-    // scrolling (the owner's ruling: the sidebar must never scroll).
-    const last = hand.lastElementChild;
-    const contentBottom = last ? last.getBoundingClientRect().bottom : hand.getBoundingClientRect().bottom;
-    const sideFoot = document.getElementById("sideFoot"), chatForm = document.getElementById("chatForm");
-    const nextTop = sideFoot && !sideFoot.hidden ? sideFoot.getBoundingClientRect().top
-      : chatForm && !chatForm.hidden ? chatForm.getBoundingClientRect().top
-      : table.getBoundingClientRect().bottom;
-    if (contentBottom > nextTop - 2) {
-      hand.removeChild(banner.root);
-      if (promptText) promptText.hidden = true;
-      prompt.appendChild(banner.root);
-      setSlot("adv-slot-prompt");
-    }
-    return;
-  }
-  // Phone column. #5's chip mode is the owner's own named trigger for "the
-  // map is already at its floor scale and there is no headroom left above
-  // the hand" -- read as it stands from the LAST layoutTable() pass (this
-  // one hasn't run yet this render, but the viewport doesn't change
-  // between one render and the next except at a real resize, which itself
-  // calls layoutTable() before the next render/decorate cycle runs).
-  if (hand && hand.dataset.mode === "chip") {
-    if (promptText) promptText.hidden = true;
-    prompt.appendChild(banner.root);
-    setSlot("adv-slot-prompt");
-    return;
-  }
+  if (hand && hand.dataset.mode === "chip") { takeOverPrompt(); return; }
   if (promptText) promptText.hidden = false;
   if (hand) table.insertBefore(banner.root, hand);
   else table.appendChild(banner.root); // defensive fallback; #sheet or #hand cover every real state today
   setSlot("adv-slot-hand");
+  if (overflowsTable()) { banner.root.remove(); takeOverPrompt(); }
 }
 
 function joinNames(ids, meta) {
@@ -336,35 +349,45 @@ function decorateMap(adv, meta) {
   });
 }
 
-function paint(adv, view, meta) {
-  if (!adv) {
-    banner.root.hidden = true;
-    decorateHand(null, view, meta);
-    decorateSheet(null, meta);
-    decorateMap(null, meta);
-    return;
-  }
+// Sets the banner's own text: the real title/why for a resolved answer, or
+// the neutral "thinking" placeholder while one is still pending. Kept
+// separate from placement/measurement (below) because the ORDER matters:
+// on a cache hit, the real (accurately-sized) text must be in place BEFORE
+// placeBanner() measures anything, so a long multi-target sentence is
+// measured at its true size, not the short placeholder's.
+function setBannerText(adv, meta, real) {
+  if (!real) { banner.title.textContent = meta.t("advisor.thinking"); banner.why.textContent = ""; return; }
+  if (!adv) return; // caller hides the banner itself in this case
   const title = bannerTitle(adv, meta) ?? meta.t("advisor.name");
   const why = meta.t(`advisor.reasons.${adv.reason.key}`, fmtParams(adv.reason.params, meta));
   banner.title.textContent = title;
   banner.why.textContent = why;
-  banner.root.hidden = false;
-  // The prompt slot's own CSS clamps the reason to 2 lines -- but a clamp
-  // alone would silently cut it off mid-sentence, which the owner (round
-  // 2) explicitly ruled out ("放不下就只留標題那一句,不要用省略號切句
-  // 子"). So if it doesn't fit whole, drop it entirely rather than show a
-  // clipped fragment; the title alone is still the full suggestion.
+}
+// The prompt slot's own CSS clamps the reason to 2 lines -- but a clamp
+// alone would silently cut it off mid-sentence, which the owner (round 2)
+// explicitly ruled out ("放不下就只留標題那一句,不要用省略號切句子").
+// So if it doesn't fit whole, drop it entirely rather than show a clipped
+// fragment; the title alone is still the full suggestion. Must run AFTER
+// placeBanner() -- it reads the slot class placeBanner() just set.
+function clampPromptWhy() {
   if (banner.root.classList.contains("adv-slot-prompt") && banner.why.scrollHeight > banner.why.clientHeight + 1) {
     banner.why.textContent = "";
   }
-  decorateHand(adv, view, meta);
-  decorateSheet(adv, meta);
-  decorateMap(adv, meta);
 }
 function clearAll() {
   cache.fp = null;
   cache.hasResult = false;
   if (banner) banner.root.hidden = true;
+  // Real bug found while testing (round 3): the prompt-takeover slot hides
+  // #promptText while it's in use -- if the switch is turned off (or a
+  // spectator/room view is reached) while that slot was active, nothing
+  // else ever un-hides it again, permanently breaking the game's own
+  // prompt text. With the advisor off, the table must look and behave
+  // exactly as if this feature did not exist (the original brief's own
+  // words) -- so this restores it every time, whether or not it was ever
+  // hidden.
+  const promptText = document.getElementById("promptText");
+  if (promptText) promptText.hidden = false;
   decorateHand(null, null, null);
   decorateSheet(null, null);
   decorateMap(null, null);
@@ -386,19 +409,37 @@ function applyDecorations(view, meta, force, switchVisible) {
   const active = switchVisible && enabled && couldAdvise(view, meta.side);
   if (!active) { clearAll(); return; }
   ensureBanner();
-  placeBanner(meta); // sync: must land in its slot before app.js's layoutTable() measures it
   const fp = fingerprint(view, meta.side);
-  if (!force && cache.fp === fp && cache.hasResult) { paint(cache.adv, view, meta); return; }
+  const cacheHit = !force && cache.fp === fp && cache.hasResult;
+  if (cacheHit) {
+    // Already know the real answer for this exact position (the player
+    // clicked something that doesn't change what the best move is) -- fill
+    // in the real text BEFORE placing/measuring, so placeBanner()'s own
+    // overflow check and app.js's layoutTable() both see the banner's
+    // true final size, not a placeholder's.
+    if (cache.adv) setBannerText(cache.adv, meta, true);
+    placeBanner(meta);
+    if (!cache.adv) { banner.root.hidden = true; decorateHand(null, view, meta); decorateSheet(null, meta); decorateMap(null, meta); return; }
+    banner.root.hidden = false;
+    clampPromptWhy();
+    decorateHand(cache.adv, view, meta);
+    decorateSheet(cache.adv, meta);
+    decorateMap(cache.adv, meta);
+    return;
+  }
+  // A neutral placeholder, synchronously, so the slot this is about to
+  // move into already has real content the instant layoutTable() (or, for
+  // the sheet slot, the sheet's own rendered height) measures it -- no
+  // reflow later when the real title/why text replaces it. This DOES mean
+  // a genuinely new, long suggestion is measured at the placeholder's
+  // (shorter) size on this one frame; the very next render (almost always
+  // the next click) re-measures at the real size via the cache-hit branch
+  // above.
+  setBannerText(null, meta, false);
+  placeBanner(meta);
+  banner.root.hidden = false;
   cache.fp = fp;
   cache.hasResult = false;
-  const myGen = ++gen;
-  // A neutral placeholder, synchronously, so the slot this just moved into
-  // already has real content the instant layoutTable() (or, for the sheet
-  // slot, the sheet's own rendered height) measures it -- no reflow later
-  // when the real title/why text replaces it.
-  banner.title.textContent = meta.t("advisor.thinking");
-  banner.why.textContent = "";
-  banner.root.hidden = false;
   decorateHand(null, view, meta);
   decorateSheet(null, meta);
   decorateMap(null, meta);
@@ -406,6 +447,7 @@ function applyDecorations(view, meta, force, switchVisible) {
   // (#17's own budget: comfortably under 3s, but not instant) -- yielding
   // once here at least lets "thinking" paint before that runs, and the gen
   // check throws the answer away if the position has already moved on.
+  const myGen = ++gen;
   setTimeout(() => {
     if (myGen !== gen) return;
     let adv = null;
@@ -413,7 +455,14 @@ function applyDecorations(view, meta, force, switchVisible) {
     if (myGen !== gen) return;
     cache.adv = adv;
     cache.hasResult = true;
-    paint(adv, view, meta);
+    if (!adv) { banner.root.hidden = true; decorateHand(null, view, meta); decorateSheet(null, meta); decorateMap(null, meta); return; }
+    setBannerText(adv, meta, true);
+    placeBanner(meta); // the real text may be a different length -- re-measure/re-place now that it's known
+    banner.root.hidden = false;
+    clampPromptWhy();
+    decorateHand(adv, view, meta);
+    decorateSheet(adv, meta);
+    decorateMap(adv, meta);
   }, 0);
 }
 
