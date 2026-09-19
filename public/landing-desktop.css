@@ -81,7 +81,16 @@
     z-index: 1;
     flex: none;
     width: 430px;
+    /* #7 (from #20's iPad finding): plain 100vh is "toolbar collapsed" on
+       iPadOS Safari too (iPad in portrait is already >=768px), so the
+       card's bottom edge could land behind a still-showing toolbar. 100vh
+       here is only a fallback for engines without svh support; 100svh (the
+       worst case, bars showing) is what actually applies, same convention
+       as style.css's own body.setup-* rule. landing.js's resize listener
+       already re-measures --seam-y on any resize, including the one a
+       toolbar show/hide fires, so the gold seam stays in sync either way. */
     height: 100vh;
+    height: 100svh;
     background: var(--bg);
     box-shadow: 0 0 0 1px #8a7a52, 0 0 80px 10px rgba(0, 0, 0, 0.85);
   }

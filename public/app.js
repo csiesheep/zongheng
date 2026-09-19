@@ -63,6 +63,9 @@ function paintBody(view) {
 function show(view) {
   for (const v of ["setup", "lobby", "table", "over"]) $(v).hidden = v !== view;
   window.scrollTo(0, 0);
+  // Desktop-only (see desktop.css, #7): which backdrop/frame the page-card
+  // shell gets follows the active view. Mobile never reads this attribute.
+  document.body.dataset.view = view;
   paintBody(view);
   // The table is a fixed one-screen layout (header -> mandate -> map ->
   // stat line -> prompt -> hand): it never scrolls, on 375x667 or 390x844,
@@ -297,9 +300,34 @@ const CARD_H = 176, HAND_GUTTER = 31; // 96x176 card + the C2_Game hand row's ow
 // headroom, same idea as HAND_GUTTER above but smaller (a chip has no image
 // to letterbox around).
 const CARD_FULL_MIN = 120, CHIP_H = 56, CHIP_GUTTER = 16;
+// >=1024px (desktop.css's own breakpoint, #7): #table stops being the single
+// flex column the code below sizes and becomes a two-column CSS grid (map |
+// a fixed 390px sidebar) — a grid item's `flex` shorthand and #table's own
+// row-gap math (both below) simply don't apply to that layout, and the map
+// no longer competes with the hand for height (they're in separate grid
+// columns) so it never needs to shrink for the hand's sake. So the map's
+// scale here is a plain letterbox fit (min of the width- and height-ratio)
+// against #map's own real box — whatever CSS grid actually gave it — rather
+// than the mobile function's width-priority, shrink-for-the-hand logic.
+const isDesktopTable = () => window.innerWidth >= 1024;
+function layoutTableDesktop() {
+  // A short mobile viewport can leave body.table-overflow set (#5, round 5:
+  // "even a chip row doesn't fit, let the page scroll") — that class
+  // combines with .table-lock at a HIGHER specificity than this file's own
+  // body.table-lock rule, so it must be cleared explicitly here rather than
+  // relying on desktop.css to out-specify it.
+  document.body.classList.remove("table-overflow");
+  const map = $("map");
+  const availW = map.clientWidth, availH = map.clientHeight;
+  if (!availW || !availH) return;
+  const hand = $("hand");
+  hand.hidden = hand.children.length === 0;
+  fitMap(Math.min(availW / DESIGN_W, availH / DESIGN_H));
+}
 function layoutTable() {
   const table = $("table");
   if (table.hidden) return;
+  if (isDesktopTable()) { layoutTableDesktop(); return; }
   // table.clientWidth includes #table's own left/right padding, but a child
   // like .map only gets the content width inside that padding — use the
   // map's own rendered width so `scale` matches what actually gets drawn.
@@ -853,7 +881,14 @@ function renderPending(v, p, setPrompt, sh) {
 // shapes, so only the .chip modifier class and the markup inside differ.
 function renderHand(v, mode) {
   const el = $("hand");
-  mode = mode || el.dataset.mode || "full";
+  // >=1024px (#7) is always "full": the short-viewport chip mode (#5, round
+  // 5) exists only because a phone can run out of height for a real card —
+  // the desktop sidebar never does (the map doesn't compete with the hand
+  // for height there; see layoutTableDesktop()). Without this, resizing
+  // from a short mobile viewport (dataset.mode left over as "chip") up past
+  // 1024px would render chip-styled cards into the desktop sidebar instead
+  // of the real 96x176/77x141 cards desktop.css expects.
+  mode = mode || (isDesktopTable() ? "full" : el.dataset.mode) || "full";
   el.dataset.mode = mode;
   el.innerHTML = "";
   const me = game.me, ui = game.ui;
@@ -873,6 +908,11 @@ function renderHand(v, mode) {
   };
   for (const id of hand) tile(id);
   if (v.phase === "action" && E.jiudingUsable(v, me)) tile(E.JIUDING, "jiuding");
+  // Desktop-only (see desktop.css, #7): the sidebar hand is a fixed grid,
+  // 3 columns up to 6 cards, 4 columns (cards at ~0.8x) from 7 up (the
+  // 9-card hand from turn 7 on, plus the Nine Cauldrons). No effect on
+  // mobile's own horizontal-scroll .hand, which never reads this class.
+  el.classList.toggle("hand-many", el.children.length > 6);
 }
 
 function fmtLog(l) {
@@ -903,6 +943,13 @@ function renderLog(v) {
   const NEWS = new Set(["headline", "play", "place", "campaign", "lobby", "score", "tire", "seal", "unseal", "mie", "restore", "reform", "jiuding", "bog", "skip", "era", "turn"]);
   const news = v.log.filter((l) => l.i > (game.seenLog || 0) && NEWS.has(l.type)).map(fmtLog).filter(Boolean).slice(-7);
   $("promptText").insertAdjacentHTML("beforeend", news.length ? `<div class="news">${news.map((s) => `<div>${esc(s)}</div>`).join("")}</div>` : "");
+  // Desktop-only (see desktop.css, #7): the sidebar's bottom strip condenses
+  // to the single latest line (the bot's own move if it just went, else the
+  // newest log entry) plus a button that opens the same #logBody panel as
+  // #logToggle. Harmless on mobile: #sideFoot is display:none there.
+  const latest = game.botLine || lines[0] || "";
+  $("sideFootText").textContent = latest;
+  $("sideFootBtn").textContent = t("buttons.logChat");
 }
 $("chatForm").onsubmit = (ev) => {
   ev.preventDefault();
@@ -911,6 +958,7 @@ $("chatForm").onsubmit = (ev) => {
   $("chatIn").value = "";
 };
 $("logToggle").onclick = () => { $("logBody").hidden = !$("logBody").hidden; if (game.st) renderLog(E.view(game.st, game.me)); };
+$("sideFootBtn").onclick = () => { $("logBody").hidden = !$("logBody").hidden; if (game.st) renderLog(game.room ? game.st : E.view(game.st, game.me)); };
 
 // The result screen's whole colour follows the WINNER, not your own seat
 // (owner, 2026-09-19: "for win page, the background should be the winner's
@@ -939,6 +987,10 @@ function renderOver() {
   $("overStatMie").textContent = `${Object.keys(st.mie).length}${t("tracks.of")}${st.options.mie}`;
   $("overStatMandateLabel").textContent = t("over.mandate");
   $("overStatMandate").textContent = mandateText(st.mandate);
+  // #over.winner-chu/winner-qin (set here by #6) is also what desktop.css
+  // (#7) keys its full-viewport winner-territory backdrop off — see
+  // `body:has(#over.winner-chu:not([hidden]))` there. No separate
+  // win-qin/win-chu body class needed.
   $("over").classList.toggle("winner-chu", winner === E.CHU);
   $("over").classList.toggle("winner-qin", winner === E.QIN);
   $("over").setAttribute("aria-label", t("over.winner", { side: sideName(winner) }));

@@ -12,8 +12,15 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="rules.css">
+<link rel="stylesheet" href="desktop.css">
 </head>
 <body>
+<div class="d-frame" aria-hidden="true">
+  <div class="d-tex d-tex-a"></div>
+  <div class="d-tex d-tex-b"></div>
+  <div class="d-vignette"></div>
+</div>
+<div class="page-card" id="pageCard">
 <header class="bar">
   <a class="hub back" id="backLink" href="./"></a>
   <span id="barMid"></span>
@@ -21,6 +28,7 @@
 </header>
 <main class="rules" id="rules"></main>
 <footer class="credit" id="credit"></footer>
+</div>
 <script type="module" src="rules.js"></script>
 </body>
 </html>

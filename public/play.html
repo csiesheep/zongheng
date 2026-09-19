@@ -14,8 +14,15 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;700;900&display=swap">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="screens.css">
+<link rel="stylesheet" href="desktop.css">
 </head>
 <body>
+<div class="d-frame" aria-hidden="true">
+  <div class="d-tex d-tex-a"></div>
+  <div class="d-tex d-tex-b"></div>
+  <div class="d-vignette"></div>
+</div>
+<div class="page-card" id="pageCard">
 <header class="bar">
   <a class="hub back" id="backLink" href="./" data-t="nav.back"></a>
   <span id="barMid"></span>
@@ -81,6 +88,10 @@
   <section class="sheet" id="sheet"></section>
   <section class="hand" id="hand"></section>
   <form id="chatForm" class="chat" hidden><input id="chatIn" maxlength="200" autocomplete="off"><button type="submit" class="small" data-t="buttons.send"></button></form>
+  <section class="sidefoot" id="sideFoot">
+    <div class="sidefoot-text" id="sideFootText"></div>
+    <button id="sideFootBtn" type="button" class="small"></button>
+  </section>
   <div id="logBody" class="logbody" hidden></div>
 </main>
 
@@ -116,6 +127,7 @@
     </div>
   </div>
 </main>
+</div>
 
 <script type="module" src="app.js"></script>
 </body>
