@@ -110,22 +110,44 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .landing-body { min-height: 100svh; }
 .landing-page { height: 100svh; display: flex; flex-direction: column; overflow: hidden; }
 .landing-page .hero { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; position: relative; }
-.landing-bar { flex: none; padding: 2px 8px 0 14px; display: flex; align-items: center; justify-content: space-between; }
+/* The bar overlays the top of .sides (over Qin's block, see below) instead
+   of taking its own row, so the tiger-tally art starts at the very top
+   edge of the viewport — background stays transparent on purpose. */
+.landing-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; padding: 2px 8px 0 14px; display: flex; align-items: center; justify-content: space-between; background: transparent; }
 .landing-bar .hub { min-height: 44px; display: inline-flex; align-items: center; }
+.landing-bar .bar-right { display: flex; align-items: center; gap: 10px; }
+/* Rules, to the left of the language button, in the same voice as the
+   hub link (gold, no fill) — a full 44px tap target even though the
+   short label is small. */
+.landing-bar .rules { min-height: 44px; padding: 0 2px; display: inline-flex; align-items: center; color: var(--gold); font: 700 12px var(--serif); text-decoration: none; letter-spacing: 1px; }
 .langBtn { min-width: 44px; min-height: 44px; border-radius: 18px; background: none; border: 1px solid var(--gold); color: var(--gold); font: 700 12px var(--serif); padding: 4px 12px; }
 .sides { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; position: relative; }
 /* Qin's content sits toward the top of its block and Chu's toward the
    bottom — both anchored AWAY from the shared boundary where the 縱橫
    badge floats, so neither ever collides with it even on a short phone. */
+/* The gold seam between Qin and Chu: sits exactly on the 50/50 flex split
+   (both .side-tap are flex: 1 1 0), same convention landing-desktop.css's
+   outer seam uses (top at the boundary, 4px tall, no centring) so the two
+   line up without extra math. */
+.sides::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 4px; background: #d8b56a; z-index: 2; pointer-events: none; }
 .side-tap { position: relative; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; text-decoration: none; padding: 4px 16px; gap: 4px; }
 .side-tap.qin { justify-content: flex-start; padding-top: 8px; }
 .side-tap.chu { justify-content: flex-end; padding-bottom: 8px; }
 .side-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
-.side-tap.chu .side-img { object-position: 35% 8%; }
+/* Design final (C2, 2026-09-19): the image is wider than the column
+   (column + 130px) and shifted left by the same 130px, putting Chu's
+   head at roughly 28% of the column so the headline/CTA text never
+   overlaps it. */
+.side-tap.chu .side-img { inset: 0 auto 0 -130px; width: calc(100% + 130px); object-position: center 22%; }
 .side-shade { position: absolute; inset: 0; z-index: 1; }
 .side-tap.qin .side-shade { background: linear-gradient(to right, rgba(6, 5, 4, 0.97), rgba(6, 5, 4, 0.9) 38%, rgba(6, 5, 4, 0.35) 72%, rgba(6, 5, 4, 0)); }
 .side-tap.chu .side-shade { background: linear-gradient(to left, rgba(60, 6, 4, 0.96), rgba(60, 6, 4, 0.7) 40%, rgba(60, 6, 4, 0) 70%); }
 .side-content { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; }
+/* Qin's block keeps the same padding-top as before (so the 50/50 flex
+   split with Chu is untouched) — the clearance for the bar now overlaid
+   on top of it (40px: 46px bar minus the 8px it already had headroom for)
+   is added on the content itself, not the block, via margin-top. */
+.side-tap.qin .side-content { margin-top: 40px; }
 .side-tap.chu .side-content { flex-direction: row-reverse; align-self: flex-end; text-align: right; }
 .side-glyph { font-size: clamp(28px, 9vh, 52px); line-height: 1; }
 .side-tap.qin .side-glyph { font: 900 clamp(28px, 9vh, 52px)/1 var(--serif); color: var(--qin-text); }
@@ -159,22 +181,17 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .controls .ghost.small { min-height: 44px; font-size: 12px; }
 #btnCreate { flex: 1; border: none; background: var(--text); color: var(--bg); font-weight: 600; }
 #btnJoin { flex: none; width: 66px; border: none; background: var(--chu-btn); color: #fff; font-weight: 600; padding: 0; }
-.controls .row.bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.controls .link { flex: none; min-height: 44px; display: inline-flex; align-items: center; font: 400 13px var(--serif); color: var(--text); text-decoration: underline; }
-.controls .credit { margin: 0; padding: 0; flex: 1; text-align: right; font: 400 10px/1.35 var(--serif); color: var(--text-dim); }
 
 /* The multiplayer card: a light parchment island (same double-ring inset
    border as the 縱橫 badge) sitting inside the otherwise dark controls
-   strip. Name + Random side sit above its "MULTIPLAYER" title. */
+   strip. One row today ([Multiplayer][code][Join]); more rows (e.g. a
+   tutorial button) stack above it later, so this stays column-flex. */
 .mp-card { background: var(--neutral-bg); color: var(--neutral-ink); border: 1px solid #efe6d2; border-radius: 12px;
   box-shadow: inset 0 0 0 3px var(--neutral-bg), inset 0 0 0 4px #b7ab8d; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
-.mp-title { font: 700 10px/12px var(--sans); letter-spacing: 2px; color: #4a463c; margin: 0; text-transform: uppercase; }
 .mp-card .row input, .mp-card #joinCode { border-color: #1a1a1a; background: #f7f2e4; color: #1a1a1a; }
 .mp-card .ghost { border-color: #1a1a1a; color: #1a1a1a; }
 .mp-card #btnCreate { background: #1a1a1a; color: #fff; }
 .mp-card #btnJoin { background: var(--chu-btn); color: #fff; }
-.mp-card .link { color: var(--chu-bg); }
-.mp-card .credit { color: #4a463c; }
 
 /* table: everything below the map's own opaque background paints in the
    seated side's court colour (black for Qin, lacquer red for Chu — see

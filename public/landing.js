@@ -24,9 +24,7 @@ function setLang(l) {
   document.documentElement.lang = lang;
   document.title = lang === "en" ? "Zongheng 縱橫" : "縱橫 Zongheng";
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
-  $("credit").textContent = S.credit;
   $("joinCode").placeholder = t("landing.codePlaceholder");
-  $("landName").placeholder = t("landing.name");
   // A room this tab still holds a seat in, or a solo game still in progress:
   // offer the way back. Both can appear together; that row must still fit.
   const room = sess.get("zh.lastRoom");
@@ -37,17 +35,10 @@ function setLang(l) {
 }
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
 
-$("landName").value = store.get("zh.name", "");
-$("landName").addEventListener("input", () => store.set("zh.name", $("landName").value.trim()));
-const saveName = () => store.set("zh.name", $("landName").value.trim());
-$("btnQin").addEventListener("click", saveName);
-$("btnChu").addEventListener("click", saveName);
-$("btnRandom").addEventListener("click", saveName);
-$("btnCreate").onclick = () => { saveName(); location.href = "play.html?create=1"; };
+$("btnCreate").onclick = () => { location.href = "play.html?create=1"; };
 $("btnJoin").onclick = () => {
   const code = $("joinCode").value.trim().toUpperCase();
   if (!/^[A-Z0-9]{4}$/.test(code)) { $("joinCode").focus(); return; }
-  saveName();
   location.href = `play.html?room=${code}`;
 };
 $("joinCode").addEventListener("keydown", (ev) => { if (ev.key === "Enter") $("btnJoin").click(); });
@@ -66,9 +57,26 @@ function syncDesktopSeam() {
   const y = qin.getBoundingClientRect().bottom;
   document.documentElement.style.setProperty("--seam-y", `${y}px`);
 }
-window.addEventListener("resize", syncDesktopSeam);
+// A plain 'resize' event can fire a frame before the browser has settled
+// the new layout (observed after #12's bar-overlay change: a window
+// resize's own handler read #btnQin mid-reflow and got the OLD height —
+// a second resize was needed to correct it). Two rAFs guarantee at least
+// one full layout+paint has happened before we measure, so one resize is
+// enough. A setTimeout fallback is added because rAF doesn't run at all
+// while the tab is backgrounded/hidden (a resize can still land there,
+// e.g. a window manager resizing an occluded window); the timeout still
+// fires, just possibly throttled, and re-measuring is harmless either
+// way. ResizeObserver on #btnQin itself is kept as a third, independent
+// path (its callback always runs after layout is current).
+function syncDesktopSeamNextFrame() {
+  requestAnimationFrame(() => requestAnimationFrame(syncDesktopSeam));
+  setTimeout(syncDesktopSeam, 120);
+}
+window.addEventListener("resize", syncDesktopSeamNextFrame);
 window.addEventListener("load", syncDesktopSeam);
 if (window.ResizeObserver) {
+  const qin = $("btnQin");
+  if (qin) new ResizeObserver(syncDesktopSeam).observe(qin);
   const sides = document.querySelector(".sides");
   if (sides) new ResizeObserver(syncDesktopSeam).observe(sides);
 }

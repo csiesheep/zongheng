@@ -21,7 +21,7 @@ export default {
   sys: { joined: "{name} joined.", left: "{name} left.", leftGame: "{name} left; the bot plays the seat.", dealt: "The cards are dealt.", timeout: "{name} ran out of time; the table decided.", over: "{side} ({name}) wins: {reason}." },
   ends: { unification: "three states destroyed", alliance: "four seals held", mandate: "the Mandate reached 20", collapse: "the realm collapsed on the other side", scoring: "the other side held a scoring card at the turn's end", scoringBoth: "both held scoring cards; the tie rule", final: "the Mandate after the final scoring", tie: "a level Mandate; the tie rule" },
   errors: { noRoom: "No room with that code.", full: "That room is full.", needMore: "Two seats are needed.", notReady: "The other seat is not ready.", notYet: "The table is not built yet.", notYourTurn: "It is not your decision right now." },
-  landing: { backToRoom: "Back to room {code}", resume: "Resume your game", play: "Play vs bot", random: "Random side", multiplayer: "Multiplayer", create: "Create a room", join: "Join", code: "Room code", codePlaceholder: "CODE", rulesLink: "Rules and the 72 cards", name: "Your name" },
+  landing: { backToRoom: "Back to room {code}", resume: "Resume your game", play: "Play vs bot", create: "Multiplayer", join: "Join", code: "Room code", codePlaceholder: "CODE", rulesLink: "Rules and the 72 cards", rulesShort: "Rules", name: "Your name" },
   side: {
     qin: { headline: "the Horizontal", sub: "Pick the states off one by one.", cta: "Play as Qin" },
     chu: { headline: "the Vertical", sub: "Bind the states together.", cta: "Play as Chu" },
