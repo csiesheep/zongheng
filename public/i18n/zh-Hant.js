@@ -7,6 +7,11 @@ export default {
   soon: "施工中。規則已寫好,接下來是引擎、電腦與房間。",
   credit: "同人、免費。靈感來自《冷戰熱鬥》的卡驅動設計;與 GMT Games 無關。",
   nav: { back: "‹ 縱橫", rules: "規則", hub: "csiesheep games", lang: "EN" },
+  // 規則頁牌表的第 72 列:九鼎不在 shared/cards.js 的 CARDS 裡(它是引擎的
+  // 特殊牌 st.jiuding,不是一張 CARDS 紀錄),rules.js 沒辦法像其他 71 張
+  // 那樣直接從牌堆讀名字/說明。文字沿用這個檔案裡規則頁本來就有的「九鼎」
+  // 那句話(見 rules.js 自己的 specialText)。
+  rules: { jiuding: "九鼎", jiudingText: "4 點行動點,全部用在三晉或周室視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。" },
   sides: { qin: "秦", chu: "楚" },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },
   setup: { defaultName: "玩家" },
