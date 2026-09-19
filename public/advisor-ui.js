@@ -165,7 +165,16 @@ function placeBanner(meta) {
     setSlot("adv-slot-prompt");
   };
   const overflowsTable = () => table.scrollHeight > table.clientHeight + 1;
-  const sheetHasContent = !!(sheet && !sheet.hidden && sheet.children.length > 0);
+  // #24 round 4: app.js's setPrompt() (round 2) always parks a hidden
+  // .sheet-title as #sheet's first child now, even while just browsing the
+  // hand -- sheet.children.length is never really 0 any more, so this used
+  // to see "content" that isn't actually visible (style.css collapses a
+  // sheet whose only children are all [hidden] the same way it always
+  // collapsed a truly empty one) and routed the banner into the sheet slot
+  // regardless, instead of falling through to the hand/prompt slots below
+  // and letting THEIR own overflow check decide. Only a real, visible
+  // child counts as content here now.
+  const sheetHasContent = !!(sheet && !sheet.hidden && [...sheet.children].some((c) => !c.hidden));
   const desktop = window.innerWidth >= 1024;
   if (desktop) {
     if (sheetHasContent) {
