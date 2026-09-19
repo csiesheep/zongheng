@@ -1,0 +1,147 @@
+/* The advisor's own UI (issue #18): the top-bar switch, the suggestion
+   banner, and the gold decorations on the card/use/target #17's advise()
+   names. Loaded after style.css/screens.css/desktop.css so its rules win
+   without !important.
+
+   orchestrator's 2nd-round review: the banner used to be a `position:
+   fixed` overlay, which floated over the map / hand / sheet with a colour
+   scheme meant for a dark background, unreadable on the light map or the
+   cream sheet, and sometimes covering the very card it was pointing at.
+   It is now ALWAYS a normal flow element (advisor-ui.js's placeBanner()
+   moves the one node between a small set of real slots -- above the hand,
+   inside the sheet, replacing the prompt's own text, or the hand's own
+   grid on desktop), with its own solid dark background so the contrast
+   never depends on what would otherwise be underneath it.
+
+   One colour throughout: gold #e9b92e (owner: "改成黃金色,而不是淡黃色"),
+   never a transition (owner: colours are static, not animated). */
+
+/* ---------- the switch, mounted once inside #advisorSlot in the .bar ---------- */
+#advisorSlot { display: inline-flex; align-items: center; }
+.adv-toggle {
+  height: 44px; padding: 0 4px; border: none; background: none;
+  display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+}
+.adv-toggle-label {
+  font-family: var(--kai); font-weight: 900; font-size: 13px; color: var(--text-dim);
+  white-space: nowrap;
+}
+.adv-toggle.on .adv-toggle-label { color: #e9b92e; }
+.adv-toggle-track {
+  width: 26px; height: 16px; box-sizing: border-box; border-radius: 8px;
+  border: 1.5px solid var(--gold-line); background: none; position: relative; flex: none;
+}
+.adv-toggle.on .adv-toggle-track { border-color: #e9b92e; background: rgba(233, 185, 46, 0.28); }
+.adv-toggle-dot {
+  position: absolute; top: 1.5px; left: 1.5px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--gold-line);
+}
+.adv-toggle.on .adv-toggle-dot { left: 12px; background: #e9b92e; }
+/* A very short viewport (#5's 28px topbar row) still gives the switch a
+   real 44px tap target -- the button's own box, not the visible track. */
+
+/* ---------- the suggestion banner: always a solid, flow-positioned box ---------- */
+.advisor-banner {
+  box-sizing: border-box;
+  background: #1a1713; border: 1px solid #e9b92e; border-radius: 8px;
+  padding: 6px 10px;
+}
+.advisor-banner-title {
+  font: 600 13px/1.3 var(--serif); color: #e9b92e; margin: 0 0 2px;
+  overflow-wrap: break-word;
+}
+.advisor-banner-why {
+  font: 400 11.5px/1.4 var(--serif); color: #efe6d2; overflow-wrap: break-word;
+}
+/* Slot: a flow row directly above #hand, inside #table (the ordinary
+   phone case) -- app.js's layoutTable() counts this row's own rendered
+   height in its "chrome" budget, so this is capped to a fixed height
+   regardless of how long the title/why text turns out to be: the box
+   layoutTable() measures right after placeBanner() moves this here (while
+   it still only holds the "thinking" placeholder) must be the same size
+   it ends up after the real text arrives, or the map/hand sizing done
+   from that measurement would be wrong a moment later. */
+.advisor-banner.adv-slot-hand { flex: none; margin: 0 8px 4px; max-height: 60px; overflow: hidden; }
+/* Slot: replaces #promptText's own spot when there's no room for a row of
+   its own (#5's chip-mode hand, the opening placement's own sheet row that
+   doesn't fit either, or the sidebar when even the hand's own grid can't
+   take the "desktop" slot below) -- #table's background is already this
+   dark, so no extra box here, just the text. Owner: "12px、最多 3 行" --
+   the title (a setup placement can be several sentences long, e.g. one per
+   suggested space) is capped to 2 lines with an ellipsis (a title is a
+   single instruction; truncating it is the normal web meaning of "doesn't
+   fit"), leaving at most 1 line for the reason -- and if that ONE line
+   can't hold the whole sentence, it's dropped entirely rather than clipped
+   mid-sentence (advisor-ui.js's clampPromptWhy() decides that, not CSS;
+   the ellipsis on the title is the one exception the owner's "don't cut a
+   sentence with an ellipsis" rule doesn't reach, since a title cut short
+   still reads as a complete-enough label, unlike a reason cut mid-clause). */
+.advisor-banner.adv-slot-prompt { background: none; border: none; padding: 0; margin: 0; max-height: none; }
+.advisor-banner.adv-slot-prompt .advisor-banner-title {
+  font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.advisor-banner.adv-slot-prompt .advisor-banner-why {
+  font-size: 12px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* Slot: appended as #sheet's own last flow child (the full-screen card
+   header + use buttons, the mini chip + target preview, or a pending
+   choice's Confirm/Cancel row) -- #sheet is already one of layoutTable()'s
+   own counted ids, so this needs no separate budget entry. */
+.advisor-banner.adv-slot-sheet { margin-top: 8px; }
+/* Slot: #7's desktop sidebar (>=1024px) -- the hand's own CSS grid's first
+   row, spanning every column, so the actual cards flow into the rows
+   below it instead of this covering them. */
+@media (min-width: 1024px) {
+  body[data-view="table"] .hand .advisor-banner.adv-slot-desktop {
+    grid-column: 1 / -1; max-height: 70px; overflow: hidden; margin-bottom: 6px;
+  }
+}
+/* Belt-and-suspenders: whatever the switch/banner's own `hidden` attribute
+   says, neither may show outside the table view -- app.js's render() (and
+   so this file's decorate()) is only called right after entering the
+   table, never on the way OUT to setup/lobby/over, so table-lock (already
+   toggled by the existing, untouched show()) is the one signal guaranteed
+   to flip the instant that happens. */
+body:not(.table-lock) #advisorSlot .adv-toggle,
+body:not(.table-lock) .advisor-banner {
+  display: none !important;
+}
+
+/* ---------- gold decoration: hand card / sheet use-button / order-button ---------- */
+.card.adv-pick {
+  box-shadow: 0 0 0 2px #e9b92e, 0 0 14px 5px rgba(233, 185, 46, 0.6);
+  border-color: #e9b92e;
+}
+.sheet-grid button.adv-pick, .rowb.order button.adv-pick {
+  box-shadow: 0 0 0 2px #e9b92e, 0 0 10px 3px rgba(233, 185, 46, 0.55);
+  border-color: #e9b92e;
+}
+
+/* ---------- gold decoration: the map target ---------- */
+.node.adv-target { z-index: 3; }
+.node.adv-target::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 84px; height: 84px;
+  transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle, transparent 25px, rgba(233, 185, 46, 0.55) 30px, rgba(233, 185, 46, 0.16) 42px, transparent 42px);
+  /* The disc's own top (where a +n placement badge or the cost badge sits)
+     stays clear of the glow (owner: "圆盤正上方留空不蓋住數字"). */
+  -webkit-mask-image: conic-gradient(transparent 0deg 34deg, #000 34deg 326deg, transparent 326deg 360deg);
+  mask-image: conic-gradient(transparent 0deg 34deg, #000 34deg 326deg, transparent 326deg 360deg);
+}
+.node.adv-target::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 38px; height: 38px;
+  transform: translate(-50%, -50%); border-radius: 50%; border: 3.5px solid #e9b92e;
+  pointer-events: none; z-index: 1;
+}
+.node.big.adv-target::after { width: 42px; height: 42px; }
+.node.adv-target .disc { position: relative; z-index: 2; }
+/* The city name must stay legible over the glow (owner: "城名要疊在光暈上面
+   保持清楚") -- it already carries a light halo of its own (style.css's
+   text-shadow), this only makes sure it paints above the gold, not under it. */
+.node.adv-target .nm { z-index: 4; }
+.node .adv-badge {
+  position: absolute; bottom: -4px; left: -6px; min-width: 15px; height: 15px;
+  border-radius: 8px; background: #e9b92e; color: #1a1a1a; text-align: center;
+  font: 700 9px/15px var(--sans); padding: 0 3px; z-index: 5;
+}
