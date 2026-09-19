@@ -41,8 +41,10 @@ export const REASON_KEYS = [
 //   region   a region id                       scoringSoon mustPlayScoring + the space keys
 //   card     a card id                         scoringSoon dumpEnemyEvent mustPlayScoring bogDiscard
 //   perk     a 變法 perk id or null            reform
-//   n        a count: spaces changed / markers held / the region's net /
-//            the Mandate swing / the 變法 box / rounds left / cards left
+//   n        a count: spaces changed / markers held / spaces still to take /
+//            the region's net / the Mandate swing / the 變法 box / rounds
+//            left / cards left. Each key's `n` is whatever its line of copy
+//            reads out (public/i18n/en.js, advisor.reasons).
 //   need     points still needed on that road  nearDestroy seal denySeal destroyState
 //   total    the Mandate after the move        mandate
 //   weariness  the 疲敝 track after the move   avoidCollapse
@@ -193,9 +195,12 @@ function reasonFor(st, action, side, rng, targets, L) {
       const dv = d(`mieRoad:${id}`);
       if (dv > 0 && !st1.mie[id]) { sum += dv; if (dv > top) { top = dv; state = id; } }
     }
-    // evaluate's own top bracket for the road to 滅: two points or fewer left.
-    if (state && (t1[`$mieNeed:${state}`] ?? 99) <= 2) {
-      add("nearDestroy", sum, { state, n: Object.keys(st1.mie).length, need: t1[`$mieNeed:${state}`] });
+    // 滅國 is every space of the state under Qin, so the distance the copy
+    // reads out ("{state} is {n} away from falling") is spaces, not points;
+    // `need` keeps the evaluation's own measure, which is in points.
+    const short = state ? E.spacesOfState(state).filter((x) => E.controller(st1, x) !== QIN).length : 0;
+    if (state && short <= 2) {
+      add("nearDestroy", sum, { state, n: short, need: t1[`$mieNeed:${state}`] });
     }
   }
   {

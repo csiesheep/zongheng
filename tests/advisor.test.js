@@ -12,6 +12,8 @@ import assert from "node:assert/strict";
 import * as E from "../public/shared/engine.js";
 import * as B from "../public/shared/bots.js";
 import { advise } from "../public/shared/advisor.js";
+import EN from "../public/i18n/en.js";
+import ZH from "../public/i18n/zh-Hant.js";
 
 const { QIN, CHU, CARD, SPACE, JIUDING } = E;
 
@@ -271,6 +273,21 @@ test("advisor: a hard decision on a midgame position stays inside the phone budg
   ms.sort((a, b) => a - b);
   console.log(`advisor: advise on a midgame position ${ms.map((x) => x.toFixed(0)).join("/")} ms (median ${ms[2].toFixed(0)})`);
   assert.ok(ms[2] < 3000, `median ${ms[2]} ms is far past anything a phone can hide`);
+});
+
+test("advisor: every reason key has a line of copy in both languages, and no line is spare", () => {
+  // The key list above is copied from the design; these two are the writer's
+  // (#19). A key the advisor can return with nothing to say, or a line nothing
+  // can ever reach, is the same bug seen from two sides.
+  const want = [...REASON_KEYS].sort();
+  assert.deepStrictEqual(Object.keys(EN.advisor.reasons).sort(), want);
+  assert.deepStrictEqual(Object.keys(ZH.advisor.reasons).sort(), want);
+  // Every use the advisor can return is one the copy knows how to phrase.
+  for (const u of USES) {
+    if (u === "headline") { assert.ok(EN.advisor.suggestHeadline && ZH.advisor.suggestHeadline); continue; }
+    assert.ok(EN.advisor.suggestUse[u], `en has no copy for use ${u}`);
+    assert.ok(ZH.advisor.suggestUse[u], `zh has no copy for use ${u}`);
+  }
 });
 
 test("advisor: no advice when it is not this side's decision", () => {
