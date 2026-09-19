@@ -160,6 +160,10 @@ function describeAction(a) {
 
 // ---------- rendering ----------
 function render() {
+  // The whole page's accent (buttons, pressed hand card) follows whichever
+  // court you sit in; a spectator gets the neutral bronze-on-black default.
+  document.body.classList.toggle("side-qin", !game.spectator && game.me === 0);
+  document.body.classList.toggle("side-chu", !game.spectator && game.me === 1);
   // In a room the state on hand is already this seat's view.
   const v = game.room ? game.st : E.view(game.st, game.me);
   $("barMid").textContent = `${t("tracks.turn")} ${v.turn} · ${game.spectator ? "" : sideName(game.me)}`;
@@ -602,4 +606,11 @@ setLang(params.get("lang") || store.get("zh.lang", (navigator.language || "").st
 if (params.has("resume") && loadSolo()) resumeSolo();
 else if (params.get("create") === "1") connect({ create: "1" });
 else if (params.get("room")) { const code = params.get("room").toUpperCase(); connect({ room: code, token: sess.get("zh.token." + code) || "" }); }
-else show("setup");
+else {
+  // The landing's Qin/Chu/Random taps preselect a side and land here; the
+  // level (bot strength) is still picked on this screen.
+  const side = params.get("side");
+  if (side === "qin" || side === "chu" || side === "random") { setup.side = side; store.set("zh.side", side); }
+  renderSetup();
+  show("setup");
+}
