@@ -1,10 +1,17 @@
 /* The advisor's own UI (issue #18): the top-bar switch, the suggestion
-   banner above the hand, and the gold decorations on the card/use/target
-   #17's advise() names. Loaded after style.css/screens.css/desktop.css so
-   its rules win without !important; nothing here edits the table's own
-   layout (see advisor-ui.js: the banner is a position:fixed overlay,
-   anchored to #hand's own box, precisely so it never has to be counted in
-   layoutTable()'s chrome sum or #7's fixed grid areas).
+   banner, and the gold decorations on the card/use/target #17's advise()
+   names. Loaded after style.css/screens.css/desktop.css so its rules win
+   without !important.
+
+   orchestrator's 2nd-round review: the banner used to be a `position:
+   fixed` overlay, which floated over the map / hand / sheet with a colour
+   scheme meant for a dark background, unreadable on the light map or the
+   cream sheet, and sometimes covering the very card it was pointing at.
+   It is now ALWAYS a normal flow element (advisor-ui.js's placeBanner()
+   moves the one node between a small set of real slots -- above the hand,
+   inside the sheet, replacing the prompt's own text, or the hand's own
+   grid on desktop), with its own solid dark background so the contrast
+   never depends on what would otherwise be underneath it.
 
    One colour throughout: gold #e9b92e (owner: "改成黃金色,而不是淡黃色"),
    never a transition (owner: colours are static, not animated). */
@@ -33,18 +40,52 @@
 /* A very short viewport (#5's 28px topbar row) still gives the switch a
    real 44px tap target -- the button's own box, not the visible track. */
 
-/* ---------- the suggestion banner ---------- */
+/* ---------- the suggestion banner: always a solid, flow-positioned box ---------- */
 .advisor-banner {
-  position: fixed; z-index: 45; box-sizing: border-box;
-  border: 1px solid #e9b92e; background: rgba(233, 185, 46, 0.1);
-  border-radius: 10px; padding: 7px 11px; pointer-events: none;
+  box-sizing: border-box;
+  background: #1a1713; border: 1px solid #e9b92e; border-radius: 8px;
+  padding: 6px 10px;
 }
 .advisor-banner-title {
   font: 600 13px/1.3 var(--serif); color: #e9b92e; margin: 0 0 2px;
   overflow-wrap: break-word;
 }
 .advisor-banner-why {
-  font: 400 11.5px/1.4 var(--serif); color: var(--text); overflow-wrap: break-word;
+  font: 400 11.5px/1.4 var(--serif); color: #efe6d2; overflow-wrap: break-word;
+}
+/* Slot: a flow row directly above #hand, inside #table (the ordinary
+   phone case) -- app.js's layoutTable() counts this row's own rendered
+   height in its "chrome" budget, so this is capped to a fixed height
+   regardless of how long the title/why text turns out to be: the box
+   layoutTable() measures right after placeBanner() moves this here (while
+   it still only holds the "thinking" placeholder) must be the same size
+   it ends up after the real text arrives, or the map/hand sizing done
+   from that measurement would be wrong a moment later. */
+.advisor-banner.adv-slot-hand { flex: none; margin: 0 8px 4px; max-height: 60px; overflow: hidden; }
+/* Slot: replaces #promptText's own spot when there's no room for a row of
+   its own (#5's chip-mode hand, or the sidebar when even the hand's own
+   grid can't take the "desktop" slot below) -- #table's background is
+   already this dark, so no extra box here, just the text; clamped to 2
+   lines (owner: "12px、最多 3 行" -- title is its own line, so 2 more for
+   the reason) and, if that's still not enough, the WHOLE line is dropped
+   rather than clipped mid-sentence (advisor-ui.js decides that, not CSS). */
+.advisor-banner.adv-slot-prompt { background: none; border: none; padding: 0; margin: 0; max-height: none; }
+.advisor-banner.adv-slot-prompt .advisor-banner-title { font-size: 12px; }
+.advisor-banner.adv-slot-prompt .advisor-banner-why {
+  font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* Slot: appended as #sheet's own last flow child (the full-screen card
+   header + use buttons, the mini chip + target preview, or a pending
+   choice's Confirm/Cancel row) -- #sheet is already one of layoutTable()'s
+   own counted ids, so this needs no separate budget entry. */
+.advisor-banner.adv-slot-sheet { margin-top: 8px; }
+/* Slot: #7's desktop sidebar (>=1024px) -- the hand's own CSS grid's first
+   row, spanning every column, so the actual cards flow into the rows
+   below it instead of this covering them. */
+@media (min-width: 1024px) {
+  body[data-view="table"] .hand .advisor-banner.adv-slot-desktop {
+    grid-column: 1 / -1; max-height: 70px; overflow: hidden; margin-bottom: 6px;
+  }
 }
 /* Belt-and-suspenders: whatever the switch/banner's own `hidden` attribute
    says, neither may show outside the table view -- app.js's render() (and

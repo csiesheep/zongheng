@@ -284,14 +284,20 @@ function render() {
   // target picking), it shrinks back to a strip so the map stays tappable,
   // matching C2_Place/C2_Campaign.
   setSheetOpen(wantsCardOverlay(v));
-  layoutTable(); // the map's real box depends on the hand's, so both are sized together, then fitMap() scales the map's content
   // The advisor's own decoration pass (issue #18): everything it draws lives
   // in advisor-ui.js, which no-ops (and calls advise() zero times) unless
-  // solo is true and its own switch is on.
+  // solo is true and its own switch is on. Called BEFORE layoutTable() (not
+  // after, as issue #18 first landed it): the owner's ruling (orchestrator's
+  // 2nd-round review) is that the suggestion banner is a normal flow row,
+  // not a floating overlay, so its own box has to exist at whatever size
+  // it's going to be before layoutTable() can measure the chrome it leaves
+  // for the map/hand — see the "advisorBanner" id added to that sum below.
   decorateAdvisor(v, {
     solo: !game.room && !game.spectator, side: game.me, uiCard: game.ui.card,
+    pickedSpaces: (game.ui.picks && game.ui.picks.length ? game.ui.picks : game.ui.points) || [],
     t, spaceName, stateName, regionName, cardName, sep,
   });
+  layoutTable(); // the map's real box depends on the hand's, so both are sized together, then fitMap() scales the map's content
 }
 // The map's scale is the viewport-width ratio (DESIGN_W is the mockup's own
 // canvas width) UNLESS that would leave no room at all for a shown hand, in
@@ -355,7 +361,18 @@ function layoutTable() {
   const availW = $("map").clientWidth || table.clientWidth, availH = table.clientHeight;
   if (!availW || !availH) return;
   const widthScale = availW / DESIGN_W;
-  const chrome = ["topbar", "statline", "prompt", "sheet"].reduce((sum, id) => sum + $(id).getBoundingClientRect().height, 0);
+  // "advisorBanner" (issue #18, orchestrator's 2nd-round ruling): the one
+  // spot advisor-ui.js's own layout is allowed to touch here. The element
+  // doesn't always exist (created lazily, only while a solo game has the
+  // switch on), and when it DOES exist it isn't always its own row here --
+  // advisor-ui.js also reparents it inside #prompt or #sheet in some
+  // states, and both of those are already in the list below, so it's only
+  // added again when it's sitting directly in #table as its own sibling of
+  // #hand (the "browsing the hand" state); otherwise it would be counted
+  // twice.
+  const advBanner = document.getElementById("advisorBanner");
+  const advBannerAsRow = advBanner && advBanner.parentElement === table ? advBanner.getBoundingClientRect().height : 0;
+  const chrome = ["topbar", "statline", "prompt", "sheet"].reduce((sum, id) => sum + $(id).getBoundingClientRect().height, 0) + advBannerAsRow;
   // #table's own top/bottom padding, plus one flex column gap per boundary
   // between its VISIBLE children (a hidden/empty row like #sheet or #chatForm
   // takes no box and no gap) — measured, not guessed, so a wrong constant

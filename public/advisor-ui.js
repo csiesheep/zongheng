@@ -1,10 +1,18 @@
-// The advisor's UI (issue #18): a top-bar switch, a suggestion banner above
-// the hand, and gold decorations on whichever card / use / target #17's
+// The advisor's UI (issue #18): a top-bar switch, a suggestion banner, and
+// gold decorations on whichever card / use / target #17's own
 // `advise(view, side)` names. Everything here is self-contained -- app.js
-// only mounts the switch once and calls `decorate(view, meta)` at the tail
-// of its own render() -- so this file owns every DOM node it creates and
-// never touches anything app.js built (it only reads it, by position: the
-// hand's card order, the sheet's fixed use-button order, E.SPACES' order).
+// only mounts the switch once and calls `decorate(view, meta)` -- so this
+// file owns every DOM node it creates and never touches anything app.js
+// built (it only reads it, by position: the hand's card order, the sheet's
+// fixed use-button order, E.SPACES' order).
+//
+// orchestrator's 2nd-round review (round 1 was `position: fixed`, floating
+// over the map / hand / sheet with a colour scheme meant for a dark
+// background, sitting on light ones): the banner is now ALWAYS a normal
+// flow element, moved between a small set of real slots that already exist
+// in app.js's own layout (never floating, never absolutely positioned), so
+// it can never sit on top of anything and its own solid dark background
+// always has the contrast it needs.
 //
 // Two promises this file makes, matching #17's own:
 //   - it never calls `advise()` when the switch is off, when this isn't a
@@ -12,9 +20,9 @@
 //     over -- the switch's own visibility follows the same "am I looking at
 //     a solo table" gate, independent of on/off.
 //   - it never rebuilds its own elements on click. The switch and the
-//     banner are each created once; every later update only changes
-//     text/attributes/classes on those same nodes. Coloring never uses a
-//     transition (owner: colours are static, not animated).
+//     banner are each created once; every later update only moves the SAME
+//     node between slots, or changes text/attributes/classes on it.
+//     Colouring never uses a transition (owner: colours are static).
 import { advise } from "./shared/advisor.js";
 import * as E from "./shared/engine.js";
 
@@ -24,8 +32,8 @@ const USE_ORDER_JIUDING = ["place", "campaign", "lobby"];
 const ORDER_KEYS = ["opsFirst", "eventFirst"];
 // owner (#18): the teaching mode never shows the switch. #15 hasn't landed
 // yet, so its exact state shape isn't known here -- ?tutorial is the signal
-// the brief names explicitly, and it's read once at load (this page is
-// reloaded on any real navigation, so a stale read isn't a risk).
+// the brief names explicitly (orchestrator: swap for Tut.active() once #15
+// lands and this rebases past it).
 let TUTORIAL = false;
 try { TUTORIAL = new URLSearchParams(location.search).has("tutorial"); } catch {}
 
@@ -35,11 +43,10 @@ function persist() { try { localStorage.setItem(STORE_KEY, enabled ? "1" : "0");
 
 let toggle = null; // { root, label, track, dot } -- built once by mountAdvisorToggle
 let banner = null; // { root, title, why } -- built once, lazily, by ensureBanner
-let ro = null; // ResizeObserver, repositions the banner without a fresh decorate() call
 let lastCtx = null; // the most recent {view, meta, switchVisible}, so the switch's own click can redecorate
 let gen = 0; // invalidates a scheduled advise() the moment the position moves on
-let lastScrolledCard = undefined;
-const cache = { fp: null, adv: null };
+let lastScrolledCard;
+const cache = { fp: null, adv: null, hasResult: false };
 
 // A fingerprint of everything advise()'s answer can depend on, EXCLUDING the
 // player's own in-progress UI picks (which card sheet is open, which target
@@ -73,11 +80,6 @@ export function mountAdvisorToggle(host) {
     enabled = !enabled;
     persist();
     syncToggleUI(lastCtx && lastCtx.meta);
-    // Bug found while testing (#18): this used to call applyDecorations()
-    // without its 4th argument, so `active` (which needs switchVisible)
-    // was always falsy here and a click on the switch with no OTHER
-    // render() in between (e.g. right at the very first decision) silently
-    // did nothing until the next unrelated render.
     if (lastCtx) applyDecorations(lastCtx.view, lastCtx.meta, true, lastCtx.switchVisible);
   });
   host.appendChild(root);
@@ -106,71 +108,96 @@ function ensureBanner() {
   const why = document.createElement("div");
   why.className = "advisor-banner-why";
   root.append(title, why);
-  document.body.appendChild(root);
   banner = { root, title, why };
-  try {
-    ro = new ResizeObserver(() => { if (banner && !banner.root.hidden) positionBanner(); });
-    const hand = document.getElementById("hand");
-    if (hand) ro.observe(hand);
-    const table = document.getElementById("table");
-    if (table) ro.observe(table);
-  } catch { /* ResizeObserver missing: the next decorate() still repositions it */ }
 }
-// A fixed overlay, anchored to the hand's own current box, so it never takes
-// part in #table's own flex/grid height math (mobile's layoutTable() sums a
-// FIXED list of ids for "chrome"; the desktop grid, #7, has fixed grid areas
-// -- neither is mine to extend) and never needs the hand row to make room
-// for it. Clamped to never rise above the table's own top edge (a very short
-// phone) and capped to the hand's own width (390px on desktop's sidebar).
-function positionBanner() {
-  if (!banner) return;
+function setSlot(cls) {
+  banner.root.classList.remove("adv-slot-hand", "adv-slot-prompt", "adv-slot-sheet", "adv-slot-desktop");
+  banner.root.classList.add(cls);
+}
+// Moves the SAME banner node into whichever real slot app.js's own layout
+// has room for right now, and applies the matching size class -- this must
+// run BEFORE app.js's layoutTable() (see the call site in render()), since
+// layoutTable() measures #prompt/#sheet's rendered height (which now
+// includes the banner, when it's parked inside one of them) and, for the
+// one truly new row this adds, reads a class list that includes
+// "advisorBanner" for exactly that reason.
+//
+// Slots, in the order this checks them:
+//   - sheet:   #sheet has real content -- the full-screen "browsing a
+//              card" header, the mini chip + preview while a target is
+//              being picked, OR the opening placement / any other pending
+//              choice (renderPending renders its Confirm/Cancel row into
+//              #sheet too) -- the banner becomes the sheet's own last flow
+//              child, below whatever's already there (owner: "sheet 裡...
+//              的 flow").
+//   - desktop: >=1024px, browsing the hand with no sheet open -- becomes
+//              the hand's own grid's first row (spanning every column), so
+//              the cards flow into the rows below it, still inside the
+//              sidebar; falls back to the prompt slot if that would push
+//              the hand past the frame's own bottom edge.
+//   - prompt:  the phone column's hand row has already been squeezed down
+//              to its "chip" mode (#5: the map is at its own floor scale
+//              and the hand's own box has no headroom left for anything
+//              above it) -- the banner replaces the prompt's OWN text
+//              (hidden while this is active; Log/Rules stay) instead of
+//              trying to add a row that isn't there.
+//   - hand:    the ordinary case -- a plain flow row directly above #hand,
+//              inside #table, counted in layoutTable()'s own "chrome" sum.
+function placeBanner(meta) {
   const table = document.getElementById("table");
   const hand = document.getElementById("hand");
-  const map = document.getElementById("map");
-  if (!table) return;
-  const tr = table.getBoundingClientRect();
-  const hr = hand ? hand.getBoundingClientRect() : null;
-  const prompt = document.getElementById("prompt");
   const sheet = document.getElementById("sheet");
-  const pr = prompt ? prompt.getBoundingClientRect() : null;
-  // #sheet sits between #prompt and #hand in the DOM, and while a card's
-  // map-active use (place/campaign/lobby target picking) is open it stays
-  // visible as a small chip strip right there -- so the real "bottom of
-  // what's above the hand" is whichever of the two extends lower, not
-  // always #prompt.
-  const sr = sheet && !sheet.hidden && sheet.getBoundingClientRect().height > 0 ? sheet.getBoundingClientRect() : null;
-  const aboveHandBottom = Math.max(pr ? pr.bottom : 0, sr ? sr.bottom : 0);
-  const h = banner.root.offsetHeight || 54;
-  // Above the hand, in the gap between whatever sits right above it and the
-  // hand row -- but on a real phone that gap is only a few px (#table's own
-  // row-gap), nowhere near this banner's own height, so sitting there would
-  // print gold text directly over real instructions. Only use that spot
-  // when it is actually tall enough. Otherwise: on #7's desktop sidebar
-  // (>=1024px) the hand has real headroom of its own (its grid area is
-  // often several hundred px tall), so this drops the banner just inside
-  // the hand's own top edge instead -- still in the sidebar, between the
-  // prompt and the cards, per the desktop brief, rather than jumping all
-  // the way to the map on the OTHER side of the frame. On the phone
-  // column, the hand's own box is exactly card-height (no headroom to
-  // spare), so it falls back to just inside the map's own bottom edge
-  // instead (the same spot used when there is no hand row at all, e.g.
-  // the opening placement) -- the map is the one part of that column that
-  // never carries text this has to compete with.
-  const handVisible = !!(hand && !hand.hidden && hr && hr.height > 0);
-  const gapAboveHand = handVisible && aboveHandBottom ? hr.top - aboveHandBottom : -1;
-  const fitsAboveHand = handVisible && gapAboveHand >= h + 10;
+  const prompt = document.getElementById("prompt");
+  const promptText = document.getElementById("promptText");
+  if (!table) return;
+  const sheetHasContent = !!(sheet && !sheet.hidden && sheet.children.length > 0);
+  if (sheetHasContent) {
+    if (promptText) promptText.hidden = false;
+    sheet.appendChild(banner.root);
+    setSlot("adv-slot-sheet");
+    return;
+  }
   const desktop = window.innerWidth >= 1024;
-  const mr = map ? map.getBoundingClientRect() : tr;
-  let anchor, top;
-  if (fitsAboveHand) { anchor = hr; top = hr.top - h - 6; }
-  else if (handVisible && desktop) { anchor = hr; top = hr.top + 6; }
-  else { anchor = mr; top = mr.bottom - h - 6; }
-  const width = Math.min(390, Math.max(200, anchor.width || tr.width || 320));
-  banner.root.style.width = width + "px";
-  banner.root.style.left = Math.max(tr.left, anchor.left) + "px";
-  const minTop = tr.top + 4, maxTop = tr.bottom - h - 4;
-  top = Math.max(minTop, Math.min(top, maxTop));
-  banner.root.style.top = top + "px";
+  if (desktop && hand) {
+    if (promptText) promptText.hidden = false;
+    hand.insertBefore(banner.root, hand.firstChild);
+    setSlot("adv-slot-desktop");
+    // #hand's OWN box on the desktop grid is a fixed `1fr` grid row -- its
+    // getBoundingClientRect() doesn't grow with content, so the thing to
+    // check is whether the actual last card now paints past whatever sits
+    // right after the hand (#sideFoot, or #chatForm in a room), since
+    // `.hand{overflow:visible}` lets it spill there instead of clipping or
+    // scrolling (the owner's ruling: the sidebar must never scroll).
+    const last = hand.lastElementChild;
+    const contentBottom = last ? last.getBoundingClientRect().bottom : hand.getBoundingClientRect().bottom;
+    const sideFoot = document.getElementById("sideFoot"), chatForm = document.getElementById("chatForm");
+    const nextTop = sideFoot && !sideFoot.hidden ? sideFoot.getBoundingClientRect().top
+      : chatForm && !chatForm.hidden ? chatForm.getBoundingClientRect().top
+      : table.getBoundingClientRect().bottom;
+    if (contentBottom > nextTop - 2) {
+      hand.removeChild(banner.root);
+      if (promptText) promptText.hidden = true;
+      prompt.appendChild(banner.root);
+      setSlot("adv-slot-prompt");
+    }
+    return;
+  }
+  // Phone column. #5's chip mode is the owner's own named trigger for "the
+  // map is already at its floor scale and there is no headroom left above
+  // the hand" -- read as it stands from the LAST layoutTable() pass (this
+  // one hasn't run yet this render, but the viewport doesn't change
+  // between one render and the next except at a real resize, which itself
+  // calls layoutTable() before the next render/decorate cycle runs).
+  if (hand && hand.dataset.mode === "chip") {
+    if (promptText) promptText.hidden = true;
+    prompt.appendChild(banner.root);
+    setSlot("adv-slot-prompt");
+    return;
+  }
+  if (promptText) promptText.hidden = false;
+  if (hand) table.insertBefore(banner.root, hand);
+  else table.appendChild(banner.root); // defensive fallback; #sheet or #hand cover every real state today
+  setSlot("adv-slot-hand");
 }
 
 function joinNames(ids, meta) {
@@ -194,6 +221,18 @@ function fmtParams(params, meta) {
   }
   return out;
 }
+// How many of `ids` the player has already placed themselves (their own
+// tentative picks this decision, not yet confirmed) -- subtracted out so a
+// spot the player already satisfied stops glowing and its badge counts
+// down, instead of staying lit at the original suggestion's count forever
+// (owner, round 2: "已經放滿的據點金圈和 +n 徽章要跟著更新").
+function remainingCounts(ids, meta) {
+  const counts = {};
+  for (const id of ids) counts[id] = (counts[id] || 0) + 1;
+  for (const id of (meta && meta.pickedSpaces) || []) if (counts[id]) counts[id]--;
+  for (const id of Object.keys(counts)) if (counts[id] <= 0) delete counts[id];
+  return counts;
+}
 // The banner's one title line already says card+use+target together
 // (advisor.suggestCard.<use>, e.g. "Campaign in {space} with {card}") --
 // there is no separate "step 2" text, only a separate VISUAL location (the
@@ -202,10 +241,9 @@ function bannerTitle(adv, meta) {
   const { t, cardName } = meta;
   if (adv.action.type === "headline") return t("advisor.suggestHeadline", { card: cardName(adv.card) });
   if (adv.action.type === "choose") {
-    if (!adv.targets.length) return null; // a card/option pending choice names no space
-    const counts = {};
-    for (const id of adv.targets) counts[id] = (counts[id] || 0) + 1;
+    const counts = remainingCounts(adv.targets, meta);
     const ids = Object.keys(counts);
+    if (!ids.length) return null; // a card/option pending choice names no space, or it's already fully placed
     // Each line is already its own full sentence ("Place {n} ... in
     // {space}."), so multiple spaces are joined with a space, not the
     // language's list separator (which would double up the punctuation).
@@ -213,7 +251,8 @@ function bannerTitle(adv, meta) {
   }
   if (adv.card == null) return null;
   const use = adv.use || "event";
-  const space = adv.targets.length ? joinNames(adv.targets, meta) : "";
+  const remaining = Object.keys(remainingCounts(adv.targets, meta));
+  const space = remaining.length ? joinNames(remaining, meta) : "";
   let s = t(`advisor.suggestCard.${use}`, { card: cardName(adv.card), space });
   if (adv.order) s += " " + t(`advisor.suggestOrder.${adv.order}`);
   return s;
@@ -271,7 +310,7 @@ function decorateSheet(adv, meta) {
     }
   }
 }
-function decorateMap(adv) {
+function decorateMap(adv, meta) {
   const mapInner = document.getElementById("mapInner");
   if (!mapInner) return;
   const nodes = mapInner.querySelectorAll(".node");
@@ -281,8 +320,7 @@ function decorateMap(adv) {
     if (b) b.remove();
   });
   if (!adv || !adv.targets || !adv.targets.length) return;
-  const counts = {};
-  for (const id of adv.targets) counts[id] = (counts[id] || 0) + 1;
+  const counts = remainingCounts(adv.targets, meta);
   E.SPACES.forEach((sp, i) => {
     const n = counts[sp.id];
     if (!n) return;
@@ -299,12 +337,11 @@ function decorateMap(adv) {
 }
 
 function paint(adv, view, meta) {
-  ensureBanner();
   if (!adv) {
     banner.root.hidden = true;
     decorateHand(null, view, meta);
     decorateSheet(null, meta);
-    decorateMap(null);
+    decorateMap(null, meta);
     return;
   }
   const title = bannerTitle(adv, meta) ?? meta.t("advisor.name");
@@ -312,35 +349,59 @@ function paint(adv, view, meta) {
   banner.title.textContent = title;
   banner.why.textContent = why;
   banner.root.hidden = false;
-  positionBanner();
+  // The prompt slot's own CSS clamps the reason to 2 lines -- but a clamp
+  // alone would silently cut it off mid-sentence, which the owner (round
+  // 2) explicitly ruled out ("放不下就只留標題那一句,不要用省略號切句
+  // 子"). So if it doesn't fit whole, drop it entirely rather than show a
+  // clipped fragment; the title alone is still the full suggestion.
+  if (banner.root.classList.contains("adv-slot-prompt") && banner.why.scrollHeight > banner.why.clientHeight + 1) {
+    banner.why.textContent = "";
+  }
   decorateHand(adv, view, meta);
   decorateSheet(adv, meta);
-  decorateMap(adv);
-}
-function showThinking(meta) {
-  ensureBanner();
-  banner.title.textContent = meta.t("advisor.thinking");
-  banner.why.textContent = "";
-  banner.root.hidden = false;
-  positionBanner();
+  decorateMap(adv, meta);
 }
 function clearAll() {
   cache.fp = null;
-  cache.adv = null;
+  cache.hasResult = false;
   if (banner) banner.root.hidden = true;
   decorateHand(null, null, null);
   decorateSheet(null, null);
-  decorateMap(null);
+  decorateMap(null, null);
 }
 
+// The same cheap pre-checks advise() itself opens with (#17): mirrored here
+// so a state where advise() is certain to answer null (the bot's own turn,
+// a spectator-shaped view) never inserts the "thinking" placeholder at all
+// -- without this, every single bot move would flash the banner into its
+// slot and back out a moment later, since applyDecorations only learns
+// advise()'s real answer after the yield below.
+function couldAdvise(view, side) {
+  if (!view || view.winner != null) return false;
+  if (!Array.isArray(view.hands?.[side])) return false;
+  const kind = E.legal(view, side)?.kind;
+  return kind === "action" || kind === "headline" || kind === "pending";
+}
 function applyDecorations(view, meta, force, switchVisible) {
-  const active = switchVisible && enabled && view && view.winner == null;
+  const active = switchVisible && enabled && couldAdvise(view, meta.side);
   if (!active) { clearAll(); return; }
+  ensureBanner();
+  placeBanner(meta); // sync: must land in its slot before app.js's layoutTable() measures it
   const fp = fingerprint(view, meta.side);
-  if (!force && cache.fp === fp) { paint(cache.adv, view, meta); return; }
+  if (!force && cache.fp === fp && cache.hasResult) { paint(cache.adv, view, meta); return; }
   cache.fp = fp;
+  cache.hasResult = false;
   const myGen = ++gen;
-  showThinking(meta);
+  // A neutral placeholder, synchronously, so the slot this just moved into
+  // already has real content the instant layoutTable() (or, for the sheet
+  // slot, the sheet's own rendered height) measures it -- no reflow later
+  // when the real title/why text replaces it.
+  banner.title.textContent = meta.t("advisor.thinking");
+  banner.why.textContent = "";
+  banner.root.hidden = false;
+  decorateHand(null, view, meta);
+  decorateSheet(null, meta);
+  decorateMap(null, meta);
   // advise() is synchronous and can take real time on a midgame position
   // (#17's own budget: comfortably under 3s, but not instant) -- yielding
   // once here at least lets "thinking" paint before that runs, and the gen
@@ -351,6 +412,7 @@ function applyDecorations(view, meta, force, switchVisible) {
     try { adv = advise(view, meta.side); } catch { adv = null; }
     if (myGen !== gen) return;
     cache.adv = adv;
+    cache.hasResult = true;
     paint(adv, view, meta);
   }, 0);
 }
@@ -364,9 +426,10 @@ function relegateRulesLink(switchVisible) {
   if (alt) alt.hidden = !relegate;
 }
 
-// The one call app.js makes at the tail of its own render(): meta carries
-// exactly what this file can't read out of app.js's own closures --
-// { side, solo, uiCard, t, spaceName, stateName, regionName, cardName, sep }.
+// The one call app.js makes, now BEFORE its own layoutTable() (see the call
+// site): meta carries exactly what this file can't read out of app.js's own
+// closures -- { side, solo, uiCard, pickedSpaces, t, spaceName, stateName,
+// regionName, cardName, sep }.
 export function decorate(view, meta) {
   const tableEl = document.getElementById("table");
   const tableShown = !!tableEl && !tableEl.hidden;
