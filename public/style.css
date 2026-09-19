@@ -12,6 +12,8 @@
   --serif: "Noto Serif TC", serif; --kai: "LXGW WenKai TC", "Noto Serif TC", serif; --sans: "Noto Sans TC", sans-serif;
   /* Neutral default accent (landing, lobby before a side is known): bronze on black. */
   --accent: var(--gold); --accent-ink: var(--bg); --accent-font: var(--serif); --accent-weight: 600;
+  --field-bg: rgba(255, 255, 255, 0.06);
+  --table-bg: var(--bg);
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -20,9 +22,24 @@ body { background: var(--bg); color: var(--text); font-family: var(--serif); dis
 button { font-family: var(--serif); cursor: pointer; }
 button:disabled { opacity: 0.45; cursor: default; }
 
-/* Seated side re-skins the accent used by primary controls and the hand. */
-body.side-chu { --accent: var(--chu-gold); --accent-ink: #6f120d; --accent-font: var(--kai); --accent-weight: 700; }
-body.side-qin { --accent: var(--qin-text); --accent-ink: var(--bg); --accent-font: var(--serif); --accent-weight: 900; }
+/* Seated side re-skins the accent used by primary controls and the hand, and
+   the block below the map (the whole court's own colour: black for Qin,
+   lacquer red for Chu). */
+body.side-chu { --accent: var(--chu-gold); --accent-ink: #6f120d; --accent-font: var(--kai); --accent-weight: 700; --table-bg: #4f0e0a; }
+body.side-qin { --accent: var(--qin-text); --accent-ink: var(--bg); --accent-font: var(--serif); --accent-weight: 900; --table-bg: var(--bg); }
+
+/* The solo setup screen re-skins its whole page by which side is picked:
+   Qin default black, Chu lacquer red, Random a light parchment (ink on
+   cream) — every component below already reads these same tokens. */
+body.setup-chu {
+  --bg: #4f0e0a; --text: #fff3d2; --text-dim: #f1d3c4; --text-soft: #ffe3cf;
+  --gold: #f4d98a; --gold-line: #d8b56a; --field-bg: rgba(0, 0, 0, 0.22);
+}
+body.setup-random {
+  --bg: #f7f3e8; --text: #1a1a1a; --text-dim: #4a463c; --text-soft: #33302a;
+  --gold: #1a1a1a; --gold-line: #1a1a1a; --field-bg: #ffffff;
+}
+body.setup-qin, body.setup-chu, body.setup-random { background: var(--bg); color: var(--text); }
 
 .bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 0; gap: 8px; }
 .bar .hub { color: var(--gold); text-decoration: none; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; }
@@ -36,7 +53,7 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .bar .back { font-family: var(--kai); font-size: 15px; letter-spacing: 2px; padding: 8px 10px 8px 0; min-height: 44px; display: inline-flex; align-items: center; }
 .actions { display: flex; flex-direction: column; gap: 10px; }
 .actions .row { display: flex; gap: 8px; }
-.actions .row input { flex: 1; min-width: 0; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font: 16px var(--serif); padding: 0 10px; letter-spacing: 3px; }
+.actions .row input { flex: 1; min-width: 0; background: var(--field-bg); border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font: 16px var(--serif); padding: 0 10px; letter-spacing: 3px; }
 .actions button, .actions .link { min-height: 46px; border: 1px solid var(--gold-line); border-radius: 8px; background: none; color: var(--text); font-size: 16px; letter-spacing: 1px; padding: 0 14px; }
 .actions .primary { background: var(--gold); color: var(--bg); font-family: var(--kai); font-size: 18px; letter-spacing: 3px; }
 .actions a.primary { display: block; text-align: center; text-decoration: none; line-height: 44px; }
@@ -65,30 +82,39 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .landing-bar .hub { min-height: 44px; display: inline-flex; align-items: center; }
 .langBtn { min-width: 44px; min-height: 44px; border-radius: 18px; background: none; border: 1px solid var(--gold); color: var(--gold); font: 700 12px var(--serif); padding: 4px 12px; }
 .sides { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; position: relative; }
-.side-tap { position: relative; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; overflow: hidden; text-decoration: none; padding: 6px 16px; }
+/* Qin's content sits toward the top of its block and Chu's toward the
+   bottom — both anchored AWAY from the shared boundary where the 縱橫
+   badge floats, so neither ever collides with it even on a short phone. */
+.side-tap { position: relative; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; text-decoration: none; padding: 4px 16px; gap: 4px; }
+.side-tap.qin { justify-content: flex-start; padding-top: 8px; }
+.side-tap.chu { justify-content: flex-end; padding-bottom: 8px; }
 .side-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+.side-tap.chu .side-img { object-position: 22% center; }
 .side-shade { position: absolute; inset: 0; z-index: 1; }
-.side-tap.qin .side-shade { background: linear-gradient(to right, rgba(6, 5, 4, 0.92), rgba(6, 5, 4, 0.42) 62%, rgba(6, 5, 4, 0.05)); }
-.side-tap.chu .side-shade { background: linear-gradient(to left, rgba(60, 6, 4, 0.94), rgba(60, 6, 4, 0.46) 62%, rgba(60, 6, 4, 0.08)); }
+.side-tap.qin .side-shade { background: linear-gradient(to right, rgba(6, 5, 4, 0.97), rgba(6, 5, 4, 0.9) 38%, rgba(6, 5, 4, 0.35) 72%, rgba(6, 5, 4, 0)); }
+.side-tap.chu .side-shade { background: linear-gradient(to left, rgba(60, 6, 4, 0.96), rgba(60, 6, 4, 0.7) 40%, rgba(60, 6, 4, 0) 70%); }
 .side-content { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; }
 .side-tap.chu .side-content { flex-direction: row-reverse; align-self: flex-end; text-align: right; }
-.side-glyph { font-size: clamp(34px, 11vh, 52px); line-height: 1; }
-.side-tap.qin .side-glyph { font: 900 clamp(34px, 11vh, 52px)/1 var(--serif); color: var(--qin-text); }
-.side-tap.chu .side-glyph { font: 700 clamp(34px, 11vh, 52px)/1 var(--kai); color: var(--chu-gold); }
+.side-glyph { font-size: clamp(28px, 9vh, 52px); line-height: 1; }
+.side-tap.qin .side-glyph { font: 900 clamp(28px, 9vh, 52px)/1 var(--serif); color: var(--qin-text); }
+.side-tap.chu .side-glyph { font: 700 clamp(28px, 9vh, 52px)/1 var(--kai); color: var(--chu-gold); }
 .side-text { display: flex; flex-direction: column; gap: 3px; font-size: 11px; line-height: 1.4; }
 .side-tap.qin .side-text { color: var(--text); }
 .side-tap.chu .side-text { color: #fff3d2; }
 .side-headline { font-weight: 900; font-size: 12px; }
 .side-tap.chu .side-headline { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
-.side-cta { position: relative; z-index: 2; align-self: flex-start; margin-top: 6px; min-width: 118px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; letter-spacing: 1px; }
+/* Both CTAs are the same shape (size, border-width, radius); only the
+   colour tells Qin and Chu apart. */
+.side-cta { position: relative; z-index: 2; align-self: flex-start; margin-top: 2px; min-width: 118px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; letter-spacing: 1px; border-radius: 10px; border-width: 1.5px; border-style: solid; }
 .side-tap.chu .side-cta { align-self: flex-end; }
-.side-tap.qin .side-cta { border: 1px solid var(--qin-text); border-radius: 8px; color: var(--qin-text); font-family: var(--serif); font-weight: 600; }
-.side-tap.chu .side-cta { border: 1px solid var(--chu-gold); border-radius: 20px; color: var(--chu-gold); font-family: var(--kai); font-weight: 700; }
+.side-tap.qin .side-cta { border-color: var(--qin-text); color: var(--qin-text); font-family: var(--serif); font-weight: 600; }
+.side-tap.chu .side-cta { border-color: var(--chu-gold); color: var(--chu-gold); font-family: var(--kai); font-weight: 700; }
 .sides h1#hero { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; z-index: 3;
-  width: 120px; height: 44px; box-sizing: border-box; background: var(--bg); border: 1.5px solid var(--gold); border-radius: 8px;
+  width: clamp(104px, 30vh, 148px); height: clamp(40px, 10vh, 52px); box-sizing: border-box; background: var(--bg); border: 1.5px solid var(--gold); border-radius: 10px;
   box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 4px var(--gold-line);
-  font: 900 22px/41px var(--serif); letter-spacing: 6px; padding-left: 6px; text-align: center; color: var(--gold); }
-.controls { flex: none; padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 8px; }
+  font-family: var(--serif); font-weight: 900; font-size: clamp(18px, 5vh, 26px); line-height: calc(clamp(40px, 10vh, 52px) - 3px);
+  letter-spacing: clamp(3px, 1.2vh, 6px); padding-left: 5px; text-align: center; color: var(--gold); }
+.controls { flex: none; padding: 6px 14px 8px; display: flex; flex-direction: column; gap: 6px; }
 .controls .row { display: flex; gap: 8px; align-items: center; }
 .controls .row.extra { gap: 8px; }
 .controls .row.extra a { flex: 1; }
@@ -103,8 +129,23 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .controls .link { flex: none; min-height: 44px; display: inline-flex; align-items: center; font: 400 13px var(--serif); color: var(--text); text-decoration: underline; }
 .controls .credit { margin: 0; padding: 0; flex: 1; text-align: right; font: 400 10px/1.35 var(--serif); color: var(--text-dim); }
 
-/* table */
-#table { padding: 8px 8px 20px; }
+/* The multiplayer card: a light parchment island (same double-ring inset
+   border as the 縱橫 badge) sitting inside the otherwise dark controls
+   strip. Name + Random side sit above its "MULTIPLAYER" title. */
+.mp-card { background: var(--neutral-bg); color: var(--neutral-ink); border: 1px solid #efe6d2; border-radius: 12px;
+  box-shadow: inset 0 0 0 3px var(--neutral-bg), inset 0 0 0 4px #b7ab8d; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
+.mp-title { font: 700 10px/12px var(--sans); letter-spacing: 2px; color: #4a463c; margin: 0; text-transform: uppercase; }
+.mp-card .row input, .mp-card #joinCode { border-color: #1a1a1a; background: #f7f2e4; color: #1a1a1a; }
+.mp-card .ghost { border-color: #1a1a1a; color: #1a1a1a; }
+.mp-card #btnCreate { background: #1a1a1a; color: #fff; }
+.mp-card #btnJoin { background: var(--chu-btn); color: #fff; }
+.mp-card .link { color: var(--chu-bg); }
+.mp-card .credit { color: #4a463c; }
+
+/* table: everything below the map's own opaque background paints in the
+   seated side's court colour (black for Qin, lacquer red for Chu — see
+   body.side-qin/side-chu's --table-bg). */
+#table { padding: 8px 8px 20px; background: var(--table-bg); }
 .tracks { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 12px; padding: 4px 4px 8px; color: var(--text-dim); }
 .tracks .wide { grid-column: 1 / -1; }
 .tracks b { color: var(--text); font-weight: 600; }
@@ -118,10 +159,18 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .mandate { position: relative; height: 12px; border-left: 2px solid #777; border-right: 2px solid var(--chu-btn); margin: 4px 0; }
 .mandate .mid { position: absolute; left: 50%; top: 0; width: 1px; height: 12px; background: var(--gold); }
 .mandate .dot { position: absolute; top: 1px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--gold); }
-.map { position: relative; width: 358px; height: 350px; margin: 0 auto; background: var(--neutral-bg); overflow: hidden; border-radius: 8px; }
-.region { position: absolute; border: 1px solid var(--gold-line); }
-.region span { position: absolute; right: 4px; bottom: 1px; font-family: var(--kai); font-size: 11px; color: var(--gold-line); letter-spacing: 2px; }
-.region.home { background: #e9dcc0; }
+.map { position: relative; width: 358px; height: 350px; margin: 0 auto; background: url(art/ui/map.jpg) center/cover, var(--neutral-bg); overflow: hidden; border-radius: 8px; }
+.map::before { content: ""; position: absolute; inset: 0; background: rgba(250, 248, 242, 0.62); pointer-events: none; }
+/* Each region is a soft, borderless tint (no outline — the label pill and
+   the node colouring carry the boundary instead). */
+.region { position: absolute; border-radius: 10px; }
+.region span { position: absolute; right: 4px; bottom: 1px; font: 900 10px/1.5 var(--sans); letter-spacing: 1.5px; color: #fff; padding: 1px 6px; border-radius: 4px; }
+.region-west { background: rgba(43, 43, 43, 0.15); } .region-west span { background: #2b2b2b; }
+.region-jin { background: rgba(183, 121, 31, 0.2); } .region-jin span { background: #7a4d0c; }
+.region-zhou { background: rgba(216, 181, 106, 0.28); } .region-zhou span { background: #7a5c10; }
+.region-east { background: rgba(47, 125, 120, 0.2); } .region-east span { background: #1d5651; }
+.region-south { background: rgba(163, 26, 21, 0.16); } .region-south span { background: #7d130e; }
+.region-north { background: rgba(74, 111, 165, 0.2); } .region-north span { background: #2f4d7a; }
 .node { position: absolute; width: 46px; height: 30px; padding: 0; border: 1.5px solid var(--gold-line); border-radius: 6px; background: var(--neutral-bg); color: var(--neutral-ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-family: var(--serif); }
 .node .nm { font-family: var(--kai); font-size: 10px; line-height: 11px; white-space: nowrap; }
 .node .nm.cap { color: var(--gold-line); border-bottom: 1px solid var(--gold-line); }
@@ -141,12 +190,27 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .prompt .news { margin-top: 6px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 12px; line-height: 1.5; color: var(--text-dim); }
 .tracks .states { display: flex; flex-wrap: wrap; gap: 4px 10px; }
 .tracks .states span { white-space: nowrap; }
-.sheet { display: flex; flex-direction: column; gap: 6px; padding: 0 4px 8px; }
+.sheet { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px 8px; border-radius: 10px; transition: background-color 0.15s; }
 .sheet .rowb { display: flex; flex-wrap: wrap; gap: 6px; }
 .sheet button { min-height: 40px; padding: 0 12px; background: none; border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font-size: 14px; }
 .sheet button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .sheet button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-family: var(--accent-font); font-weight: var(--accent-weight); }
 .sheet .note { font-size: 12px; color: var(--text-dim); }
+/* The sheet's own background follows the selected card's owner (see the
+   card-sheet designs: Chu opens on lacquer red, Qin on black, neutral and
+   scoring cards on parchment) — the surrounding page keeps its own colour. */
+.sheet-q { background: var(--qin-bg); }
+.sheet-q button { border-color: var(--gold-line); color: var(--qin-text); }
+.sheet-q button[aria-pressed="true"], .sheet-q button.primary { background: var(--qin-text); border-color: var(--qin-text); color: var(--bg); }
+.sheet-q .note { color: var(--text-soft); }
+.sheet-c { background: var(--chu-bg); }
+.sheet-c button { border-color: var(--gold); color: #fff3d2; }
+.sheet-c button[aria-pressed="true"], .sheet-c button.primary { background: var(--chu-gold); border-color: var(--chu-gold); color: #6f120d; }
+.sheet-c .note { color: #fff3d2; }
+.sheet-n, .sheet-s { background: var(--neutral-bg); }
+.sheet-n button, .sheet-s button { border-color: #8a8060; color: var(--neutral-ink); }
+.sheet-n button[aria-pressed="true"], .sheet-s button[aria-pressed="true"], .sheet-n button.primary, .sheet-s button.primary { background: var(--neutral-ink); border-color: var(--neutral-ink); color: #fff; }
+.sheet-n .note, .sheet-s .note { color: #4a463c; }
 
 /* Hand: rounded cards, circular ops badges. Qin, Chu and neutral/scoring
    cards all share this shape — only colour, texture and font tell them apart. */

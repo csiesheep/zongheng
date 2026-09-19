@@ -48,9 +48,18 @@ function setLang(l) {
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
 
 // ---------- views ----------
+// The page's whole colour follows the side: the setup screen re-skins by
+// whichever side is picked (Qin black, Chu lacquer red, Random parchment);
+// once seated, the table and result screens follow the seat instead.
+function paintBody(view) {
+  document.body.classList.remove("setup-qin", "setup-chu", "setup-random", "side-qin", "side-chu");
+  if (view === "setup") document.body.classList.add("setup-" + setup.side);
+  else if ((view === "table" || view === "over") && !game.spectator) document.body.classList.add(game.me === 0 ? "side-qin" : "side-chu");
+}
 function show(view) {
   for (const v of ["setup", "lobby", "table", "over"]) $(v).hidden = v !== view;
   window.scrollTo(0, 0);
+  paintBody(view);
 }
 // The landing is its own page. Going back never loses anything: the solo game
 // is saved on every move, and a room keeps this tab's seat (the bot covers it
@@ -75,6 +84,7 @@ function seg(el, items, value, onPick) {
 function renderSetup() {
   seg($("segSide"), [["qin", t("sides.qin")], ["chu", t("sides.chu")], ["random", t("setup.random")]], setup.side, (v) => { setup.side = v; store.set("zh.side", v); renderSetup(); });
   seg($("segLevel"), [["easy", t("setup.easy")], ["normal", t("setup.normal")], ["hard", t("setup.hard")]], setup.level, (v) => { setup.level = v; store.set("zh.level", v); renderSetup(); });
+  if (!$("setup").hidden) paintBody("setup");
 }
 $("btnStart").onclick = startSolo;
 
@@ -160,10 +170,10 @@ function describeAction(a) {
 
 // ---------- rendering ----------
 function render() {
-  // The whole page's accent (buttons, pressed hand card) follows whichever
-  // court you sit in; a spectator gets the neutral bronze-on-black default.
-  document.body.classList.toggle("side-qin", !game.spectator && game.me === 0);
-  document.body.classList.toggle("side-chu", !game.spectator && game.me === 1);
+  // The whole page's accent (buttons, pressed hand card, the block below the
+  // map) follows whichever court you sit in; paintBody() sets this once the
+  // seat is known (see show()). A spectator gets the neutral default.
+  if (!$("table").hidden) paintBody("table");
   // In a room the state on hand is already this seat's view.
   const v = game.room ? game.st : E.view(game.st, game.me);
   $("barMid").textContent = `${t("tracks.turn")} ${v.turn} · ${game.spectator ? "" : sideName(game.me)}`;
@@ -269,6 +279,13 @@ function currentMode(v) {
   }
   return none;
 }
+// Which colour a card belongs to: Qin (q), Chu (c), neutral (n) or a scoring
+// card (s). Used to tint both the hand tile and the sheet panel below it.
+function cardSide(id) {
+  if (id === E.JIUDING) return "n";
+  const c = E.CARD[id];
+  return c.scoring ? "s" : c.side === 0 ? "q" : c.side === 1 ? "c" : "n";
+}
 function cardInfo(L, card) {
   if (card === E.JIUDING) return L.jiuding ? { id: card, ops: 4, enemy: false, uses: { place: L.jiuding.place, campaign: L.jiuding.campaign, lobby: L.jiuding.lobby } } : null;
   const c = L.cards.find((x) => x.id === card);
@@ -281,7 +298,7 @@ function renderMap(v) {
   const el = $("map"); el.innerHTML = "";
   for (const [r, [x, y, w, h]] of Object.entries(REGION_BOX)) {
     const d = document.createElement("div");
-    d.className = "region" + (E.REGIONS[r].home ? " home" : "");
+    d.className = `region region-${r}` + (E.REGIONS[r].home ? " home" : "");
     d.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
     d.innerHTML = `<span>${esc(regionName(r))}</span>`;
     el.appendChild(d);
@@ -319,6 +336,10 @@ function note(parent, text) { const d = document.createElement("div"); d.classNa
 function renderPromptAndSheet(v) {
   const p = $("prompt"), sh = $("sheet");
   sh.innerHTML = "";
+  // The sheet's own background follows the selected card's owner, like the
+  // card-sheet mockups (a Chu card opens on lacquer red, Qin on black,
+  // neutral/scoring on parchment).
+  sh.className = "sheet" + (game.ui.card != null ? " sheet-" + cardSide(game.ui.card) : "");
   const me = game.me, ui = game.ui;
   const err = ui.err ? `<div class="err">${esc(ui.err)}</div>` : "";
   const setPrompt = (html) => { p.innerHTML = html + err; };

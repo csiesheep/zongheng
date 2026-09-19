@@ -28,7 +28,7 @@
         <span class="side-content">
           <span class="side-glyph" lang="zh-Hant" aria-hidden="true">秦</span>
           <span class="side-text">
-            <span class="side-headline" lang="zh-Hant" data-t="side.qin.headline"></span>
+            <span class="side-headline" data-t="side.qin.headline"></span>
             <span class="side-sub" data-t="side.qin.sub"></span>
           </span>
         </span>
@@ -40,7 +40,7 @@
         <span class="side-content">
           <span class="side-glyph" lang="zh-Hant" aria-hidden="true">楚</span>
           <span class="side-text">
-            <span class="side-headline" lang="zh-Hant" data-t="side.chu.headline"></span>
+            <span class="side-headline" data-t="side.chu.headline"></span>
             <span class="side-sub" data-t="side.chu.sub"></span>
           </span>
         </span>
@@ -55,20 +55,23 @@
       <a id="btnResume" class="ghost small" href="play.html?resume" data-t="landing.resume" hidden></a>
       <a id="btnRoom" class="ghost small" href="play.html" hidden></a>
     </div>
-    <div class="row">
-      <label for="landName" class="sr" data-t="landing.name"></label>
-      <input id="landName" maxlength="16" spellcheck="false">
-      <a id="btnRandom" class="ghost" href="play.html?play&amp;side=random" data-t="landing.random"></a>
-    </div>
-    <div class="row">
-      <button id="btnCreate" type="button" data-t="landing.create"></button>
-      <label for="joinCode" class="sr" data-t="landing.code"></label>
-      <input id="joinCode" maxlength="4" autocapitalize="characters" spellcheck="false">
-      <button id="btnJoin" type="button" data-t="landing.join"></button>
-    </div>
-    <div class="row bottom">
-      <a href="rules.html" class="link" data-t="landing.rulesLink"></a>
-      <p class="credit" id="credit"></p>
+    <div class="mp-card">
+      <div class="row">
+        <label for="landName" class="sr" data-t="landing.name"></label>
+        <input id="landName" maxlength="16" spellcheck="false">
+        <a id="btnRandom" class="ghost" href="play.html?play&amp;side=random" data-t="landing.random"></a>
+      </div>
+      <h2 class="mp-title" data-t="landing.multiplayer"></h2>
+      <div class="row">
+        <button id="btnCreate" type="button" data-t="landing.create"></button>
+        <label for="joinCode" class="sr" data-t="landing.code"></label>
+        <input id="joinCode" maxlength="4" autocapitalize="characters" spellcheck="false">
+        <button id="btnJoin" type="button" data-t="landing.join"></button>
+      </div>
+      <div class="row bottom">
+        <a href="rules.html" class="link" data-t="landing.rulesLink"></a>
+        <p class="credit" id="credit"></p>
+      </div>
     </div>
   </div>
 </div>

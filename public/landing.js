@@ -25,7 +25,7 @@ function setLang(l) {
   document.title = lang === "en" ? "Zongheng 縱橫" : "縱橫 Zongheng";
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
   $("credit").textContent = S.credit;
-  $("joinCode").placeholder = t("landing.code");
+  $("joinCode").placeholder = t("landing.codePlaceholder");
   $("landName").placeholder = t("landing.name");
   // A room this tab still holds a seat in, or a solo game still in progress:
   // offer the way back. Both can appear together; that row must still fit.
