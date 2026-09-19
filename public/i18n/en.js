@@ -146,4 +146,17 @@ export default {
       best: "The best available move right now.",
     },
   },
+  // #29: the full card page's one-line "what kind of card is this" note —
+  // own event, a shared neutral card, the other side's card, or a scoring
+  // card. Fixed copy from the issue's own table, not templated with a live
+  // tally (renderPromptAndSheet still shows the fuller scoring tally
+  // separately, via scoringPanel).
+  sheet: {
+    hint: {
+      own: "Your own event: it happens when you play it.",
+      neutral: "A neutral card: the event or the ops, never both.",
+      enemy: "An enemy card: you use the ops, and its event still happens; you choose the order.",
+      score: "A scoring card: it must be played this turn.",
+    },
+  },
 };

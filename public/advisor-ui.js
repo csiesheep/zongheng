@@ -175,11 +175,19 @@ function placeBanner(meta) {
   // and letting THEIR own overflow check decide. Only a real, visible
   // child counts as content here now.
   const sheetHasContent = !!(sheet && !sheet.hidden && [...sheet.children].some((c) => !c.hidden));
+  // #29: the full card page now splits into a fixed head + a scrollable
+  // .sheet-mid + a pinned footer (see sheetMid() in app.js) — appending the
+  // banner straight into #sheet would land it AFTER the pinned footer
+  // (#sheet's last child), below Cancel/Confirm instead of "below the uses"
+  // (the owner's own words, #29 addendum). Route into .sheet-mid whenever
+  // it exists; only the compact chip (no .sheet-mid) still gets #sheet
+  // itself, same as before.
+  const sheetContentTarget = sheet ? sheet.querySelector(":scope > .sheet-mid") || sheet : sheet;
   const desktop = window.innerWidth >= 1024;
   if (desktop) {
     if (sheetHasContent) {
       if (promptText) promptText.hidden = false;
-      sheet.appendChild(banner.root);
+      sheetContentTarget.appendChild(banner.root);
       setSlot("adv-slot-sheet");
       return;
     }
@@ -209,9 +217,9 @@ function placeBanner(meta) {
   // Phone column.
   if (sheetHasContent) {
     if (promptText) promptText.hidden = false;
-    sheet.appendChild(banner.root);
+    sheetContentTarget.appendChild(banner.root);
     setSlot("adv-slot-sheet");
-    if (overflowsTable()) { sheet.removeChild(banner.root); takeOverPrompt(); }
+    if (overflowsTable()) { sheetContentTarget.removeChild(banner.root); takeOverPrompt(); }
     return;
   }
   if (hand && hand.dataset.mode === "chip") { takeOverPrompt(); return; }
