@@ -32,6 +32,10 @@ function setLang(l) {
   if (room) { $("btnRoom").href = `play.html?room=${room}`; $("btnRoom").textContent = t("landing.backToRoom", { code: room }); }
   $("btnResume").hidden = !savedSolo();
   $("extraRow").hidden = $("btnRoom").hidden && $("btnResume").hidden;
+  // The gold dot (#15) marks the tutorial unopened; it never reads or writes
+  // zh.solo, only its own key, and disappears for good once the tutorial
+  // page has been opened.
+  $("tutEntryDot").hidden = store.get("zh.tutorialSeen", "") === "1";
 }
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
 
