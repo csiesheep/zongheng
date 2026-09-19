@@ -9,6 +9,14 @@
 // external actions are `setup`/`headline`/`play`/`choose`; each validates,
 // mutates, then calls `run`. Every rule in the rulebook
 // (Projects/zongheng/zongheng - rulebook.md) has a named function here.
+//
+// One `apply` is therefore not one "move": `run` stops only at a decision,
+// never at a boundary in the turn structure. When nobody can play, a single
+// `apply` walks out the rest of the action rounds, the end-of-turn scoring and
+// the next deal, and hands back a state waiting on the next headline. That is
+// the rulebook (四、細則:「兩人皆無合法行動時(理論上不會),該行動回合跳過」,
+// and nothing in 三、回合結構 4「結算」 is a player's choice except the 明法令
+// discard, which does park). tests/engine-validation.test.js pins it.
 export * from "./board.js";
 import {
   SPACES, SPACE, REGIONS, SCORED_REGIONS, STATES, SETUP, spacesOf, spacesOfState,
@@ -505,6 +513,10 @@ function resolveHeadlines(st) {
   st.phase = "action"; st.round = 1; st.actor = QIN;
 }
 
+// A side with nothing to play skips its half of the action round (rulebook
+// 四、細則). There is no decision in a skip, so `run` does not stop: with both
+// hands empty the remaining rounds, the end of the turn and the next deal all
+// come out of whichever `apply` emptied the last hand.
 function beginAction(st) {
   if (st.winner != null) return;
   st.phasing = st.actor;
@@ -545,11 +557,20 @@ function finishCard(st, step) {
   if (step.triggered && CARD[c].remove) st.removed.push(c);
   else st.discard.push(c);
 }
+// The one door for spending ops, whichever action brought them: `play` dry
+// runs it through `validateOps` before it commits, and so does `choose` for
+// the ops steps that ask (the event-first branch, 商旅通賈). Every refusal is
+// a rules `Error`, so a payload with no points or a space that is not on the
+// board is a refusal too, not a TypeError from three calls down (#16).
 function doOps(st, side, card, ops, choice) {
+  if (!choice || typeof choice !== "object") fail("ops: no choice");
   if (choice.use === "place") {
+    if (!Array.isArray(choice.points)) fail("place: points must be a list");
+    for (const id of choice.points) if (!SPACE[id]) fail(`place: unknown space ${id}`);
     if (card === JIUDING && choice.points.every(inZhou)) ops += 1;
     placePoints(st, side, choice.points, ops);
   } else if (choice.use === "campaign") {
+    if (!SPACE[choice.target]) fail(`campaign: unknown space ${choice.target}`);
     if (card === JIUDING && inZhou(choice.target)) ops += 1;
     const t = choice.target;
     if (infOf(st, t)[other(side)] <= 0) fail("campaign: no enemy influence there");
@@ -557,6 +578,7 @@ function doOps(st, side, card, ops, choice) {
     if (isProtected(st, t)) fail("campaign: the space is protected this turn");
     campaign(st, side, t, ops);
   } else if (choice.use === "lobby") {
+    if (!SPACE[choice.target]) fail(`lobby: unknown space ${choice.target}`);
     if (card === JIUDING && inZhou(choice.target)) ops += 1;
     const t = choice.target;
     if (infOf(st, t)[other(side)] <= 0) fail("lobby: no enemy influence there");
@@ -624,6 +646,10 @@ function validateChoice(st, p, choice) {
     }
     case "ops": {
       if (!choice || !p.allowed.includes(choice.use)) fail("ops: bad use");
+      // The same dry run `play` does, so ops that arrive through this door are
+      // refused by the same rules with the same error (#16). Without it an
+      // illegal `points` / `target` only blew up once `run` reached the step.
+      validateOps(st, p.who, p.card, p.ops, choice);
       return choice;
     }
     default: fail(`choose: unknown kind ${p.kind}`);
