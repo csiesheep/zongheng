@@ -115,6 +115,11 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
    edge of the viewport — background stays transparent on purpose. */
 .landing-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; padding: 2px 8px 0 14px; display: flex; align-items: center; justify-content: space-between; background: transparent; }
 .landing-bar .hub { min-height: 44px; display: inline-flex; align-items: center; }
+.landing-bar .bar-right { display: flex; align-items: center; gap: 10px; }
+/* Rules, to the left of the language button, in the same voice as the
+   hub link (gold, no fill) — a full 44px tap target even though the
+   short label is small. */
+.landing-bar .rules { min-height: 44px; padding: 0 2px; display: inline-flex; align-items: center; color: var(--gold); font: 700 12px var(--serif); text-decoration: none; letter-spacing: 1px; }
 .langBtn { min-width: 44px; min-height: 44px; border-radius: 18px; background: none; border: 1px solid var(--gold); color: var(--gold); font: 700 12px var(--serif); padding: 4px 12px; }
 .sides { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; position: relative; }
 /* Qin's content sits toward the top of its block and Chu's toward the
@@ -176,19 +181,17 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .controls .ghost.small { min-height: 44px; font-size: 12px; }
 #btnCreate { flex: 1; border: none; background: var(--text); color: var(--bg); font-weight: 600; }
 #btnJoin { flex: none; width: 66px; border: none; background: var(--chu-btn); color: #fff; font-weight: 600; padding: 0; }
-.controls .row.bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.controls .link { flex: none; min-height: 44px; display: inline-flex; align-items: center; font: 400 13px var(--serif); color: var(--text); text-decoration: underline; }
 
 /* The multiplayer card: a light parchment island (same double-ring inset
    border as the 縱橫 badge) sitting inside the otherwise dark controls
-   strip. */
+   strip. One row today ([Multiplayer][code][Join]); more rows (e.g. a
+   tutorial button) stack above it later, so this stays column-flex. */
 .mp-card { background: var(--neutral-bg); color: var(--neutral-ink); border: 1px solid #efe6d2; border-radius: 12px;
   box-shadow: inset 0 0 0 3px var(--neutral-bg), inset 0 0 0 4px #b7ab8d; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
 .mp-card .row input, .mp-card #joinCode { border-color: #1a1a1a; background: #f7f2e4; color: #1a1a1a; }
 .mp-card .ghost { border-color: #1a1a1a; color: #1a1a1a; }
 .mp-card #btnCreate { background: #1a1a1a; color: #fff; }
 .mp-card #btnJoin { background: var(--chu-btn); color: #fff; }
-.mp-card .link { color: var(--chu-bg); }
 
 /* table: everything below the map's own opaque background paints in the
    seated side's court colour (black for Qin, lacquer red for Chu — see

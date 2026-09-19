@@ -68,12 +68,20 @@
   }
 
   /* The phone layout itself, untouched, just narrowed into a column and
-     lifted above the backdrop. */
+     lifted above the backdrop. Height is plain 100vh here, not the 100svh
+     style.css uses for mobile: dynamic viewport units (svh/dvh/lvh) exist
+     to dodge a MOBILE browser's animating toolbar, and some engines only
+     recompute them a frame after a resize/orientation event fires — which
+     showed up on desktop as the seam misreading #btnQin's height right
+     after a window resize (fixed twice: this, and the rAF delay in
+     landing.js). Desktop has no toolbar to dodge, so plain vh (synchronous
+     with the resize event) is both correct and simpler here. */
   .landing-page {
     position: relative;
     z-index: 1;
     flex: none;
     width: 430px;
+    height: 100vh;
     background: var(--bg);
     box-shadow: 0 0 0 1px #8a7a52, 0 0 80px 10px rgba(0, 0, 0, 0.85);
   }

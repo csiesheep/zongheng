@@ -57,9 +57,26 @@ function syncDesktopSeam() {
   const y = qin.getBoundingClientRect().bottom;
   document.documentElement.style.setProperty("--seam-y", `${y}px`);
 }
-window.addEventListener("resize", syncDesktopSeam);
+// A plain 'resize' event can fire a frame before the browser has settled
+// the new layout (observed after #12's bar-overlay change: a window
+// resize's own handler read #btnQin mid-reflow and got the OLD height —
+// a second resize was needed to correct it). Two rAFs guarantee at least
+// one full layout+paint has happened before we measure, so one resize is
+// enough. A setTimeout fallback is added because rAF doesn't run at all
+// while the tab is backgrounded/hidden (a resize can still land there,
+// e.g. a window manager resizing an occluded window); the timeout still
+// fires, just possibly throttled, and re-measuring is harmless either
+// way. ResizeObserver on #btnQin itself is kept as a third, independent
+// path (its callback always runs after layout is current).
+function syncDesktopSeamNextFrame() {
+  requestAnimationFrame(() => requestAnimationFrame(syncDesktopSeam));
+  setTimeout(syncDesktopSeam, 120);
+}
+window.addEventListener("resize", syncDesktopSeamNextFrame);
 window.addEventListener("load", syncDesktopSeam);
 if (window.ResizeObserver) {
+  const qin = $("btnQin");
+  if (qin) new ResizeObserver(syncDesktopSeam).observe(qin);
   const sides = document.querySelector(".sides");
   if (sides) new ResizeObserver(syncDesktopSeam).observe(sides);
 }

@@ -18,7 +18,7 @@ export default {
   sys: { joined: "{name} 進來了。", left: "{name} 離開了。", leftGame: "{name} 離開了,由電腦代打。", dealt: "發牌了。", timeout: "{name} 逾時,由桌面代為決定。", over: "{side}({name})獲勝:{reason}。" },
   ends: { unification: "三國同滅", alliance: "四國相印", mandate: "天命達 20", collapse: "對方把天下推到土崩", scoring: "對方回合結束時手上還有記分卡", scoringBoth: "雙方都留著記分卡,依平手規則", final: "終局結算後的天命", tie: "天命平手,依平手規則" },
   errors: { noRoom: "沒有這個房號。", full: "房間已滿。", needMore: "需要兩個座位。", notReady: "對方尚未就緒。", notYet: "牌桌還沒蓋好。", notYourTurn: "現在不是你決定。" },
-  landing: { backToRoom: "回到房間 {code}", resume: "繼續上一局", play: "與電腦對弈", create: "多人遊戲", join: "加入", code: "房號", codePlaceholder: "CODE", rulesLink: "規則與七十二張牌", name: "你的名字" },
+  landing: { backToRoom: "回到房間 {code}", resume: "繼續上一局", play: "與電腦對弈", create: "多人遊戲", join: "加入", code: "房號", codePlaceholder: "CODE", rulesLink: "規則與七十二張牌", rulesShort: "規則", name: "你的名字" },
   side: {
     qin: { headline: "連橫", sub: "逐一吞併六國。", cta: "以秦開局" },
     chu: { headline: "合縱", sub: "把六國綁在一起。", cta: "以楚開局" },
