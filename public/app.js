@@ -426,9 +426,11 @@ function layoutTable() {
   // Re-decided from scratch every pass (not remembered) so leaving the
   // state, or a tall viewport that never needed it, is never stuck compact.
   const mapActive = !!game.mapActive;
+  const sheetTitle = sheetEl.querySelector(".sheet-title");
   hand.hidden = !hasHand;
   promptEl.hidden = false;
   sheetEl.classList.remove("sheet-compact");
+  if (sheetTitle) sheetTitle.hidden = true;
   if (advBanner) advBanner.hidden = false;
 
   // Measures the CURRENT dom (whatever hidden/compact state is set right
@@ -515,6 +517,12 @@ function layoutTable() {
     // the advice instead until this state ends.
     promptEl.hidden = true;
     sheetEl.classList.add("sheet-compact");
+    // #24 round 2, fix #2: the prompt row was carrying the ONLY copy of
+    // whatever question is on screen in some states (an event's forced
+    // "Pick 1 (1 left)", a pending choice) — the sheet's own preview note
+    // doesn't always restate it. Reveal the parked copy the moment prompt
+    // itself gives way, so a question is never silently dropped.
+    if (sheetTitle) sheetTitle.hidden = false;
     if (advBanner) advBanner.hidden = true;
     result = attempt();
   }
@@ -814,7 +822,19 @@ function renderPromptAndSheet(v) {
   sh.className = "sheet" + (game.ui.card != null ? " sheet-" + cardSide(game.ui.card) : "");
   const me = game.me, ui = game.ui;
   const err = ui.err ? `<div class="err">${esc(ui.err)}</div>` : "";
-  const setPrompt = (html) => { p.innerHTML = html + err; };
+  // #24 round 2 (orchestrator's fix #2): every setPrompt() call also parks
+  // the same text as a hidden first line inside the sheet — layoutTable()
+  // reveals it only when it actually hides #prompt on a short viewport, so
+  // an instruction never just vanishes (e.g. an event's forced "Pick 1 (1
+  // left)" used to leave the sheet with nothing but Confirm/Cancel and no
+  // question). Never both visible at once: #prompt showing is the normal
+  // case, this is only the fallback layoutTable() reaches for.
+  const setPrompt = (html) => {
+    p.innerHTML = html + err;
+    let titleEl = sh.querySelector(".sheet-title");
+    if (!titleEl) { titleEl = document.createElement("div"); titleEl.className = "sheet-title"; titleEl.hidden = true; sh.insertBefore(titleEl, sh.firstChild); }
+    titleEl.innerHTML = html + err;
+  };
   if (v.winner != null) {
     setPrompt(`${t("prompt.over")} <b>${esc(t("over.winner", { side: sideName(v.winner) }))}</b> · ${esc(t("over.reasons." + v.reason))}`);
     btn(sh, t("buttons.result"), () => renderOver(), "primary");
@@ -848,7 +868,14 @@ function renderPromptAndSheet(v) {
   // tappable (C2_Place/C2_Campaign) — "Expand" swaps in the full card.
   const mapActive = ui.use === "campaign" || ui.use === "lobby" || (ui.use === "place" && !(info.enemy && ui.order === "eventFirst" && !ui.pair));
   game.mapActive = mapActive;
-  if (mapActive && !ui.chipExpanded) {
+  // #24 round 2, fix #3: whenever the CHIP is shown (map active, not
+  // expanded) the order/pair choice is already made — the interactive rows
+  // move to whenever the FULL card is on screen instead (browsing it before
+  // any use is picked, the place pre-order step, or "Card"/看牌 pressed
+  // while map-active), so they're always reachable rather than landing
+  // exactly in the state that gets compacted away.
+  const showFullCard = !mapActive || ui.chipExpanded;
+  if (!showFullCard) {
     cardChip(sh, ui.card);
   } else {
     cardHeader(sh, ui.card);
@@ -861,20 +888,51 @@ function renderPromptAndSheet(v) {
     if (ui.card === E.JIUDING && (u === "event" || u === "reform")) continue;
     btn(uses, t(`uses.${u}`), () => { ui.use = u; ui.points = []; ui.target = null; ui.err = ""; render(); }, "", ui.use === u, !usable(u));
   }
-  if (info.enemy && ui.use && ui.use !== "event" && ui.use !== "reform") {
-    const r = row(sh, "rowb order");
-    for (const o of ["opsFirst", "eventFirst"]) btn(r, t(`uses.${o}`), () => { ui.order = o; ui.points = []; render(); }, "", ui.order === o);
-    note(sh, t("preview.enemyEvent"));
+  // #24 round 2, fix #3 (owner): "their card"'s ops-first/event-first order
+  // and 說客's pairing used to only render once a map-needing use was
+  // already picked — exactly the state that #24's own give-way compacts
+  // away on a short screen, making them unreachable there. They're real
+  // rules choices, not decoration, so they can't just disappear: now shown
+  // on the full card (below the five uses, still defaulting to opsFirst /
+  // no pair from freshUi()) as soon as the card opens, chosen BEFORE a use
+  // is picked. The compact chip instead gets a one-line summary of
+  // whatever was already chosen; "Card"/看牌 (now always visible, fix #1)
+  // is how you get back to change it.
+  // Once a campaign/lobby target is actually picked, its own preview note
+  // (further down) already restates the state the player cares about right
+  // now — stacking the order/pair summary on top of THAT, too, was enough
+  // extra height on its own to blow the 390x669/375x667 budget on an enemy
+  // card (round 2 testing). The order/pair choice itself doesn't change
+  // once a target's chosen; "Card"/看牌 still reaches it either way.
+  const targetPreviewComing = !showFullCard && (ui.use === "campaign" || ui.use === "lobby") && ui.target;
+  if (info.enemy) {
+    if (showFullCard) {
+      const r = row(sh, "rowb order");
+      for (const o of ["opsFirst", "eventFirst"]) btn(r, t(`uses.${o}`), () => { ui.order = o; ui.points = []; render(); }, "", ui.order === o);
+      note(sh, t("preview.enemyEvent"));
+    } else if (!targetPreviewComing) {
+      note(sh, t(`advisor.suggestOrder.${ui.order}`));
+    }
   }
-  if (ui.card === "shuoke" && info.uses.pair && info.uses.pair.length && ui.use && ui.use !== "event" && ui.use !== "reform") {
-    const r = row(sh);
-    note(sh, t("uses.pair"));
-    for (const c of info.uses.pair) btn(r, `${cardName(c)} (${E.opsOf(game.st, me, c)})`, () => { ui.pair = ui.pair === c ? null : c; ui.points = []; render(); }, "", ui.pair === c);
+  if (ui.card === "shuoke" && info.uses.pair && info.uses.pair.length) {
+    if (showFullCard) {
+      const r = row(sh);
+      note(sh, t("uses.pair"));
+      for (const c of info.uses.pair) btn(r, `${cardName(c)} (${E.opsOf(game.st, me, c)})`, () => { ui.pair = ui.pair === c ? null : c; ui.points = []; render(); }, "", ui.pair === c);
+    } else if (ui.pair && !targetPreviewComing) {
+      note(sh, `${t("uses.pair")} ${cardName(ui.pair)} (${E.opsOf(game.st, me, ui.pair)})`);
+    }
   }
   const base = { type: "play", card: ui.card, use: ui.use };
   if (ui.pair) base.pair = ui.pair;
   if (info.enemy && !ui.pair) base.order = ui.order;
-  if (!ui.use) { setPrompt(""); return; }
+  // #24 round 2, fix #4 (owner): the full card page had no way to back out
+  // before picking a use at all — the sheet is a full-screen overlay here
+  // (wantsCardOverlay), so the hand underneath isn't tappable either. A
+  // permanent Cancel, same reset every other Cancel on this sheet falls
+  // back to.
+  const cancelToFresh = () => { game.ui = freshUi(); render(); };
+  if (!ui.use) { setPrompt(""); btn(sh, t("buttons.cancel"), cancelToFresh); return; }
   if (ui.use === "event" || ui.use === "reform") {
     setPrompt("");
     footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)}`, () => humanAct(base), false);
@@ -900,6 +958,12 @@ function renderPromptAndSheet(v) {
     else { const e = E.edge(v, me, ui.target); text = t("preview.lobby", { edge: e, n: Math.min(info.ops, e) }); }
     note(sh, `${spaceName(ui.target)}: ${text}`);
     footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}`, () => humanAct({ ...base, target: ui.target }), false);
+  } else {
+    // #24 round 2, fix #1 (owner): before a target is tapped, this branch
+    // used to render nothing at all past the chip — 0 visible buttons, no
+    // way back. A lone Cancel (the chip's own "Card"/看牌 is always there
+    // too, fix #1) is enough; there's no target yet to Confirm.
+    btn(sh, t("buttons.cancel"), cancelToFresh);
   }
 }
 
@@ -1346,3 +1410,19 @@ else {
   renderSetup();
   show("setup");
 }
+// #24 round 2, fix #5: the very first paint into the table view can land
+// before the webfonts finish loading — a fallback font's metrics measured
+// .bar at 64px (not 54) on a real English 390-wide phone, one whole
+// give-way stage too tall, until the NEXT render() (any click) re-measured
+// with the real font and fixed itself. Re-running layoutBar() catches that
+// first frame without waiting for a click. Three independent triggers,
+// belt-and-suspenders: document.fonts.ready is the direct signal, but this
+// session's own dev sandbox has no route to fonts.googleapis.com at all —
+// it resolves "ready" immediately over a font that never actually loads,
+// so it alone couldn't be verified end to end here. window's own "load"
+// and a couple of short delayed re-checks cover a real device regardless
+// of exactly which resource the race was against.
+try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layoutBar()); } catch {}
+window.addEventListener("load", () => layoutBar());
+setTimeout(() => layoutBar(), 300);
+setTimeout(() => layoutBar(), 1200);
