@@ -15,9 +15,12 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 let lang = (new URLSearchParams(location.search).get("lang") || (() => { try { return localStorage.getItem("zh.lang"); } catch { return null; } })() || ((navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
 if (!["en", "zh-Hant"].includes(lang)) lang = "en";
 const spaceName = (id) => (lang === "en" ? E.SPACE[id].en : E.SPACE[id].zh);
-// The map's own region tag needs a SHORT name ("West", not "the West") so it
-// fits its little pill; zh's board name is already short enough to reuse.
-const regionShortName = (r) => (lang === "en" ? en.regionShort[r] : E.REGIONS[r].zh);
+// Same regionShort table app.js's map uses (see its own comment on this
+// function) — zh's used to fall back to E.REGIONS[r].zh, which is why the
+// owner's "regionShort.zhou: 周室→周" (#26 追加(2)) needed this read fixed
+// too, not just the i18n key: the old fallback would have kept showing
+// "周室" here no matter what regionShort.zhou said.
+const regionShortName = (r) => (lang === "en" ? en.regionShort[r] : zh.regionShort[r]);
 
 // The header (Back / centre label / language button) reads the same nav.*
 // and landing.rulesLink strings play.html and landing.js use, so it stays
@@ -31,20 +34,20 @@ const T = {
     ends: "六種結束方式",
     endsRows: [["一統", "秦同時滅掉五國(韓、魏、趙、齊、燕)之中的三國:控制該國全部據點即為滅。"], ["合縱", "楚同時持有四國相印:控制該國國都,而且在那裡的影響力達到上限(安定值 + 2)。"], ["天命", "天命軌到達任一方 20。"], ["土崩", "把疲敝軌推到土崩的人立刻敗北,包括打出對手陣營的牌時觸發的對手事件。"], ["記分卡", "回合結束時手上還有記分卡的人敗北。"], ["終局", "第 8 回合結束後五區各結算一次,天命領先者勝;平手楚勝。"]],
     board: "棋盤",
-    boardText: "26 個據點,分五個記分區(三晉、西土、南方、東方、北疆)與周室。五個「國」畫在區域之內,各有一個國都:韓(新鄭)、魏(大梁)、趙(邯鄲)、齊(臨淄)、燕(薊)。★ 為要衝,共八個。每據點有安定值 2 到 4。",
-    mapAlt: "地圖:26 個據點分屬五個記分區與周室,每個據點旁的小方籤標著它的安定值,★ 是要衝,方形圓盤是國都。",
+    boardText: "26 個據點,分五個記分區(三晉、西土、南方、東方、北疆)與周。五個「國」畫在區域之內,各有一個國都:韓(新鄭)、魏(大梁)、趙(邯鄲)、齊(臨淄)、燕(薊)。★ 為要衝,共八個。每據點有安定值 2 到 4。",
+    mapAlt: "地圖:26 個據點分屬五個記分區與周,每個據點旁的小方籤標著它的安定值,★ 是要衝,方形圓盤是國都。",
     mapLegend: "★ 要衝　▢ 國都　籤上的數字 = 安定值　色塊 = 記分區",
     control: "影響力與控制",
     controlText: "控制 = 我方影響力 ≥ 對方影響力 + 安定值。任一方在任一據點最多安定值 + 2 點,多的消失。",
     uses: "一張牌的五種用法",
     usesRows: [["事件", "照牌面做。用行動點打出對手陣營的牌時,對手的事件仍然觸發,你決定事件先或行動點先。"], ["放置", "每 1 點行動點放 1 點影響力,只能放在已有自己影響力的據點,或與自己控制的據點相鄰處;目標由對手控制時每點花 2,逐點判定。"], ["征伐", "花 X 點對一個有對手影響力的據點:先移除對手 min(X, 其影響力),剩下的放為自己的(不受相鄰限制)。目標是要衝則疲敝軌前進 1。受疲敝封鎖。"], ["遊說", "局勢 = 我方控制的相鄰據點數 − 對方控制的相鄰據點數。移除對手 min(X, 局勢) 點。不動疲敝、不受封鎖。"], ["變法", "棄掉行動點 ≥ 門檻的牌,變法軌前進 1;每回合 1 次(到第 2 格後 2 次)。"]],
     tracks: "疲敝軌與變法軌",
-    weariness: "疲敝軌:承平 5 → 兵連 4 → 禍結 3 → 民困 2 → 土崩 1。要衝征伐推 1;每回合結算回復 1。封鎖(只限征伐):兵連以下不可征伐本土(西土、南方);禍結以下再加上三晉與周室;民困時任何要衝都不可。推到土崩者立刻敗北,推進者是正在行動的玩家。",
+    weariness: "疲敝軌:承平 5 → 兵連 4 → 禍結 3 → 民困 2 → 土崩 1。要衝征伐推 1;每回合結算回復 1。封鎖(只限征伐):兵連以下不可征伐本土(西土、南方);禍結以下再加上三晉與周;民困時任何要衝都不可。推到土崩者立刻敗北,推進者是正在行動的玩家。",
     reformText: "變法軌 6 格,先到者得分,解鎖是重點:",
     reformRows: E.REFORM.map((r) => [String(r.box), r.zh, String(r.ops), `${r.first} / ${r.second}`, { null: "無", twice: "每回合可推進變法 2 次", campaign: "每回合一次,一次征伐 +1", peek: "標題階段對手先亮牌", discard: "回合結算時可棄 1 張牌而不觸發事件", emperor: "到達時疲敝軌後退 1" }[r.perk]]),
     reformHead: ["格", "名稱", "門檻", "先到 / 後到", "解鎖"],
     special: "九鼎、洛邑、滅與相印",
-    specialText: "九鼎:4 點行動點,全部用在三晉或周室視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。洛邑:每回合結算時控制者天命 +1,直到「秦滅周」。滅:秦控制某國全部據點時放滅國標記,得天命(韓魏燕 2、趙齊 3,每國一次),楚控制該國國都時解除。相印:楚控制某國國都、且在該處的影響力達到上限(安定值 + 2)時放相印標記,天命 +1(每國一次),秦控制該國都時解除。",
+    specialText: "九鼎:4 點行動點,全部用在三晉或周視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。洛邑:每回合結算時控制者天命 +1,直到「秦滅周」。滅:秦控制某國全部據點時放滅國標記,得天命(韓魏燕 2、趙齊 3,每國一次),楚控制該國國都時解除。相印:楚控制某國國都、且在該處的影響力達到上限(安定值 + 2)時放相印標記,天命 +1(每國一次),秦控制該國都時解除。",
     turn: "回合",
     turnText: "8 回合:變法期 1 到 3(手牌 8,行動 6 次)、縱橫期 4 到 6、兼併期 7 到 8(手牌 9,行動 7 次)。補牌 → 標題(各蓋一張同時翻開,行動點高者先結算,同點秦先,事件一定觸發)→ 行動回合 → 結算(記分卡判負、疲敝回復、洛邑天命、本回合效果結束)。第 4、7 回合補牌前把該期牌庫洗入。",
     scoring: "記分",

@@ -68,7 +68,7 @@ export default {
   },
   useNames: { event: "事件", place: "放置", campaign: "征伐", lobby: "遊說", reform: "變法", bog: "頓兵" },
   scoringLevel: { none: "無", presence: "存在", domination: "優勢", control: "獨佔" },
-  regionShort: { west: "西土", jin: "三晉", zhou: "周室", east: "東方", south: "南方", north: "北疆" },
+  regionShort: { west: "西土", jin: "三晉", zhou: "周", east: "東方", south: "南方", north: "北疆" },
   tutorial: {
     button: "教學 · 5 分鐘",
     intro: { kicker: "教學 · 約 5 分鐘", title: "初入戰國", sub: "", text: "你扮演秦。十個小步驟裡,你會拿下一個據點、學會一張牌的四種用法、打一次征伐,還會滅掉韓。對方照劇本走,不會出錯。", start: "開始", notNow: "先不要" },

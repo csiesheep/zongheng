@@ -313,7 +313,11 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .blob.active { opacity: 0.4; }
 .blob-west { fill: #2b2b2b; stroke: #2b2b2b; }
 .blob-jin { fill: #b7791f; stroke: #b7791f; }
-.blob-zhou { fill: #d8b56a; stroke: #d8b56a; }
+/* Purple (owner: "天子之色", #26 追加(2)) — the amber/gold it shared with
+   .blob-jin at low opacity made Zhou's one space (Luoyi) unreadable as its
+   own region. Same .blob {opacity:.22} everyone else uses, only the hue
+   changes. */
+.blob-zhou { fill: #6b4fa0; stroke: #6b4fa0; }
 .blob-east { fill: #2f7d78; stroke: #2f7d78; }
 .blob-south { fill: #a31c15; stroke: #a31c15; }
 .blob-north { fill: #4a6fa5; stroke: #4a6fa5; }
@@ -321,8 +325,9 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    never over a city), each in its own region's colour, short names only. */
 .region-label { position: absolute; z-index: 2; font: 700 13px/1.3 var(--sans); letter-spacing: 0.5px; color: #fff; padding: 2px 8px; border-radius: 5px; white-space: nowrap; transform: translate(-50%, -50%); }
 .region-label.faded { opacity: 0.35; }
-.rl-west { background: #2b2b2b; } .rl-jin { background: #7a4d0c; } .rl-zhou { background: #7a5c10; }
+.rl-west { background: #2b2b2b; } .rl-jin { background: #7a4d0c; } .rl-zhou { background: #4a3578; }
 .rl-east { background: #1d5651; } .rl-south { background: #7d130e; } .rl-north { background: #2f4d7a; }
+/* .rl-zhou on white text: contrast 10.14:1 (WCAG needs >=4.5:1). */
 /* Cities: a split two-tone disc (Qin left, Chu right, empty = a plain grey
    ring until someone has influence there), the name below in dark ink with
    a light halo so it reads over the map at any tint. NODE_POS is each

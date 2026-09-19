@@ -88,8 +88,16 @@ export function renderRoads() {
 // — and it is, via regionMembers()). One colour per region, matching its blob.
 // north nudged 2026-09-19 for the stability tag (#26) — its old spot started
 // overlapping Liaodong's new tag.
+// jin/zhou swapped the same day (#26 追加(2), owner on a real phone: "周跟
+// 三晉是不是寫反了?") — the old values had "Three Jin" sitting on Zhou's
+// only space (Luoyi) and "Zhou" sitting in the middle of the Three Jin
+// cluster. The new spots were found by measuring, not eyeballing: jin sits
+// inside the convex hull of the Three Jin's six spaces (yiyang/xinzheng/
+// hedong/daliang/shangdang/handan) at the nearest collision-free point to
+// their centroid; zhou sits at the nearest collision-free point to Luoyi
+// that's still closer to Luoyi than to any Three Jin space.
 export const REGION_LABEL_POS = {
-  north: [320, 60], west: [30, 152], jin: [176, 202], zhou: [184, 162], east: [340, 274], south: [235, 306],
+  north: [320, 60], west: [30, 152], jin: [200, 216], zhou: [140, 280], east: [340, 274], south: [235, 306],
 };
 // No ellipsis anywhere on the map (owner). Long English names that have a
 // natural break (a space or hyphen) go on two lines; the rest just render

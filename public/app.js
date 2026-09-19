@@ -35,8 +35,13 @@ const sideName = (s) => t(`sides.${E.SIDES[s]}`);
 const spaceName = (id) => (lang === "en" ? E.SPACE[id].en : E.SPACE[id].zh);
 const regionName = (r) => (lang === "en" ? E.REGIONS[r].en : E.REGIONS[r].zh);
 // The map's own region tag needs a SHORT name ("West", not "the West") so it
-// fits its little pill; zh's board name is already short enough to reuse.
-const regionShortName = (r) => (lang === "en" ? t("regionShort." + r) : E.REGIONS[r].zh);
+// fits its little pill. Both languages' short forms live in i18n/*'s own
+// regionShort table (zh's used to just reuse E.REGIONS[r].zh directly, since
+// every region's board name was already short enough — true again as of
+// #26 追加(2) except Zhou, whose full board name "周室" was too easy to
+// confuse with 三晉 at a glance on a real phone; regionShort.zhou is now
+// "周" and this reads it like every other region already did in English).
+const regionShortName = (r) => t("regionShort." + r);
 const stateName = (s) => (lang === "en" ? E.STATES[s].en : E.STATES[s].zh);
 const cardName = (id) => (id === E.JIUDING ? (lang === "en" ? "The Nine Cauldrons" : "九鼎") : lang === "en" ? E.CARD[id].en : E.CARD[id].zh);
 const cardText = (id) => (id === E.JIUDING ? (lang === "en" ? "4 ops; 5 if all of it lands in the Three Jin or Zhou. Then it passes face down." : "4 點;全部用在三晉或周室視為 5。用後蓋著交給對手。") : lang === "en" ? CARD_EN[id] ?? E.CARD[id].text : E.CARD[id].text);
