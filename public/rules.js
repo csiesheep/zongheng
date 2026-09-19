@@ -10,6 +10,11 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 let lang = (new URLSearchParams(location.search).get("lang") || (() => { try { return localStorage.getItem("zh.lang"); } catch { return null; } })() || ((navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
 if (!["en", "zh-Hant"].includes(lang)) lang = "en";
 
+// The header (Back / centre label / language button) reads the same nav.*
+// and landing.rulesLink strings play.html and landing.js use, so it stays
+// one voice with the rest of the app instead of forking its own copy.
+const NAV = { "zh-Hant": zh, en };
+
 const T = {
   "zh-Hant": {
     title: "縱橫",
@@ -78,16 +83,39 @@ const T = {
 function table(head, rows, cls = []) {
   return `<table><thead><tr>${head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c, i) => `<td class="${cls[i] || ""}">${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
+// One row per card, art on the left, background/badge/name colour keyed to
+// the card's owner — the same three tones the card sheet uses (楚 #4f0e0a,
+// 秦 var(--bg), 中立與記分 #f7f3e8; see rules.css). Read straight off
+// shared/cards.js so a rules edit and the deck can never drift apart.
+function cardList(S, cardEn) {
+  return `<div class="cardlist">${E.CARDS.map((c) => {
+    const side = c.scoring ? "s" : c.side === 0 ? "q" : c.side === 1 ? "c" : "n";
+    const zhName = `${esc(c.zh)}${c.remove ? " *" : ""}`;
+    const text = c.scoring
+      ? (lang === "en" ? `Scores ${E.REGIONS[c.scoring].en}.` : `結算${E.REGIONS[c.scoring].zh}。`)
+      : esc(lang === "en" ? cardEn[c.id] ?? c.text : c.text);
+    const year = c.year ? ` <small>(${lang === "en" ? "" : "前"}${c.year}${lang === "en" ? " BC" : ""})</small>` : "";
+    return `<div class="cardrow side-${side}">` +
+      `<img src="art/cards/${c.id}.jpg" width="60" height="80" loading="lazy" alt="${esc(c.zh)} ${esc(c.en)}">` +
+      `<div class="cr-body">` +
+      `<span class="cr-head">` +
+      `<span class="cr-badge">${c.scoring ? "–" : c.ops}</span>` +
+      `<span class="cr-zh" lang="zh-Hant">${zhName}</span>` +
+      `<span class="cr-en">${esc(c.en)} · ${S.era[c.era]} · ${c.scoring ? S.scoringCard : S.side[c.side]}</span>` +
+      `</span>` +
+      `<span class="cr-text">${text}${year}</span>` +
+      `</div></div>`;
+  }).join("")}</div>`;
+}
 function render() {
   const S = T[lang];
+  const N = NAV[lang];
   document.documentElement.lang = lang;
-  $("langBtn").textContent = lang === "en" ? "中文" : "EN";
+  $("backLink").textContent = N.nav.back;
+  $("barMid").textContent = N.landing.rulesLink;
+  $("langBtn").textContent = N.nav.lang;
   $("credit").textContent = S.credit;
   const regionRows = E.SCORED_REGIONS.map((r) => { const R = E.REGIONS[r]; return [esc(lang === "en" ? R.en : R.zh), R.presence, R.domination, R.control, E.spacesOf(r).filter((id) => E.SPACE[id].battleground).length]; });
-  const cardRows = E.CARDS.map((c) => {
-    const side = c.scoring ? "s" : c.side === 0 ? "q" : c.side === 1 ? "c" : "n";
-    return [c.num, `<span class="${side}">${esc(c.zh)}${c.remove ? " *" : ""}</span>${lang === "en" ? `<br><small>${esc(c.en)}</small>` : ""}`, S.era[c.era], c.scoring ? S.scoringCard : S.side[c.side], c.scoring ? "–" : c.ops, esc(c.scoring ? `${lang === "en" ? "Scores " + E.REGIONS[c.scoring].en : "結算" + E.REGIONS[c.scoring].zh}` : lang === "en" ? CARD_EN[c.id] ?? c.text : c.text) + (c.year ? ` <small>(${lang === "en" ? "" : "前"}${c.year}${lang === "en" ? " BC" : ""})</small>` : "")];
-  });
   $("rules").innerHTML =
     `<h1>${esc(S.title)}</h1><p>${esc(S.intro)}</p>` +
     `<h2>${esc(S.ends)}</h2>${table([], S.endsRows.map(([a, b]) => [`<b>${esc(a)}</b>`, esc(b)]))}` +
@@ -98,8 +126,7 @@ function render() {
     `<h2>${esc(S.special)}</h2><p>${esc(S.specialText)}</p>` +
     `<h2>${esc(S.turn)}</h2><p>${esc(S.turnText)}</p>` +
     `<h2>${esc(S.scoring)}</h2><p>${esc(S.scoringText)}</p>${table(S.scoringHead, regionRows)}` +
-    `<h2>${esc(S.cards)}</h2><p>${esc(S.remove)}</p>${table(S.cardsHead, cardRows)}`;
+    `<h2>${esc(S.cards)}</h2><p>${esc(S.remove)}</p>${cardList(S, CARD_EN)}`;
 }
 $("langBtn").onclick = () => { lang = lang === "en" ? "zh-Hant" : "en"; try { localStorage.setItem("zh.lang", lang); } catch {} render(); };
 render();
-void en; void zh;

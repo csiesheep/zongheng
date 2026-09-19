@@ -7,28 +7,17 @@
 <title>縱橫 規則 · Zongheng rules</title>
 <meta name="description" content="縱橫 Zongheng 的規則與七十二張牌。">
 <link rel="canonical" href="https://games.csiesheep.com/zongheng/rules">
-<meta name="theme-color" content="#1c1a17">
+<meta name="theme-color" content="#0c0b0a">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=LXGW+WenKai+TC:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="style.css">
-<style>
-  .rules { padding: 16px 14px 40px; max-width: 720px; margin: 0 auto; line-height: 1.7; }
-  .rules h1 { font-family: var(--kai); font-weight: 400; letter-spacing: 6px; margin: 8px 0 4px; color: var(--gold); }
-  .rules h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; border-bottom: 1.5px solid var(--gold-line); padding-bottom: 4px; margin: 28px 0 10px; color: var(--gold); }
-  .rules table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 8px 0; }
-  .rules th, .rules td { border-bottom: 1px solid #4a4336; padding: 5px 6px; text-align: left; vertical-align: top; }
-  .rules th { color: var(--gold); font-weight: 600; }
-  .rules .q { color: var(--qin-text); } .rules .c { color: var(--chu-gold); } .rules .n { color: var(--gold); } .rules .s { color: #9fc9b8; }
-  .rules p, .rules li { color: var(--text-soft); }
-  .rules b { color: var(--text); }
-  .rules a { color: var(--gold); }
-</style>
+<link rel="stylesheet" href="rules.css">
 </head>
 <body>
 <header class="bar">
-  <a class="hub" href="./">← 縱橫 Zongheng</a>
+  <a class="hub back" id="backLink" href="./"></a>
   <span id="barMid"></span>
-  <button id="langBtn" type="button">EN</button>
+  <button id="langBtn" class="langBtn" type="button"></button>
 </header>
 <main class="rules" id="rules"></main>
 <footer class="credit" id="credit"></footer>

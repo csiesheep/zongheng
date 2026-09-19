@@ -1,0 +1,51 @@
+/* Rules page only. C2 skin (black/gold, Noto Serif TC) reusing the tokens
+   style.css already declares on :root — no new colours invented here except
+   the three card-row backgrounds the owner named: Chu #4f0e0a, Qin #0c0b0a
+   (== --bg) and neutral/scoring #f7f3e8 (== the card sheet's own parchment,
+   not --neutral-bg). */
+/* body is a column flex container (style.css); a flex item's default
+   min-width:auto lets its content's min-content size force it wider than
+   the viewport (the 6px h1 letter-spacing was enough on its own at 375px),
+   so this must give up that default to actually shrink to the phone. */
+.rules { padding: 10px 14px 40px; max-width: 720px; width: 100%; min-width: 0; margin: 0 auto; line-height: 1.7; box-sizing: border-box; }
+.rules h1 { font-family: var(--kai); font-weight: 400; letter-spacing: 6px; margin: 8px 0 4px; color: var(--gold); }
+.rules h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; border-bottom: 1.5px solid var(--gold-line); padding-bottom: 4px; margin: 28px 0 10px; color: var(--gold); }
+.rules table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 8px 0; }
+.rules th, .rules td { border-bottom: 1px solid #4a4336; padding: 5px 6px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+/* The two-column "label / prose" tables (ends, uses): keep the short label
+   whole (it always has room) and let the prose column give up the space by
+   wrapping at its own word breaks, instead of the label breaking mid-word. */
+.rules td b { white-space: nowrap; }
+.rules th { color: var(--gold); font-weight: 600; }
+.rules .q { color: var(--qin-text); }
+.rules .c { color: var(--chu-gold); }
+.rules .n { color: var(--gold); }
+.rules .s { color: #9fc9b8; }
+.rules p, .rules li { color: var(--text-soft); }
+.rules b { color: var(--text); }
+.rules a { color: var(--gold); }
+
+/* The 72-card table: one row per card, art on the left so the deck reads at
+   a glance. Flex rows (not a rigid grid) so the effect text can wrap freely
+   on a 375px phone without ever forcing side-scroll. */
+.cardlist { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.cardrow { display: flex; gap: 10px; padding: 8px; border-radius: 10px; border: 1px solid var(--gold-line); }
+.cardrow.side-c { background: #4f0e0a; border-color: var(--gold); }
+.cardrow.side-q { background: var(--bg); }
+.cardrow.side-n, .cardrow.side-s { background: #f7f3e8; }
+.cardrow img { flex: none; width: 60px; height: 80px; object-fit: cover; border-radius: 8px; }
+.cardrow .cr-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.cardrow .cr-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cardrow .cr-badge { flex: none; width: 20px; height: 20px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 11px; line-height: 20px; text-align: center; }
+.cardrow .cr-zh { font-size: 15px; }
+.cardrow .cr-en { font-size: 11px; }
+.cardrow .cr-text { font-size: 12px; line-height: 1.45; }
+.cardrow.side-q .cr-zh { font-family: var(--serif); font-weight: 900; color: var(--qin-text); }
+.cardrow.side-q .cr-en, .cardrow.side-q .cr-text { color: var(--text-soft); }
+.cardrow.side-q .cr-badge { background: var(--qin-text); color: var(--bg); }
+.cardrow.side-c .cr-zh { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
+.cardrow.side-c .cr-en, .cardrow.side-c .cr-text { color: #fff3d2; }
+.cardrow.side-c .cr-badge { background: var(--chu-gold); color: #6f120d; }
+.cardrow.side-n .cr-zh, .cardrow.side-n .cr-en, .cardrow.side-s .cr-zh, .cardrow.side-s .cr-en { color: var(--neutral-ink); }
+.cardrow.side-n .cr-text, .cardrow.side-s .cr-text { color: #4a463c; }
+.cardrow.side-n .cr-badge, .cardrow.side-s .cr-badge { background: var(--neutral-ink); color: #fff; }
