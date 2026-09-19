@@ -222,9 +222,40 @@ export function decorate() {
   restrictHand(step, ui);
   restrictSheet(step, ui);
   buildCoach();
-  updateCoach(step);
+  updateCoach(step); // calls app.js's layoutTable(), which can flip the hand full<->chip and rebuild it from scratch (#5/#18) — see the re-call below
+  // Found testing 375x553, English, lesson 3 ("hand"): every card in hand
+  // came back enabled, because updateCoach()'s own layoutTable() call
+  // switched the hand from "full" to "chip" mode right after restrictHand()
+  // ran, and app.js's renderHand() rebuilds #hand's children from scratch on
+  // a mode switch — a fresh, unrestricted button for every card, with none
+  // of restrictHand()'s disabled/tut-lit/onclick work still attached. Redo
+  // it against whatever #hand actually holds now.
+  restrictHand(step, ui);
   pinCoach();
   checkOverflow();
+  // pinCoach()'s synchronous measurement right after updateCoach() sometimes
+  // reads the panel's own height a frame too early — found testing 375x553,
+  // English, lesson 1: the very first decorate() (still running behind the
+  // intro card) sized the just-built panel correctly, but the SECOND
+  // decorate() (fired synchronously when "Start" is clicked, moments later)
+  // read a height that undercounted the still-settling layout, so
+  // bottomHits/topHits both came back false even though the rendered panel
+  // visibly covered the target — no "Got it" ever appeared, and a real tap
+  // there would have hit the panel, not the map. landing.js's own
+  // syncDesktopSeamNextFrame hits the same class of bug with two rAFs, but
+  // rAF never runs at all in a backgrounded tab (confirmed while testing
+  // this very fix: document.visibilityState stayed "hidden" throughout, and
+  // the scheduled rAFs simply never fired) — a plain double setTimeout
+  // reaches the same "let layout settle, then re-measure" outcome without
+  // that dependency (still a macrotask, so it queues after the current
+  // paint either way on a visible tab). Run after every decorate(), not
+  // just the panel's first build, since it's this SECOND call (on lesson
+  // entry) that needs correcting, not the first. Guarded on `on` and on the
+  // step not having changed since — a lesson change (or leaving the
+  // tutorial) before the timer fires would otherwise re-pin a panel for the
+  // wrong step.
+  const atStep = stepIdx;
+  setTimeout(() => setTimeout(() => { if (on && stepIdx === atStep) { pinCoach(); checkOverflow(); } }, 0), 0);
 }
 
 // ---------- map restriction ----------
@@ -541,10 +572,27 @@ function pinCoach() {
   const cand = candidates(el, mapRect);
   const bottomHits = target ? overlaps(cand.bottom, target) : false;
   const topHits = target ? overlaps(cand.top, target) : false;
+  // Found testing 375x553 (issue #15, round 4 follow-up): on a map this
+  // short, the panel can cover the target at BOTH edges even once "Got it"
+  // has collapsed it — the pinTop/pinBottom choice below has no third edge
+  // to try. Rather than silently leave the target un-tappable (a real
+  // finger tap there would hit the panel, not the city — .click() in a
+  // walker script doesn't notice because it ignores z-order), drop out of
+  // floating entirely: flow mode pushes the panel below the map in #table's
+  // own column, which can never cover it, and inflates #table's real
+  // content height so checkOverflow() (called right after this) turns on
+  // the page's own scroll — exactly the "375x553 才允許捲" escape valve the
+  // review comment names for this size.
+  const bothCover = !!target && bottomHits && topHits;
+  el.classList.toggle("tut-pin-flow", bothCover);
+  if (bothCover) {
+    el.style.top = ""; el.style.bottom = "";
+    el.classList.remove("tut-pin-top", "tut-pin-bottom");
+    gotItBtn.hidden = true; // flow mode never covers the map, so there's nothing to dismiss
+    return;
+  }
   // Default bottom (matches Tut_Card); flip to the top edge only when the
-  // bottom would cover the target and the top wouldn't. If both would
-  // cover it (the panel is taller than the map has room for on either
-  // side), stay bottom and let the covers-check below raise the button.
+  // bottom would cover the target and the top wouldn't.
   const pinTop = bottomHits && !topHits;
   const covers = pinTop ? topHits : bottomHits; // whichever edge was actually chosen
   const needsGotIt = expanded && !!target && covers;

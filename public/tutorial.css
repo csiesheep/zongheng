@@ -34,6 +34,13 @@
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
   display: flex; flex-direction: column; gap: 5px;
 }
+/* Escape valve for a map too short to let the panel avoid its own target at
+   either edge (pinCoach()'s bothCover case, found at 375x553) — falls back
+   into #table's normal flex column below the map/hand instead of floating
+   over either, which can never cover a map target and lets the page's own
+   scroll (checkOverflow()'s table-overflow) reach it. Higher specificity
+   than .tut-coach alone so it wins regardless of source order. */
+.tut-coach.tut-pin-flow { position: static; left: auto; right: auto; top: auto; bottom: auto; margin: 6px 8px 0; max-height: none; }
 @media (min-width: 1024px) {
   .tut-coach {
     position: static; grid-area: coach; left: auto; right: auto; top: auto; bottom: auto;
