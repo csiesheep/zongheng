@@ -322,6 +322,14 @@ function layoutTableDesktop() {
   if (!availW || !availH) return;
   const hand = $("hand");
   hand.hidden = hand.children.length === 0;
+  // A plain resize (crossing 1024px, e.g. a tablet rotation) calls
+  // layoutTable() but NOT render()/renderHand() — so a hand left in "chip"
+  // mode from a short mobile viewport (see renderHand's own isDesktopTable
+  // default, which only takes effect on the NEXT full render) needs fixing
+  // right here too, the same way the mobile branch below fixes a full<->chip
+  // flip: re-render off game.lastView, the last state renderHand actually
+  // rendered from.
+  if (hand.dataset.mode !== "full" && game.lastView) renderHand(game.lastView, "full");
   fitMap(Math.min(availW / DESIGN_W, availH / DESIGN_H));
 }
 function layoutTable() {
