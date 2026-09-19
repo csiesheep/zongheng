@@ -1,0 +1,258 @@
+/* Desktop layout for play.html and rules.html (issue #7), signed off by the
+   owner on canvas "Desktop: every page" (Version 21). Everything in this
+   file is scoped to >=1024px — below that (including the 768-1023px band,
+   which stays the plain mobile column per the owner's own split) nothing
+   here applies, and every phone/tablet pixel must stay exactly what it was
+   before this file existed.
+
+   Shell used by both pages: a fixed, full-viewport `.d-frame` backdrop
+   (textured, dark, vignetted — never scrolls, never receives clicks) behind
+   a `.page-card` that holds the real page content. `.page-card` is
+   `display: contents` below 1024px (see style.css) so it's structurally
+   invisible on mobile; here it becomes the actual visual card:
+     - the game table (body[data-view="table"]): the signed-off 1280x765
+       max frame, map left + a fixed 390px sidebar right.
+     - every other view (setup/lobby/over, and rules.html): the existing
+       mobile column, unchanged internally, centred at its own 390px width
+       inside a rounded gold-bordered card, per "手機那一欄置中" in #7. */
+
+@media (min-width: 1024px) {
+  html, body { height: 100%; }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  /* .setup-qin/.setup-chu/.setup-random (style.css) still set --bg/--text
+     etc. for the card's own content; the desktop shell's outer background
+     is always the same near-black behind the textured backdrop. */
+  body.setup-qin, body.setup-chu, body.setup-random { height: 100%; overflow: hidden; }
+  /* #table's own no-scroll lock (style.css: height:100svh) would otherwise
+     fight the desktop shell's centring — the frame below takes care of
+     never scrolling instead. */
+  body.table-lock { height: 100%; overflow: hidden; }
+
+  .d-frame {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: #060504;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .d-tex { position: absolute; left: 0; right: 0; background-size: cover; background-position: center; opacity: 0; transition: none; }
+  .d-tex-a { background-image: url(art/ui/qintex.jpg); }
+  .d-tex-b { background-image: url(art/ui/chutex.jpg); }
+  .d-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(6, 5, 4, 0.1) 25%, rgba(6, 5, 4, 0.8) 100%); }
+
+  /* Default backdrop (setup, lobby): the same two-tone black-bronze/lacquer
+     split as the landing's own desktop shell (landing-desktop.css) — a
+     static 50/50 split here (no seam to sync to, unlike the landing's own
+     Qin/Chu column boundary). */
+  .d-tex-a { top: 0; height: 50%; opacity: 0.35; }
+  .d-tex-b { top: 50%; bottom: 0; opacity: 0.4; }
+
+  /* The table: backdrop is the SEATED side's own territory (owner: "座位
+     那一邊的材質"), full-bleed, not split. paintBody() already sets
+     body.side-qin/side-chu for the table view (style.css uses the same
+     classes for the mobile accent colours). */
+  body[data-view="table"].side-qin .d-tex-a { top: 0; bottom: 0; height: auto; opacity: 0.55; }
+  body[data-view="table"].side-qin .d-tex-b { opacity: 0; }
+  body[data-view="table"].side-chu .d-tex-b { top: 0; bottom: 0; height: auto; opacity: 0.6; }
+  body[data-view="table"].side-chu .d-tex-a { opacity: 0; }
+
+  /* The result page: backdrop is the WINNER's territory regardless of seat
+     (owner: "for win page, the background should be the winner's nation
+     background") — #6's renderOver() sets winner-qin/winner-chu on #over
+     itself (screens.css uses the same classes for the card's own colour),
+     independently of the seat's side-qin/side-chu. */
+  body:has(#over.winner-qin:not([hidden])) .d-tex-a { top: 0; bottom: 0; height: auto; opacity: 0.55; }
+  body:has(#over.winner-qin:not([hidden])) .d-tex-b { opacity: 0; }
+  body:has(#over.winner-chu:not([hidden])) .d-tex-b { top: 0; bottom: 0; height: auto; opacity: 0.6; }
+  body:has(#over.winner-chu:not([hidden])) .d-tex-a { opacity: 0; }
+
+  /* ---------- the page-card shell ---------- */
+  .page-card {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Default (setup/lobby/over, and rules.html): the existing mobile column,
+     centred, capped at 390x844 with the C2 rounded gold frame. Height is
+     allowed to shrink below 844 on a short viewport — the mobile CSS
+     already knows how to fit its own content into whatever height it's
+     given (container queries, svh-based clamps, #20's own work), so this
+     box just gives it a shorter box instead of reinventing that logic. */
+  .page-card {
+    width: 390px;
+    max-height: min(844px, 100vh);
+    height: min(844px, 100vh);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px #8a7a52, 0 0 80px 10px rgba(0, 0, 0, 0.85);
+    background: var(--bg);
+  }
+  /* rules.html's content is long-form and meant to scroll; it never had a
+     no-scroll requirement (unlike the table), so the card itself scrolls
+     instead of being clipped. */
+  body:has(#rules) .page-card { height: min(844px, 100vh); overflow-y: auto; }
+
+  /* The table: the signed-off max-1280x765 frame (owner: "ensure that we
+     don't do full screen. we set a max width"). Width is capped at 1280px
+     outright; height at 765px via the aspect-ratio below. When the
+     viewport is smaller than the frame in EITHER dimension, the whole
+     frame scales down together (never distorts) — expressing the
+     height-limited case as an equivalent max-width (100vh * 1280/765) is
+     what lets one `width` value satisfy an the width cap, the viewport's
+     own width, AND the viewport's own height all at once, with
+     aspect-ratio deriving the matching height. */
+  body[data-view="table"] .page-card {
+    width: min(1280px, 100vw, calc(100vh * 1280 / 765));
+    aspect-ratio: 1280 / 765;
+    max-height: none;
+    height: auto;
+    border-radius: 14px;
+    background: #0c0b0a;
+  }
+  body[data-view="table"] .page-card .bar { flex: none; }
+  body[data-view="table"] #table {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* .view (style.css, shared by every <main>) caps width at 640px and
+       centres it with auto margins — exactly what the mobile column wants,
+       and exactly what the two-column frame must NOT have. */
+    max-width: none;
+    width: auto;
+    margin: 0;
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 390px;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "map topbar"
+      "map statline"
+      "map prompt"
+      "map hand"
+      "map chat"
+      "map foot";
+    padding: 0;
+    gap: 0;
+    /* Full 390px sidebar width needs the map to no longer share its side
+       padding budget with anything else (mobile's #table has no horizontal
+       padding for the same reason — see style.css). */
+  }
+  body[data-view="table"] #topbar { grid-area: topbar; padding: 8px 14px 4px; }
+  body[data-view="table"] #statline { grid-area: statline; padding: 6px 14px; }
+  body[data-view="table"] #prompt { grid-area: prompt; padding: 6px 14px; }
+  body[data-view="table"] #sheet:not(.overlay) { grid-area: prompt; margin: 0 14px; align-self: end; }
+  body[data-view="table"] #hand { grid-area: hand; }
+  body[data-view="table"] #chatForm { grid-area: chat; padding: 4px 14px; }
+  body[data-view="table"] #sideFoot { grid-area: foot; }
+  body[data-view="table"] #map {
+    grid-area: map;
+    flex: none;
+    margin: 10px 0 10px 10px;
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px #8a7a52;
+    min-height: 0;
+  }
+
+  /* The mini card-chip (browsing a card while the map stays active, e.g.
+     placing/campaigning) sits right where the prompt row was, above the
+     hand — matching #sheet's normal (non-overlay) flow position on mobile,
+     just re-anchored into the sidebar's own grid area instead of eating
+     into the map's flex row. */
+  body[data-view="table"] #sheet:not(.overlay):empty { display: none; }
+
+  /* Hand: a fixed grid instead of mobile's horizontal-scroll row. 3 columns
+     up to 6 cards; app.js toggles .hand-many at 7+ (the 9-card hand from
+     turn 7 on, plus the Nine Cauldrons) — 4 columns, each card ~0.8x. */
+  body[data-view="table"] .hand {
+    display: grid;
+    grid-template-columns: repeat(3, 96px);
+    gap: 14px 18px;
+    justify-content: center;
+    align-content: start;
+    overflow: visible;
+    padding: 10px 12px 0;
+  }
+  body[data-view="table"] .hand .card { width: 96px; height: 176px; }
+  body[data-view="table"] .hand.hand-many {
+    grid-template-columns: repeat(4, 77px);
+    gap: 6px 12px;
+  }
+  body[data-view="table"] .hand.hand-many .card { width: 77px; height: 141px; }
+  body[data-view="table"] .hand.hand-many .cardimg { height: 78px; flex: none; }
+  body[data-view="table"] .hand.hand-many .ci { padding: 4px 5px 5px; gap: 4px; }
+  body[data-view="table"] .hand.hand-many .ops { width: 18px; height: 18px; font-size: 9px; }
+  body[data-view="table"] .hand.hand-many .nm-zh { font-size: 10.5px; }
+  body[data-view="table"] .hand.hand-many .nm-en { font-size: 8px; }
+
+  /* The record/chat strip: the sidebar's own bottom row, always visible
+     (unlike mobile's #logToggle-in-the-prompt-row), latest line + a button
+     that opens the same #logBody panel. Default OFF state (display:none)
+     lives in style.css; this is the only place that turns it on. */
+  .sidefoot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: auto 12px 12px;
+    padding: 8px 8px 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--gold-line);
+  }
+  .sidefoot-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text-soft);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  #sideFootBtn { flex: none; }
+
+  /* Card sheet + log panel: confined to the 390px sidebar (owner: "log and
+     chat 可以縮小"; issue #7: "地圖保持可見、可點") instead of covering the
+     whole frame like mobile's fixed full-screen overlay. */
+  body[data-view="table"] .sheet.overlay {
+    position: absolute;
+    inset: 0 0 0 auto;
+    left: auto;
+    width: 390px;
+    height: 100%;
+    z-index: 40;
+    border-radius: 0;
+    margin: 0;
+    max-height: none;
+    padding: 14px;
+  }
+  body[data-view="table"] .logbody {
+    position: absolute;
+    inset: auto 0 0 auto;
+    left: auto;
+    top: auto;
+    width: 390px;
+    max-height: 70%;
+    z-index: 45;
+    border-radius: 14px 14px 0 0;
+  }
+
+  /* Keyboard/mouse (issue #7): a visible focus ring on every interactive
+     surface the sidebar and map expose, without moving anything on hover. */
+  body[data-view="table"] .hit:focus-visible,
+  body[data-view="table"] .card:focus-visible,
+  body[data-view="table"] .sheet button:focus-visible,
+  body[data-view="table"] #sideFootBtn:focus-visible,
+  .page-card a:focus-visible,
+  .page-card button:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+}

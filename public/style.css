@@ -464,3 +464,15 @@ body.sheet-open { overflow: hidden; height: 100svh; }
   background: #15130f; border-top: 1px solid var(--gold-line); border-radius: 14px 14px 0 0; box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.5); font-size: 12px; color: var(--text-dim); line-height: 1.6; }
 .logbody .say { color: var(--text); }
 .logbody .bot { color: var(--gold); }
+
+/* ---------- desktop (>=1024px) hook points, default OFF ----------
+   The actual desktop rules live in desktop.css (all wrapped in its own
+   @media (min-width: 1024px)); these three selectors just give the new
+   desktop-only elements a harmless default so nothing leaks onto a phone
+   before desktop.css's media query ever matches. .page-card is
+   `display: contents` on mobile — literally invisible to layout, so
+   #backLink/#rulesLink/#langBtn and every <main> lay out directly under
+   <body> exactly as before this wrapper existed (#7). */
+.d-frame { display: none; }
+.page-card { display: contents; }
+.sidefoot { display: none; }
