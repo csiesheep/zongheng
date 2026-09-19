@@ -1236,6 +1236,15 @@ function renderLog(v) {
   // Under the prompt: what happened since this seat last acted.
   const NEWS = new Set(["headline", "play", "place", "campaign", "lobby", "score", "tire", "seal", "unseal", "mie", "restore", "reform", "jiuding", "bog", "skip", "era", "turn"]);
   const news = v.log.filter((l) => l.i > (game.seenLog || 0) && NEWS.has(l.type)).map(fmtLog).filter(Boolean).slice(-7);
+  // #30: renderLog() is also called directly by #logToggle/#sideFootBtn
+  // (opening/closing the panel doesn't need a full render()), which never
+  // resets #promptText the way render()'s own setPrompt() does — so a plain
+  // beforeend append here used to leave one more copy of this block behind
+  // every single time the log panel was opened or closed. Removing any
+  // existing one first makes renderLog() idempotent regardless of who calls
+  // it or how many times.
+  const oldNews = $("promptText").querySelector(".news");
+  if (oldNews) oldNews.remove();
   $("promptText").insertAdjacentHTML("beforeend", news.length ? `<div class="news">${news.map((s) => `<div>${esc(s)}</div>`).join("")}</div>` : "");
   // Desktop-only (see desktop.css, #7): the sidebar's bottom strip condenses
   // to the single latest line (the bot's own move if it just went, else the
