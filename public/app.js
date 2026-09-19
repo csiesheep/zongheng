@@ -72,32 +72,62 @@ $("btnBoard").onclick = () => { show("table"); render(); };
 
 // ---------- setup ----------
 const setup = { side: store.get("zh.side", "chu"), level: store.get("zh.level", "normal") };
+// Builds the buttons once and reuses them on every later call (same item
+// count/order): only aria-pressed, label text and the click handler are
+// updated in place, so repeated calls (a pick, a language switch) never
+// touch the DOM nodes — no rebuild flicker (#20). Item count changing would
+// still fall back to a full rebuild, but every caller today always passes
+// the same three (easy/normal/hard) options.
 function seg(el, items, value, onPick) {
-  el.innerHTML = "";
-  for (const [v, label] of items) {
-    const b = document.createElement("button");
-    b.type = "button"; b.textContent = label; b.setAttribute("aria-pressed", String(v === value));
+  if (el.childElementCount !== items.length) el.innerHTML = "";
+  items.forEach(([v, label], i) => {
+    let b = el.children[i];
+    if (!b) { b = document.createElement("button"); b.type = "button"; el.appendChild(b); }
+    if (b.textContent !== label) b.textContent = label;
+    b.setAttribute("aria-pressed", String(v === value));
     b.onclick = () => onPick(v);
-    el.appendChild(b);
-  }
+  });
 }
 // A picture tile per side (art/ui/qin.jpg, chu.jpg), plus a plain "random"
 // tile — the selected one gets a thick border and full opacity, the way the
 // C2 setup mockups (C2_SetupQin/Setup/SetupRandom) show all three at once.
+// Built once; later calls (a pick, a language switch) only update
+// aria-pressed and text nodes in place — the <img> is never re-created, so
+// it never re-decodes and never flickers (#20).
+const SIDE_TILES = ["qin", "chu", "random"];
 function renderSideTiles() {
-  const el = $("sideTiles"); el.innerHTML = "";
+  const el = $("sideTiles");
   const pick = (v) => { setup.side = v; store.set("zh.side", v); renderSetup(); };
-  for (const v of ["qin", "chu", "random"]) {
-    const b = document.createElement("button");
-    b.type = "button"; b.className = `tile ${v}`; b.setAttribute("aria-pressed", String(setup.side === v));
+  if (el.childElementCount !== SIDE_TILES.length) {
+    el.innerHTML = "";
+    for (const v of SIDE_TILES) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = `tile ${v}`;
+      if (v !== "random") {
+        const img = document.createElement("img");
+        img.src = `art/ui/${v}.jpg`; img.alt = "";
+        b.appendChild(img);
+      }
+      const info = document.createElement("span"); info.className = "tile-info";
+      const tg = document.createElement("span"); tg.className = "tg"; tg.lang = "zh-Hant";
+      const tname = document.createElement("span"); tname.className = "tname";
+      const ttag = document.createElement("span"); ttag.className = "ttag";
+      info.append(tg, tname, ttag);
+      b.appendChild(info);
+      b.onclick = () => pick(v);
+      el.appendChild(b);
+    }
+  }
+  SIDE_TILES.forEach((v, i) => {
+    const b = el.children[i];
+    b.setAttribute("aria-pressed", String(setup.side === v));
     const glyph = v === "qin" ? "秦" : v === "chu" ? "楚" : "?";
     const tname = v === "random" ? t("setup.random") : t(`sides.${v}`);
     const tag = v === "random" ? t("setup.randomTag") : t(`side.${v}.headline`);
-    b.innerHTML = (v !== "random" ? `<img src="art/ui/${v}.jpg" alt="">` : "") +
-      `<span class="tile-info"><span class="tg" lang="zh-Hant">${esc(glyph)}</span><span class="tname">${esc(tname)}</span><span class="ttag">${esc(tag)}</span></span>`;
-    b.onclick = () => pick(v);
-    el.appendChild(b);
-  }
+    b.querySelector(".tg").textContent = glyph;
+    b.querySelector(".tname").textContent = tname;
+    b.querySelector(".ttag").textContent = tag;
+  });
 }
 function renderSetup() {
   renderSideTiles();
