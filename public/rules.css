@@ -25,6 +25,17 @@
 .rules b { color: var(--text); }
 .rules a { color: var(--gold); }
 
+/* The board section's map (#26): reuses .map/.map-inner/.node/.disc/.nm
+   from style.css untouched (same classes the game table draws with, via
+   map-draw.js) — this only bleeds it to the full viewport/card width
+   (cancelling .rules's own 14px side padding, the same "edge to edge" the
+   table's #map already gets from #table having no side padding of its
+   own) and gives the box its height from an aspect-ratio instead of JS,
+   so only the scale transform inside (rules.js's fitRulesMap()) needs
+   script at all. */
+.rules .rules-map { flex: none; min-height: 0; width: calc(100% + 28px); margin: 10px -14px 6px; aspect-ratio: 390 / 408; border-radius: 0; }
+.rules-map-legend { margin: 0 0 4px; font-size: 12px; color: var(--text-dim); }
+
 /* The 72-card table: one row per card, art on the left so the deck reads at
    a glance. Flex rows (not a rigid grid) so the effect text can wrap freely
    on a 375px phone without ever forcing side-scroll. */

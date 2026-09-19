@@ -17,7 +17,7 @@ import * as Tut from "./tutorial-ui.js";
 import {
   DESIGN_W, DESIGN_H, NODE_POS, nodeCenter, regionMembers, isCapital,
   renderRegionBlobs, renderRoads, REGION_LABEL_POS,
-  NODE_BREAK_EN, NODE_SMALL_EN, NODE_ANCHOR, nodeLabelHTML,
+  NODE_BREAK_EN, NODE_SMALL_EN, NODE_ANCHOR, nodeLabelHTML, stabilityTagHTML,
 } from "./map-draw.js";
 
 const LANGS = { en, "zh-Hant": zh };
@@ -613,6 +613,7 @@ function renderMap(v) {
       (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (lit ? " lit" : "") + (picked ? " picked" : "");
     vis.style.cssText = `left:${x}px;top:${y}px`;
     vis.innerHTML = `<span class="disc${cap ? " sq" : ""}">${empty ? "" : `<i class="q">${q || ""}</i><i class="c">${c || ""}</i>`}</span>` +
+      stabilityTagHTML(sp) +
       (picked ? `<span class="badge">+${picked}</span>` : "") +
       (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
       nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc);

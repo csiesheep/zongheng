@@ -86,8 +86,10 @@ export function renderRoads() {
 // Hand-picked so the tag sits in open water, never over a city or another
 // tag (owner: per-region position is fine, membership must stay data-driven
 // — and it is, via regionMembers()). One colour per region, matching its blob.
+// north nudged 2026-09-19 for the stability tag (#26) — its old spot started
+// overlapping Liaodong's new tag.
 export const REGION_LABEL_POS = {
-  north: [282, 66], west: [30, 152], jin: [176, 202], zhou: [184, 162], east: [340, 274], south: [235, 306],
+  north: [320, 60], west: [30, 152], jin: [176, 202], zhou: [184, 162], east: [340, 274], south: [235, 306],
 };
 // No ellipsis anywhere on the map (owner). Long English names that have a
 // natural break (a space or hyphen) go on two lines; the rest just render
@@ -99,7 +101,12 @@ export const REGION_LABEL_POS = {
 // region, so it's fine per the same rule as REGION_LABEL_POS.
 export const NODE_BREAK_EN = { hangu: ["Hangu", "Pass"], bashu: ["Ba-", "Shu"], chencai: ["Chen-", "Cai"], huaisi: ["Huai-", "Si"], wuyue: ["Wu-", "Yue"] };
 export const NODE_SMALL_EN = new Set(["zhongshan", "liaodong", "shangdang", "guanzhong", "daliang", "hanzhong", "xinzheng", "qianzhong"]);
-export const NODE_ANCHOR = { bashu: "right", shangdang: "right", ying: "top", wuyue: "top", yiyang: "left", linzi: "left", ji: "left", liaodong: "right", hangu: "right" };
+// jimo: "left" added 2026-09-19 for the stability tag (#26) — Jimo's default
+// (name straight below) put its bottom-left stab tag inside Ju's disc; every
+// other anchor tried for this pair just moved the same collision onto a
+// different neighbour (measured, not guessed — see the issue's commit
+// message), anchor-left was the only one of the four with zero overlap.
+export const NODE_ANCHOR = { bashu: "right", shangdang: "right", ying: "top", wuyue: "top", yiyang: "left", linzi: "left", ji: "left", liaodong: "right", hangu: "right", jimo: "left" };
 // `name` is the already-resolved display name (the caller's own spaceName()
 // — app.js and rules.js each have their own, reading the same E.SPACE[id]
 // but keyed to their own current language); `esc` is the caller's own HTML
