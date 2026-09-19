@@ -544,62 +544,88 @@ function targetRect() {
   };
 }
 function overlaps(a, b) { return !(a.bottom <= b.top || a.top >= b.bottom || a.right <= b.left || a.left >= b.right); }
-function candidates(el, mapRect) {
-  const panelH = el.getBoundingClientRect().height || 200; // height doesn't change with top/bottom, so the CURRENT box is a fine estimate for the candidate not yet applied
-  return {
-    bottom: { top: mapRect.bottom - panelH - 8, bottom: mapRect.bottom - 8, left: mapRect.left, right: mapRect.right },
-    top: { top: mapRect.top + 8, bottom: mapRect.top + 8 + panelH, left: mapRect.left, right: mapRect.right },
-  };
-}
 // Owner's ruling, issue #15 review round 4: the coach's prose starts open
 // on EVERY lesson (never auto-collapsed) — collapsing only ever happens
 // because the player tapped "Got it", never automatically. That button
 // itself only appears when the fully-expanded panel, at whichever edge it
 // would otherwise pin to, still covers the taught target — a lesson whose
 // panel never reaches the target keeps the text open with no button at all.
+// Round 5's ruling (issue #15 review): the EXPANDED panel is allowed to sit
+// over the target — nobody is expected to tap while still reading the
+// lesson — so the edge is chosen against the COLLAPSED ("Got it" already
+// tapped) height, the one state the player actually has to act in. Only
+// when EVEN the collapsed panel covers the target at both edges (owner
+// named 375x553 as the one case this should ever happen) does this fall
+// back to flow mode. Both heights are measured for real via the DOM (toggle
+// #tutTextP's hidden, read the box, put it back) instead of guessed, since a
+// wrong guess here is exactly what round 4's single-measurement version got
+// wrong — it read whatever state the panel happened to already be in.
+// The "Got it" button's own visibility is decided by THIS function's caller,
+// from a coverage check that itself needs a clean height to test against —
+// so both measurements are taken with it force-hidden, not however the
+// PREVIOUS lesson's pinCoach() call happened to leave it. Without this, a
+// lesson entered right after one that needed "Got it" measured its own
+// collapsed height ~50px too tall (the leftover visible button, not yet
+// updated for the new step), wrongly concluding neither edge clears the
+// target and falling into flow mode — found testing English 390x669's
+// "lobby" lesson, entered right after "campaign" (issue #15 review round 5).
+function measuredHeight(el, hideText) {
+  const p = el.querySelector("#tutTextP");
+  const gotIt = el.querySelector("#tutGotItBtn");
+  const wasP = p.hidden, wasGotIt = gotIt.hidden;
+  p.hidden = hideText;
+  gotIt.hidden = true;
+  const h = el.getBoundingClientRect().height;
+  p.hidden = wasP;
+  gotIt.hidden = wasGotIt;
+  return h;
+}
 function pinCoach() {
   const el = ctx.$("tutCoach");
   if (!el) return;
   const gotItBtn = el.querySelector("#tutGotItBtn");
   if (window.matchMedia("(min-width: 1024px)").matches) {
     el.style.top = ""; el.style.bottom = "";
+    el.classList.remove("tut-pin-flow", "tut-pin-top", "tut-pin-bottom");
     gotItBtn.hidden = true;
     return;
   }
   const tableRect = ctx.$("table").getBoundingClientRect();
   const mapRect = ctx.$("map").getBoundingClientRect();
   const target = targetRect();
-  const cand = candidates(el, mapRect);
-  const bottomHits = target ? overlaps(cand.bottom, target) : false;
-  const topHits = target ? overlaps(cand.top, target) : false;
-  // Found testing 375x553 (issue #15, round 4 follow-up): on a map this
-  // short, the panel can cover the target at BOTH edges even once "Got it"
-  // has collapsed it — the pinTop/pinBottom choice below has no third edge
-  // to try. Rather than silently leave the target un-tappable (a real
-  // finger tap there would hit the panel, not the city — .click() in a
-  // walker script doesn't notice because it ignores z-order), drop out of
-  // floating entirely: flow mode pushes the panel below the map in #table's
-  // own column, which can never cover it, and inflates #table's real
-  // content height so checkOverflow() (called right after this) turns on
-  // the page's own scroll — exactly the "375x553 才允許捲" escape valve the
-  // review comment names for this size.
-  const bothCover = !!target && bottomHits && topHits;
-  el.classList.toggle("tut-pin-flow", bothCover);
-  if (bothCover) {
+  const collapsedH = measuredHeight(el, true);
+  const expandedH = measuredHeight(el, false);
+  const rectAt = (edge, h) => edge === "bottom"
+    ? { top: mapRect.bottom - h - 8, bottom: mapRect.bottom - 8, left: mapRect.left, right: mapRect.right }
+    : { top: mapRect.top + 8, bottom: mapRect.top + 8 + h, left: mapRect.left, right: mapRect.right };
+  const covers = (edge, h) => !!target && overlaps(rectAt(edge, h), target);
+  const fits = (r) => r.top >= 0 && r.bottom <= window.innerHeight;
+  // Prefer bottom (matches the design's Tut_Card); flip to top only when
+  // bottom fails collapsed and top doesn't. Neither clearing collapsed is
+  // the genuine "nowhere works" case — flow mode.
+  let edge = !covers("bottom", collapsedH) ? "bottom" : !covers("top", collapsedH) ? "top" : null;
+  const flow = edge == null;
+  el.classList.toggle("tut-pin-flow", flow);
+  if (flow) {
     el.style.top = ""; el.style.bottom = "";
     el.classList.remove("tut-pin-top", "tut-pin-bottom");
     gotItBtn.hidden = true; // flow mode never covers the map, so there's nothing to dismiss
     return;
   }
-  // Default bottom (matches Tut_Card); flip to the top edge only when the
-  // bottom would cover the target and the top wouldn't.
-  const pinTop = bottomHits && !topHits;
-  const covers = pinTop ? topHits : bottomHits; // whichever edge was actually chosen
-  const needsGotIt = expanded && !!target && covers;
+  // The chosen edge clears the target once collapsed, but must also land
+  // fully inside the viewport at whichever height it's showing RIGHT NOW
+  // (issue #15 review round 5, item 1) — try the other edge if this one
+  // would spill off screen and the other one wouldn't.
+  const h = expanded ? expandedH : collapsedH;
+  if (!fits(rectAt(edge, h))) {
+    const other = edge === "bottom" ? "top" : "bottom";
+    if (fits(rectAt(other, h))) edge = other;
+  }
+  const needsGotIt = expanded && covers(edge, expandedH);
   gotItBtn.hidden = !needsGotIt;
-  el.classList.toggle("tut-pin-top", pinTop);
-  el.classList.toggle("tut-pin-bottom", !pinTop);
-  if (pinTop) { el.style.bottom = ""; el.style.top = `${Math.round(mapRect.top - tableRect.top) + 8}px`; }
+  el.classList.toggle("tut-pin-top", edge === "top");
+  el.classList.toggle("tut-pin-bottom", edge === "bottom");
+  if (edge === "top") { el.style.bottom = ""; el.style.top = `${Math.round(mapRect.top - tableRect.top) + 8}px`; }
   else { el.style.top = ""; el.style.bottom = `${Math.round(tableRect.bottom - mapRect.bottom) + 8}px`; }
 }
 
