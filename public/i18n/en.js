@@ -9,6 +9,12 @@ export default {
   soon: "Under construction. The rules are written; the engine, the bot and the rooms are next.",
   credit: "A free fan project. Inspired by the card-driven design of Twilight Struggle; not affiliated with GMT Games.",
   nav: { back: "‹ Zongheng", rules: "Rules", hub: "csiesheep games", lang: "中文" },
+  // The rules page's 72nd row: the Nine Cauldrons aren't in shared/cards.js
+  // (they're the engine's special `st.jiuding` card, not a CARDS entry), so
+  // rules.js can't read this name/text off the deck the way it does for the
+  // other 71. Wording matches the existing "Nine Cauldrons" sentence in this
+  // file's rules page prose (see rules.js's own specialText).
+  rules: { jiuding: "The Nine Cauldrons", jiudingText: "4 ops, 5 if all of it lands in the Three Jin or Zhou; place, campaign or lobby only; then it passes face down and the other side may use it from the next turn; Chu holds it at the start." },
   sides: { qin: "Qin", chu: "Chu" },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },
   setup: { defaultName: "Player" },

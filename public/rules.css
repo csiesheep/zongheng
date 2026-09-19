@@ -36,6 +36,11 @@
 .cardrow img { flex: none; width: 60px; height: 80px; object-fit: cover; border-radius: 8px; }
 .cardrow .cr-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .cardrow .cr-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+/* flex-wrap only breaks a line when an item doesn't fit; on the shorter
+   names that left .cr-en sharing the first line for 13 of the 71 rows.
+   flex-basis:100% forces it onto its own line every time, not just when
+   space runs out. */
+.cardrow .cr-en { flex-basis: 100%; }
 .cardrow .cr-badge { flex: none; width: 20px; height: 20px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 11px; line-height: 20px; text-align: center; }
 .cardrow .cr-zh { font-size: 15px; }
 .cardrow .cr-en { font-size: 11px; }
