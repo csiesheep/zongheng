@@ -8,8 +8,11 @@
 /* #table needs a positioning context for the coach card below on a phone —
    desktop.css only sets this inside its own >=1024px block. Harmless at
    any width: it only matters to an absolutely-positioned descendant, and
-   the only one is this tutorial's own panel. */
-#table { position: relative; }
+   the only one is this tutorial's own panel. Still scoped to body.tut-on
+   (issue #31): #table is an existing, shared element, and a rule touching
+   it must not apply outside a tutorial actually running, even though this
+   particular property has no visible effect without .tut-coach present. */
+body.tut-on #table { position: relative; }
 
 /* ---------- the coach card ---------- */
 /* Appended once as #table's LAST child. On a phone (<1024px) it floats,
@@ -127,7 +130,13 @@
 }
 @keyframes tut-pulse { 0%, 100% { outline-color: var(--gold); } 50% { outline-color: #fff3d2; } }
 .card.tut-lit { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--gold) !important; opacity: 1 !important; }
-.hand .card:not(.tut-lit) { opacity: 0.32; }
+/* Issue #31: this used to apply to every hand, in every real game, forever —
+   .tut-lit is a tutorial-only class, so any card without it (i.e. every
+   card in a normal game) was permanently dimmed to 0.32 the moment
+   tutorial.css loaded (it always does, on every play.html load). Scoped to
+   body.tut-on (set by tutorial-ui.js's start(), removed on the way out) so
+   the dimming only ever applies while a lesson is actually running. */
+body.tut-on .hand .card:not(.tut-lit) { opacity: 0.32; }
 
 /* ---------- full-page overlays: the opening card and the completion page ---------- */
 .tut-overlay {
