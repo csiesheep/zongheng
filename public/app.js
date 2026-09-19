@@ -450,7 +450,21 @@ function layoutTable() {
     // it's deliberately left out of this budget; #map's own overflow:hidden
     // clips it to that box regardless. $(id) is null-guarded because
     // tutCoach only exists while a tutorial is actually running.
-    const chrome = ["topbar", "statline", "prompt", "sheet"].reduce((sum, id) => sum + ($(id) && !$(id).hidden ? $(id).getBoundingClientRect().height : 0), 0) + advBannerAsRow;
+    // #24 round 3: #sheet becomes `position: fixed; inset: 0` (style.css's
+    // .sheet.overlay) while wantsCardOverlay() is true — its own
+    // getBoundingClientRect() then reports the FULL viewport height
+    // regardless of its real content, which blew this budget's "chrome"
+    // sum up to ~669px and forced the map/hand to their floor with
+    // table-overflow set, even though the overlay covers them anyway and
+    // nothing was actually cut off (a real "headline card open" /
+    // "card open" state measured this). An overlay isn't a normal flow
+    // row sharing this budget with the map/hand, so it contributes 0 here.
+    const chrome = ["topbar", "statline", "prompt", "sheet"].reduce((sum, id) => {
+      const el = $(id);
+      if (!el || el.hidden) return sum;
+      if (id === "sheet" && el.classList.contains("overlay")) return sum;
+      return sum + el.getBoundingClientRect().height;
+    }, 0) + advBannerAsRow;
     // #table's own top/bottom padding, plus one flex column gap per
     // boundary between its VISIBLE children (a hidden/empty row like
     // #sheet or #chatForm takes no box and no gap) — measured, not
@@ -479,7 +493,15 @@ function layoutTable() {
       scale = Math.min(widthScale, Math.max(FLOOR_SCALE, spaceForMapAndHand / DESIGN_H));
       mapH = Math.round(DESIGN_H * scale);
       handH = 0;
-      if (mapH > spaceForMapAndHand) overflow = true;
+      // #24 round 3: at a near-exact fit (scale close to spaceForMapAndHand
+      // / DESIGN_H), Math.round() can round mapH UP by a fraction of a px
+      // past the unrounded budget — a real "use picked, no target yet"
+      // state at 390x669 measured table-overflow set from exactly this,
+      // even though nothing was actually cut off (the map rendered at its
+      // true floor, everything still on screen, scrollHeight == innerHeight).
+      // A sub-pixel tolerance stops that rounding artifact from tripping
+      // the same "let the page scroll" fallback a real overflow needs.
+      if (mapH > spaceForMapAndHand + 1) overflow = true;
     } else {
       const full = configFor(CARD_H + HAND_GUTTER); // 207: 96x176 card + its own headroom
       if (full.handH - HAND_GUTTER >= CARD_FULL_MIN) {
@@ -487,12 +509,24 @@ function layoutTable() {
       } else {
         const chip = configFor(CHIP_H + CHIP_GUTTER); // 72: a fixed 56px chip row
         mode = "chip";
-        if (chip.handH >= CHIP_H + CHIP_GUTTER - 2) {
+        // #24 round 3: this used to require chip.handH within 2px of the
+        // full 72 (CHIP_H+CHIP_GUTTER) or else fall through to forcing
+        // exactly 72 anyway (see the `else` below) — on a real 375x667
+        // action-hand state that fell a few px short (different game text
+        // sizes statline/topbar to slightly different real heights), that
+        // forced 72 was MORE than the true budget by ~3px and tripped an
+        // avoidable table-overflow. CHIP_H alone (the chip's actual content,
+        // no gutter) is the real floor; anything at or above that is a
+        // legible row, just with less breathing room than the 16px ideal,
+        // and using chip's own computed (already-fitting) handH here can't
+        // overshoot the budget the way a hardcoded constant can.
+        if (chip.handH >= CHIP_H) {
           ({ scale, mapH, handH } = chip);
         } else {
-          // Even a chip row doesn't fit alongside the map's floor spec (e.g.
-          // 375x553) — give both their true minimum and let the PAGE scroll
-          // instead of squeezing either below spec (owner's round 5, #3).
+          // Even the chip's own bare row doesn't fit alongside the map's
+          // floor spec (e.g. 375x553) — give both their true minimum and
+          // let the PAGE scroll instead of squeezing either below spec
+          // (owner's round 5, #3).
           scale = FLOOR_SCALE; mapH = Math.round(DESIGN_H * scale); handH = CHIP_H + CHIP_GUTTER; overflow = true;
         }
       }
@@ -958,6 +992,11 @@ function renderPromptAndSheet(v) {
     else { const e = E.edge(v, me, ui.target); text = t("preview.lobby", { edge: e, n: Math.min(info.ops, e) }); }
     note(sh, `${spaceName(ui.target)}: ${text}`);
     footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}`, () => humanAct({ ...base, target: ui.target }), false);
+    // #24 round 3 (owner): the target's own preview note above already
+    // restates what the parked sheet-title would say ("Campaign with N
+    // ops" vs "Xinzheng: removes…") — once a target is picked, keeping
+    // both was the extra few px that pushed 390x669 back into scroll.
+    sh.querySelector(".sheet-title")?.remove();
   } else {
     // #24 round 2, fix #1 (owner): before a target is tapped, this branch
     // used to render nothing at all past the chip — 0 visible buttons, no

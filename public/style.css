@@ -460,6 +460,14 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 3.6em; overflow: hidden; }
 .sheet { flex: none; display: flex; flex-direction: column; gap: 6px; margin: 0 8px; padding: 8px 10px; border-radius: 10px; max-height: 40svh; overflow-y: auto; }
 .sheet:empty { display: none; }
+/* #24 round 3: setPrompt() (round 2's fix #2) always parks its text as a
+   hidden .sheet-title, first child of the sheet -- so #sheet is no longer
+   :empty even in the browsing-the-hand state, where it holds nothing else.
+   That one hidden div's own padding (8px/10px) was enough on its own to
+   push the hand row 16px further down and overflow a short viewport that
+   used to fit exactly. A sheet whose only children are all [hidden] must
+   collapse the same way an actually-empty one already does. */
+.sheet:not(:has(> :not([hidden]))) { display: none; }
 /* A card sheet covers the whole screen while it's open (C2_CardChu/Qin/
    Neutral/Scoring are full pages, not a strip under the map) so the table
    behind it can't scroll; Cancel/Confirm/re-tapping the card closes it and
