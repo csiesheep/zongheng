@@ -990,8 +990,7 @@ function fmtLog(l) {
   return s === key ? "" : s;
 }
 function renderLog(v) {
-  const body = $("logBody");
-  $("logToggle").textContent = `${t("buttons.log")} (${body.hidden ? t("buttons.show") : t("buttons.hide")})`;
+  syncLogToggleLabel();
   // #27: the title in the panel's own sticky header (not the #logToggle
   // label above, which stays as-is) names what's actually inside it — the
   // room's chat is mixed into the same feed there, so it says so.
@@ -1018,15 +1017,27 @@ $("chatForm").onsubmit = (ev) => {
   if (text) send({ type: "chat", text });
   $("chatIn").value = "";
 };
+// #logToggle's own label is the only one of the panel's buttons that names
+// open/closed state (#sideFootBtn always just reads "Log and chat" — see
+// renderLog); every path that opens or closes the panel must keep it in
+// sync, not just the two that already called renderLog, or it goes stale
+// until the next render (#27 follow-up: closing from the header's own
+// button or the scrim left it reading "(Hide)" while the panel was shut).
+function syncLogToggleLabel() {
+  const hidden = $("logBody").hidden;
+  $("logToggle").textContent = `${t("buttons.log")} (${hidden ? t("buttons.show") : t("buttons.hide")})`;
+}
 // #27: the panel used to be the only way to close itself (#logToggle in the
 // prompt row), and once the log grew past a few lines it covered its own
 // toggle button along with the whole prompt row and hand underneath — no way
 // left to close it or play a card except reloading. It now closes itself
 // from three places: its own sticky-header close button, a full-viewport
-// scrim behind it, and (unchanged) #logToggle / #sideFootBtn.
+// scrim behind it, and (unchanged) #logToggle / #sideFootBtn. Every one of
+// those paths runs through here so #logToggle's own label never goes stale.
 function setLogOpen(open) {
   $("logBody").hidden = !open;
   $("logScrim").hidden = !open;
+  syncLogToggleLabel();
 }
 $("logClose").onclick = () => setLogOpen(false);
 $("logScrim").onclick = () => setLogOpen(false);
