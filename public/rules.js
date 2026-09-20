@@ -163,14 +163,23 @@ function table(head, rows, cls = []) {
 // visible text line is the two of them together — hidden at mobile by
 // rules.css's own default (.cr-year{display:none}), same as it always was
 // before this element existed at all.
+// #45 (owner, comparing the design board to the live tile): the design's
+// own long-name example list names 信陵君竊符救趙 AND "most English names" —
+// the tile shows whichever language the interface is currently in (not
+// always 楚/中文, the mobile row's own bilingual-always convention), so
+// `cr-tile-name` (hidden at mobile, same default as `cr-year`) carries
+// `enName` under `en` and the plain zh name under `zh-Hant`; the mobile
+// row's own `cr-zh`/`cr-en` are untouched either way.
 function cardRow(side, id, zhName, enLine, badge, text, era, filterSideKey, searchName, year = "") {
   const enName = enLine.split(" · ")[0];
+  const tileName = lang === "en" ? esc(enName) : zhName;
   return `<button type="button" class="cardrow side-${side}" data-card="${esc(id)}" data-era="${esc(era)}" data-side="${esc(filterSideKey)}" data-name="${esc(searchName.toLowerCase())}">` +
     `<img src="art/cards/${id}.jpg" width="60" height="80" loading="lazy" alt="${esc(zhName.replace(/ \*$/, ""))} ${esc(enName)}">` +
     `<div class="cr-body">` +
     `<span class="cr-head">` +
     `<span class="cr-badge">${badge}</span>` +
     `<span class="cr-zh" lang="zh-Hant">${zhName}</span>` +
+    `<span class="cr-tile-name"${lang === "en" ? "" : ' lang="zh-Hant"'}>${tileName}</span>` +
     `<span class="cr-year">${year}</span>` +
     `<span class="cr-en">${esc(enLine)}</span>` +
     `</span>` +
