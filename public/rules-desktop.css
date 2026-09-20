@@ -31,6 +31,15 @@
   .rules { max-width: none; padding: 0 20px 40px; }
 
   /* ---------- the bar: tabs instead of the mid label / #40's chip row ---------- */
+  /* Round 1 review (#44): `.bar` was `position: static` inside `.page-card`
+     (the scroller here) so it scrolled away with the text, leaving the tabs
+     and the language button gone and an empty strip where the bar used to
+     be, while the rail/map's own `.d-sticky` stayed pinned below it. Sticky
+     + a solid background (same token `.page-card` itself already paints
+     with) keeps it in place and opaque; z-index above the rail/map/panel
+     columns' own sticky boxes (default z-index: auto, so anything explicit
+     here already wins) so it stays drawn on top of them, not under. */
+  body:has(#rules) .bar { position: sticky; top: 0; z-index: 20; background: var(--bg); }
   #barMid { display: none; }
   #rulesNav { display: none; }
   #rulesTabs { display: flex; gap: 6px; }
