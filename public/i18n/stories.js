@@ -294,8 +294,8 @@ export default {
 
   // #36 batch 3: 兼併期 (era: "conquest"), all 20 cards.
   changping: {
-    zh: "前260年,秦攻韓上黨,上黨降趙,引發秦趙長平之戰。趙以趙括代廉頗為將,冒進出擊,被秦將白起分割包圍,趙軍斷糧四十六日。趙括突圍戰死,四十餘萬降卒盡遭白起坑殺,《史記》本傳的這個數字後世史家多有存疑。這是戰國規模最大、傷亡最慘重的一戰。",
-    en: "In 260 BC, Qin attacked Han's Shangdang region, which surrendered to Zhao instead, triggering the Battle of Changping. Zhao replaced Lian Po with the untested Zhao Kuo, who advanced rashly and was surrounded by the Qin general Bai Qi, his army starving for forty-six days before he died breaking out. Bai Qi then had the surrendered troops, more than four hundred thousand by the Shiji's count, put to death, a figure later historians have long questioned. It was the costliest battle of the Warring States.",
+    zh: "前262年,秦攻韓野王,截斷上黨與韓國本土的聯繫,上黨太守遂舉城降趙。前260年,秦趙兩軍在長平對峙,趙以趙括代廉頗為將,冒進出擊,被秦將白起分割包圍,趙軍斷糧四十六日。趙括突圍戰死,四十餘萬降卒盡遭白起坑殺,《史記》本傳的這個數字後世史家多有存疑。",
+    en: "In 262 BC, Qin attacked Han's Yewang, cutting Shangdang off from Han, and its governor surrendered it to Zhao instead. In 260 BC, Qin and Zhao faced off at Changping. Zhao replaced Lian Po with the untested Zhao Kuo, who advanced rashly and was surrounded by the Qin general Bai Qi, his army starving forty-six days before he died breaking out. Bai Qi then had the surrendered troops, over four hundred thousand by the Shiji's count, put to death, a figure historians have long questioned.",
     srcZh: "《史記·白起王翦列傳》、《史記·廉頗藺相如列傳》",
     srcEn: "Shiji, Biographies of Bai Qi and Wang Jian; Lian Po and Lin Xiangru",
   },
@@ -312,8 +312,8 @@ export default {
     srcEn: "Shiji, Biography of Lü Buwei",
   },
   zhengguoqu: {
-    zh: "前246年,韓國派水工鄭國游說秦國修建大型灌溉渠道,實為消耗秦國國力、拖延秦國東進的計謀。工程中途,鄭國的間諜身分被識破,秦王欲殺之,鄭國辯稱「渠成亦秦之利也」,秦王認為有理,命他繼續完工。渠成後關中沃野千里,秦國反而因此更加富強,渠因此得名鄭國渠。",
-    en: "In 246 BC, Han sent the engineer Zheng Guo to persuade Qin to build a great irrigation canal, really a scheme to drain Qin's resources and delay its eastward advance. Partway through, Qin discovered he was a spy and wanted to execute him; he argued the canal would still benefit Qin regardless, and the king let him finish it. Once built, the canal turned Guanzhong fertile for a thousand li, making Qin richer rather than weaker, and it was named after him.",
+    zh: "前246年,韓國派水工鄭國游說秦國修建大型灌溉渠道,實為消耗秦國國力、拖延東進的計謀。工程中途,鄭國的間諜身分被識破,秦王欲殺之,鄭國辯稱「渠成亦秦之利也」,秦王認為有理,命他繼續完工。渠成後灌溉鹽鹼地四萬餘頃,關中從此成為沃野,不再有凶年,渠因此得名鄭國渠。",
+    en: "In 246 BC, Han sent the engineer Zheng Guo to persuade Qin to build a great irrigation canal, really a scheme to drain Qin's resources and delay its eastward advance. Partway through, Qin discovered he was a spy and wanted to execute him; he argued the canal would still benefit Qin regardless, and the king let him finish it. Once built, it irrigated over forty thousand qing of salty land, turning Guanzhong fertile with no more bad harvest years, and it was named after him.",
     srcZh: "《史記·河渠書》",
     srcEn: "Shiji, Treatise on Rivers and Canals",
   },
@@ -337,7 +337,7 @@ export default {
   },
   xinlingjun: {
     zh: "前257年,秦圍趙都邯鄲,趙求救於魏,魏王命晉鄙率兵駐鄴觀望,不敢進兵。魏公子信陵君屢諫不聽,採納門客侯嬴之計,透過魏王寵姬如姬竊得兵符,假傳王命奪晉鄙之軍,力士朱亥椎殺晉鄙。信陵君遂率兵擊秦,大破秦軍,解邯鄲之圍,但因矯殺晉鄙、竊符出兵,不敢返魏,留趙十年。",
-    en: "In 257 BC, Qin besieged Handan, and Zhao appealed to Wei. King An of Wei ordered his general Jin Bi to camp and wait, ignoring Lord Xinling's pleas. Xinling, on a retainer's plan, had the king's consort steal the military tally, seized Jin Bi's command by forged order, and had a strongman club him to death. Xinling then crushed the Qin army, lifting the siege, but for killing Jin Bi he dared not return to Wei and stayed in Zhao for ten years.",
+    en: "In 257 BC, Qin besieged Handan, and Zhao appealed to Wei. King Anxi of Wei ordered his general Jin Bi to camp and wait, ignoring Lord Xinling's pleas. Xinling, on a retainer's plan, had the king's consort steal the military tally, seized Jin Bi's command by forged order, and had a strongman club him to death. Xinling then crushed the Qin army, lifting the siege, but for killing Jin Bi he dared not return to Wei and stayed in Zhao for ten years.",
     srcZh: "《史記·魏公子列傳》",
     srcEn: "Shiji, Biography of the Lord of Wei",
   },
@@ -360,16 +360,16 @@ export default {
     srcEn: "Shiji, Biography of Lord Chunshen",
   },
   jingke: {
-    zh: "前227年,燕太子丹派荊軻刺秦王,携帶督亢地圖與秦國叛將樊於期首級進獻為由接近秦王。易水送別時,高漸離擊筑,荊軻和而歌:「風蕭蕭兮易水寒,壯士一去兮不復還。」入秦後圖窮匕見,荊軻刺秦王未中,反被侍衛所殺,秦王因此加緊發兵滅燕。",
-    en: "In 227 BC, Crown Prince Dan of Yan sent Jing Ke to assassinate the king of Qin, using a defector's severed head and a map of Dukang as pretexts. At the Yi River farewell, Gao Jianli played the zhu while Jing Ke sang: the wind sighs, the Yi River is cold; the brave man once gone will never return. In Qin, the map unrolled to reveal a hidden dagger, but his strike missed, and the guards cut him down; Qin attacked Yan harder afterward.",
+    zh: "前227年,燕太子丹派荊軻刺秦王,携帶督亢地圖與秦國逃將樊於期(得罪秦王政,逃亡至燕)的首級進獻為由接近秦王。易水送別時,高漸離擊筑,荊軻和而歌:「風蕭蕭兮易水寒,壯士一去兮不復還。」入秦後圖窮匕見,荊軻刺秦王未中,反被侍衛所殺。",
+    en: "In 227 BC, Crown Prince Dan of Yan sent Jing Ke to kill the king of Qin, using the severed head of Fan Wuqi, a fugitive Qin general who angered the king, plus a map of Dukang. Gao Jianli played the zhu at the Yi River farewell while Jing Ke sang: the wind sighs, the river is cold; the brave man once gone will never return. In Qin, the map unrolled to reveal a dagger, but his strike missed, and the guards cut him down.",
     srcZh: "《史記·刺客列傳》",
     srcEn: "Shiji, Biographies of the Assassins",
   },
   liuguo: {
-    zh: "前241年,趙、楚、魏、韓、燕(一說衛)五國最後一次合縱攻秦,推楚考烈王為縱約長,聯軍進逼函谷關,被秦軍擊退而還。這是戰國史上最後一次真正成形的合縱行動,此後山東六國再也無力組織聯合抗秦。",
-    en: "In 241 BC, Zhao, Chu, Wei, Han, and Yan, joined by some accounts by Wey, made a final coalition attack on Qin under King Kaolie of Chu as its leader, advancing on Hangu Pass before Qin's army drove them back. It was the last coalition the eastern states ever managed to form against Qin, and none of them could organize a joint resistance again afterward.",
-    srcZh: "《史記·楚世家》、《史記·秦始皇本紀》",
-    srcEn: "Shiji, House of Chu; Basic Annals of the First Emperor",
+    zh: "前241年,趙、楚、魏、韓、燕(一說衛)五國最後一次合縱攻秦,推楚考烈王為縱約長,楚相春申君主持此役,聯軍進逼函谷關,被秦軍擊退而還。這是戰國史上最後一次真正成形的合縱行動,此後山東六國再也無力組織聯合抗秦。",
+    en: "In 241 BC, Zhao, Chu, Wei, Han, and Yan, joined by some accounts by Wey, made a final coalition attack on Qin under King Kaolie of Chu as its leader, with Lord Chunshen of Chu directing the campaign, advancing on Hangu Pass before Qin's army drove them back. It was the last coalition the eastern states ever managed to form against Qin, and none of them could organize a joint resistance again afterward.",
+    srcZh: "《史記·楚世家》、《史記·春申君列傳》",
+    srcEn: "Shiji, House of Chu; Biography of Lord Chunshen",
   },
   lixin: {
     zh: "前225年,秦王政問李信伐楚需兵若干,李信答二十萬即可,遂與蒙恬率二十萬兵伐楚,連戰連捷,攻破平輿、鄢郢。李信西向與蒙恬會師城父,楚軍尾隨三日三夜不曾休整,突襲李信軍,攻入兩壁,斬殺秦軍七都尉。傳統上以為統兵楚將是項燕,但〈白起王翦列傳〉此段本身未點名。",
@@ -402,15 +402,15 @@ export default {
     srcEn: "Shiji, Biographies of Bai Qi and Wang Jian",
   },
   mibing: {
-    zh: "「弭兵」一詞源自春秋末年向戌弭兵之會。前546年,宋國大夫向戌倡議弭兵,促成晉、楚等十四國在宋會盟,約定除齊、秦外互相朝見,此後晉楚之間大規模戰爭停止近四十年。戰國時列強紛爭愈演愈烈,類似的弭兵之議偶有提出,但已難再靠會盟真正平息戰事。",
-    en: "The term for laying down arms traces to the Covenant of Song near the end of the Spring and Autumn period. In 546 BC, the Song official Xiang Xu proposed a truce and brought fourteen states, including Jin and Chu, to a covenant requiring mutual courtesy visits except with Qi and Qin, and large fighting between Jin and Chu stopped for nearly forty years. Warring States rulers still floated similar proposals sometimes, but no covenant could really hold the fighting back by then.",
-    srcZh: "《左傳·襄公二十七年》、《史記·宋微子世家》",
-    srcEn: "Zuo Zhuan, Duke Xiang Year 27; Shiji, House of Song",
+    zh: "「弭兵」一詞源自春秋末年向戌弭兵之會。前546年,宋國大夫向戌倡議弭兵,促成晉、楚等十四國在宋會盟,約定除齊、秦外互相朝見,此後晉楚之間大規模戰爭停止近四十年。戰國時,宋牼聽聞秦楚交兵,也說「吾聞秦楚構兵,我將見楚王說而罷之」,可見弭兵的想法戰國仍有人提起。",
+    en: "The term for laying down arms traces to the Covenant of Song near the end of the Spring and Autumn period. In 546 BC, Xiang Xu of Song proposed a truce, bringing fourteen states, including Jin and Chu, to a covenant of mutual visits except Qi and Qin; large fighting between Jin and Chu stopped for forty years. In the Warring States, Song Keng, hearing Qin and Chu were at war, said he meant to see the Chu king and talk him out of it.",
+    srcZh: "《左傳·襄公二十七年》、《孟子·告子下》",
+    srcEn: "Zuo Zhuan, Duke Xiang Year 27; Mengzi, Gaozi II",
   },
   jianbing: {
-    zh: "戰國小邦常在大國夾縫中苟延殘喘,衛國是其中最典型的例子。衛國自三家分晉後便日漸弱小,淪為魏國附庸,卻一直保有國君名號,直到秦二世元年(前209年)才被廢為庶人,衛國正式絕祀,是姬姓封國中最後滅亡的一個。",
-    en: "Small states often survived only precariously wedged between the great powers, and Wey is the clearest case. Reduced to a dependency of Wei not long after the Partition of Jin, it kept its ruler's title all the way through the Warring States, and only in 209 BC, the first year of the Second Emperor, was its last ruler stripped of rank and its sacrifices ended, making it the last of the Ji-surnamed states to fall.",
-    srcZh: "《史記·衛康叔世家》",
-    srcEn: "Shiji, House of Kangshu of Wey",
+    zh: "戰國小邦常在大國夾縫中苟延殘喘,魯國就是一例。前249年,楚考烈王出兵滅魯,魯頃公被廢為庶人,遷居下邑,魯國自此絕祀。衛國則撐得更久,直到秦二世元年(前209年)才被廢為庶人,是姬姓封國中最後滅亡的一個。",
+    en: "Small states often survived only precariously wedged between the great powers, and Lu is one example. In 249 BC, King Kaolie of Chu destroyed Lu, stripped Duke Qing of his rank, and moved him to Xiayi, ending Lu's sacrifices. Wey held on much longer, and only in 209 BC, the first year of the Second Emperor, was its last ruler stripped of rank, making it the last of the Ji-surnamed states to fall.",
+    srcZh: "《史記·魯周公世家》、《史記·衛康叔世家》",
+    srcEn: "Shiji, House of the Duke of Zhou at Lu; House of Kangshu of Wey",
   },
 };
