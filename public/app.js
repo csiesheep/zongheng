@@ -1384,7 +1384,12 @@ function logCardRefs(l) {
 // row with two inline .log-card-link buttons — separated by the
 // template's own "and"/"、", never enlarged past their own text metrics,
 // so neither one can encroach on the other or on the row above/below.
-function logLineNodes(l, clickable) {
+// `pill` (#39 part 4): the news strip's own latest line only -- the main
+// log panel never passes it, so it "keeps its text links" per the owner's
+// spec unchanged. Only changes each card name's own styling class; the
+// wholeLine/two-name shape below (round 2's own fix) is untouched either
+// way, so the pill never becomes a second nested button.
+function logLineNodes(l, clickable, pill) {
   const raw = `log.${l.type}`.split(".").reduce((o, k) => (o ? o[k] : undefined), S);
   if (typeof raw !== "string") return null;
   const P = logParams(l);
@@ -1407,11 +1412,11 @@ function logLineNodes(l, clickable) {
       // a plain <span>, not a nested button (buttons can't nest); the
       // <button> ancestor is what actually answers the click.
       const span = document.createElement("span");
-      span.className = "log-card-name";
+      span.className = "log-card-name" + (pill ? " pill" : "");
       span.textContent = cardName(ref.id);
       root.appendChild(span);
     } else if (ref && clickable) {
-      root.appendChild(cardLinkButton(ref.id, ref.side));
+      root.appendChild(cardLinkButton(ref.id, ref.side, pill));
     } else {
       root.appendChild(document.createTextNode(k in P ? String(P[k]) : `{${k}}`));
     }
@@ -1427,10 +1432,10 @@ function logLineNodes(l, clickable) {
 // its neighbour is that its box is exactly its own glyphs, nothing more.
 // `side` is credited in the peek's own "{side} played this" hint line —
 // here always the card's own headline seat (E.QIN/E.CHU).
-function cardLinkButton(id, side) {
+function cardLinkButton(id, side, pill) {
   const b = document.createElement("button");
   b.type = "button";
-  b.className = "log-card-link";
+  b.className = "log-card-link" + (pill ? " pill" : "");
   b.textContent = cardName(id);
   b.onclick = (ev) => { ev.stopPropagation(); openPeek(id, side); };
   return b;
@@ -1516,10 +1521,16 @@ function renderLog(v) {
   if (newsEntries.length) {
     const newsDiv = document.createElement("div");
     newsDiv.className = "news";
-    for (const l of newsEntries) {
-      const node = logLineNodes(l, clickable);
+    // #39 part 4: newest first (reversed from the chronological order
+    // newsEntries itself keeps) -- .news still caps its own visible height
+    // and clips whatever's past it (unchanged), so the newest line, now the
+    // tallest with its own pill names, has to be the FIRST child or that
+    // same cap could clip the one line the owner actually asked to make
+    // more prominent instead of an older, plainer one.
+    newsEntries.slice().reverse().forEach((l, i) => {
+      const node = logLineNodes(l, clickable, i === 0);
       if (node) newsDiv.appendChild(node);
-    }
+    });
     $("promptText").appendChild(newsDiv);
   }
   // Desktop-only (see desktop.css, #7): the sidebar's bottom strip condenses

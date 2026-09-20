@@ -638,6 +638,22 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
   cursor: pointer;
 }
 .log-card-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+/* #39 part 4: the news strip's own LATEST line only (app.js's renderLog()
+   passes `pill` for that one entry alone -- the main log panel above never
+   does, so it "keeps its text links" per the owner's spec unchanged). An
+   inline-flex pill sizes itself by its own height, not by the line's
+   normal font metrics, so it grows the row that holds it — .news's
+   max-height already gives a short viewport room for roughly this much
+   before older lines start getting clipped, which is fine: the important
+   line is always first (see the reverse() in renderLog()), so a clip only
+   ever eats an older, plainer line below it, never this one. */
+.news .log-card-name.pill, .news .log-card-link.pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 30px; margin: 2px 3px 2px 0; padding: 0 10px;
+  border: 1px solid var(--gold-line); border-radius: 15px;
+  background: rgba(216, 181, 106, 0.08);
+  color: var(--gold); font-size: 12.5px; text-decoration: none; vertical-align: middle;
+}
 .sheet { flex: none; display: flex; flex-direction: column; gap: 6px; margin: 0 8px; padding: 8px 10px; border-radius: 10px; max-height: 40svh; overflow-y: auto; }
 .sheet:empty { display: none; }
 /* #24 round 3: setPrompt() (round 2's fix #2) always parks its text as a
