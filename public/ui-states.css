@@ -296,36 +296,54 @@ a[href], [role="button"] { cursor: pointer; }
    rules page's #cardDetail share the same class for), and the log panel,
    arrive with a 160ms rise + fade. Scoped entirely inside
    prefers-reduced-motion: no-preference (acceptance #5): a reduced-motion
-   browser never even parses `animation-name: ui-arrive`, so there is
+   browser never even parses the @starting-style block below, so there is
    nothing to disable per-element.
 
    The trigger is the existing display:none -> shown transition these
    elements already go through (.sheet's own :not(:has(>:not([hidden])))
    rule in style.css collapses it when empty; #logBody toggles the
-   [hidden] attribute) -- exactly the same "JS never has to know about the
-   animation" pattern style.css's own .node.lastmove-pulse already uses
-   for the last-move brackets, just triggered by becoming visible instead
-   of by a class app.js adds for one render. A CSS animation restarts
-   whenever the element it's attached to starts being rendered again, so
-   this fires every time the sheet/log panel actually opens, without any
-   JS change.
+   [hidden] attribute) -- no JS change needed.
 
-   animation-fill-mode: backwards means the FROM keyframe (opacity:0,
-   translateY(24px)) is only ever the animation's OWN painted state while
-   it runs -- once it ends (or if a browser never runs it at all, e.g. the
-   hidden test pane, which never fires requestAnimationFrame), the element
-   is simply at its ordinary resting styles (opacity:1, no transform),
-   because those are the TO keyframe and nothing here sets them as a
-   separate always-on property. Only translateY/opacity are animated --
-   never height or margin -- so layoutTable()'s own measurement of the
-   sheet (acceptance #3) reads the final, laid-out size throughout. */
+   This was first written with @keyframes + animation-fill-mode:
+   backwards (the same pattern style.css's own .node.lastmove-pulse
+   already uses), then switched after testing it against this repo's own
+   hidden preview pane and catching exactly the failure this issue warns
+   about: with the pane genuinely backgrounded (document.visibilityState
+   stays "hidden" even after this tool "fronts" the tab -- confirmed via
+   script), the animation never ticked forward at all -- #sheet read
+   opacity:0 immediately on open AND still opacity:0 a full second of
+   real wall-clock time later. backwards-fill's FROM keyframe (opacity:0)
+   is a real, paintable value for as long as the animation is scheduled
+   but hasn't progressed, so a timeline that never ticks leaves it there
+   indefinitely -- the exact #31 shape this issue calls out by name, just
+   arrived at through the new stylesheet's motion instead of a stray
+   resting rule.
+
+   @starting-style has no such window: opacity:0/translateY(24px) are
+   the FROM value of a *transition*, only ever substituted in for that
+   element's very first style resolution after it starts being rendered.
+   Every style resolution after that -- including the very next one, if
+   the transition never gets a single tick -- reads the plain rule below,
+   which sets no opacity/transform of its own at all, so it resolves to
+   the browser's ordinary 1 / none. Tested the same way: forcing the
+   transition to 2s and reading #sheet immediately after opening reads
+   opacity:1 straight away in this pane -- no animation plays, but the
+   card is simply there at once, never caught at 0. A browser that
+   doesn't parse @starting-style at all (Safari <17.5, older Firefox)
+   drops the unknown block and reads that exact same plain rule from the
+   very first frame. Only translateY/opacity ever move -- never height or
+   margin -- so layoutTable()'s own measurement of the sheet (acceptance
+   #3) reads the final, laid-out size throughout. */
 @media (prefers-reduced-motion: no-preference) {
-  @keyframes ui-arrive {
-    from { opacity: 0; transform: translateY(24px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
   .sheet.overlay,
   #logBody:not([hidden]) {
-    animation: ui-arrive 160ms ease-out backwards;
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+  }
+  @starting-style {
+    .sheet.overlay,
+    #logBody:not([hidden]) {
+      opacity: 0;
+      transform: translateY(24px);
+    }
   }
 }
