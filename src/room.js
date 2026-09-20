@@ -9,6 +9,7 @@
 // "room"; all timers are the object's single alarm.
 import * as E from "../public/shared/engine.js";
 import * as B from "../public/shared/bots.js";
+import { fallbackFor } from "../public/shared/fallback.js";
 import en from "../public/i18n/en.js";
 import zh from "../public/i18n/zh-Hant.js";
 
@@ -26,77 +27,10 @@ const LOG_KEEP = 120, CHAT_MAX = 200;
 const clean = (s) => String(s ?? "").replace(/[^\p{L}\p{N} _.\-]/gu, "").trim().slice(0, 16);
 const newToken = () => crypto.randomUUID().replace(/-/g, "");
 
-// ---------- the fallback a refused bot is carried by (#25) ----------
-// How many more of `id` this pending still allows. The limits are the ones the
-// pending itself carries, so this reads what the engine published rather than
-// keeping a second copy of the rule.
-function roomFor(st, p, id, counts) {
-  let r = Infinity;
-  if (p.distinct) r = Math.min(r, 1);
-  if (p.maxPer) r = Math.min(r, p.maxPer);
-  if (p.maxOf) r = Math.min(r, p.maxOf[id] ?? 0);
-  if (p.side != null) r = Math.min(r, E.capOf(st, id) - E.infOf(st, id)[p.side]);
-  return r - (counts[id] || 0);
-}
-function* pendingCandidates(st, side, p) {
-  const mk = (choice) => ({ type: "choose", side, choice });
-  switch (p.kind) {
-    case "points": {
-      const min = p.min ?? 0;
-      if (min === 0) yield mk([]);
-      const counts = {}, out = [], want = Math.max(min, 1);
-      for (const id of p.options) {
-        while (out.length < want && roomFor(st, p, id, counts) > 0) { counts[id] = (counts[id] || 0) + 1; out.push(id); }
-        if (out.length >= want) break;
-      }
-      if (out.length >= min) yield mk(out);
-      if (min <= 1) for (const id of p.options) yield mk([id]);
-      break;
-    }
-    case "card": {
-      const min = p.min ?? 1;
-      if (min === 0) yield mk([]);
-      if (p.options.length >= min) yield mk(p.options.slice(0, Math.max(min, 1)));
-      if (min <= 1) for (const c of p.options) yield mk([c]);
-      break;
-    }
-    case "option":
-      for (const o of p.options) yield mk(o.id);
-      break;
-    case "ops": {
-      const o = E.opsOptions(st, side);
-      if (p.allowed.includes("campaign")) for (const t of o.campaignTargets) yield mk({ use: "campaign", target: t });
-      if (p.allowed.includes("lobby")) for (const t of o.lobbyTargets) yield mk({ use: "lobby", target: t.id });
-      if (p.allowed.includes("place")) for (const x of o.placeOptions) if (x.cost <= p.ops) yield mk({ use: "place", points: [x.id] });
-      break;
-    }
-  }
-}
-// Candidates for the seat, simplest first. `event` leads because it has no
-// payload to get wrong and always spends a card, so the table moves. Nothing
-// here is trusted: `fallbackFor` hands each one to the engine and keeps the
-// first the engine does not refuse.
-function* fallbackCandidates(st, side) {
-  const L = E.legal(st, side);
-  if (L.kind === "pending") { yield* pendingCandidates(st, side, L.pending); return; }
-  if (L.kind === "headline") { for (const card of L.cards) yield { type: "headline", side, card }; return; }
-  if (L.kind !== "action") return;
-  if (L.bog && L.bog.length) { for (const card of L.bog) yield { type: "play", side, card, use: "bog" }; return; }
-  for (const c of L.cards) {
-    const u = c.uses || {};
-    yield { type: "play", side, card: c.id, use: "event" };
-    if (u.place) for (const o of u.place.options) if (o.cost <= u.place.ops) yield { type: "play", side, card: c.id, use: "place", order: "opsFirst", points: [o.id] };
-    if (u.campaign) for (const t of u.campaign.targets) yield { type: "play", side, card: c.id, use: "campaign", order: "opsFirst", target: t };
-    if (u.lobby) for (const t of u.lobby.targets) yield { type: "play", side, card: c.id, use: "lobby", order: "opsFirst", target: t.id };
-    if (u.reform) yield { type: "play", side, card: c.id, use: "reform" };
-  }
-  const j = L.jiuding;
-  if (j) {
-    if (j.place) for (const o of j.place.options) if (o.cost <= 4) yield { type: "play", side, card: E.JIUDING, use: "place", points: [o.id] };
-    if (j.campaign) for (const t of j.campaign.targets) yield { type: "play", side, card: E.JIUDING, use: "campaign", target: t };
-    if (j.lobby) for (const t of j.lobby.targets) yield { type: "play", side, card: E.JIUDING, use: "lobby", target: t.id };
-  }
-}
+// The fallback a refused bot is carried by (#25) lives in
+// public/shared/fallback.js, because the solo game in the browser needs the
+// same carry (#53). Only the wording of the log line stays here: the client
+// words its own through i18n.
 const describe = (a) => (a.type === "play" ? `${a.card} as ${a.use}` : a.type === "headline" ? `${a.card} as its headline` : `a ${JSON.stringify(a.choice)} choice`);
 
 export class Room {
@@ -414,14 +348,9 @@ export class Room {
       st.headline.map((h) => (h == null ? 0 : 1)).join(""),
     ].join(":");
   }
-  // The first action the engine accepts, or null if it accepts none.
-  fallbackFor(side) {
-    const st = this.room.state;
-    for (const action of fallbackCandidates(st, side)) {
-      try { return { action, state: E.apply(st, action) }; } catch { /* not that one */ }
-    }
-    return null;
-  }
+  // The first action the engine accepts, or null if it accepts none. A method
+  // (not the import used directly) because the harness stubs it per room.
+  fallbackFor(side) { return fallbackFor(this.room.state, side); }
   // Nothing left to ask: keep the clock if one is running, otherwise stop
   // waking up. With nobody connected the room parks on the idle sweep, so the
   // Durable Object can be evicted instead of ticking every 900 ms.
