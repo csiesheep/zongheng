@@ -192,21 +192,44 @@ body:not(.table-lock) #logToggle { display: none; }
 }
 .setup-h1 { margin: 0; flex: none; font: 900 26px var(--serif); color: var(--gold); }
 .setup-view .field { display: flex; flex-direction: column; gap: 8px; margin: 0; flex: none; }
-.field-label { font: 600 11px/1 var(--serif); letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+.field-label { font: 600 12.5px/1 var(--serif); letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
 .tiles { display: flex; gap: 8px; }
 .tile { flex: 1; height: 120px; height: clamp(96px, 24cqh, 150px); padding: 0; position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--gold-line); opacity: 0.72; background: #15130f; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .tile.chu { background: #3a0a07; }
-.tile.random { background: #ece4d0; }
 .tile[aria-pressed="true"] { border: 3px solid var(--gold); opacity: 1; }
 .tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* #42: the random tile is a dark split of both sides' portraits (tiger
+   left, phoenix right) instead of the old cream/plain tile, so it needs
+   its own halves rather than the single full-bleed .tile img above. */
+/* Round 1 review (#42): .tile img's own `inset: 0` (left AND right both 0)
+   still applied to these halves, and with left/width/right all non-auto
+   the spec drops `right`, not `left` — so both halves resolved to the
+   same `left: 0`, showing only the left image. Each half now sets its
+   own `left`/`right` explicitly (never both 0) so there's nothing left
+   for the base rule to contribute. object-position is picked from where
+   each portrait's head actually sits in its source photo (sampled by
+   pixel brightness), not guessed: the tiger pair in qin.jpg has one head
+   around x=69% of the frame, and the phoenix's head in chu.jpg is
+   already centred (~x=51%). */
+.tile.random .tile-half { position: absolute; top: 0; bottom: 0; width: 50%; object-fit: cover; }
+.tile.random .tile-half-l { left: 0; right: auto; object-position: 69% 30%; }
+.tile.random .tile-half-r { left: 50%; right: auto; object-position: 51% 20%; }
+/* Hard-coded gold, not var(--gold): body.setup-random remaps --gold to a
+   dark ink so page text reads on that state's cream ground (see the
+   body.setup-random block above) — exactly the state this tile is shown
+   selected in, so following the token would turn the seam and the mark
+   near-invisible against the tile's own dark portraits. */
+.tile.random .tile-seam { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; background: #d8b56a; z-index: 1; }
+/* The random tile's own glyph (parallel to .tg's 秦/楚, same 26px): fixed
+   in the tile's upper half so it never sits under the tname/ttag block
+   (.tile-info, bottom-anchored with a 24px top pad) at any tile height in
+   the clamp(96px, 24cqh, 150px) range. */
+.tile.random .tile-q { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); font: 900 26px/1 var(--serif); color: #d8b56a; z-index: 2; text-shadow: 0 1px 3px rgba(6, 5, 4, 0.85); }
 .tile .tile-info { position: absolute; left: 0; right: 0; bottom: 0; padding: 24px 6px 10px; background: linear-gradient(to top, rgba(6, 5, 4, 0.95), rgba(6, 5, 4, 0)); display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.tile.random .tile-info { background: none; }
 .tile .tg { font: 900 26px/1 var(--serif); color: var(--qin-text); }
 .tile.chu .tg { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
-.tile.random .tg { color: #1a1a1a; }
 .tile .tname { font: 600 13px/1 var(--serif); color: #fff; }
-.tile .ttag { font: 400 10.5px/1.2 var(--serif); color: #fff; }
-.tile.random .tname, .tile.random .ttag { color: #1a1a1a; }
+.tile .ttag { font: 400 12px/1.2 var(--serif); color: #fff; }
 .pills { display: flex; gap: 8px; }
 .pills button { flex: 1; height: 46px; border-radius: 10px; background: none; color: var(--text); border: 1px solid var(--gold-line); font: 600 14px var(--serif); -webkit-tap-highlight-color: transparent; }
 .pills button[aria-pressed="true"] { background: var(--gold); color: var(--bg); border-color: var(--gold); }
@@ -307,10 +330,10 @@ body:not(.table-lock) #logToggle { display: none; }
 .side-glyph { font-size: clamp(28px, 9vh, 52px); line-height: 1; }
 .side-tap.qin .side-glyph { font: 900 clamp(28px, 9vh, 52px)/1 var(--serif); color: var(--qin-text); }
 .side-tap.chu .side-glyph { font: 700 clamp(28px, 9vh, 52px)/1 var(--kai); color: var(--chu-gold); }
-.side-text { display: flex; flex-direction: column; gap: 3px; font-size: 11px; line-height: 1.4; }
+.side-text { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; line-height: 1.4; }
 .side-tap.qin .side-text { color: var(--text); }
 .side-tap.chu .side-text { color: #fff3d2; }
-.side-headline { font-weight: 900; font-size: 12px; }
+.side-headline { font-weight: 900; font-size: 13.5px; }
 .side-tap.chu .side-headline { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
 /* Both CTAs are the same shape (size, border-width, radius); only the
    colour tells Qin and Chu apart. */
@@ -847,7 +870,7 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    :root[lang="zh-Hant"] below, same convention as the hand's own
    :root[lang] rules in this file. */
 .sheet-name { font-family: var(--serif); font-size: 24px; line-height: 1.15; font-weight: 600; letter-spacing: 1px; margin: 0; }
-.sheet-info { font-size: 11px; line-height: 1.5; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--sheet-line, var(--gold-line)); }
+.sheet-info { font-size: 12px; line-height: 1.5; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--sheet-line, var(--gold-line)); }
 /* The card-text panel: its own bordered/tinted box (parchment for a
    neutral/scoring card, lacquer for Chu, bronze-black for Qin — the same
    three backgrounds .sheet-n/.sheet-c/.sheet-q already paint the header
@@ -862,7 +885,7 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    empty shell) when the card has no story (see historyBox() in
    card-view.js). */
 .sheet-history-title { font: 700 12px/1.3 var(--sans); letter-spacing: 0.5px; opacity: 0.85; }
-.sheet-history-src { margin: 2px 0 0; font-size: 10.5px; opacity: 0.65; }
+.sheet-history-src { margin: 2px 0 0; font-size: 12px; opacity: 0.65; }
 /* The full card page's own scrollable middle (see sheetMid() in app.js):
    the card's own variable-length content — the text box, a scoring tally,
    the advisor's own suggestion banner when it's on, then the history (#46)
