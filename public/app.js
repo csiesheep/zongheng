@@ -1279,6 +1279,11 @@ function renderHand(v, mode) {
     const b = document.createElement("button");
     b.type = "button"; b.className = `card ${chip ? "chip " : ""}${cls}`.trim();
     b.setAttribute("aria-pressed", String(ui.card === id));
+    // #39 part 1: the hand shows the interface language only (CSS hides the
+    // other .nm-zh/.nm-en span off :root[lang]) -- the other language stays
+    // reachable here as the button's own aria-label, and on the full card
+    // page (renderCardView/cardHeader, untouched) which still shows both.
+    b.setAttribute("aria-label", `${cardZh(id)} / ${cardEn(id)}`);
     const ci = `<span class="ci"><span class="ops ${kind}">${esc(opsLabel(id))}</span><span class="nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span></span>`;
     b.innerHTML = chip ? ci : `<img class="cardimg" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` + ci;
     b.disabled = !canPick;

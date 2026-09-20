@@ -878,8 +878,17 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .card .ci { flex: none; padding: 6px 7px 7px; display: flex; align-items: flex-start; gap: 6px; }
 .card .ops { flex: none; width: 22px; height: 22px; border-radius: 50%; font-family: var(--sans); font-size: 11px; line-height: 22px; text-align: center; font-weight: 700; }
 .card .nm { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.card .nm-zh { font-family: var(--kai); font-size: 13px; line-height: 1.2; overflow-wrap: break-word; }
-.card .nm-en { font-size: 10px; line-height: 1.2; opacity: 0.85; overflow-wrap: break-word; }
+.card .nm-zh { font-family: var(--kai); font-size: 14px; line-height: 1.2; overflow-wrap: break-word; }
+.card .nm-en { font-size: 14px; line-height: 1.2; opacity: 0.85; overflow-wrap: break-word; }
+/* #39 part 1 (owner: "hand shows one language only"): only the .nm-* span
+   matching the interface language stays visible on a HAND card -- the
+   other one is still in the DOM (so its text never needs re-deriving) but
+   display:none removes it from the accessibility tree too, which is fine:
+   the button carries a bilingual aria-label of its own (see app.js's
+   tile()). Scoped to .card only, so the full card/sheet page (.sheet-chip
+   etc., untouched) keeps showing both names as always. */
+:root[lang="en"] .card .nm-zh { display: none; }
+:root[lang="zh-Hant"] .card .nm-en { display: none; }
 /* side colouring: neutral (n), Qin (q), Chu (c), scoring (s) */
 .card .ops.n, .card.jiuding .ops { background: var(--gold); color: var(--bg); }
 .card:has(.ops.n) { background: var(--neutral-bg); color: var(--neutral-ink); }
@@ -894,17 +903,25 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .card.jiuding { background: #d9c58f; color: var(--neutral-ink); }
 /* Round 5's short-viewport hand: when even a squeezed full card would drop
    below CARD_FULL_MIN (see app.js), the hand switches to a fixed 56px chip
-   row instead of a half-squashed card — badge + both names, no image, width
-   follows its own content (never truncated). The .card:has(.ops.*) side
-   colouring above already applies to it unchanged; only the shape differs. */
+   row instead of a half-squashed card — badge + one name (#39 part 1: the
+   other language dropped, not just shrunk — see the :root[lang] rule
+   above), no image, width follows its own content (never truncated). The
+   .card:has(.ops.*) side colouring above already applies to it unchanged;
+   only the shape differs. */
 .card.chip {
-  flex-direction: row; align-items: center; width: auto; min-width: 96px; max-width: 190px;
+  /* No max-width (#39: a 190px cap clipped a long English name once its own
+     line grew to ~15px — "Zhang Yi's Horizontal" measured 20px past the
+     card's own edge, silently eaten by this rule's overflow:hidden). .hand
+     already scrolls horizontally on its own, so an unusually long name just
+     costs a little more scroll rather than clipping. */
+  flex-direction: row; align-items: center; width: auto; min-width: 96px;
   height: 56px; padding: 0 10px;
 }
 .card.chip .ci { flex: 1 1 auto; padding: 0; align-items: center; gap: 8px; }
 .card.chip .ops { width: 26px; height: 26px; font-size: 12px; line-height: 26px; }
-.card.chip .nm-zh { font-size: 15px; font-weight: 700; white-space: nowrap; }
-.card.chip .nm-en { font-size: 11px; white-space: nowrap; }
+/* Same size for whichever one is actually visible (#39: "name about 15px")
+   — with only one language shown there's no reason left for zh/en to differ. */
+.card.chip .nm-zh, .card.chip .nm-en { font-size: 15px; font-weight: 700; white-space: nowrap; }
 .chat { flex: none; display: flex; gap: 6px; padding: 2px 8px; }
 .chat input { flex: 1; min-width: 0; min-height: 44px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font: 14px var(--serif); padding: 0 10px; }
 /* The log opens as a bottom sheet over the whole page (C2_Log) rather than
