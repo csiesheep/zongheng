@@ -792,7 +792,7 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 /* #30: the log toggle moved to the top bar (style.css's own .bar rules,
    next to Advisor/Rules/lang) -- #promptText now uses the row's full
    width instead of sharing it with that button. */
-.prompt { flex: none; display: flex; align-items: flex-start; gap: 8px; padding: 3px 8px; font-size: 13px; line-height: 1.35; }
+.prompt { flex: none; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; padding: 3px 8px; font-size: 13px; line-height: 1.35; }
 .prompt-text { flex: 1; min-width: 0; }
 .prompt .err { color: var(--bad); }
 /* #39 round 2 review: which lines actually stay in the DOM is decided in
@@ -804,6 +804,15 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    paint-safety net (generous, so it's never the thing actually deciding
    what shows) in case that loop is ever bypassed. */
 .prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 160px; overflow: hidden; }
+/* #53 round 2: a replaced bot move's own line (app.js's `game.fallbackNote`,
+   #fallbackBanner in play.html). A sibling of .prompt-text, not inside it,
+   so the advisor's own prompt-takeover slot (advisor-ui.js) cannot hide it
+   along with the prompt. Gold, not the dim `.news` tone -- this is something
+   the player should read, not skim -- and wraps freely: two lines is fine,
+   a clipped sentence is not (the review that asked for this measured the
+   longest card name in the game against it at 390x669/375x667). */
+.prompt-fallback { flex: 0 0 100%; margin-top: 6px; padding-left: 8px; border-left: 2px solid var(--gold); font-size: 12px; line-height: 1.4; font-weight: 600; color: var(--gold); }
+.prompt-fallback[hidden] { display: none; }
 /* #34 round 2 (orchestrator's ruling): a line naming exactly one card is
    the WHOLE row, one <button> — see logLineNodes() in app.js. It resets
    every default button style back to a plain row (a <div> would have had

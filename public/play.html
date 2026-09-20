@@ -86,6 +86,13 @@
   <section class="statline" id="statline"></section>
   <section class="prompt" id="prompt">
     <div class="prompt-text" id="promptText"></div>
+    <!-- #53 round 2: a replaced bot move's own line (app.js's `game.fallbackNote`).
+         A sibling of #promptText, not a child of it, on purpose -- the advisor
+         (advisor-ui.js) hides #promptText outright in one of its own slots
+         (takeOverPrompt()), and this line has to survive that untouched since
+         it is not the advisor's to hide. Hidden by default; app.js's renderLog()
+         is the only thing that ever shows or fills it. -->
+    <div class="prompt-fallback" id="fallbackBanner" hidden></div>
   </section>
   <section class="sheet" id="sheet"></section>
   <section class="hand" id="hand"></section>
