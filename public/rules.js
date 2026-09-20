@@ -240,14 +240,16 @@ function cardList(S, N, cardEn, opts = {}) {
       : esc(lang === "en" ? cardEn[c.id] ?? c.text : c.text);
     const year = c.year ? ` <small>(${lang === "en" ? "" : "前"}${c.year}${lang === "en" ? " BC" : ""})</small>` : "";
     const enLine = `${c.en} · ${S.era[c.era]} · ${c.scoring ? S.scoringCard : S.side[c.side]}`;
-    // #45 round 1: the desktop tile's own line 2 is never empty (the design
-    // never shows the name alone) — reuse `year` when there is one (same
-    // string the mobile description already carries), otherwise a scoring
-    // card falls back to its own era and every other undated card falls
-    // back to N.rules.undated. This is deliberately a SEPARATE value from
-    // `year` above: `year` still only ever feeds the mobile row's own
-    // `text + year` description, unaffected by any of this.
-    const tileLine2 = year || (c.scoring ? esc(S.era[c.era]) : esc(N.rules.undated));
+    // #45 round 1 / #47 item 4: the desktop tile's own line 2 is never empty
+    // (the design never shows the name alone) — the year when there is one,
+    // otherwise a scoring card falls back to its own era and every other
+    // undated card falls back to N.rules.undated. Deliberately its OWN
+    // string, not `year` above (which still only ever feeds the mobile
+    // row's inline `text + year`, brackets and all, untouched): on its own
+    // line the brackets are noise (owner, #47) — "前 356 年" / "356 BC",
+    // the design board's own form, not "(前356)" / "(356 BC)".
+    const tileYear = c.year ? (lang === "en" ? `${c.year} BC` : `前 ${c.year} 年`) : "";
+    const tileLine2 = tileYear || (c.scoring ? esc(S.era[c.era]) : esc(N.rules.undated));
     return cardRow(side, c.id, zhName, enLine, c.scoring ? "–" : c.ops, text + year, c.era, filterSideKeyOf(c), `${c.zh} ${c.en}`, tileLine2);
   });
   // Name is bilingual regardless of the active language, same as every

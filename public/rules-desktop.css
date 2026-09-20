@@ -195,7 +195,11 @@
     display: block; flex-basis: 100%; font-size: 12px; line-height: 1.3;
     color: var(--text-dim); overflow-wrap: anywhere;
   }
-  .d-grid-col .cardrow .cr-year small { font-size: 12px; }
+  /* #47 item 4: .cr-year's own text no longer wraps a <small> tag (the
+     bracketed inline form, "(前356)"/"(356 BC)", was only ever the mobile
+     row's own — the tile's own line 2, "前 356 年"/"356 BC", is plain text
+     already at .cr-year's own 12px), so there is no more small-tag rule to
+     keep here. */
   /* #47: the badge needs no override here any more — the base .cr-badge
      rule (rules.css) is already 20x20/12px, the same numbers this used to
      repeat, now that the phone row's own badge matches. */
