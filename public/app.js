@@ -812,6 +812,21 @@ function renderStatLine(v) {
 let scoreHighlight = null;
 
 // What tapping the map does right now: the lit spaces, the picks so far, the cost badges.
+// #49: every mode below also reports `side` (E.QIN/E.CHU) — the badge and the
+// picked ring (renderMap) colour themselves for that side, the same rule
+// last-move tags use (#41). It is always the ACTING side (`me`/`game.me` —
+// E.legal() only ever returns a "pending" whose `who` equals the side asked,
+// see engine.js's legal()/ask(), so `me` and a pending's own `who`/`side`
+// fields never disagree here). That is exactly right for placement and for
+// campaign/lobby target picks (the issue's own "whose side" rule). It is
+// ALSO what a handful of "points" picks use even though they pick a target
+// on the OPPONENT's spaces for a later E.remove() there (cards.js: mozhe,
+// ganmao, the jingxiang/baiqi/changping-south chain, yili's first two
+// choices) — those keep the acting side's colour, not the side that will
+// actually lose the point, because the "points" pending object carries no
+// place/remove intent for app.js to read (only ask()/pts() attach an
+// explicit `side`, and it is always equal to `who` there too). Flagged for
+// the orchestrator/owner in the #49 handover, not solved here.
 function placementTrial(v, side, points) {
   const trial = E.clone(v); trial.log = [];
   let spent = 0;
@@ -827,7 +842,7 @@ function roomFor(p, v, id, counts) {
   return r - (counts[id] || 0);
 }
 function currentMode(v) {
-  const none = { lit: new Set(), picked: {}, costs: null, onTap() {} };
+  const none = { lit: new Set(), picked: {}, costs: null, side: E.QIN, onTap() {} };
   const me = game.me, ui = game.ui;
   if (v.winner != null) return none;
   const L = E.legal(v, me);
@@ -840,19 +855,19 @@ function currentMode(v) {
       if (cost <= left && E.canPlaceAt(trial, me, sp.id) && E.infOf(trial, sp.id)[me] < E.capOf(trial, sp.id)) { lit.add(sp.id); costs[sp.id] = cost; }
     }
     const picked = {}; for (const id of points) picked[id] = (picked[id] || 0) + 1;
-    return { lit, picked, costs, onTap: (id) => { points.push(id); render(); } };
+    return { lit, picked, costs, side: me, onTap: (id) => { points.push(id); render(); } };
   };
   if (L.kind === "pending") {
     const p = L.pending;
     if (p.kind === "points") {
       const counts = {}; for (const id of ui.picks) counts[id] = (counts[id] || 0) + 1;
       const lit = new Set(ui.picks.length < p.n ? p.options.filter((id) => roomFor(p, v, id, counts) > 0) : []);
-      return { lit, picked: counts, costs: null, onTap: (id) => { ui.picks.push(id); render(); } };
+      return { lit, picked: counts, costs: null, side: me, onTap: (id) => { ui.picks.push(id); render(); } };
     }
     if (p.kind === "ops" && ui.opsUse === "place") return placing(p.ops, ui.points);
     if (p.kind === "ops" && (ui.opsUse === "campaign" || ui.opsUse === "lobby")) {
       const ids = ui.opsUse === "campaign" ? p.options.campaignTargets : p.options.lobbyTargets.map((x) => x.id);
-      return { lit: new Set(ids), picked: ui.target ? { [ui.target]: 1 } : {}, costs: null, onTap: (id) => { ui.target = id; render(); } };
+      return { lit: new Set(ids), picked: ui.target ? { [ui.target]: 1 } : {}, costs: null, side: me, onTap: (id) => { ui.target = id; render(); } };
     }
     return none;
   }
@@ -863,7 +878,7 @@ function currentMode(v) {
   if (ui.use === "campaign" || ui.use === "lobby") {
     const u = info.uses[ui.use];
     const ids = u ? (ui.use === "campaign" ? u.targets : u.targets.map((x) => x.id)) : [];
-    return { lit: new Set(ids), picked: ui.target ? { [ui.target]: 1 } : {}, costs: null, onTap: (id) => { ui.target = id; render(); } };
+    return { lit: new Set(ids), picked: ui.target ? { [ui.target]: 1 } : {}, costs: null, side: me, onTap: (id) => { ui.target = id; render(); } };
   }
   return none;
 }
@@ -1003,6 +1018,10 @@ function renderMap(v) {
     const empty = !q && !c;
     const anchor = NODE_ANCHOR[sp.id];
     const lit = mode.lit.has(sp.id), picked = mode.picked[sp.id];
+    // #49: while picking, the badge/ring follow the ACTING side's colour
+    // (mode.side — see currentMode() above), the same class names the
+    // last-move tag uses for its own side (lastMoveTagClass below).
+    const pickSide = picked ? (mode.side === E.QIN ? " pick-q" : " pick-c") : "";
     // #41: the last-move mark — a frame around the disc plus a small tag
     // near its upper right, for every space computeLastMoveMarks() (called
     // from render(), once per action) flagged. `mv` is undefined for every
@@ -1015,7 +1034,7 @@ function renderMap(v) {
     const vis = document.createElement("div");
     vis.className = "node" + (big ? " big" : "") + (empty ? " empty" : "") + (anchor ? ` anchor-${anchor}` : "") +
       (NODE_STAB_RIGHT.has(sp.id) ? " stab-r" : "") + (NODE_STAB_HI.has(sp.id) ? " stab-hi" : "") +
-      (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (lit ? " lit" : "") + (picked ? " picked" : "") +
+      (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (lit ? " lit" : "") + (picked ? " picked" : "") + pickSide +
       (mv ? " lastmove" : "") + (mv && game.lastMoveFresh ? " lastmove-pulse" : "") +
       (NODE_LASTMOVE_LEFT.has(sp.id) ? " lastmove-l" : "");
     vis.style.cssText = `left:${x}px;top:${y}px`;

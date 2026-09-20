@@ -532,12 +532,42 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .node.anchor-right .nm { left: 100%; top: 50%; transform: translateY(-50%); margin-top: 0; margin-left: 4px; text-align: left; }
 .node.ctlq .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #0e0e0e; }
 .node.ctlc .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #a31c15; }
-/* Placement: a dashed ring on spaces you can tap, a solid red ring on
-   spaces you've already placed in this action; a gold badge for the 2x
-   cost where the enemy controls. */
+/* Placement: a dashed ring on spaces you can tap, a solid ring on spaces
+   you've already placed in this action; a gold badge for the 2x cost where
+   the enemy controls. #49 (owner: 「Qin 在放影響力時,+1/+2/... 用黑色」):
+   the ring's outer 2px and the "+N" badge both used to be Chu's red for
+   BOTH sides — they now follow whichever side is ACTING in this pick
+   (app.js's currentMode() `mode.side`, always `game.me` — see its own
+   comment there for the one case, opponent-targeting removal picks, this
+   doesn't perfectly disambiguate), the same #0e0e0e/#a31c15 the disc's own
+   two numbers and the control ring above already use — reused directly
+   (no --qin-ink/--chu-ink custom property exists yet for this map ink;
+   .disc i.q/i.c and .ctlq/.ctlc don't use one either, so this doesn't add
+   a third colour, it follows the file's own existing convention). */
 .node.lit .disc { outline: 2px dashed var(--gold); outline-offset: 2px; cursor: pointer; }
-.node.picked .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #a31c15; }
-.node .badge { position: absolute; top: -4px; right: -6px; min-width: 15px; height: 15px; border-radius: 8px; background: #a31c15; color: #fff; font: 700 9px/15px var(--sans); text-align: center; padding: 0 3px; z-index: 3; }
+.node.picked.pick-q .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #0e0e0e; }
+.node.picked.pick-c .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #a31c15; }
+/* Badge size/ink match .lastmove-tag exactly (#41, below): 18px high, 12px
+   bold digits, white on the side colour, the same 1.5px paper halo so the
+   black holds on a dark region or a black control ring. Corner and
+   NODE_LASTMOVE_LEFT/anchor-top position also follow .lastmove-tag — EXCEPT
+   the badge can be on screen at the SAME TIME as .cost (both belong to the
+   still-picking phase; .lastmove-tag never overlaps .cost because one only
+   shows before an action resolves and the other only after, see
+   NODE_LASTMOVE_LEFT's own comment in map-draw.js), so on the six
+   NODE_LASTMOVE_LEFT nodes the badge drops BELOW .cost's row instead of
+   sharing its corner — measured against .cost, .stab and every name at
+   390x669/375x667 in both languages with all 26 spaces forced picked, see
+   this commit's message. */
+.node .badge {
+  position: absolute; top: -6px; right: -8px; min-width: 18px; height: 18px; box-sizing: border-box;
+  border-radius: 9px; color: #fff; font: 700 12px/18px var(--sans); text-align: center;
+  padding: 0 4px; z-index: 4; pointer-events: none; white-space: nowrap; box-shadow: 0 0 0 1.5px #f7f3e8;
+}
+.node.pick-q .badge { background: #0e0e0e; }
+.node.pick-c .badge { background: #a31c15; }
+.node.lastmove-l .badge { right: auto; left: -8px; top: 16px; }
+.node.anchor-top.lastmove-l .badge { left: -13px; top: 16px; }
 .node .cost { position: absolute; top: -4px; left: -6px; width: 15px; height: 15px; border-radius: 8px; background: var(--gold); color: #1a1a1a; font: 700 9px/15px var(--sans); text-align: center; z-index: 3; }
 /* The stability tag (owner design "A 數字籤", #26): a small square, copper-
    toned so it never reads as influence (black/red discs) or the red +n
