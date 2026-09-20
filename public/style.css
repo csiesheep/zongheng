@@ -587,7 +587,19 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .prompt { flex: none; display: flex; align-items: flex-start; gap: 8px; padding: 3px 8px; font-size: 13px; line-height: 1.35; }
 .prompt-text { flex: 1; min-width: 0; }
 .prompt .err { color: var(--bad); }
-.prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 3.6em; overflow: hidden; }
+/* #39 round 1 review item 2: every card name in the strip is a pill now
+   (30px tall, see .news .pill below), not just the newest line -- the old
+   3.6em (~40px) cap only ever had to fit plain 11px text, and a real
+   two-pill-line state (390x669, two separate lines each naming one card)
+   measured its second pill's own box past that cap: overflow:hidden still
+   clipped it from PAINTING there, so `elementFromPoint` at its centre hit
+   the hand card underneath instead of the pill -- invisible AND untappable,
+   even though its geometry looked fine on paper. 78px fits two pill lines
+   back to back (2 x 34px incl. margin) with a hair of headroom; older
+   lines beyond that still clip, same as always -- newest first (see
+   renderLog()'s reverse()), so a clip only ever eats a line the player
+   already acted past. */
+.prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 78px; overflow: hidden; }
 /* #34 round 2 (orchestrator's ruling): a line naming exactly one card is
    the WHOLE row, one <button> — see logLineNodes() in app.js. It resets
    every default button style back to a plain row (a <div> would have had
@@ -638,15 +650,18 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
   cursor: pointer;
 }
 .log-card-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
-/* #39 part 4: the news strip's own LATEST line only (app.js's renderLog()
-   passes `pill` for that one entry alone -- the main log panel above never
-   does, so it "keeps its text links" per the owner's spec unchanged). An
+/* #39 part 4, round 1 review: EVERY card name in the news strip is a
+   pill, on whichever line it's on (app.js's renderLog() passes `pill`
+   for every news entry now -- the main log panel above never does, so it
+   "keeps its text links" per the owner's spec unchanged). The owner's
+   own round-1 finding was that gating this on "latest line" alone left
+   pills almost never showing in real play: a score/reform/turn line with
+   no card name of its own is very often the actual newest entry, one
+   step after the play/headline line that does name a card. An
    inline-flex pill sizes itself by its own height, not by the line's
-   normal font metrics, so it grows the row that holds it — .news's
-   max-height already gives a short viewport room for roughly this much
-   before older lines start getting clipped, which is fine: the important
-   line is always first (see the reverse() in renderLog()), so a clip only
-   ever eats an older, plainer line below it, never this one. */
+   normal font metrics, so it grows every row that holds one — .news's
+   own max-height still clips whatever's past it (newest first, from
+   renderLog()'s own reverse()), same as before this correction. */
 .news .log-card-name.pill, .news .log-card-link.pill {
   display: inline-flex; align-items: center; justify-content: center;
   height: 30px; margin: 2px 3px 2px 0; padding: 0 10px;

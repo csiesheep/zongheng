@@ -1398,11 +1398,12 @@ function logCardRefs(l) {
 // row with two inline .log-card-link buttons — separated by the
 // template's own "and"/"、", never enlarged past their own text metrics,
 // so neither one can encroach on the other or on the row above/below.
-// `pill` (#39 part 4): the news strip's own latest line only -- the main
-// log panel never passes it, so it "keeps its text links" per the owner's
-// spec unchanged. Only changes each card name's own styling class; the
-// wholeLine/two-name shape below (round 2's own fix) is untouched either
-// way, so the pill never becomes a second nested button.
+// `pill` (#39 part 4, corrected by round 1 review — every card name in
+// the news strip, not just its latest line): the main log panel never
+// passes it, so it "keeps its text links" per the owner's spec unchanged.
+// Only changes each card name's own styling class; the wholeLine/two-name
+// shape below (round 2's own fix) is untouched either way, so the pill
+// never becomes a second nested button.
 function logLineNodes(l, clickable, pill) {
   const raw = `log.${l.type}`.split(".").reduce((o, k) => (o ? o[k] : undefined), S);
   if (typeof raw !== "string") return null;
@@ -1535,14 +1536,18 @@ function renderLog(v) {
   if (newsEntries.length) {
     const newsDiv = document.createElement("div");
     newsDiv.className = "news";
-    // #39 part 4: newest first (reversed from the chronological order
-    // newsEntries itself keeps) -- .news still caps its own visible height
-    // and clips whatever's past it (unchanged), so the newest line, now the
-    // tallest with its own pill names, has to be the FIRST child or that
-    // same cap could clip the one line the owner actually asked to make
-    // more prominent instead of an older, plainer one.
-    newsEntries.slice().reverse().forEach((l, i) => {
-      const node = logLineNodes(l, clickable, i === 0);
+    // #39 part 4, round 1 review (owner's own ruling: "my spec was wrong,
+    // not your code"): pilling only the newest line left every OTHER
+    // card-naming line as a plain 15px text link — in real play the
+    // newest line is rarely a card name at all (a score/reform/turn line
+    // almost always follows a play/headline a moment later), so pills
+    // barely ever showed. Every card name visible in the strip is a pill
+    // now, on whichever line it's on — newest first (unchanged from part
+    // 4's own ordering; not itself part of this correction, just kept),
+    // so .news's own height cap still clips an older line before it ever
+    // reaches the one the player just triggered.
+    newsEntries.slice().reverse().forEach((l) => {
+      const node = logLineNodes(l, clickable, true);
       if (node) newsDiv.appendChild(node);
     });
     $("promptText").appendChild(newsDiv);
