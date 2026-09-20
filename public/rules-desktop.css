@@ -30,6 +30,22 @@
   }
   .rules { max-width: none; padding: 0 20px 40px; }
 
+  /* #45 (owner, desktop): no browser scrollbar anywhere on this page — not
+     on #pageCard (the scroller both tabs share) and not on any inner
+     scroller (.d-sticky: the rail, the pinned map, the card panel). Hiding
+     the bar only, never the scrolling itself: no overflow: hidden here (
+     #pageCard/.d-sticky keep their own overflow-y: auto/scroll, set
+     elsewhere), so wheel/trackpad/keyboard/rail-click scrolling all still
+     work exactly as before — only the drawn gutter goes away. */
+  body:has(#rules) .page-card,
+  body:has(#rules) .d-sticky {
+    scrollbar-width: none;
+  }
+  body:has(#rules) .page-card::-webkit-scrollbar,
+  body:has(#rules) .d-sticky::-webkit-scrollbar {
+    display: none;
+  }
+
   /* ---------- the bar: tabs instead of the mid label / #40's chip row ---------- */
   /* Round 1 review (#44): `.bar` was `position: static` inside `.page-card`
      (the scroller here) so it scrolled away with the text, leaving the tabs
