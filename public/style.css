@@ -7,6 +7,12 @@
   --gold: #d8b56a; --gold-line: #8a7a52;
   --qin-text: #e9dfc4; --qin-bg: #1b1a17;
   --chu-bg: #8e1a12; --chu-btn: #a31c15; --chu-gold: #f4d98a;
+  /* orchestrator's ruling (#48): the disc red (--chu-btn, 1.98:1) and the ring
+     red (#c4261c, ~2.6:1) both fail 3:1 against the mandate track's #2a251b
+     ground -- this brighter vermilion (already used for the tutorial's new
+     dot, .tut-btn-dot) clears it at ~3.5:1. Scoped to the mandate fill only;
+     the other Chu reds keep their own values. */
+  --chu-fill: #e0392b;
   --neutral-bg: #ece4d0; --neutral-ink: #1a1a1a;
   --bad: #ff8f7d;
   --serif: "Noto Serif TC", serif; --kai: "LXGW WenKai TC", "Noto Serif TC", serif; --sans: "Noto Sans TC", sans-serif;
@@ -410,24 +416,31 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .tb-turn b { color: var(--text); font-weight: 600; }
 .tb-mandate-label { font-size: 12px; }
 .tb-mandate-val { font-size: 14px; font-weight: 700; }
-/* #39 part 2: a real tug bar. .m-track is the 10px rounded rail (radius 5 +
-   overflow:hidden rounds both ends together, no separate border-radius math
-   needed on the two fills); the two absolutely-positioned fills sit inside
-   it sized by inline `style` from renderTopBar()'s own `pos` (same
-   E.MANDATE_TO_WIN-derived position the old dot used), the hairline and the
-   14x14 diamond marker (a square rotated 45deg) stack above them. One
-   layout, every viewport -- the old max-height:719px squash (a 3px line
-   overlaid on the row) doesn't carry over: there's no 3px version of a bar
-   with rounded ends, two fills and end labels left to squash into, and the
-   owner's spec draws one bar, not two. */
+/* #39 part 2 / #48: a real tug bar. .m-track is the 10px rounded rail
+   (radius 5 + overflow:hidden rounds both ends together, box-sizing:
+   border-box so the 1px ring below sits inside the fixed 10px height
+   instead of growing it) on one quiet ground colour. #48: the single
+   absolutely-positioned .m-fill sits inside it, sized by inline `style`
+   from renderTopBar()'s own `pos` (same E.MANDATE_TO_WIN-derived position
+   the marker uses) to span only between the middle and the marker, in the
+   leader's colour -- not the old two-fills-from-the-edges reading, which
+   made the leader's own colour shrink as its lead grew. The hairline and
+   the 14x14 diamond marker (a square rotated 45deg) stack above the fill.
+   One layout, every viewport -- the old max-height:719px squash (a 3px
+   line overlaid on the row) doesn't carry over: there's no 3px version of
+   a bar with rounded ends, a fill and end labels left to squash into, and
+   the owner's spec draws one bar, not two. */
 .mandate { display: flex; align-items: center; gap: 6px; height: 14px; margin: 2px 0 1px; }
 .mandate .m-end { flex: none; font-family: var(--kai); font-size: 11px; line-height: 1; color: var(--text-dim); }
 .mandate .m-end-qin { color: var(--qin-text); }
 .mandate .m-end-chu { color: var(--chu-gold); }
-.mandate .m-track { position: relative; flex: 1 1 auto; height: 10px; border-radius: 5px; overflow: hidden; background: var(--gold-line); }
+.mandate .m-track {
+  position: relative; flex: 1 1 auto; height: 10px; border-radius: 5px; overflow: hidden;
+  box-sizing: border-box; background: #2a251b; border: 1px solid var(--gold-line);
+}
 .mandate .m-fill { position: absolute; top: 0; bottom: 0; }
-.mandate .m-fill-qin { left: 0; background: var(--qin-bg); }
-.mandate .m-fill-chu { right: 0; background: var(--chu-btn); }
+.mandate .m-fill.lead-qin { background: var(--qin-text); }
+.mandate .m-fill.lead-chu { background: var(--chu-fill); }
 .mandate .m-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--gold); opacity: 0.7; z-index: 1; }
 .mandate .m-marker {
   position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;

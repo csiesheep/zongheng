@@ -715,21 +715,30 @@ function wantsCardOverlay(v) {
 
 // Above the map: the turn line and the Mandate tug-of-war bar (C2_Game's
 // header + mandate strip, condensed — the seat portrait row is #6's).
-// #39 part 2: a real tug bar instead of the old 3px line + 8px dot -- Qin's
-// own fill runs from the left edge to the marker, Chu's from the marker to
-// the right edge (owner's spec, literally: which side "wins" the reading
-// isn't the point, matching the two segments named is), a gold diamond
-// marker, 秦/楚 at the two ends (the same hardcoded glyphs overGlyphChar()
-// already uses on the result screen -- not sideName(), which is localized
-// and reads as a whole word in English, not the single glyph the design
-// canvas draws at each end regardless of language). role="img" carries the
-// bar's own spoken value since none of its children are real text a screen
-// reader should read individually.
+// #39 part 2 / #48: a real tug bar. The marker moves toward the LEADER's
+// end (owner's spec); #48 fixed the fill to match that reading -- filling
+// each side's own colour from the edge to the marker made the LEADER's
+// colour shrink as its lead grew (the marker eats into its own half). The
+// fill now runs only between the middle and the marker, in the leader's
+// colour, growing as the lead grows: Qin's paper tone leftward from the
+// middle when Qin leads, Chu's disc red rightward when Chu leads, no fill
+// at 0. A gold diamond marker, 秦/楚 at the two ends (the same hardcoded
+// glyphs overGlyphChar() already uses on the result screen -- not
+// sideName(), which is localized and reads as a whole word in English, not
+// the single glyph the design canvas draws at each end regardless of
+// language). role="img" carries the bar's own spoken value since none of
+// its children are real text a screen reader should read individually.
 function renderTopBar(v) {
   const pos = Math.max(2, Math.min(98, 50 - (v.mandate / E.MANDATE_TO_WIN) * 50));
   const phase = v.phase === "setup" ? "" : ` · ${t("tracks.round")} ${v.round}${t("tracks.of")}${v.rounds}`;
   const m = v.mandate;
   const leadColor = m > 0 ? "var(--qin-text)" : m < 0 ? "var(--chu-gold)" : "var(--text)";
+  const fillLeft = m > 0 ? pos : 50;
+  const fillWidth = m > 0 ? 50 - pos : m < 0 ? pos - 50 : 0;
+  // orchestrator's ruling (#48): the colour lives in CSS (.lead-qin/.lead-chu
+  // pick --qin-text / --chu-fill), not as a literal here -- app.js only says
+  // which side is leading.
+  const fillClass = m > 0 ? " lead-qin" : m < 0 ? " lead-chu" : "";
   const spoken = `${t("tracks.mandate")} ${mandateText(m)}`;
   $("topbar").innerHTML =
     `<div class="tb-turn"><b>${t("tracks.turn")} ${v.turn}</b>${v.era ? " · " + t("eras." + v.era) : ""}${phase} · ` +
@@ -737,8 +746,7 @@ function renderTopBar(v) {
     `<div class="mandate" role="img" aria-label="${esc(spoken)}">` +
       `<span class="m-end m-end-qin" aria-hidden="true">${overGlyphChar(E.QIN)}</span>` +
       `<span class="m-track">` +
-        `<span class="m-fill m-fill-qin" style="width:${pos}%"></span>` +
-        `<span class="m-fill m-fill-chu" style="width:${100 - pos}%"></span>` +
+        `<span class="m-fill${fillClass}" style="left:${fillLeft}%;width:${fillWidth}%"></span>` +
         `<span class="m-mid"></span>` +
         `<span class="m-marker" style="left:${pos}%"></span>` +
       `</span>` +
