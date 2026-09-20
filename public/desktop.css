@@ -242,12 +242,24 @@
     grid-template-columns: repeat(4, 77px);
     gap: 6px 12px;
   }
-  body[data-view="table"] .hand.hand-many .card { width: 77px; height: 141px; }
+  body[data-view="table"] .hand.hand-many .card { width: 77px; height: 141px; position: relative; }
   body[data-view="table"] .hand.hand-many .cardimg { height: 78px; flex: none; }
-  body[data-view="table"] .hand.hand-many .ci { padding: 4px 5px 5px; gap: 4px; }
-  body[data-view="table"] .hand.hand-many .ops { width: 18px; height: 18px; font-size: 9px; }
-  body[data-view="table"] .hand.hand-many .nm-zh { font-size: 10.5px; }
-  body[data-view="table"] .hand.hand-many .nm-en { font-size: 8px; }
+  /* #39 part 1: the badge moves onto the picture's own top-left corner (out
+     of the flex flow — .ops is still .ci's first child in the DOM, just no
+     longer laid out inline with it) so .ci's whole width is free for the
+     name, centred, in the card's foot. Nothing here may go under 11px. */
+  body[data-view="table"] .hand.hand-many .ci { flex-direction: column; align-items: center; justify-content: center; padding: 3px 3px 4px; gap: 0; text-align: center; }
+  body[data-view="table"] .hand.hand-many .ops {
+    position: absolute; top: 4px; left: 4px; z-index: 1;
+    width: 22px; height: 22px; font-size: 12px; line-height: 22px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  }
+  body[data-view="table"] .hand.hand-many .nm { width: 100%; align-items: center; text-align: center; }
+  /* One language only (#39 part 1's :root[lang] rule in style.css hides the
+     other) -- zh gets a little more room since it reads at up to 2 lines,
+     en up to 3, per the owner's spec. */
+  body[data-view="table"] .hand.hand-many .nm-zh { font-size: 13px; }
+  body[data-view="table"] .hand.hand-many .nm-en { font-size: 11px; }
 
   /* The record/chat strip: the sidebar's own bottom row, always visible
      (unlike mobile's #logToggle-in-the-prompt-row), latest line + a button

@@ -396,23 +396,45 @@ function render() {
     solo: !game.room && !game.spectator && !Tut.active(), side: game.me, uiCard: game.ui.card,
     pickedSpaces: (game.ui.picks && game.ui.picks.length ? game.ui.picks : game.ui.points) || [],
     t, spaceName, stateName, regionName, cardName, sep,
+    // Round 1 review (#39, item 3 — a pre-existing defect, not new here):
+    // a genuinely new position's real advice text arrives async (advise()
+    // itself can take real time — see advisor-ui.js's own setTimeout), so
+    // THIS render's layoutTable() call below still measures the banner at
+    // its short synchronous placeholder size. On English, advisor on, that
+    // placeholder-vs-real gap was enough to leave the sheet/hand 11px below
+    // a screen layoutTable() had already decided didn't need to scroll —
+    // fixed on the NEXT render only, because by then the answer is cached
+    // and arrives synchronously. advisor-ui.js calls this back once the
+    // real text (and the banner's real height) is actually in the DOM, so
+    // this same render's layout gets corrected without waiting for another
+    // click; layoutTable() itself already avoids rebuilding the hand/sheet
+    // except an actual chip<->full mode flip (unchanged, existing rule).
+    layoutTable,
   });
   layoutTable(); // the map's real box depends on the hand's, so both are sized together, then fitMap() scales the map's content
   Tut.decorate(); // no-op unless a tutorial is running (#15)
 }
 // The map's scale is the viewport-width ratio (DESIGN_W is the mockup's own
 // canvas width) UNLESS that would leave no room at all for a shown hand, in
-// which case scale gives up only down to FLOOR_SCALE — the scale at which
-// the disc/name/tap-target minimums are still met (30/34px design discs ->
-// 28/32px drawn). A real 375-390px-wide phone never needs the floor; only a
-// short one (e.g. 390x669 with iOS Chrome's toolbars up) does. Below the
-// floor, it's the hand's card ART that concedes further (see CARD_H below),
-// never the map — a fixed short viewport (no scrolling allowed) has to put
-// the shortfall somewhere, and the map's drawn spec is the one thing that
-// must never move.
-const DESIGN_DISC = 30, DESIGN_BIG_DISC = 34; // keep in sync with .node .disc / .node.big .disc in style.css
-const MIN_DISC = 28, MIN_BIG_DISC = 32; // the owner's C2 touch/legibility floor at any width
-const FLOOR_SCALE = Math.max(MIN_DISC / DESIGN_DISC, MIN_BIG_DISC / DESIGN_BIG_DISC) * 1.01; // +1% safety margin over the exact minimum
+// which case scale gives up only down to FLOOR_SCALE. A real 375-390px-wide
+// phone never needs the floor; only a short one (e.g. 390x669 with iOS
+// Chrome's toolbars up) does. Below the floor, it's the hand's card ART that
+// concedes further (see CARD_H below), never the map — a fixed short
+// viewport (no scrolling allowed) has to put the shortfall somewhere, and
+// the map's drawn spec is the one thing that must never move.
+//
+// #39 round 2 review (owner's own ruling): FLOOR_SCALE used to be set by
+// disc/name legibility (30/34px design discs -> a 28/32px drawn floor) — the
+// owner's call this round is that the HIT BUTTON size (see HIT_SIZE below)
+// is the one binding floor, not disc legibility, and moved it down to
+// exactly MIN_HIT (40px) to free the ~40px of slack (390x669/375x667) that
+// parts 2-4's own chrome growth (mandate bar, statline, pills) needed and
+// didn't have. The disc/name themselves shrink a little further below their
+// old 28/32px floor at this new scale — accepted, per that ruling, since
+// nothing about them is a tap target.
+const HIT_SIZE = 47; // design px — see its own fuller comment at renderMap() below
+const MIN_HIT = 40; // round 2's own floor: never below this real css px
+const FLOOR_SCALE = MIN_HIT / HIT_SIZE;
 const CARD_H = 176, HAND_GUTTER = 31; // 96x176 card + the C2_Game hand row's own headroom (207 total)
 // Below CARD_FULL_MIN the full card's own art has shrunk too far to read —
 // the hand switches to a fixed-height chip row instead (round 5) rather than
@@ -691,15 +713,37 @@ function wantsCardOverlay(v) {
   return false; // campaign/lobby target picking, or place once ops are known: the map is in play
 }
 
-// Above the map: just the turn and the Mandate tug-of-war bar (C2_Game's
+// Above the map: the turn line and the Mandate tug-of-war bar (C2_Game's
 // header + mandate strip, condensed — the seat portrait row is #6's).
+// #39 part 2: a real tug bar instead of the old 3px line + 8px dot -- Qin's
+// own fill runs from the left edge to the marker, Chu's from the marker to
+// the right edge (owner's spec, literally: which side "wins" the reading
+// isn't the point, matching the two segments named is), a gold diamond
+// marker, 秦/楚 at the two ends (the same hardcoded glyphs overGlyphChar()
+// already uses on the result screen -- not sideName(), which is localized
+// and reads as a whole word in English, not the single glyph the design
+// canvas draws at each end regardless of language). role="img" carries the
+// bar's own spoken value since none of its children are real text a screen
+// reader should read individually.
 function renderTopBar(v) {
   const pos = Math.max(2, Math.min(98, 50 - (v.mandate / E.MANDATE_TO_WIN) * 50));
   const phase = v.phase === "setup" ? "" : ` · ${t("tracks.round")} ${v.round}${t("tracks.of")}${v.rounds}`;
+  const m = v.mandate;
+  const leadColor = m > 0 ? "var(--qin-text)" : m < 0 ? "var(--chu-gold)" : "var(--text)";
+  const spoken = `${t("tracks.mandate")} ${mandateText(m)}`;
   $("topbar").innerHTML =
-    `<div class="tb-turn"><b>${t("tracks.turn")} ${v.turn}</b>${v.era ? " · " + t("eras." + v.era) : ""}${phase}</div>` +
-    `<div class="mandate"><span class="mid"></span><span class="dot" style="left:${pos}%"></span></div>` +
-    `<div class="tb-mandate">${t("tracks.mandate")} <b>${mandateText(v.mandate)}</b></div>`;
+    `<div class="tb-turn"><b>${t("tracks.turn")} ${v.turn}</b>${v.era ? " · " + t("eras." + v.era) : ""}${phase} · ` +
+      `<span class="tb-mandate-label">${esc(t("tracks.mandate"))}</span> <b class="tb-mandate-val" style="color:${leadColor}">${esc(mandateText(m))}</b></div>` +
+    `<div class="mandate" role="img" aria-label="${esc(spoken)}">` +
+      `<span class="m-end m-end-qin" aria-hidden="true">${overGlyphChar(E.QIN)}</span>` +
+      `<span class="m-track">` +
+        `<span class="m-fill m-fill-qin" style="width:${pos}%"></span>` +
+        `<span class="m-fill m-fill-chu" style="width:${100 - pos}%"></span>` +
+        `<span class="m-mid"></span>` +
+        `<span class="m-marker" style="left:${pos}%"></span>` +
+      `</span>` +
+      `<span class="m-end m-end-chu" aria-hidden="true">${overGlyphChar(E.CHU)}</span>` +
+    `</div>`;
 }
 // Below the map: one condensed row (C2_Game's 5-column stat strip) —
 // weariness, reform, seals, destroyed, cauldrons. Per-state detail and
@@ -809,11 +853,11 @@ function cardInfo(L, card) {
 // giving #hitLayer the exact same box as #mapInner (fitMap() now sizes and
 // transforms both identically) and positioning each hit button in the same
 // DESIGN_W/DESIGN_H px coordinates as its node, so a button is always
-// centred on its own disc and scales with it. HIT_SIZE (47 design px) is
-// picked so that at FLOOR_SCALE (~0.9506) the rendered button is still
-// >=44 real css px (47 * 0.9506 = 44.68); on desktop's larger scale it only
-// grows, same as the disc it covers.
-const HIT_SIZE = 47;
+// centred on its own disc and scales with it. HIT_SIZE (declared above,
+// alongside FLOOR_SCALE, which is now derived FROM it — #39 round 2) is
+// 47 design px, chosen so the rendered button is exactly MIN_HIT (40 real
+// css px) at the floor scale; on desktop's larger scale it only grows,
+// same as the disc it covers.
 function renderMap(v) {
   const el = $("mapInner");
   const hitEl = $("hitLayer");
@@ -1279,6 +1323,11 @@ function renderHand(v, mode) {
     const b = document.createElement("button");
     b.type = "button"; b.className = `card ${chip ? "chip " : ""}${cls}`.trim();
     b.setAttribute("aria-pressed", String(ui.card === id));
+    // #39 part 1: the hand shows the interface language only (CSS hides the
+    // other .nm-zh/.nm-en span off :root[lang]) -- the other language stays
+    // reachable here as the button's own aria-label, and on the full card
+    // page (renderCardView/cardHeader, untouched) which still shows both.
+    b.setAttribute("aria-label", `${cardZh(id)} / ${cardEn(id)}`);
     const ci = `<span class="ci"><span class="ops ${kind}">${esc(opsLabel(id))}</span><span class="nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span></span>`;
     b.innerHTML = chip ? ci : `<img class="cardimg" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` + ci;
     b.disabled = !canPick;
@@ -1357,7 +1406,13 @@ function logCardRefs(l) {
 // row with two inline .log-card-link buttons — separated by the
 // template's own "and"/"、", never enlarged past their own text metrics,
 // so neither one can encroach on the other or on the row above/below.
-function logLineNodes(l, clickable) {
+// `pill` (#39 part 4, corrected by round 1 review — every card name in
+// the news strip, not just its latest line): the main log panel never
+// passes it, so it "keeps its text links" per the owner's spec unchanged.
+// Only changes each card name's own styling class; the wholeLine/two-name
+// shape below (round 2's own fix) is untouched either way, so the pill
+// never becomes a second nested button.
+function logLineNodes(l, clickable, pill) {
   const raw = `log.${l.type}`.split(".").reduce((o, k) => (o ? o[k] : undefined), S);
   if (typeof raw !== "string") return null;
   const P = logParams(l);
@@ -1380,11 +1435,11 @@ function logLineNodes(l, clickable) {
       // a plain <span>, not a nested button (buttons can't nest); the
       // <button> ancestor is what actually answers the click.
       const span = document.createElement("span");
-      span.className = "log-card-name";
+      span.className = "log-card-name" + (pill ? " pill" : "");
       span.textContent = cardName(ref.id);
       root.appendChild(span);
     } else if (ref && clickable) {
-      root.appendChild(cardLinkButton(ref.id, ref.side));
+      root.appendChild(cardLinkButton(ref.id, ref.side, pill));
     } else {
       root.appendChild(document.createTextNode(k in P ? String(P[k]) : `{${k}}`));
     }
@@ -1400,10 +1455,10 @@ function logLineNodes(l, clickable) {
 // its neighbour is that its box is exactly its own glyphs, nothing more.
 // `side` is credited in the peek's own "{side} played this" hint line —
 // here always the card's own headline seat (E.QIN/E.CHU).
-function cardLinkButton(id, side) {
+function cardLinkButton(id, side, pill) {
   const b = document.createElement("button");
   b.type = "button";
-  b.className = "log-card-link";
+  b.className = "log-card-link" + (pill ? " pill" : "");
   b.textContent = cardName(id);
   b.onclick = (ev) => { ev.stopPropagation(); openPeek(id, side); };
   return b;
@@ -1489,11 +1544,42 @@ function renderLog(v) {
   if (newsEntries.length) {
     const newsDiv = document.createElement("div");
     newsDiv.className = "news";
-    for (const l of newsEntries) {
-      const node = logLineNodes(l, clickable);
-      if (node) newsDiv.appendChild(node);
-    }
+    // #39 part 4, round 1 review (owner's own ruling: "my spec was wrong,
+    // not your code"): pilling only the newest line left every OTHER
+    // card-naming line as a plain 15px text link — in real play the
+    // newest line is rarely a card name at all (a score/reform/turn line
+    // almost always follows a play/headline a moment later), so pills
+    // barely ever showed. Every card name visible in the strip is a pill
+    // now, on whichever line it's on — newest first (unchanged from part
+    // 4's own ordering; not itself part of this correction, just kept).
     $("promptText").appendChild(newsDiv);
+    newsEntries.slice().reverse().forEach((l) => {
+      const node = logLineNodes(l, clickable, true);
+      if (node) newsDiv.appendChild(node);
+    });
+    // #39 round 2 review (owner's own ruling): "the floor is yours to
+    // move" — a fixed CSS max-height + a guessed pixel budget (this
+    // block's own previous shape) can only ever ask "does this line fit
+    // the box I already decided on", never "is there real room for it".
+    // layoutTable() already answers exactly that, every render, against
+    // the map's real floor (round 2 also lowered — see FLOOR_SCALE) — so
+    // ask it directly: try with everything in, and if table-overflow
+    // comes back, drop the OLDEST line (.news's last child, newest-first
+    // order) and ask again. The newest entry (index 0, never removed
+    // here) always stays, however tall — a long English headline's two
+    // pills can wrap to two rows on their own — so the strip is never
+    // empty while the log has a line; if even that alone overflows,
+    // layoutTable()'s own existing last-resort (give the map/hand their
+    // true minimum and let the page scroll) is what's left, same as any
+    // other genuinely unfittable state. .news's own CSS max-height
+    // (style.css) still clips as a paint-only safety net in case this
+    // loop is ever bypassed; it never has the final say over what stays
+    // in the DOM any more.
+    while (newsDiv.children.length > 1) {
+      layoutTable();
+      if (!document.body.classList.contains("table-overflow")) break;
+      newsDiv.removeChild(newsDiv.lastElementChild);
+    }
   }
   // Desktop-only (see desktop.css, #7): the sidebar's bottom strip condenses
   // to the single latest line (the bot's own move if it just went, else the

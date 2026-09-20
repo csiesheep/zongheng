@@ -405,26 +405,34 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    the header reads as the same piece of cloth as the table -- #table
    itself is transparent so that single background shows through both. */
 #table { padding: 6px 0; gap: 4px; background: transparent; }
-.topbar { flex: none; padding: 1px 8px; font-size: 12px; color: var(--text-dim); }
+.topbar { flex: none; padding: 2px 8px 3px; font-size: 12px; color: var(--text-dim); }
 .tb-turn { font-size: 12px; }
 .tb-turn b { color: var(--text); font-weight: 600; }
-.tb-mandate { font-size: 11px; text-align: right; margin-top: 1px; }
-.tb-mandate b { color: var(--text); }
-.mandate { position: relative; height: 10px; border-left: 2px solid #777; border-right: 2px solid var(--chu-btn); margin: 3px 0; }
-.mandate .mid { position: absolute; left: 50%; top: 0; width: 1px; height: 10px; background: var(--gold); }
-.mandate .dot { position: absolute; top: 0; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--gold); }
-/* Short viewport (owner's round 5, #2): the turn/era line, the mandate bar
-   and the mandate number used to stack as three lines (~51px) — squash them
-   into one ~30px row instead, with the mandate bar flattened into this row's
-   own bottom edge ("the tick line as this row's baseline") rather than
-   dropped. Same three child elements as always, just laid out differently;
-   #topbar's own id/children are untouched for #7/#15 to build on. */
-@media (max-height: 719px) {
-  .topbar { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 7px; }
-  .topbar .mandate { position: absolute; left: 8px; right: 8px; bottom: 0; height: 3px; margin: 0; border-left: none; border-right: none; background: #777; }
-  .topbar .mandate .mid { height: 3px; }
-  .topbar .mandate .dot { top: -3px; width: 8px; height: 8px; }
-  .topbar .tb-mandate { margin-top: 0; }
+.tb-mandate-label { font-size: 12px; }
+.tb-mandate-val { font-size: 14px; font-weight: 700; }
+/* #39 part 2: a real tug bar. .m-track is the 10px rounded rail (radius 5 +
+   overflow:hidden rounds both ends together, no separate border-radius math
+   needed on the two fills); the two absolutely-positioned fills sit inside
+   it sized by inline `style` from renderTopBar()'s own `pos` (same
+   E.MANDATE_TO_WIN-derived position the old dot used), the hairline and the
+   14x14 diamond marker (a square rotated 45deg) stack above them. One
+   layout, every viewport -- the old max-height:719px squash (a 3px line
+   overlaid on the row) doesn't carry over: there's no 3px version of a bar
+   with rounded ends, two fills and end labels left to squash into, and the
+   owner's spec draws one bar, not two. */
+.mandate { display: flex; align-items: center; gap: 6px; height: 14px; margin: 2px 0 1px; }
+.mandate .m-end { flex: none; font-family: var(--kai); font-size: 11px; line-height: 1; color: var(--text-dim); }
+.mandate .m-end-qin { color: var(--qin-text); }
+.mandate .m-end-chu { color: var(--chu-gold); }
+.mandate .m-track { position: relative; flex: 1 1 auto; height: 10px; border-radius: 5px; overflow: hidden; background: var(--gold-line); }
+.mandate .m-fill { position: absolute; top: 0; bottom: 0; }
+.mandate .m-fill-qin { left: 0; background: var(--qin-bg); }
+.mandate .m-fill-chu { right: 0; background: var(--chu-btn); }
+.mandate .m-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--gold); opacity: 0.7; z-index: 1; }
+.mandate .m-marker {
+  position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  background: var(--gold); border-radius: 2px; transform: rotate(45deg);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4); z-index: 2;
 }
 /* The map: width comes from the column, height from whatever's left after
    every flex:none sibling took its share — see fitMap() in app.js, which
@@ -551,27 +559,43 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .hit { position: absolute; width: 47px; height: 47px; transform: translate(-50%, -50%); clip-path: circle(50%); padding: 0; border: none; background: none; cursor: default; }
 .hit:not(:disabled) { cursor: pointer; }
 .card:disabled { opacity: 0.85; }
-/* Below the map: one condensed stat row, then the prompt, then the hand. */
-.statline { flex: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 3px 8px; font-size: 10px; }
-.statline .sl-label { display: block; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-size: 9px; white-space: nowrap; }
-/* #24 (found while walking a real 390x669 game, not one of this issue's
-   three named defects, but it broke the same "never scroll" promise):
-   "Qin (face down)" in the Cauldrons column doesn't fit its ~74px slot at
-   11px and used to wrap to 2 lines, growing .statline from 33px to 47px --
-   enough, on its own, to push the map past its floor spec and force
-   table-overflow during a campaign/lobby/place target pick even after the
-   hand/prompt/sheet give-way (#24) had already done everything it could.
-   One line + ellipsis keeps the row's height fixed; the value is still a
-   read-only status readout, not something a phone player edits or must
-   read in full without expanding it. */
-.statline .sl-val { display: block; color: var(--text); font-weight: 600; font-size: 11px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Below the map: one condensed stat row, then the prompt, then the hand.
+   #39 part 3: an equal 5-column grid left the Cauldrons column (the widest
+   value, see the comment this replaces below) no more room than Seals or
+   Reform ever needed. Flex with each column sized to its own content
+   (never shrunk below it — no min-width:0 override) fixes that: the five
+   natural widths add up to comfortably less than a 375px-wide row, so
+   nothing needs to be clipped or wrapped to make it fit. */
+.statline { flex: none; display: flex; justify-content: space-between; gap: 6px; padding: 2px 8px; overflow: hidden; }
+.statline > div { flex: none; }
+.statline .sl-label { display: block; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; white-space: nowrap; }
+/* #24's own note (kept — still true of what this replaces): "Qin (face
+   down)" in the Cauldrons column used to force a 2-line wrap and grow
+   .statline by 14px, enough on its own to push the map past its floor spec.
+   The owner's #39 spec forbids the ellipsis #24 used to fix that (never
+   wrap, clip or ellipsize, in EITHER language, at 375px) — the flex row
+   above is the replacement fix: every column keeps its own natural width
+   instead of being forced into an equal fifth, so the widest value no
+   longer needs truncating to fit. English can still run wide ("Qin (face
+   down)"), so its value alone may drop to 12px; the row is still short
+   enough at that size to fit 375px with all five natural widths intact. */
+.statline .sl-val { display: block; color: var(--text); font-weight: 600; font-size: 13px; line-height: 1.25; white-space: nowrap; }
+:root[lang="en"] .statline .sl-val { font-size: 12px; }
 /* #30: the log toggle moved to the top bar (style.css's own .bar rules,
    next to Advisor/Rules/lang) -- #promptText now uses the row's full
    width instead of sharing it with that button. */
 .prompt { flex: none; display: flex; align-items: flex-start; gap: 8px; padding: 3px 8px; font-size: 13px; line-height: 1.35; }
 .prompt-text { flex: 1; min-width: 0; }
 .prompt .err { color: var(--bad); }
-.prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 3.6em; overflow: hidden; }
+/* #39 round 2 review: which lines actually stay in the DOM is decided in
+   app.js's renderLog() now, against layoutTable()'s own real measurement
+   of the map/hand's real remaining room (round 2's own FLOOR_SCALE cut
+   is what gives that room to give) — the newest line always stays,
+   however tall, and an older one is dropped outright (never partially)
+   the moment the real layout doesn't fit. This max-height is only a
+   paint-safety net (generous, so it's never the thing actually deciding
+   what shows) in case that loop is ever bypassed. */
+.prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 160px; overflow: hidden; }
 /* #34 round 2 (orchestrator's ruling): a line naming exactly one card is
    the WHOLE row, one <button> — see logLineNodes() in app.js. It resets
    every default button style back to a plain row (a <div> would have had
@@ -622,6 +646,30 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
   cursor: pointer;
 }
 .log-card-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+/* #39 part 4, round 1 review: EVERY card name in the news strip is a
+   pill, on whichever line it's on (app.js's renderLog() passes `pill`
+   for every news entry now -- the main log panel above never does, so it
+   "keeps its text links" per the owner's spec unchanged). The owner's
+   own round-1 finding was that gating this on "latest line" alone left
+   pills almost never showing in real play: a score/reform/turn line with
+   no card name of its own is very often the actual newest entry, one
+   step after the play/headline line that does name a card. An
+   inline-flex pill sizes itself by its own height, not by the line's
+   normal font metrics, so it grows every row that holds one -- .news's
+   own max-height (unchanged, still just enough for one pill line) can't
+   grow to fit more without costing the map/hand a give-way stage they
+   don't have outside an active map interaction; renderLog() measures
+   each line as it's added instead and drops one outright the moment it
+   stops fitting fully, so nothing is ever left half-clipped (a pill you
+   can half see but can't tap, its own centre already past the line the
+   box actually paints). */
+.news .log-card-name.pill, .news .log-card-link.pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 30px; margin: 2px 3px 2px 0; padding: 0 10px;
+  border: 1px solid var(--gold-line); border-radius: 15px;
+  background: rgba(216, 181, 106, 0.08);
+  color: var(--gold); font-size: 12.5px; text-decoration: none; vertical-align: middle;
+}
 .sheet { flex: none; display: flex; flex-direction: column; gap: 6px; margin: 0 8px; padding: 8px 10px; border-radius: 10px; max-height: 40svh; overflow-y: auto; }
 .sheet:empty { display: none; }
 /* #24 round 3: setPrompt() (round 2's fix #2) always parks its text as a
@@ -878,8 +926,17 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .card .ci { flex: none; padding: 6px 7px 7px; display: flex; align-items: flex-start; gap: 6px; }
 .card .ops { flex: none; width: 22px; height: 22px; border-radius: 50%; font-family: var(--sans); font-size: 11px; line-height: 22px; text-align: center; font-weight: 700; }
 .card .nm { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.card .nm-zh { font-family: var(--kai); font-size: 13px; line-height: 1.2; overflow-wrap: break-word; }
-.card .nm-en { font-size: 10px; line-height: 1.2; opacity: 0.85; overflow-wrap: break-word; }
+.card .nm-zh { font-family: var(--kai); font-size: 14px; line-height: 1.2; overflow-wrap: break-word; }
+.card .nm-en { font-size: 14px; line-height: 1.2; opacity: 0.85; overflow-wrap: break-word; }
+/* #39 part 1 (owner: "hand shows one language only"): only the .nm-* span
+   matching the interface language stays visible on a HAND card -- the
+   other one is still in the DOM (so its text never needs re-deriving) but
+   display:none removes it from the accessibility tree too, which is fine:
+   the button carries a bilingual aria-label of its own (see app.js's
+   tile()). Scoped to .card only, so the full card/sheet page (.sheet-chip
+   etc., untouched) keeps showing both names as always. */
+:root[lang="en"] .card .nm-zh { display: none; }
+:root[lang="zh-Hant"] .card .nm-en { display: none; }
 /* side colouring: neutral (n), Qin (q), Chu (c), scoring (s) */
 .card .ops.n, .card.jiuding .ops { background: var(--gold); color: var(--bg); }
 .card:has(.ops.n) { background: var(--neutral-bg); color: var(--neutral-ink); }
@@ -894,17 +951,25 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .card.jiuding { background: #d9c58f; color: var(--neutral-ink); }
 /* Round 5's short-viewport hand: when even a squeezed full card would drop
    below CARD_FULL_MIN (see app.js), the hand switches to a fixed 56px chip
-   row instead of a half-squashed card — badge + both names, no image, width
-   follows its own content (never truncated). The .card:has(.ops.*) side
-   colouring above already applies to it unchanged; only the shape differs. */
+   row instead of a half-squashed card — badge + one name (#39 part 1: the
+   other language dropped, not just shrunk — see the :root[lang] rule
+   above), no image, width follows its own content (never truncated). The
+   .card:has(.ops.*) side colouring above already applies to it unchanged;
+   only the shape differs. */
 .card.chip {
-  flex-direction: row; align-items: center; width: auto; min-width: 96px; max-width: 190px;
+  /* No max-width (#39: a 190px cap clipped a long English name once its own
+     line grew to ~15px — "Zhang Yi's Horizontal" measured 20px past the
+     card's own edge, silently eaten by this rule's overflow:hidden). .hand
+     already scrolls horizontally on its own, so an unusually long name just
+     costs a little more scroll rather than clipping. */
+  flex-direction: row; align-items: center; width: auto; min-width: 96px;
   height: 56px; padding: 0 10px;
 }
 .card.chip .ci { flex: 1 1 auto; padding: 0; align-items: center; gap: 8px; }
 .card.chip .ops { width: 26px; height: 26px; font-size: 12px; line-height: 26px; }
-.card.chip .nm-zh { font-size: 15px; font-weight: 700; white-space: nowrap; }
-.card.chip .nm-en { font-size: 11px; white-space: nowrap; }
+/* Same size for whichever one is actually visible (#39: "name about 15px")
+   — with only one language shown there's no reason left for zh/en to differ. */
+.card.chip .nm-zh, .card.chip .nm-en { font-size: 15px; font-weight: 700; white-space: nowrap; }
 .chat { flex: none; display: flex; gap: 6px; padding: 2px 8px; }
 .chat input { flex: 1; min-width: 0; min-height: 44px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font: 14px var(--serif); padding: 0 10px; }
 /* The log opens as a bottom sheet over the whole page (C2_Log) rather than
