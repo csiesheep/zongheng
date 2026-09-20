@@ -161,11 +161,24 @@ body:has(#lobby:not([hidden])), body:has(#over:not([hidden])) {
 }
 #over.winner-chu { background: #4f0e0a; color: #fff3d2; }
 #over.winner-qin { background: #0c0b0a; color: #efe6d2; }
+/* #50 "B 燼": the LOSER's own page — own ground, own broken emblem. Text/
+   buttons/stat VALUES keep the same colour formula as the winner rules above
+   (tied to the side, not to win/lose) — only ground, shade, title and stats
+   rules/labels change (owner's table on #50). */
+#over.loser-chu { background: #1c0907; color: #fff3d2; }
+#over.loser-qin { background: #12100e; color: #efe6d2; }
 .over-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .over-art { position: relative; height: 46vh; height: 46svh; min-height: 220px; max-height: 430px; overflow: hidden; }
 .over-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 40%; }
+/* #50 rulings (orchestrator, issue comment): lose_qin.jpg needs the tiger
+   lifted clear of the title — `center 24%`, not the default 40%. lose_chu.jpg
+   is `center top` (its tail running under the words is accepted). */
+#over.loser-qin .over-art img { object-position: center 24%; }
+#over.loser-chu .over-art img { object-position: center top; }
 #over.winner-chu .over-shade { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(6, 5, 4, 0.25), rgba(6, 5, 4, 0.25) 55%, #4f0e0a); }
 #over.winner-qin .over-shade { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(6, 5, 4, 0.4), rgba(6, 5, 4, 0.4) 55%, #0c0b0a); }
+#over.loser-chu .over-shade { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(6, 5, 4, 0.25), rgba(6, 5, 4, 0.25) 60%, #1c0907 97%); }
+#over.loser-qin .over-shade { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(6, 5, 4, 0.15), rgba(6, 5, 4, 0.15) 60%, #12100e 97%); }
 .over-head {
   position: absolute; left: 0; right: 0; bottom: 14px; display: flex; flex-direction: column;
   align-items: center; gap: 8px; padding: 0 16px; text-align: center;
@@ -175,6 +188,8 @@ body:has(#lobby:not([hidden])), body:has(#over:not([hidden])) {
 .over-glyph.glyph-qin { font-family: var(--serif); font-weight: 900; color: var(--qin-text); }
 .over-h1 { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .over-title { font: 900 clamp(24px, 7vw, 34px)/1.15 var(--serif); letter-spacing: 6px; padding-left: 6px; color: var(--gold); }
+/* #50: the loser's title is dulled, not gold — same colour both sides. */
+#over.loser-chu .over-title, #over.loser-qin .over-title { color: #c9bfa6; }
 .over-line { font: 600 16px/1.3 var(--serif); color: #fff; }
 .over-body { padding: 14px 20px 0; display: flex; flex-direction: column; gap: 14px; align-items: center; }
 .over-desc { margin: 0; font: 400 14px/1.55 var(--serif); text-align: center; }
@@ -184,10 +199,14 @@ body:has(#lobby:not([hidden])), body:has(#over:not([hidden])) {
 }
 #over.winner-chu .over-stats { border-color: #d8b56a; }
 #over.winner-qin .over-stats { border-color: #8a7a52; }
+#over.loser-chu .over-stats { border-color: #7a5a44; }
+#over.loser-qin .over-stats { border-color: #6f6450; }
 .over-stats > div { display: flex; flex-direction: column; gap: 5px; align-items: center; min-width: 0; }
 .over-stats span { font: 400 10.5px/1 var(--serif); }
 #over.winner-chu .over-stats span { color: #f1d3c4; }
 #over.winner-qin .over-stats span { color: #b9b09a; }
+#over.loser-chu .over-stats span { color: #c9a898; }
+#over.loser-qin .over-stats span { color: #a59c88; }
 .over-stats b { font: 600 15px/1 var(--serif); color: #fff; white-space: nowrap; }
 .over-footer {
   flex: none; padding: 12px 16px max(12px, env(safe-area-inset-bottom));

@@ -73,6 +73,15 @@
   body:has(#over.winner-chu:not([hidden])) .d-tex-b { top: 0; bottom: 0; height: auto; opacity: 0.6; }
   body:has(#over.winner-chu:not([hidden])) .d-tex-a { opacity: 0; }
 
+  /* #50: the LOSER's page — plain ground colour (no court texture, either
+     side) behind the existing .d-vignette, per the owner's table on #50. */
+  body:has(#over.loser-qin:not([hidden])) .d-frame { background: #12100e; }
+  body:has(#over.loser-qin:not([hidden])) .d-tex-a,
+  body:has(#over.loser-qin:not([hidden])) .d-tex-b { opacity: 0; }
+  body:has(#over.loser-chu:not([hidden])) .d-frame { background: #1c0907; }
+  body:has(#over.loser-chu:not([hidden])) .d-tex-a,
+  body:has(#over.loser-chu:not([hidden])) .d-tex-b { opacity: 0; }
+
   /* ---------- the page-card shell ---------- */
   .page-card {
     position: relative;
