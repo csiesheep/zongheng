@@ -95,7 +95,7 @@
   width: 100%; min-height: 44px; box-sizing: border-box; text-align: left; cursor: pointer;
   font: inherit; color: inherit; -webkit-appearance: none; appearance: none;
 }
-.cardrow:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* #43: the shared gold focus ring (ui-states.css) covers .cardrow now. */
 .cardrow .cr-chevron { flex: none; align-self: center; font-size: 18px; line-height: 1; opacity: 0.6; }
 .cardrow.side-c { background: #4f0e0a; border-color: var(--gold); }
 .cardrow.side-q { background: var(--bg); }
