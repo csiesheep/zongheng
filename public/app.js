@@ -1516,14 +1516,18 @@ function renderPending(v, p, setPrompt, sh) {
   if (p.kind === "card") {
     setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t(p.min === 0 ? "prompt.cardOptional" : "prompt.card")}`);
     const r = row(sh);
-    for (const c of p.options) btn(r, `${cardName(c)} (${E.CARD[c].ops})`, () => humanAct({ type: "choose", choice: [c] }));
+    // #52: a stable hook for advisor-ui.js's decoratePending() to find the
+    // suggested card by id, instead of by position -- the same id `answer()`
+    // (shared/bots.js) puts in the "choose" action's own choice array.
+    for (const c of p.options) { const b = btn(r, `${cardName(c)} (${E.CARD[c].ops})`, () => humanAct({ type: "choose", choice: [c] })); b.dataset.card = c; }
     if (p.min === 0) btn(r, t("buttons.skip"), () => humanAct({ type: "choose", choice: [] }));
     return;
   }
   if (p.kind === "option") {
     setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t("prompt.option")}`);
     const r = row(sh);
-    for (const o of p.options) btn(r, o.label, () => humanAct({ type: "choose", choice: o.id }));
+    // #52: same hook, keyed by the option's own id.
+    for (const o of p.options) { const b = btn(r, o.label, () => humanAct({ type: "choose", choice: o.id })); b.dataset.option = o.id; }
     return;
   }
   if (p.kind === "ops") {
@@ -1533,7 +1537,13 @@ function renderPending(v, p, setPrompt, sh) {
     // — before that, it's just the use-buttons above, no map interaction yet.
     game.mapActive = !!ui.opsUse;
     const r = row(sh);
-    for (const u of p.allowed) btn(r, t(`uses.${u}`), () => { ui.opsUse = u; ui.points = []; ui.target = null; render(); }, "", ui.opsUse === u);
+    // #52: same hook, keyed by the use id ("place"/"campaign"/"lobby") --
+    // advise()'s own action for a pending "ops" choice is
+    // `{ type: "choose", choice: { use, points } | { use, target } }`
+    // (shared/advisor.js's useOf() names a pending choice "not a use", so
+    // there is no adv.use/adv.card to read here; decoratePending() reads
+    // adv.action.choice.use directly instead).
+    for (const u of p.allowed) { const b = btn(r, t(`uses.${u}`), () => { ui.opsUse = u; ui.points = []; ui.target = null; render(); }, "", ui.opsUse === u); b.dataset.use = u; }
     if (ui.opsUse === "place") {
       const { spent } = placementTrial(v, game.me, ui.points);
       note(sh, t("prompt.place", { ops: p.ops, left: p.ops - spent }));

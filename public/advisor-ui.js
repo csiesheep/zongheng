@@ -353,6 +353,45 @@ function decorateSheet(adv, meta) {
     }
   }
 }
+// #52: a PENDING choice (`renderPending()` in app.js -- kind "ops"/"option"/
+// "card"/"points") has no card page open and `advise()`'s own `card`/`use`
+// come back null for it (a pending choice is not a "use" -- see `useOf()`
+// in shared/advisor.js, deliberately unchanged: the brief says to comment,
+// not to touch it). The move itself still sits in `adv.action = { type:
+// "choose", choice }`, so this reads `choice` directly instead, and
+// `view.pending.kind` (the SAME object `renderPending()` was drawn from,
+// still on the view) to know which shape `choice` is in -- never inferred
+// from the shape alone, since a card pick's `choice` (`[id]`) and a points
+// pick's `choice` (`[id, id, ...]`) are both plain arrays.
+//   ops:    choice = { use, points } | { use, target } -> mark [data-use]
+//   option: choice = the option's id                   -> mark [data-option]
+//   card:   choice = [id] (or [] when skippable)        -> mark [data-card]
+//   points: choice = an array of space ids -- the map already marks these
+//           through targetsOf()/decorateMap(); nothing to do to a button
+//           here (renderPending's Confirm/Cancel row names no single space).
+// renderPending() gives each hooked button a stable data-* attribute (its
+// own comment there) instead of this file finding buttons by position, per
+// the brief.
+function decoratePending(adv, view) {
+  const sheet = document.getElementById("sheet");
+  if (!sheet) return;
+  sheet.querySelectorAll("[data-use].adv-pick, [data-option].adv-pick, [data-card].adv-pick")
+    .forEach((b) => b.classList.remove("adv-pick"));
+  if (!adv || !adv.action || adv.action.type !== "choose") return;
+  if (!view || !view.pending) return; // the suggestion is stale the moment the pending choice is gone
+  const kind = view.pending.kind;
+  const choice = adv.action.choice;
+  if (kind === "ops" && choice && choice.use) {
+    const b = sheet.querySelector(`[data-use="${choice.use}"]`);
+    if (b) b.classList.add("adv-pick");
+  } else if (kind === "option" && choice != null) {
+    const b = sheet.querySelector(`[data-option="${choice}"]`);
+    if (b) b.classList.add("adv-pick");
+  } else if (kind === "card" && Array.isArray(choice) && choice.length === 1) {
+    const b = sheet.querySelector(`[data-card="${choice[0]}"]`);
+    if (b) b.classList.add("adv-pick");
+  }
+}
 function decorateMap(adv, meta) {
   const mapInner = document.getElementById("mapInner");
   if (!mapInner) return;
@@ -428,6 +467,7 @@ function clearAll() {
   if (promptText) promptText.hidden = false;
   decorateHand(null, null, null);
   decorateSheet(null, null);
+  decoratePending(null, null);
   decorateMap(null, null);
 }
 
@@ -457,11 +497,12 @@ function applyDecorations(view, meta, force, switchVisible) {
     // true final size, not a placeholder's.
     if (cache.adv) setBannerText(cache.adv, meta, true);
     placeBanner(meta);
-    if (!cache.adv) { banner.root.hidden = true; decorateHand(null, view, meta); decorateSheet(null, meta); decorateMap(null, meta); return; }
+    if (!cache.adv) { banner.root.hidden = true; decorateHand(null, view, meta); decorateSheet(null, meta); decoratePending(null, view); decorateMap(null, meta); return; }
     banner.root.hidden = false;
     clampPromptWhy();
     decorateHand(cache.adv, view, meta);
     decorateSheet(cache.adv, meta);
+    decoratePending(cache.adv, view);
     decorateMap(cache.adv, meta);
     return;
   }
@@ -480,6 +521,7 @@ function applyDecorations(view, meta, force, switchVisible) {
   cache.hasResult = false;
   decorateHand(null, view, meta);
   decorateSheet(null, meta);
+  decoratePending(null, view);
   decorateMap(null, meta);
   // advise() is synchronous and can take real time on a midgame position
   // (#17's own budget: comfortably under 3s, but not instant) -- yielding
@@ -495,7 +537,7 @@ function applyDecorations(view, meta, force, switchVisible) {
     cache.hasResult = true;
     if (!adv) {
       banner.root.hidden = true;
-      decorateHand(null, view, meta); decorateSheet(null, meta); decorateMap(null, meta);
+      decorateHand(null, view, meta); decorateSheet(null, meta); decoratePending(null, view); decorateMap(null, meta);
       // #39 item 3: the placeholder banner (a normal flow row) had a real
       // height when THIS render's layoutTable() ran; hiding it outright
       // changes the chrome sum layoutTable() already measured, same as the
@@ -509,6 +551,7 @@ function applyDecorations(view, meta, force, switchVisible) {
     clampPromptWhy();
     decorateHand(adv, view, meta);
     decorateSheet(adv, meta);
+    decoratePending(adv, view);
     decorateMap(adv, meta);
     // #39 item 3 (round 1 review — a pre-existing defect, not new to this
     // issue): advise() answers async, so the render that just ran measured

@@ -144,7 +144,12 @@ body:not(.table-lock) .advisor-banner {
   box-shadow: 0 0 0 2px #e9b92e, 0 0 14px 5px rgba(233, 185, 46, 0.6);
   border-color: #e9b92e;
 }
-.sheet-grid button.adv-pick, .rowb.order button.adv-pick {
+.sheet-grid button.adv-pick, .rowb.order button.adv-pick,
+/* #52: renderPending()'s plain .rowb rows (the "ops" use-picker, an
+   "option" pending choice, a "card" pending choice) -- same ring, no
+   layout change: box-shadow paints outside the button's own box, border-
+   color reuses the border width/radius the row's own buttons already have. */
+.rowb button[data-use].adv-pick, .rowb button[data-option].adv-pick, .rowb button[data-card].adv-pick {
   box-shadow: 0 0 0 2px #e9b92e, 0 0 10px 3px rgba(233, 185, 46, 0.55);
   border-color: #e9b92e;
 }
