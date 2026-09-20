@@ -532,13 +532,50 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .node.anchor-right .nm { left: 100%; top: 50%; transform: translateY(-50%); margin-top: 0; margin-left: 4px; text-align: left; }
 .node.ctlq .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #0e0e0e; }
 .node.ctlc .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #a31c15; }
-/* Placement: a dashed ring on spaces you can tap, a solid red ring on
-   spaces you've already placed in this action; a gold badge for the 2x
-   cost where the enemy controls. */
+/* Placement: a dashed ring on spaces you can tap, a solid ring on spaces
+   you've already placed in this action; a gold badge for the 2x cost where
+   the enemy controls. #49 (owner: 「Qin 在放影響力時,+1/+2/... 用黑色」):
+   the ring's outer 2px and the "+N" badge both used to be Chu's red for
+   BOTH sides — they now follow whichever side is ACTING in this pick
+   (app.js's currentMode() `mode.side`, always `game.me` — see its own
+   comment there for the one case, opponent-targeting removal picks, this
+   doesn't perfectly disambiguate), the same #0e0e0e/#a31c15 the disc's own
+   two numbers and the control ring above already use — reused directly
+   (no --qin-ink/--chu-ink custom property exists yet for this map ink;
+   .disc i.q/i.c and .ctlq/.ctlc don't use one either, so this doesn't add
+   a third colour, it follows the file's own existing convention). */
 .node.lit .disc { outline: 2px dashed var(--gold); outline-offset: 2px; cursor: pointer; }
-.node.picked .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #a31c15; }
-.node .badge { position: absolute; top: -4px; right: -6px; min-width: 15px; height: 15px; border-radius: 8px; background: #a31c15; color: #fff; font: 700 9px/15px var(--sans); text-align: center; padding: 0 3px; z-index: 3; }
+.node.picked.pick-q .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #0e0e0e; }
+.node.picked.pick-c .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #a31c15; }
+/* Badge size/ink match .lastmove-tag exactly (#41, below): 18px high, 12px
+   bold digits, white on the side colour, the same 1.5px paper halo so the
+   black holds on a dark region or a black control ring. WHERE it sits is
+   shared with .lastmove-tag through one per-space table, NODE_PILL_POS
+   (map-draw.js) — see its own comment for the position names, what counts
+   as an overlap, the ownership rule and ★郢/Ying's accepted exception; see
+   the pill-tr/tl/trl/t/b/r/l rules below .lastmove-tag's own declaration
+   for the actual offsets, which both pills read off the same class. */
+.node .badge {
+  position: absolute; top: -6px; right: -8px; min-width: 18px; height: 18px; box-sizing: border-box;
+  border-radius: 9px; color: #fff; font: 700 12px/18px var(--sans); text-align: center;
+  padding: 0 4px; z-index: 4; pointer-events: none; white-space: nowrap; box-shadow: 0 0 0 1.5px #f7f3e8;
+}
+.node.pick-q .badge { background: #0e0e0e; }
+.node.pick-c .badge { background: #a31c15; }
 .node .cost { position: absolute; top: -4px; left: -6px; width: 15px; height: 15px; border-radius: 8px; background: var(--gold); color: #1a1a1a; font: 700 9px/15px var(--sans); text-align: center; z-index: 3; }
+/* Where NODE_PILL_POS gives a space "tl", the pill takes the corner .cost
+   normally uses — the badge, unlike the tag, can be on screen at the same
+   time as .cost (both belong to the still-picking phase) — so .cost itself
+   moves to the opposite top corner for exactly those spaces. Anchor-right
+   spaces (map-draw.js's NODE_ANCHOR) use top:-8px;right:-2px (checked
+   against the name: 0 overlap) since their name starts flush against the
+   disc's right edge, closer to the plain mirror's spot than a
+   non-anchored space's name ever is; hangu is currently the only pill-tl
+   space that is also anchor-right. The plain mirror (right:-6px, same
+   top:-4px as default) is checked clean for the rest: yiqu, jimo, song,
+   luoyi. */
+.node.pill-tl .cost { left: auto; right: -6px; }
+.node.anchor-right.pill-tl .cost { top: -8px; right: -2px; }
 /* The stability tag (owner design "A 數字籤", #26): a small square, copper-
    toned so it never reads as influence (black/red discs) or the red +n
    badge above. Default corner is bottom-left of the disc; a node whose city
@@ -571,9 +608,10 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .node.stab-hi .stab { bottom: 2px; }
 /* #41: the last-move mark — every space computeLastMoveMarks() (lastmove.js)
    flagged as changed by the LAST resolved action gets a frame around its
-   disc plus a tag near the upper-right corner (the one corner none of
-   .cost/.badge/.stab/.adv-badge use by default — see NODE_LASTMOVE_LEFT in
-   map-draw.js for the nodes whose own city name reaches into it instead).
+   disc plus a tag near the upper-right corner by default (the one corner
+   none of .cost/.stab/.adv-badge use by default — see NODE_PILL_POS in
+   map-draw.js for the nodes whose own city name or a neighbour reaches
+   into it instead, #49 round 2).
    Round 1 review (orchestrator, item 1): a 3px outline on the disc's own
    edge read as "a slightly thicker border" next to a control ring
    (.ctlq/.ctlc, above) and didn't catch the eye — replaced with four
@@ -622,15 +660,23 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    not a count) keeps the plain bronze background set above. */
 .node .lastmove-tag.side-q { background: #0e0e0e; }
 .node .lastmove-tag.side-c { background: #a31c15; }
-.node.lastmove-l .lastmove-tag { right: auto; left: -8px; }
-/* Ying and Wuyue (map-draw.js's NODE_LASTMOVE_LEFT) anchor their own city
-   name ABOVE the disc, centred (.anchor-top .nm, style.css above) rather
-   than to one side — the default top-left corner still clipped the name's
-   own bottom-left corner there (measured with all 26 nodes marked at once
-   at 390x669, both languages; not visible eyeballing one node at a time —
-   re-measured after the round-1 resize since the bigger tag changes the
-   footprint). Lifted and nudged further left, clear of both. */
-.node.anchor-top.lastmove-l .lastmove-tag { top: -1px; left: -13px; }
+/* #49: ONE position table for both pills (.badge above and .lastmove-tag
+   here) — NODE_PILL_POS in map-draw.js, read through a "pill-tr"/"tl"/
+   "trl"/"t"/"b"/"r"/"l" class app.js puts on the .node itself. "tr" is the
+   default (unlisted) corner; "trl" is "tr" 5px lower, for a top-row space
+   whose "tr" clears every other check but pokes past the map's own top
+   edge; "l"/"r" sit beside the disc, outside it, vertically centred; "t"/
+   "b" sit centred above/below it. Do not hand-tune a single space's value
+   without re-running NODE_PILL_POS's own checklist against all three
+   required sizes — a value clean at one size is not necessarily clean at
+   another. */
+.node.pill-tr .badge, .node.pill-tr .lastmove-tag { top: -6px; right: -8px; left: auto; }
+.node.pill-trl .badge, .node.pill-trl .lastmove-tag { top: -1px; right: -8px; left: auto; }
+.node.pill-tl .badge, .node.pill-tl .lastmove-tag { top: -6px; left: -8px; right: auto; }
+.node.pill-t .badge, .node.pill-t .lastmove-tag { top: -22px; left: 50%; right: auto; transform: translateX(-50%); }
+.node.pill-b .badge, .node.pill-b .lastmove-tag { bottom: -22px; top: auto; left: 50%; right: auto; transform: translateX(-50%); }
+.node.pill-r .badge, .node.pill-r .lastmove-tag { top: 50%; right: -18px; left: auto; transform: translateY(-50%); }
+.node.pill-l .badge, .node.pill-l .lastmove-tag { top: 50%; left: -18px; right: auto; transform: translateY(-50%); }
 /* The pulse: the brackets closing in once from a wider stance to their
    resting position (round 1 review's own suggestion), on top of the
    already-visible, non-animated resting frame above — so a browser that

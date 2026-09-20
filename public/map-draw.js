@@ -134,25 +134,36 @@ export const NODE_STAB_RIGHT = new Set(["shangdang"]);
 //   for nodes this close to an edge; Wuyue (y=378) was checked and already
 //   clears at the default -2px, so it's not in this set.
 export const NODE_STAB_HI = new Set(["ying"]);
-// #41: the last-move tag (a small "+2"/"−1"/destroyed-word badge) defaults
-// to the disc's upper-right corner, the one corner none of the other three
-// per-node decorations above ever use — free on all 26 nodes except where
-// the CITY NAME itself reaches into it: an anchor-top name (centred right
-// above the disc — ying, wuyue) or an anchor-right name (starts flush
-// against the disc's own right edge, vertically centred — every node whose
-// own NODE_ANCHOR is "right": bashu, shangdang, liaodong, hangu) both run
-// close enough to the upper-right corner at the map's floor scale (#39) to
-// collide with a tag there once real text is measured, not eyeballed —
-// checked by rendering all 26 spaces with a mark at once, at 390x669 floor
-// scale, in BOTH languages (English names are the wider case: catching
-// "Ba-Shu" needed the English pass, plain "巴蜀" alone would have missed
-// it). The other 22 (including anchor-left, whose name moves to the
-// OPPOSITE side, and every plain below-the-disc name) leave it clear.
-// These six flip the tag to the upper-left instead — the same corner
-// .cost (setup/opening-placement's own transient badge) uses, which is
-// never on screen at the same time as a last-move tag (cost only shows
-// while a target is still being chosen, before an action has resolved).
-export const NODE_LASTMOVE_LEFT = new Set(["ying", "wuyue", "bashu", "shangdang", "liaodong", "hangu"]);
+// #49: NODE_PILL_POS places the small pill that sits near a disc's corner —
+// #41's last-move tag AND #49's own placement badge, one visual language
+// sharing one position rule — through a class (app.js: "pill-" +
+// (NODE_PILL_POS[id] || "tr")) that both `.badge` and `.lastmove-tag` style
+// off in style.css. Default "tr" (top-right) applies to every id not
+// listed; the other positions are "tl" (top-left), "trl" (top-right, 5px
+// lower — clears the map's own top edge for a top-row space without
+// leaving the corner), "t"/"b" (centred above/below the disc) and "r"/"l"
+// (beside the disc, outside it, vertically centred).
+//
+// A space's position must have ZERO overlaps against: the disc's own
+// digits, the coming single-side disc's centred digit, every space's name/
+// stability tag/cost tag, every region label, every other pill, and the
+// map's own edge — AND it must not sit closer to a NEIGHBOUR's disc than
+// to its own + 6px (a pill has to read as belonging to its own city, not
+// whichever one it happens to be nearest). Checked at 390x669 zh, 375x667
+// en and 1280x800 zh together — a position clean at one size is not
+// necessarily clean at another.
+//
+// One space has no clean position in that set at every size: ★郢/Ying's
+// "r" still clips Huai-Si's name by 1.9x9.7px at 375x667 en, the
+// least-bad of the five candidates — orchestrator's ruling (#49): keep it,
+// a sliver under a pill a tap clears is accepted.
+export const NODE_PILL_POS = {
+  guanzhong: "l", hangu: "tl", bashu: "l", yiqu: "tl",
+  xinzheng: "r", hedong: "r", shangdang: "b",
+  luoyi: "tl", linzi: "r", jimo: "tl", song: "tl",
+  ying: "r", wuyue: "r",
+  ji: "trl", zhongshan: "r", dai: "r",
+};
 // `name` is the already-resolved display name (the caller's own spaceName()
 // — app.js and rules.js each have their own, reading the same E.SPACE[id]
 // but keyed to their own current language); `esc` is the caller's own HTML
