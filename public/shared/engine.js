@@ -331,6 +331,23 @@ export function discardCard(st, side, cardId, { noEvent = true } = {}) {
 }
 export function eraOf(turn) { return ERAS.filter((e) => turn >= e.from).pop(); }
 export function hasCards(st, side) { return st.hands[side].length > 0 || jiudingUsable(st, side); }
+// 細作 (xizuo, 67) names a card the other side must play on its next action
+// round (`st.forced[side]`, cards.js). The obligation LAPSES when that card is
+// no longer in that side's hand -- orchestrator's ruling (#55), flagged to the
+// owner; the rulebook says nothing about the case. Any other reading freezes
+// the game: seed 70 on fallbacks stopped at turn 7 with Chu forced to play
+// 說客 after 春申君's event made Chu draw two and discard that very card, and
+// `legal()` then offered Chu nothing at all.
+//
+// This is the ONE place that decides it. Every reader of `st.forced` goes
+// through here (`legal`, both checks in `play`, the Nine Cauldrons guard), so
+// a stale value can never reach a rule. It does not mutate: `legal` and the
+// per-seat `view` are read-only for the room and the bots. The stale value is
+// wiped once, in `beginAction`, so the state on the wire is honest too.
+export function forcedCard(st, side) {
+  const c = st.forced[side];
+  return c != null && st.hands[side].includes(c) ? c : null;
+}
 export function jiudingUsable(st, side) { return st.jiuding.holder === side && !st.jiuding.faceDown; }
 
 // ---------- creating a game ----------
@@ -520,6 +537,9 @@ function resolveHeadlines(st) {
 function beginAction(st) {
   if (st.winner != null) return;
   st.phasing = st.actor;
+  // The obligation lapsed while someone else was acting (#55): drop the stale
+  // name so the state this side is about to see says what the rules say.
+  if (st.forced[st.actor] && !forcedCard(st, st.actor)) st.forced[st.actor] = null;
   if (!hasCards(st, st.actor)) {
     log(st, { type: "skip", side: st.actor });
     st.plan.push({ do: "endAction" });
@@ -678,7 +698,7 @@ function play(st, action) {
   const steps = [];
   if (c === JIUDING) {
     if (!jiudingUsable(st, side)) fail("the Nine Cauldrons are not yours to use");
-    if (st.forced[side]) fail("you must play the named card");
+    if (forcedCard(st, side)) fail("you must play the named card");
     if (!["place", "campaign", "lobby"].includes(use)) fail("the Nine Cauldrons: place, campaign or lobby only");
     validateOps(st, side, JIUDING, 4, { use, points: action.points, target: action.target }, true);
     steps.push({ do: "ops", side, card: JIUDING, ops: 4, payload: { use, points: action.points, target: action.target } });
@@ -688,7 +708,8 @@ function play(st, action) {
   }
   const h = st.hands[side];
   if (!h.includes(c)) fail("card not in hand");
-  if (st.forced[side] && st.forced[side] !== c) fail("you must play the named card");
+  const forced = forcedCard(st, side);
+  if (forced && forced !== c) fail("you must play the named card");
   const card = CARD[c];
   const bog = st.effects.find((e) => e.kind === "bog" && e.who === side);
   const bogCards = bog ? h.filter((x) => CARD[x].ops >= 2) : [];
@@ -768,7 +789,7 @@ export function legal(st, side) {
   const bogCards = bog ? h.filter((x) => CARD[x].ops >= 2) : [];
   if (bogCards.length) return { kind: "action", bog: bogCards, cards: [] };
   const { placeOptions, campaignTargets, lobbyTargets } = opsOptions(st, side);
-  const forced = st.forced[side];
+  const forced = forcedCard(st, side);
   const cards = h.filter((c) => !forced || c === forced).map((c) => {
     const card = CARD[c];
     if (card.scoring) return { id: c, ops: 0, uses: { event: true } };
