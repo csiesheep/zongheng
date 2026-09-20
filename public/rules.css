@@ -104,34 +104,39 @@
 .cardrow .cr-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .cardrow .cr-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 /* flex-wrap only breaks a line when an item doesn't fit; on the shorter
-   names that left .cr-en sharing the first line for 13 of the 71 rows.
+   names that left .cr-meta sharing the first line for 13 of the 71 rows.
    flex-basis:100% forces it onto its own line every time, not just when
    space runs out. */
-.cardrow .cr-en { flex-basis: 100%; }
+.cardrow .cr-meta { flex-basis: 100%; }
 /* #44 review item 3: .cr-year (the tile's own copy of the year, alongside
    the name — cardList() already folds the year into .cr-text for the row's
    own description text, so this stays hidden here and only appears on the
    desktop grid's compact tile, see rules-desktop.css). */
 .cardrow .cr-year { display: none; }
-/* #45: .cr-tile-name (the desktop tile's own name, in the current interface
-   language — see cardRow()'s own note) never shows at mobile either; the
-   mobile row keeps its bilingual-always .cr-zh/.cr-en pair untouched. */
-.cardrow .cr-tile-name { display: none; }
-.cardrow .cr-badge { flex: none; width: 20px; height: 20px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 11px; line-height: 20px; text-align: center; }
-.cardrow .cr-zh { font-size: 15px; }
+/* #47 owner's ruling: a card shows one language everywhere. `.cr-name`,
+   this row's ONE visible name (before this issue the row always showed
+   `.cr-zh` — Chinese, regardless of the interface language — and only the
+   desktop tile had a language-aware name, `.cr-tile-name`; the two are now
+   one element, shared) carries whichever language the interface is
+   currently in (see cardRow()'s own note). */
+/* #47: 12px (was 11) — matches the desktop tile's own badge (#44/#45),
+   which no longer needs its own font-size override now that the base
+   value is the same (rules-desktop.css). */
+.cardrow .cr-badge { flex: none; width: 20px; height: 20px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 12px; line-height: 20px; text-align: center; }
+.cardrow .cr-name { font-size: 15px; }
 /* #40: both grown to 12px (were 11 / the <small> year tag's browser-default
    ~83% of 12px, i.e. ~10px) — the smallest text left on a card row now
    reads as 12px everywhere, in both languages. */
-.cardrow .cr-en { font-size: 12px; }
+.cardrow .cr-meta { font-size: 12px; }
 .cardrow .cr-text { font-size: 12px; line-height: 1.45; }
 .cardrow .cr-text small { font-size: 12px; }
-.cardrow.side-q .cr-zh { font-family: var(--serif); font-weight: 900; color: var(--qin-text); }
-.cardrow.side-q .cr-en, .cardrow.side-q .cr-text { color: var(--text-soft); }
+.cardrow.side-q .cr-name { font-family: var(--serif); font-weight: 900; color: var(--qin-text); }
+.cardrow.side-q .cr-meta, .cardrow.side-q .cr-text { color: var(--text-soft); }
 .cardrow.side-q .cr-badge { background: var(--qin-text); color: var(--bg); }
-.cardrow.side-c .cr-zh { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
-.cardrow.side-c .cr-en, .cardrow.side-c .cr-text { color: #fff3d2; }
+.cardrow.side-c .cr-name { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
+.cardrow.side-c .cr-meta, .cardrow.side-c .cr-text { color: #fff3d2; }
 .cardrow.side-c .cr-badge { background: var(--chu-gold); color: #6f120d; }
-.cardrow.side-n .cr-zh, .cardrow.side-n .cr-en, .cardrow.side-s .cr-zh, .cardrow.side-s .cr-en { color: var(--neutral-ink); }
+.cardrow.side-n .cr-name, .cardrow.side-n .cr-meta, .cardrow.side-s .cr-name, .cardrow.side-s .cr-meta { color: var(--neutral-ink); }
 .cardrow.side-n .cr-text, .cardrow.side-s .cr-text { color: #4a463c; }
 .cardrow.side-n .cr-badge, .cardrow.side-s .cr-badge { background: var(--neutral-ink); color: #fff; }
 /* #35: the row's own light-on-dark default (inherited from body) reads fine
