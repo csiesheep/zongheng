@@ -896,6 +896,21 @@ function lastLogI(view) {
 // by a tap", see clearLastMoveMarks() below: a UI-only re-render, like a
 // language toggle or picking a card, must not resurrect a cleared mark).
 function updateLastMoveMarks(prevView, v) {
+  // #41 round 2 review (orchestrator): the tutorial dims the map and lights
+  // ONE scripted target per step (tutorial-ui.js's own spotlight) — none of
+  // its ten lessons explains the brackets, so they must not appear at all
+  // while it's running, not just "not fight" the spotlight visually. Same
+  // gate decorateAdvisor() already uses to stay out of the tutorial
+  // (render()'s own `solo: !game.room && !game.spectator && !Tut.active()`
+  // call below). Checked first and unconditionally — not folded into the
+  // "did a new action resolve" branches below — because marks left over
+  // from a solo game already on screen when the tutorial starts must be
+  // cleared too, not just suppressed for the tutorial's OWN actions.
+  if (Tut.active()) {
+    game.lastMoveMarks = {};
+    game.lastMoveFresh = false;
+    return;
+  }
   const prevI = lastLogI(prevView), curI = lastLogI(v);
   if (prevView && curI > prevI) {
     game.lastMoveMarks = computeLastMoveMarks(prevView, v);
