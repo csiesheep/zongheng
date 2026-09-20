@@ -214,8 +214,8 @@ export default {
     srcEn: "Shiji, House of Tian Jingzhong Wan; Chronological Table of the Six States",
   },
   hufu: {
-    zh: "前307年,趙武靈王欲行「胡服騎射」:改穿胡人短衣窄袖,訓練騎兵,捨棄傳統以車戰為主的舊制。他先自己改穿胡服,又遣王孫緤勸說反對的公子成,公子成稱病拒絕,武靈王便親自登門說服。公子成終於接受,次日改穿胡服上朝,趙國才正式下令推行。",
-    en: "In 307 BC, King Wuling of Zhao wanted to introduce nomad dress and mounted archery: adopting short, close-fitting dress and training cavalry, abandoning the old chariot-based army. He first wore the new dress himself, then sent an envoy to win over Lord Cheng, who refused, pleading illness; the king then visited Cheng's home in person and persuaded him. Cheng accepted and wore it to court the next day, and only then did Zhao formally decree the change.",
+    zh: "前307年,趙武靈王欲行「胡服騎射」:改穿胡人短衣窄袖,訓練騎兵,捨棄傳統以車戰為主的舊制。他先自己改穿胡服,又遣王緤勸說反對的公子成,公子成稱病拒絕,武靈王便親自登門說服。公子成終於接受,次日改穿胡服上朝,趙國才正式下令推行。",
+    en: "In 307 BC, King Wuling of Zhao wanted to introduce nomad dress and mounted archery: adopting short, close-fitting dress and training cavalry, abandoning the old chariot-based army. He first wore the new dress himself, then sent an envoy named Wang Xie to win over Lord Cheng, who refused, pleading illness; the king then visited Cheng's home in person and persuaded him. Cheng accepted and wore it to court the next day, and only then did Zhao formally decree the change.",
     srcZh: "《史記·趙世家》",
     srcEn: "Shiji, House of Zhao",
   },
@@ -226,8 +226,8 @@ export default {
     srcEn: "Shiji, Biography of Lord Mengchang",
   },
   hezong: {
-    zh: "前298年,齊相孟嘗君與韓、魏合兵攻秦,借兵糧於西周。三國聯軍歷時三年,前296年進逼至鹽氏而還,秦被迫與韓、魏議和,割河北予韓,割封陵予魏。",
-    en: "In 298 BC, Lord Mengchang, chancellor of Qi, joined Han and Wei in attacking Qin, borrowing troops and grain from the Western Zhou court. The three armies campaigned for three years and advanced to Yanshi in 296 BC before turning back; Qin was forced to make peace with Han and Wei, ceding the Hebei region to Han and Fengling to Wei.",
+    zh: "前298年,齊相孟嘗君與韓、魏合兵攻秦,借兵糧於西周。三國聯軍歷時三年,前296年進逼至鹽氏而還,秦被迫與韓、魏議和,割黃河以北之地及封陵求和。",
+    en: "In 298 BC, Lord Mengchang, chancellor of Qi, joined Han and Wei in attacking Qin, borrowing troops and grain from the Western Zhou court. The three armies campaigned for three years and advanced to Yanshi in 296 BC before turning back; Qin was forced to make peace with Han and Wei, ceding land north of the Yellow River and the town of Fengling.",
     srcZh: "《史記·秦本紀》、《史記·孟嘗君列傳》",
     srcEn: "Shiji, Basic Annals of Qin; Biography of Lord Mengchang",
   },
@@ -286,8 +286,8 @@ export default {
     srcEn: "Shiji, Treatise on the Xiongnu",
   },
   ximin: {
-    zh: "戰國到秦統一之初,朝廷常把人口遷往新占邊境以充實邊防。秦昭襄王二十一年(前286年),魏獻安邑,秦遷出魏人,招募百姓徙居河東並賜爵,又赦罪人遷去充實當地,二十六、二十七年又分遷穰與南陽。三十二年(前215年)蒙恬逐匈奴取河南地,次年朝廷才把罪人遷去充實新縣。",
-    en: "From the Warring States into the early Qin empire, courts forced populations onto newly won frontier land to secure the border. In the twenty-first year of King Zhaoxiang of Qin, 286 BC, Wei surrendered Anyi, Qin moved out its people, recruited settlers for Hedong with noble rank, and pardoned convicts to fill the area, then made similar moves to Rang and Nanyang. Meng Tian drove the Xiongnu north in 215 BC; only the next year did the court move convicts to fill the new counties.",
+    zh: "戰國到秦統一之初,朝廷常把人口遷往新占邊境以充實邊防。秦昭襄王二十一年(前286年),魏獻安邑,秦遷出魏人,招募百姓徙居河東並賜爵,又赦罪人遷去充實當地,二十六、二十七年又分遷穰與南陽。秦始皇三十二年(前215年)蒙恬逐匈奴,次年朝廷才把罪人遷去充實新縣。",
+    en: "From the Warring States into the early Qin empire, courts forced populations onto newly won frontier land to secure the border. In the twenty-first year of King Zhaoxiang, 286 BC, Wei surrendered Anyi, Qin moved out its people, recruited settlers for Hedong with rank, and pardoned convicts to fill the area, then made similar moves to Rang and Nanyang. In the First Emperor's thirty-second year, 215 BC, Meng Tian drove out the Xiongnu; only the next year were convicts moved to fill the new counties.",
     srcZh: "《史記·秦本紀》、《史記·秦始皇本紀》",
     srcEn: "Shiji, Basic Annals of Qin; Basic Annals of the First Emperor",
   },
