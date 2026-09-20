@@ -152,10 +152,18 @@ function table(head, rows, cls = []) {
 // keep in sync with the rendered rows). era === "" (the Nine Cauldrons: it
 // isn't any one era) only ever matches the "all" era filter.
 // #44: the same button also becomes the desktop grid's compact tile —
-// rules-desktop.css restyles it (44x58 art, badge, name, year, no text/
-// chevron) rather than a second list, so this one function still is the
-// only place a card row/tile is built.
-function cardRow(side, id, zhName, enLine, badge, text, era, filterSideKey, searchName) {
+// rules-desktop.css restyles it (44x58 art, a 12px badge, the name, the
+// year — nothing else: review item 3 was clear that the card's own rules
+// text and its second-language line belong in the panel, not the tile) —
+// rather than a second list, so this one function still is the only place a
+// card row/tile is built. `year`, on its own (review item 3 again: the
+// mobile row folds it into `text` — see cardList() below — but the tile
+// hides `text` outright, so the year needs its own element to still show up
+// there), sits inside .cr-head, right after the name, so the tile's one
+// visible text line is the two of them together — hidden at mobile by
+// rules.css's own default (.cr-year{display:none}), same as it always was
+// before this element existed at all.
+function cardRow(side, id, zhName, enLine, badge, text, era, filterSideKey, searchName, year = "") {
   const enName = enLine.split(" · ")[0];
   return `<button type="button" class="cardrow side-${side}" data-card="${esc(id)}" data-era="${esc(era)}" data-side="${esc(filterSideKey)}" data-name="${esc(searchName.toLowerCase())}">` +
     `<img src="art/cards/${id}.jpg" width="60" height="80" loading="lazy" alt="${esc(zhName.replace(/ \*$/, ""))} ${esc(enName)}">` +
@@ -163,6 +171,7 @@ function cardRow(side, id, zhName, enLine, badge, text, era, filterSideKey, sear
     `<span class="cr-head">` +
     `<span class="cr-badge">${badge}</span>` +
     `<span class="cr-zh" lang="zh-Hant">${zhName}</span>` +
+    `<span class="cr-year">${year}</span>` +
     `<span class="cr-en">${esc(enLine)}</span>` +
     `</span>` +
     `<span class="cr-text">${text}</span>` +
@@ -216,7 +225,7 @@ function cardList(S, N, cardEn, opts = {}) {
       : esc(lang === "en" ? cardEn[c.id] ?? c.text : c.text);
     const year = c.year ? ` <small>(${lang === "en" ? "" : "前"}${c.year}${lang === "en" ? " BC" : ""})</small>` : "";
     const enLine = `${c.en} · ${S.era[c.era]} · ${c.scoring ? S.scoringCard : S.side[c.side]}`;
-    return cardRow(side, c.id, zhName, enLine, c.scoring ? "–" : c.ops, text + year, c.era, filterSideKeyOf(c), `${c.zh} ${c.en}`);
+    return cardRow(side, c.id, zhName, enLine, c.scoring ? "–" : c.ops, text + year, c.era, filterSideKeyOf(c), `${c.zh} ${c.en}`, year);
   });
   // Name is bilingual regardless of the active language, same as every
   // other card row (names are the exception to the no-mixing rule); the

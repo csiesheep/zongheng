@@ -104,20 +104,40 @@
 
   /* The grid's tiles are the SAME .cardrow buttons the mobile column uses
      (one source of truth for filters/search/data-*, see rules.js) — this
-     only restyles them from a horizontal row into a compact 3-up tile. */
-  .d-grid-col .cardlist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-  .d-grid-col .cardrow { flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 10px; text-align: center; }
+     only restyles them from a horizontal row into a compact tile: the
+     picture, a badge, the name and the year — nothing else (review item 3:
+     the card's own rules text and its second-language line belong in the
+     panel beside the grid, not the tile; "nothing under 12px anywhere in
+     the tile"). Two columns from 1024 to 1199px, three from 1200px up —
+     the grid column's own width (.d-cards-grid's 1fr) is what actually
+     narrows in that band, this only decides how many tiles share it. */
+  .d-grid-col .cardlist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 1199px) {
+    .d-grid-col .cardlist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  /* The badge overlaps the picture's own top-left corner (the row's own
+     background/border still comes from .cardrow's side-q/side-c/side-n
+     classes, untouched) rather than sitting in its own row — the only way
+     to fit picture + badge + name + year into "about 72 to 80px" without
+     shrinking the 44x58 picture the spec fixes. */
+  .d-grid-col .cardrow { position: relative; flex-direction: column; align-items: center; gap: 1px; padding: 2px 4px 3px; text-align: center; min-height: 0; }
   .d-grid-col .cardrow img { width: 44px; height: 58px; }
-  .d-grid-col .cardrow .cr-body { align-items: center; width: 100%; }
-  .d-grid-col .cardrow .cr-head { justify-content: center; }
-  /* Both names stay (card names are always bilingual regardless of the
-     interface language, same rule as every other card row/the sheet's own
-     header) — only the description and the row's own chevron go, there's
-     no room for them in a compact tile. */
-  .d-grid-col .cardrow .cr-text, .d-grid-col .cardrow .cr-chevron { display: none; }
-  .d-grid-col .cardrow .cr-zh { font-size: 12px; text-align: center; }
-  .d-grid-col .cardrow .cr-en { font-size: 9.5px; text-align: center; opacity: 0.8; }
-  .d-grid-col .cardrow .cr-badge { width: 16px; height: 16px; font-size: 10px; line-height: 16px; }
+  .d-grid-col .cardrow .cr-body { align-items: center; width: 100%; gap: 0; }
+  .d-grid-col .cardrow .cr-head { justify-content: center; flex-wrap: nowrap; gap: 3px; }
+  /* The description and the row's own chevron never show; the second-
+     language line (review item 3) doesn't either — only the Chinese name
+     (the same headline name the mobile row itself leads with) and the year
+     share the tile's one text line, right under the picture. */
+  .d-grid-col .cardrow .cr-text, .d-grid-col .cardrow .cr-chevron, .d-grid-col .cardrow .cr-en { display: none; }
+  .d-grid-col .cardrow .cr-zh { font-size: 12px; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
+  .d-grid-col .cardrow .cr-year { display: inline; font-size: 12px; line-height: 1.25; color: var(--text-dim); }
+  .d-grid-col .cardrow .cr-year small { font-size: 12px; }
+  .d-grid-col .cardrow.side-q .cr-year { color: var(--text-soft); }
+  .d-grid-col .cardrow.side-c .cr-year { color: #fff3d2; }
+  .d-grid-col .cardrow .cr-badge {
+    position: absolute; top: 3px; left: 3px; z-index: 1;
+    width: 18px; height: 18px; font-size: 12px; line-height: 18px;
+  }
   /* #44 acceptance: "the chosen tile has a 2px gold border". */
   .d-grid-col .cardrow.chosen { border: 2px solid var(--gold); }
 
