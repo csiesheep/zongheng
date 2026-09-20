@@ -166,8 +166,8 @@ export default {
 
   // #36 batch 2: 縱橫期 (era: "alliance"), excluding mianchi above.
   zhangyi2: {
-    zh: "前313年,張儀入楚,游說楚懷王絕齊,許以商於六百里地。絕齊後,秦使只認六里,懷王怒而伐秦,敗於丹陽,喪師八萬,大將屈匄被虜,漢中入秦;楚再舉兵攻秦,復敗於藍田。前311年張儀二度入楚,懷王囚而欲殺之,他重賄靳尚、寵姬鄭袖,終於脫身返秦。",
-    en: "In 313 BC, Zhang Yi persuaded King Huai of Chu to break with Qi for six hundred li at Shangyu. Once Chu broke with Qi, Qin admitted to only six li. The furious king attacked Qin and was crushed at Danyang, losing eighty thousand men and his general Qu Gai, plus Hanzhong; a second attack was defeated at Lantian. In 311 BC Zhang Yi returned to Chu, was seized by King Huai, and got free only by bribing a minister and the king's consort.",
+    zh: "前313年,張儀入楚,游說楚懷王絕齊,許以商於六百里地。絕齊後,秦使只認六里,懷王怒而伐秦,敗於丹陽,喪師八萬,大將屈匄被虜,漢中入秦;楚再攻秦,復敗於藍田。前311年張儀二度入楚,懷王囚而欲殺之,他重賄靳尚,靳尚說動楚王寵姬鄭袖為他求情,才得以脫身返秦。",
+    en: "In 313 BC, Zhang Yi persuaded King Huai of Chu to break with Qi for six hundred li at Shangyu. Once Chu broke with Qi, Qin admitted to only six li. The furious king attacked Qin and was crushed at Danyang, losing eighty thousand men and his general Qu Gai, plus Hanzhong; a second attack was defeated at Lantian. In 311 BC he returned to Chu, was seized by King Huai, and bribed the minister Jin Shang, who talked the consort into pleading for him.",
     srcZh: "《史記·張儀列傳》、《史記·楚世家》",
     srcEn: "Shiji, Biography of Zhang Yi; House of Chu",
   },
@@ -214,8 +214,8 @@ export default {
     srcEn: "Shiji, House of Tian Jingzhong Wan; Chronological Table of the Six States",
   },
   hufu: {
-    zh: "前307年,趙武靈王欲行「胡服騎射」:改穿胡人短衣窄袖,訓練騎兵,捨棄傳統以車戰為主的舊制。他先自己改穿胡服,再派人勸說反對的公子成等宗室大臣。公子成次日改穿胡服上朝,趙國才正式下令推行。趙國軍力因此大增,其後北滅中山,拓地至雲中、雁門、代郡一帶。",
-    en: "In 307 BC, King Wuling of Zhao wanted to introduce nomad dress and mounted archery: adopting short, close-fitting dress and training cavalry, abandoning the old chariot-based army. He first wore the new dress himself, then sent word to win over Lord Cheng and other royal relatives who opposed it. Lord Cheng wore it to court the next day, and only then did Zhao decree the change. Zhao's military strength grew afterward, and it went on to destroy Zhongshan and expand to Yunzhong, Yanmen, and Dai.",
+    zh: "前307年,趙武靈王欲行「胡服騎射」:改穿胡人短衣窄袖,訓練騎兵,捨棄傳統以車戰為主的舊制。他先自己改穿胡服,又遣王孫緤勸說反對的公子成,公子成稱病拒絕,武靈王便親自登門說服。公子成終於接受,次日改穿胡服上朝,趙國才正式下令推行。",
+    en: "In 307 BC, King Wuling of Zhao wanted to introduce nomad dress and mounted archery: adopting short, close-fitting dress and training cavalry, abandoning the old chariot-based army. He first wore the new dress himself, then sent an envoy to win over Lord Cheng, who refused, pleading illness; the king then visited Cheng's home in person and persuaded him. Cheng accepted and wore it to court the next day, and only then did Zhao formally decree the change.",
     srcZh: "《史記·趙世家》",
     srcEn: "Shiji, House of Zhao",
   },
@@ -226,10 +226,10 @@ export default {
     srcEn: "Shiji, Biography of Lord Mengchang",
   },
   hezong: {
-    zh: "前298年,齊相孟嘗君與韓、魏合兵攻秦,借兵糧於西周。三國聯軍進逼函谷關;〈秦本紀〉記秦兵退至鹽氏,《戰國策·秦策》則另有聯軍攻入函谷關的說法。前296年,秦被迫求和,割河外、武遂予韓,割封陵予魏。",
-    en: "In 298 BC, Lord Mengchang, chancellor of Qi, joined Han and Wei in attacking Qin, borrowing troops and grain from the Western Zhou court. The three armies advanced on Hangu Pass; the Basic Annals of Qin says Qin's forces withdrew to Yanshi, while the Zhanguo Ce gives a version in which the coalition entered the pass itself. In 296 BC, Qin was forced to make peace, ceding the Hewai region and Wusui to Han and Fengling to Wei.",
-    srcZh: "《史記·秦本紀》、《戰國策·秦策》",
-    srcEn: "Shiji, Basic Annals of Qin; Zhanguo Ce, Stratagems of Qin",
+    zh: "前298年,齊相孟嘗君與韓、魏合兵攻秦,借兵糧於西周。三國聯軍歷時三年,前296年進逼至鹽氏而還,秦被迫與韓、魏議和,割河北予韓,割封陵予魏。",
+    en: "In 298 BC, Lord Mengchang, chancellor of Qi, joined Han and Wei in attacking Qin, borrowing troops and grain from the Western Zhou court. The three armies campaigned for three years and advanced to Yanshi in 296 BC before turning back; Qin was forced to make peace with Han and Wei, ceding the Hebei region to Han and Fengling to Wei.",
+    srcZh: "《史記·秦本紀》、《史記·孟嘗君列傳》",
+    srcEn: "Shiji, Basic Annals of Qin; Biography of Lord Mengchang",
   },
   tiandan: {
     zh: "前279年,燕將樂毅久攻即墨不下,燕惠王中齊將田單的反間計,懷疑樂毅擁兵自重,改以騎劫為將。田單趁夜以火牛陣突襲燕軍,燕軍大亂,騎劫戰死,齊軍乘勝追擊,收復失地七十餘城,迎齊襄王返臨淄復國。",
@@ -274,8 +274,8 @@ export default {
     srcEn: "Shiji, Records on the Money-Makers",
   },
   yili: {
-    zh: "戰國疫病流行時有記載。《史記·六國年表》秦國前369年條記「民大疫,日蝕」,兩件事同年並列。前243年(秦王政四年),《史記·秦始皇本紀》又記「蝗蟲從東方來,蔽天。天下疫。」,顯示蝗災與疫病也常相伴而生。",
-    en: "Warring States chronicles do record epidemics. The Shiji's chronological tables list, for Qin in 369 BC, the entry \"great plague among the people, an eclipse,\" the two recorded together in the same year. In 243 BC, the fourth year of the future First Emperor, the Shiji's Basic Annals record a locust swarm from the east that darkened the sky, adding \"there was plague across the realm.\" Locust plagues and disease outbreaks were often noted together.",
+    zh: "戰國疫病流行時有記載。《史記·六國年表》秦國前369年條記「民大疫,日蝕」,兩件事同年並列。前243年(秦王政四年),《史記·秦始皇本紀》又記「蝗蟲從東方來,蔽天。天下疫。」",
+    en: "Warring States chronicles do record epidemics. The Shiji's chronological tables list, for Qin in 369 BC, the entry \"great plague among the people, an eclipse,\" the two recorded together in the same year. In 243 BC, the fourth year of the future First Emperor, the Shiji's Basic Annals record a locust swarm from the east that darkened the sky, adding \"there was plague across the realm.\"",
     srcZh: "《史記·六國年表》、《史記·秦始皇本紀》",
     srcEn: "Shiji, Chronological Table of the Six States; Basic Annals of the First Emperor",
   },
@@ -286,9 +286,9 @@ export default {
     srcEn: "Shiji, Treatise on the Xiongnu",
   },
   ximin: {
-    zh: "戰國到秦統一之初,朝廷常把內地人口遷往新占邊境,以充實邊防。秦昭襄王二十一年(前286年),魏獻安邑,秦遷出魏人,招募百姓徙居河東並賜爵,又赦罪人遷去充實當地;二十六年遷之穰、二十七年遷之南陽,做法相同。統一後,前215年蒙恬北逐匈奴,也曾遷罪人充實新縣。",
-    en: "From the Warring States into the early Qin empire, courts forced inland populations onto newly won frontier land to secure the border. In the twenty-first year of King Zhaoxiang of Qin, 286 BC, after Wei surrendered Anyi, Qin moved out its people, recruited settlers for Hedong with noble rank, and pardoned convicts to fill the area; similar moves followed in the twenty-sixth year to Rang and the twenty-seventh to Nanyang. After unification, Meng Tian's 215 BC campaign against the Xiongnu also used pardoned convicts.",
-    srcZh: "《史記·秦本紀》",
-    srcEn: "Shiji, Basic Annals of Qin",
+    zh: "戰國到秦統一之初,朝廷常把人口遷往新占邊境以充實邊防。秦昭襄王二十一年(前286年),魏獻安邑,秦遷出魏人,招募百姓徙居河東並賜爵,又赦罪人遷去充實當地,二十六、二十七年又分遷穰與南陽。三十二年(前215年)蒙恬逐匈奴取河南地,次年朝廷才把罪人遷去充實新縣。",
+    en: "From the Warring States into the early Qin empire, courts forced populations onto newly won frontier land to secure the border. In the twenty-first year of King Zhaoxiang of Qin, 286 BC, Wei surrendered Anyi, Qin moved out its people, recruited settlers for Hedong with noble rank, and pardoned convicts to fill the area, then made similar moves to Rang and Nanyang. Meng Tian drove the Xiongnu north in 215 BC; only the next year did the court move convicts to fill the new counties.",
+    srcZh: "《史記·秦本紀》、《史記·秦始皇本紀》",
+    srcEn: "Shiji, Basic Annals of Qin; Basic Annals of the First Emperor",
   },
 };
