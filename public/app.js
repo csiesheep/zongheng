@@ -735,7 +735,10 @@ function renderTopBar(v) {
   const leadColor = m > 0 ? "var(--qin-text)" : m < 0 ? "var(--chu-gold)" : "var(--text)";
   const fillLeft = m > 0 ? pos : 50;
   const fillWidth = m > 0 ? 50 - pos : m < 0 ? pos - 50 : 0;
-  const fillColor = m > 0 ? "var(--qin-text)" : "var(--chu-btn)";
+  // orchestrator's ruling (#48): the colour lives in CSS (.lead-qin/.lead-chu
+  // pick --qin-text / --chu-fill), not as a literal here -- app.js only says
+  // which side is leading.
+  const fillClass = m > 0 ? " lead-qin" : m < 0 ? " lead-chu" : "";
   const spoken = `${t("tracks.mandate")} ${mandateText(m)}`;
   $("topbar").innerHTML =
     `<div class="tb-turn"><b>${t("tracks.turn")} ${v.turn}</b>${v.era ? " · " + t("eras." + v.era) : ""}${phase} · ` +
@@ -743,7 +746,7 @@ function renderTopBar(v) {
     `<div class="mandate" role="img" aria-label="${esc(spoken)}">` +
       `<span class="m-end m-end-qin" aria-hidden="true">${overGlyphChar(E.QIN)}</span>` +
       `<span class="m-track">` +
-        `<span class="m-fill" style="left:${fillLeft}%;width:${fillWidth}%;background:${fillColor}"></span>` +
+        `<span class="m-fill${fillClass}" style="left:${fillLeft}%;width:${fillWidth}%"></span>` +
         `<span class="m-mid"></span>` +
         `<span class="m-marker" style="left:${pos}%"></span>` +
       `</span>` +
