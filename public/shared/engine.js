@@ -708,14 +708,28 @@ function play(st, action) {
   }
   const h = st.hands[side];
   if (!h.includes(c)) fail("card not in hand");
-  const forced = forcedCard(st, side);
-  if (forced && forced !== c) fail("you must play the named card");
   const card = CARD[c];
   const bog = st.effects.find((e) => e.kind === "bog" && e.who === side);
   const bogCards = bog ? h.filter((x) => CARD[x].ops >= 2) : [];
+  // 頓兵堅城 (dunbing, 69) and 細作 (xizuo, 67) both claim this action round.
+  // orchestrator's ruling (#57), flagged to the owner: the bog comes first and
+  // 細作 carries. While a discard is owed AND possible, the round IS the
+  // discard -- any card of 2+ ops, named or not, the player's choice -- so the
+  // named-card check does not apply to it. With no card the bog can take, the
+  // card's own text says the round is a normal one and the bog waits: then the
+  // named card must be played, as before. Until this the two refusals crossed
+  // and a named card under 2 ops left the side with nothing at all to do
+  // (seed 1332 on fallbacks, turn 7, Chu forced to play 記分 score_east).
+  const bogRound = bogCards.length > 0 && use === "bog";
+  const forced = forcedCard(st, side);
+  if (forced && forced !== c && !bogRound) fail("you must play the named card");
   if (bogCards.length && use !== "bog") fail("頓兵堅城: discard a card of 2+ ops first");
   h.splice(h.indexOf(c), 1);
-  st.forced[side] = null;
+  // The obligation is not used up by a bog discard of another card (#57): it
+  // waits for the side's next action round. Discarding the named card itself
+  // ends it, like playing it -- and `forcedCard` would say so anyway, since
+  // the card has left the hand.
+  if (!bogRound || c === forced) st.forced[side] = null;
   const ops = opsOf(st, side, c);
   if (use === "bog") {
     if (!bogCards.includes(c)) fail("bog: that card cannot be discarded");
