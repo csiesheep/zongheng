@@ -587,7 +587,15 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .prompt { flex: none; display: flex; align-items: flex-start; gap: 8px; padding: 3px 8px; font-size: 13px; line-height: 1.35; }
 .prompt-text { flex: 1; min-width: 0; }
 .prompt .err { color: var(--bad); }
-.prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 3.6em; overflow: hidden; }
+/* #39 round 2 review: which lines actually stay in the DOM is decided in
+   app.js's renderLog() now, against layoutTable()'s own real measurement
+   of the map/hand's real remaining room (round 2's own FLOOR_SCALE cut
+   is what gives that room to give) — the newest line always stays,
+   however tall, and an older one is dropped outright (never partially)
+   the moment the real layout doesn't fit. This max-height is only a
+   paint-safety net (generous, so it's never the thing actually deciding
+   what shows) in case that loop is ever bypassed. */
+.prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 160px; overflow: hidden; }
 /* #34 round 2 (orchestrator's ruling): a line naming exactly one card is
    the WHOLE row, one <button> — see logLineNodes() in app.js. It resets
    every default button style back to a plain row (a <div> would have had

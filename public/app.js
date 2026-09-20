@@ -1552,38 +1552,33 @@ function renderLog(v) {
     // barely ever showed. Every card name visible in the strip is a pill
     // now, on whichever line it's on — newest first (unchanged from part
     // 4's own ordering; not itself part of this correction, just kept).
-    $("promptText").appendChild(newsDiv); // attach BEFORE measuring below
-    const budget = parseFloat(getComputedStyle(newsDiv).maxHeight) || 0;
-    for (const l of newsEntries.slice().reverse()) {
+    $("promptText").appendChild(newsDiv);
+    newsEntries.slice().reverse().forEach((l) => {
       const node = logLineNodes(l, clickable, true);
-      if (!node) continue;
-      newsDiv.appendChild(node);
-      // A pill (30px) is taller than .news's own max-height was ever sized
-      // for (plain 11px text) — CSS overflow:hidden alone would leave a
-      // line that doesn't fully fit PARTIALLY painted, its top sliver
-      // visible while its own centre (where the strict tap check lands)
-      // is already past the clip and hits whatever's underneath instead
-      // (measured: a two-real-lines-of-pills state, the second pill's own
-      // rect read top:589/bottom:619 against a box that ends at 596 —
-      // visible on paper, untappable in practice). Measuring here, as
-      // each line actually goes in, drops a line outright the moment it
-      // stops fitting rather than leaving it half-shown; promptText can be
-      // transiently `hidden` mid-render (a card overlay, a tutorial lesson)
-      // when this runs, in which case every rect reads zero and nothing
-      // gets trimmed — harmless, since none of it paints there either way.
-      // Applies to the newest line too, not just a second-or-later one: a
-      // long English headline's two pills can wrap to two rows on their
-      // own, taller than the box on the first line alone — growing the
-      // box to fit it costs the same map/hand headroom this box never
-      // had to spend before (measured: removing the cap here turned a
-      // clean, non-scrolling 375x667 into a 42px table-overflow). An
-      // empty strip for one render is a smaller wrong than a pill that's
-      // visibly there but whose own centre already fails the tap check.
-      const top = newsDiv.getBoundingClientRect().top;
-      if (budget && node.getBoundingClientRect().bottom - top > budget) {
-        newsDiv.removeChild(node);
-        break;
-      }
+      if (node) newsDiv.appendChild(node);
+    });
+    // #39 round 2 review (owner's own ruling): "the floor is yours to
+    // move" — a fixed CSS max-height + a guessed pixel budget (this
+    // block's own previous shape) can only ever ask "does this line fit
+    // the box I already decided on", never "is there real room for it".
+    // layoutTable() already answers exactly that, every render, against
+    // the map's real floor (round 2 also lowered — see FLOOR_SCALE) — so
+    // ask it directly: try with everything in, and if table-overflow
+    // comes back, drop the OLDEST line (.news's last child, newest-first
+    // order) and ask again. The newest entry (index 0, never removed
+    // here) always stays, however tall — a long English headline's two
+    // pills can wrap to two rows on their own — so the strip is never
+    // empty while the log has a line; if even that alone overflows,
+    // layoutTable()'s own existing last-resort (give the map/hand their
+    // true minimum and let the page scroll) is what's left, same as any
+    // other genuinely unfittable state. .news's own CSS max-height
+    // (style.css) still clips as a paint-only safety net in case this
+    // loop is ever bypassed; it never has the final say over what stays
+    // in the DOM any more.
+    while (newsDiv.children.length > 1) {
+      layoutTable();
+      if (!document.body.classList.contains("table-overflow")) break;
+      newsDiv.removeChild(newsDiv.lastElementChild);
     }
   }
   // Desktop-only (see desktop.css, #7): the sidebar's bottom strip condenses
