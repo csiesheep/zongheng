@@ -284,10 +284,13 @@ body:not(.table-lock) #logToggle { display: none; }
    black ground of .controls below it. A second layer, painted on TOP of
    the existing horizontal shade (first-listed background wins), fades to
    the page's own ground colour (var(--bg), same token .controls' own
-   background resolves from) starting at the panel's vertical middle and
-   reaching fully opaque ground by the very last pixel row — so that row
-   is the same colour as the ground under it, not an approximation of it. */
-.side-tap.chu .side-shade { background: linear-gradient(to top, var(--bg) 0%, rgba(6, 5, 4, 0) 50%), linear-gradient(to left, rgba(60, 6, 4, 0.96), rgba(60, 6, 4, 0.7) 40%, rgba(60, 6, 4, 0) 70%); }
+   background resolves from) reaching fully opaque ground by the very last
+   pixel row — so that row is the same colour as the ground under it, not
+   an approximation of it.
+   #38 (owner, design A): with the cream card gone, the red can reach
+   further down before it meets the block below, so the fade now starts
+   later and covers about the panel's last third (was: starting at 50%). */
+.side-tap.chu .side-shade { background: linear-gradient(to top, var(--bg) 0%, var(--bg) 3%, rgba(12, 11, 10, 0.85) 12%, rgba(12, 11, 10, 0.4) 24%, rgba(12, 11, 10, 0) 36%), linear-gradient(to left, rgba(60, 6, 4, 0.96), rgba(60, 6, 4, 0.7) 40%, rgba(60, 6, 4, 0) 70%); }
 .side-content { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; }
 /* Qin's block keeps the same padding-top as before (so the 50/50 flex
    split with Chu is untouched) — the clearance for the bar now overlaid
@@ -316,43 +319,71 @@ body:not(.table-lock) #logToggle { display: none; }
   box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 4px var(--gold-line);
   font-family: var(--serif); font-weight: 900; font-size: clamp(18px, 5vh, 26px); line-height: calc(clamp(40px, 10vh, 52px) - 3px);
   letter-spacing: clamp(3px, 1.2vh, 6px); padding-left: 5px; text-align: center; color: var(--gold); }
-.controls { flex: none; padding: 6px 14px 8px; display: flex; flex-direction: column; gap: 6px; }
-.controls .row { display: flex; gap: 8px; align-items: center; }
-.controls .row.extra { gap: 8px; }
-.controls .row.extra a { flex: 1; }
-.controls input, .controls button, .controls .ghost { min-height: 46px; box-sizing: border-box; border-radius: 8px; font: 400 16px var(--serif); }
-.controls input { flex: 1; min-width: 0; padding: 0 12px; border: 1px solid var(--gold-line); background: rgba(255, 255, 255, 0.06); color: var(--text); }
-.controls #joinCode { flex: none; width: 92px; padding: 0 6px; font: 700 15px var(--sans); letter-spacing: 4px; text-align: center; }
-.controls .ghost { flex: none; padding: 0 12px; border: 1px solid var(--gold-line); color: var(--text); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font: 600 13px var(--serif); background: none; }
-.controls .ghost.small { min-height: 44px; font-size: 12px; }
-#btnCreate { flex: 1; border: none; background: var(--text); color: var(--bg); font-weight: 600; }
-#btnJoin { flex: none; width: 66px; border: none; background: var(--chu-btn); color: #fff; font-weight: 600; padding: 0; }
+/* #38 (owner: design A 銅線 Bronze line): the cream mp-card is gone. Two
+   rows of flat bronze-outline buttons sit directly on the black ground,
+   116px whether or not there's a saved game to resume — today's card was
+   170/120px. Block padding + two 44px rows + one 8px row-gap = 116px
+   exactly, so this fixed math is load-bearing: don't add a border or
+   padding here without re-deriving it. */
+.controls { flex: none; height: 116px; box-sizing: border-box; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.controls .row { display: flex; gap: 8px; }
+.controls input, .controls button, .controls .ctl-btn { height: 44px; box-sizing: border-box; }
+.controls input { flex: 1; min-width: 0; padding: 0 12px; border: 1px solid var(--gold-line); border-radius: 10px; background: rgba(255, 255, 255, 0.05); color: var(--text); font: 700 16px var(--sans); letter-spacing: 4px; text-align: center; }
+/* 16px, not the old 15px: an iOS focused input under 16px zooms the whole
+   page, and this page can never scroll to recover from that (issue #38). */
+.controls #joinCode { flex: none; width: 92px; padding: 0 6px; }
 
-/* The multiplayer card: a light parchment island (same double-ring inset
-   border as the 縱橫 badge) sitting inside the otherwise dark controls
-   strip. One row today ([Multiplayer][code][Join]); more rows (e.g. a
-   tutorial button) stack above it later, so this stays column-flex. */
-.mp-card { background: var(--neutral-bg); color: var(--neutral-ink); border: 1px solid #efe6d2; border-radius: 12px;
-  box-shadow: inset 0 0 0 3px var(--neutral-bg), inset 0 0 0 4px #b7ab8d; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
-.mp-card .row input, .mp-card #joinCode { border-color: #1a1a1a; background: #f7f2e4; color: #1a1a1a; }
-.mp-card .ghost { border-color: #1a1a1a; color: #1a1a1a; }
-.mp-card #btnCreate { background: #1a1a1a; color: #fff; }
-.mp-card #btnJoin { background: var(--chu-btn); color: #fff; }
-
-/* The tutorial entry (#15): inside the white mp-card, ABOVE the
-   [Multiplayer][code][Join] row (the mp-card comment above already expected
-   this), full width, 44px, gold #f4d98a with a dark border/text, per the
-   owner's Tut_LandingA mockup — not the plain ghost button outside the card
-   that the first build shipped (issue #15 review, item 5). A small unread
-   dot sits on top until zh.tutorialSeen is set (landing.js) — never tied to
-   zh.solo. */
-.tut-btn {
-  position: relative; height: 44px; box-sizing: border-box; border-radius: 8px;
-  border: 1.5px solid #1a1a1a; background: #f4d98a; color: #1a1a1a;
+/* The flat outline button design A uses everywhere in .controls except the
+   two filled "continue" actions below. Icon (var(--gold), 16px) then label,
+   8px gap; border-box so the 44px height holds regardless of padding. */
+.ctl-btn {
+  flex: 1 1 0; min-width: 0; height: 44px; box-sizing: border-box;
+  border: 1px solid var(--gold-line); border-radius: 10px;
+  background: rgba(216, 181, 106, 0.06); color: var(--qin-text);
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  font: 600 14px var(--serif); text-decoration: none;
+  font: 600 14px var(--serif); letter-spacing: 1px; text-decoration: none;
+  padding: 0 8px; overflow: hidden;
 }
-.tut-btn-dot { position: absolute; top: -4px; right: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px #0c0b0a; }
+.ctl-btn .ctl-icon { flex: none; color: var(--gold); }
+.ctl-btn .ctl-label { overflow: hidden; text-overflow: clip; white-space: nowrap; }
+/* Resume / Back-to-room: the one filled thing in the block. */
+.ctl-btn.ctl-fill { border-color: var(--gold); background: var(--gold); color: var(--bg); }
+.ctl-btn.ctl-fill .ctl-icon { color: var(--bg); }
+/* Join: outline, but its border and text pick up the gold accent instead
+   of the neutral qin-text every other outline button uses. */
+#btnJoin.ctl-btn { flex: none; width: 66px; padding: 0; border-color: var(--gold); color: var(--gold); }
+#btnCreate.ctl-btn { flex: 1; }
+
+/* Tutorial shares row 1 with Resume/Back-to-room; landing.js sets
+   data-fit on the row (mirrored onto #btnTutorial) from how many of those
+   are showing — issue #38 acceptance requires every label to still fit,
+   uncut, at 375px in EITHER language ("Resume your game" / "Tutorial · 5
+   minutes" are the long strings), so once row 1 is sharing space at all,
+   every control in it drops to 13px/no extra letter-spacing/tighter
+   padding — a step down from the 14px/1px the spec gives the block's
+   outline buttons in general, kept only where a control has the full row
+   to itself. solo = Tutorial alone, full row. paired = one companion,
+   half the row. squeeze = both companions shown: Tutorial becomes a 44px
+   icon-only square; its aria-label (set in landing.js) keeps the label
+   for a screen reader. */
+#ctaRow[data-fit="paired"] .ctl-btn, #ctaRow[data-fit="squeeze"] .ctl-btn {
+  font-size: 12.5px; letter-spacing: 0; gap: 4px; padding: 0 4px;
+}
+#ctaRow[data-fit="paired"] .ctl-icon, #ctaRow[data-fit="squeeze"] .ctl-icon { width: 14px; height: 14px; }
+/* squeeze has three controls fighting for the row (Resume, Back-to-room,
+   and Tutorial's own 44px square), so Resume/Room get one more notch than
+   paired's 12.5px — "Back to room ABCD" is as long as "Resume your game"
+   and both must still fit at 375px. */
+#ctaRow[data-fit="squeeze"] .ctl-btn.ctl-fill { font-size: 11.5px; gap: 3px; padding: 0 3px; }
+#ctaRow[data-fit="squeeze"] .ctl-btn.ctl-fill .ctl-icon { width: 13px; height: 13px; }
+#btnTutorial[data-fit="squeeze"] { flex: none; width: 44px; padding: 0; }
+#btnTutorial[data-fit="squeeze"] .ctl-label { display: none; }
+/* Normally an inline dot right after the label (not the card corner badge
+   the previous design used); squeezed down to icon-only, there's no label
+   to sit after, so the dot moves to the icon's own corner instead. */
+.tut-btn-dot { width: 7px; height: 7px; border-radius: 50%; background: #e0392b; flex: none; }
+#btnTutorial[data-fit="squeeze"] { position: relative; }
+#btnTutorial[data-fit="squeeze"] .tut-btn-dot { position: absolute; top: 4px; right: 4px; }
 
 /* table: a fixed one-screen layout, header -> mandate -> map -> stat line
    -> prompt -> hand (C2_Game order). body.table-lock (see app.js's show())

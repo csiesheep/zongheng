@@ -29,9 +29,17 @@ function setLang(l) {
   // offer the way back. Both can appear together; that row must still fit.
   const room = sess.get("zh.lastRoom");
   $("btnRoom").hidden = !room;
-  if (room) { $("btnRoom").href = `play.html?room=${room}`; $("btnRoom").textContent = t("landing.backToRoom", { code: room }); }
+  if (room) { $("btnRoom").href = `play.html?room=${room}`; $("btnRoom").querySelector(".ctl-label").textContent = t("landing.backToRoom", { code: room }); }
   $("btnResume").hidden = !savedSolo();
-  $("extraRow").hidden = $("btnRoom").hidden && $("btnResume").hidden;
+  // Row 1 always shows Tutorial; when Resume and/or Back-to-room join it,
+  // Tutorial's own label shrinks (one companion) or gives way to an
+  // icon-only square (both), so the row always fits at 44px (issue #38).
+  // The aria-label keeps the full text for a screen reader either way.
+  const companions = (!$("btnResume").hidden ? 1 : 0) + (!$("btnRoom").hidden ? 1 : 0);
+  const fit = companions === 2 ? "squeeze" : companions === 1 ? "paired" : "solo";
+  $("ctaRow").dataset.fit = fit;
+  $("btnTutorial").dataset.fit = fit;
+  $("btnTutorial").setAttribute("aria-label", t("tutorial.button"));
   // The gold dot (#15) marks the tutorial unopened; it never reads or writes
   // zh.solo, only its own key, and disappears for good once the tutorial
   // page has been opened.
