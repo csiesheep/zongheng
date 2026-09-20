@@ -873,6 +873,16 @@ function lastMoveTagText(mark) {
   const d = mark.delta;
   return d ? (d > 0 ? `+${d}` : `−${-d}`) : null;
 }
+// The tag's own background colour (round 1 review, item 2): the side whose
+// count actually changed, the same black/red the disc's own two numbers
+// already use (style.css's `.disc i.q`/`.disc i.c`) — so a bare "+2" also
+// says WHOSE +2 it is, without a second glance at the disc. A destroyed/
+// restored mark has no side (it's the state's capital, not a count) and
+// keeps the frame's own bronze.
+function lastMoveTagClass(mark) {
+  if (!mark || mark.destroyed != null) return "";
+  return mark.side === E.QIN ? " side-q" : " side-c";
+}
 // #41: the log's own running index (engine.js's log(), `st.logSeq`) of the
 // latest entry in `view`, or 0 for an empty/missing log — used only to tell
 // whether a new action resolved between two renders, never read as text.
@@ -913,6 +923,7 @@ function clearLastMoveMarks() {
     n.classList.remove("lastmove", "lastmove-pulse");
     const tag = n.querySelector(".lastmove-tag");
     if (tag) tag.remove();
+    n.querySelectorAll(".lastmove-frame, .lastmove-frame2").forEach((f) => f.remove());
   });
 }
 // Touch targets are a physical requirement, not a design one: they must
@@ -972,11 +983,19 @@ function renderMap(v) {
       (mv ? " lastmove" : "") + (mv && game.lastMoveFresh ? " lastmove-pulse" : "") +
       (NODE_LASTMOVE_LEFT.has(sp.id) ? " lastmove-l" : "");
     vis.style.cssText = `left:${x}px;top:${y}px`;
+    // #41 round 1 review (item 1): the mark reads as two viewfinder-style
+    // corner brackets (.lastmove-frame/-frame2, each contributing two
+    // opposite corners via its own ::before/::after — see style.css)
+    // instead of an outline on the disc itself, so it can't be mistaken
+    // for a control ring or the advisor's suggestion ring at a glance.
+    // Both are inert decoration (pointer-events:none, sized/positioned in
+    // style.css to track the disc exactly) — present only when `mv` is set.
     vis.innerHTML = `<span class="disc${cap ? " sq" : ""}">${empty ? "" : `<i class="q">${q || ""}</i><i class="c">${c || ""}</i>`}</span>` +
+      (mv ? `<span class="lastmove-frame" aria-hidden="true"></span><span class="lastmove-frame2" aria-hidden="true"></span>` : "") +
       stabilityTagHTML(sp) +
       (picked ? `<span class="badge">+${picked}</span>` : "") +
       (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
-      (mvTag ? `<span class="lastmove-tag" aria-hidden="true">${esc(mvTag)}</span>` : "") +
+      (mvTag ? `<span class="lastmove-tag${lastMoveTagClass(mv)}" aria-hidden="true">${esc(mvTag)}</span>` : "") +
       nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc);
     el.appendChild(vis);
     const hb = document.createElement("button");

@@ -30,8 +30,13 @@ export function computeLastMoveMarks(prevView, view) {
       // case where both move at once (a campaign that removes the
       // defender and then places the attacker's own surplus at the same
       // target in a single call, engine.js's campaign()) still has only
-      // one tag to show, so the bigger of the two swings wins.
-      marks[sp.id] = { delta: Math.abs(dq) >= Math.abs(dc) ? dq : dc };
+      // one tag to show, so the bigger of the two swings wins. `side`
+      // names WHOSE count that swing belongs to (E.QIN/E.CHU) — round 1
+      // review (orchestrator, item 2): the tag's own colour now follows
+      // this, the same black/red the disc's own two numbers already use,
+      // so "+2" also says whose +2 it is.
+      const useQin = Math.abs(dq) >= Math.abs(dc);
+      marks[sp.id] = { side: useQin ? E.QIN : E.CHU, delta: useQin ? dq : dc };
     }
   }
   // A state's destroyed flag flipping (engine.js's checkMarkers(), st.mie)
