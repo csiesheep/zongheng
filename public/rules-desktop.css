@@ -210,11 +210,30 @@
      is `position: fixed`) into an ordinary box that sits still inside its
      own sticky column. No Close button here (there is nothing to close: the
      panel just always shows whatever is chosen, or the hint). */
+  /* #45 (owner, measured on the live site with #card-ximu): .sheet-img's own
+     frame — a 4px double ring drawn with box-shadow, extending PAST the
+     picture's own box rather than inside it — was flush against
+     #dCardPanelInner's left edge (no padding anywhere in this column), and
+     #dCardPanel's own `overflow-y: auto` (the .d-sticky default) clips X
+     too, not just Y (a CSS quirk: overflow-y set to anything but visible
+     while overflow-x stays at its own initial value computes THAT axis to
+     auto as well) — so the ring's left side had nowhere to bleed into and
+     got cut. The design's own board-style frame (16px padding, a 1px
+     border, 12px radius, on the SCROLLING box itself) gives every side of
+     that ring room inside the padding edge, which is where a scroll
+     container's clip sits — never possible to clip a child's overflow that
+     stays within the parent's own padding. */
+  .d-card-panel {
+    padding: 16px;
+    border: 1px solid var(--gold-line);
+    border-radius: 12px;
+    box-sizing: border-box;
+  }
   .d-card-panel .sheet.overlay {
     position: static; top: auto; left: auto; right: auto; bottom: auto;
     height: auto; max-height: none; z-index: auto; margin: 0; padding: 0;
   }
   .d-card-panel .peek-footer { display: none; }
   .d-card-panel .sheet-mid { max-height: none; overflow: visible; }
-  .d-card-hint { margin: 20px 4px; color: var(--text-dim); font-size: 13px; }
+  .d-card-hint { margin: 4px; color: var(--text-dim); font-size: 13px; }
 }
