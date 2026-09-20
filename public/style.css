@@ -546,6 +546,53 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    bigger lift only for the handful of nodes this close to an edge — none
    of the others (checked: Wuyue at y=378 already clears at -2px). */
 .node.stab-hi .stab { bottom: 2px; }
+/* #41: the last-move mark — every space computeLastMoveMarks() (app.js)
+   flagged as changed by the LAST resolved action gets a frame around its
+   disc plus a small tag near the upper-right corner (the one corner none
+   of .cost/.badge/.stab/.adv-badge use by default — see NODE_LASTMOVE_LEFT
+   in map-draw.js for the 4 nodes whose own city name reaches into it
+   instead). Both are drawn purely with `outline`/absolutely-positioned
+   children, so they add zero layout (the node's own box, and its disc's
+   box, are exactly the same size with or without this class — #41's own
+   "no layout change" requirement, same rule as the advisor's ring below).
+   Colour: a deep, matte bronze (#8a5a12) — the advisor's own suggestion
+   ring (advisor.css, #e9b92e) is a bright, glowing lemon-gold circle that
+   floats OUTSIDE the disc at a bigger radius (38-42px) with a soft halo;
+   this frame sits tight against the disc's own edge (30/34px) with no
+   glow, in a visibly darker, more orange-brown gold — different hue,
+   different brightness, different radius and different texture, so a disc
+   that is both an advisor target and a last-move space still reads as two
+   separate rings, not one thicker one. */
+.node.lastmove .disc { outline: 3px solid #8a5a12; outline-offset: 1px; }
+.node .lastmove-tag {
+  position: absolute; top: -4px; right: -6px; min-width: 15px; height: 15px; box-sizing: border-box;
+  border-radius: 8px; background: #8a5a12; color: #fff; font: 700 9px/15px var(--sans); text-align: center;
+  padding: 0 3px; z-index: 6; pointer-events: none; white-space: nowrap;
+}
+.node.lastmove-l .lastmove-tag { right: auto; left: -6px; }
+/* Ying and Wuyue (map-draw.js's NODE_LASTMOVE_LEFT) anchor their own city
+   name ABOVE the disc, centred (.anchor-top .nm, style.css above) rather
+   than to one side — the default top-left corner still clipped the name's
+   own bottom-left corner by 1-2px there (measured with all 26 nodes
+   marked at once at 390x669, zh-Hant; not visible eyeballing one node at a
+   time). Lifted and nudged further left, clear of both. */
+.node.anchor-top.lastmove-l .lastmove-tag { top: 0; left: -10px; }
+/* The pulse: one 0.6s ring that expands out from the frame and fades, on
+   top of the (already-visible, non-animated) outline above — so a browser
+   that never runs this animation at all (the hidden test pane throttles
+   timers and never runs requestAnimationFrame) still shows the correct
+   RESTING mark, because that resting mark was never waiting on the
+   animation to begin with. app.js adds this class for exactly one
+   renderMap() call, right after a new action resolves (game.lastMoveFresh)
+   — never on a later, unrelated re-render that redraws the same mark. */
+.node.lastmove-pulse .disc { animation: lastmove-pulse 0.6s ease-out; }
+@keyframes lastmove-pulse {
+  from { box-shadow: 0 0 0 0 rgba(138, 90, 18, 0.65); }
+  to { box-shadow: 0 0 0 9px rgba(138, 90, 18, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .node.lastmove-pulse .disc { animation: none; }
+}
 /* #7/#32: .hit-layer used to sit flush with .map's own box (inset:0) and
    position each button by percentage of THAT box, which drifted away from
    the visual disc (inside .map-inner, a fixed design canvas fitMap()

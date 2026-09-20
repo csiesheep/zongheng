@@ -52,6 +52,10 @@ export default {
   },
   eras: { reform: "變法期", alliance: "縱橫期", conquest: "兼併期" },
   tracks: { mandate: "天命", weariness: "疲敝", reform: "變法", seals: "相印", mie: "滅", jiuding: "九鼎", faceDown: "蓋著", turn: "回合", round: "行動", of: "／" },
+  // #41: 據點上「上一手」標記用的短籤,只在一個國家的滅/復國狀態剛好翻轉時出現
+  // ——不是 log 裡的完整句子(那句還是用上面 log.mie/log.restore),是貼在圓盤
+  // 旁邊、只有幾個字寬的小籤。
+  lastMove: { destroyed: "滅", restored: "復國" },
   weariness: { 5: "承平", 4: "兵連", 3: "禍結", 2: "民困", 1: "土崩" },
   prompt: {
     setup: "放置 {n} 點起始影響力(剩 {left})。點地圖。", setupBonus: "在已有影響力處放 {n} 點補償(剩 {left})。",

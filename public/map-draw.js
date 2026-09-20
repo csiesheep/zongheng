@@ -134,6 +134,25 @@ export const NODE_STAB_RIGHT = new Set(["shangdang"]);
 //   for nodes this close to an edge; Wuyue (y=378) was checked and already
 //   clears at the default -2px, so it's not in this set.
 export const NODE_STAB_HI = new Set(["ying"]);
+// #41: the last-move tag (a small "+2"/"−1"/destroyed-word badge) defaults
+// to the disc's upper-right corner, the one corner none of the other three
+// per-node decorations above ever use — free on all 26 nodes except where
+// the CITY NAME itself reaches into it: an anchor-top name (centred right
+// above the disc — ying, wuyue) or an anchor-right name (starts flush
+// against the disc's own right edge, vertically centred — every node whose
+// own NODE_ANCHOR is "right": bashu, shangdang, liaodong, hangu) both run
+// close enough to the upper-right corner at the map's floor scale (#39) to
+// collide with a tag there once real text is measured, not eyeballed —
+// checked by rendering all 26 spaces with a mark at once, at 390x669 floor
+// scale, in BOTH languages (English names are the wider case: catching
+// "Ba-Shu" needed the English pass, plain "巴蜀" alone would have missed
+// it). The other 22 (including anchor-left, whose name moves to the
+// OPPOSITE side, and every plain below-the-disc name) leave it clear.
+// These six flip the tag to the upper-left instead — the same corner
+// .cost (setup/opening-placement's own transient badge) uses, which is
+// never on screen at the same time as a last-move tag (cost only shows
+// while a target is still being chosen, before an action has resolved).
+export const NODE_LASTMOVE_LEFT = new Set(["ying", "wuyue", "bashu", "shangdang", "liaodong", "hangu"]);
 // `name` is the already-resolved display name (the caller's own spaceName()
 // — app.js and rules.js each have their own, reading the same E.SPACE[id]
 // but keyed to their own current language); `esc` is the caller's own HTML
