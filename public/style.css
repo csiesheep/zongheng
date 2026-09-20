@@ -280,7 +280,14 @@ body:not(.table-lock) #logToggle { display: none; }
 .side-tap.chu .side-img { inset: 0 auto 0 -130px; width: calc(100% + 130px); object-position: center 22%; }
 .side-shade { position: absolute; inset: 0; z-index: 1; }
 .side-tap.qin .side-shade { background: linear-gradient(to right, rgba(6, 5, 4, 0.97), rgba(6, 5, 4, 0.9) 38%, rgba(6, 5, 4, 0.35) 72%, rgba(6, 5, 4, 0)); }
-.side-tap.chu .side-shade { background: linear-gradient(to left, rgba(60, 6, 4, 0.96), rgba(60, 6, 4, 0.7) 40%, rgba(60, 6, 4, 0) 70%); }
+/* #37 (owner, iPhone): the red panel ended in a hard edge against the
+   black ground of .controls below it. A second layer, painted on TOP of
+   the existing horizontal shade (first-listed background wins), fades to
+   the page's own ground colour (var(--bg), same token .controls' own
+   background resolves from) starting at the panel's vertical middle and
+   reaching fully opaque ground by the very last pixel row — so that row
+   is the same colour as the ground under it, not an approximation of it. */
+.side-tap.chu .side-shade { background: linear-gradient(to top, var(--bg) 0%, rgba(6, 5, 4, 0) 50%), linear-gradient(to left, rgba(60, 6, 4, 0.96), rgba(60, 6, 4, 0.7) 40%, rgba(60, 6, 4, 0) 70%); }
 .side-content { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; }
 /* Qin's block keeps the same padding-top as before (so the 50/50 flex
    split with Chu is untouched) — the clearance for the bar now overlaid
