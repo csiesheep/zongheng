@@ -284,9 +284,27 @@ function bannerTitle(adv, meta) {
   const { t, cardName } = meta;
   if (adv.action.type === "headline") return t("advisor.suggestHeadline", { card: cardName(adv.card) });
   if (adv.action.type === "choose") {
+    // #52 addendum: found while verifying the new gold mark below, not
+    // asked for by the issue, but left alone it contradicts the very thing
+    // #52 marks -- a PENDING "ops" choice's own move can be campaign/lobby,
+    // not just place (choice = { use, target } -- see decoratePending()),
+    // yet suggestSetup's line always says "Place {n} in {space}" no matter
+    // which. Playing Hangu Pass event-first and choosing Campaign, the
+    // banner used to say "Place 1 influence in Daliang" while the button it
+    // gold-rings says Campaign and the map ring is Daliang's -- the same
+    // suggestion, described two contradictory ways on one screen.
+    // advisor.suggestUse.<use> (en.js/zh-Hant.js: written for #17/#18,
+    // never wired to anything until now) already has the right words for a
+    // use with no card name -- read straight off adv.action.choice.use, the
+    // same field decoratePending() reads to pick the button.
+    const choice = adv.action.choice;
+    const opsUse = choice && typeof choice === "object" && !Array.isArray(choice) ? choice.use : null;
     const counts = remainingCounts(adv.targets, meta);
     const ids = Object.keys(counts);
     if (!ids.length) return null; // a card/option pending choice names no space, or it's already fully placed
+    if (opsUse && opsUse !== "place") {
+      return ids.map((id) => t(`advisor.suggestUse.${opsUse}`, { space: meta.spaceName(id) })).join(" ");
+    }
     // Each line is already its own full sentence ("Place {n} ... in
     // {space}."), so multiple spaces are joined with a space, not the
     // language's list separator (which would double up the punctuation).
