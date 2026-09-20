@@ -534,6 +534,31 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .prompt-text { flex: 1; min-width: 0; }
 .prompt .err { color: var(--bad); }
 .prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 3.6em; overflow: hidden; }
+/* #34: a card name inside the log/news, turned into a link-styled button
+   that opens the read-only peek sheet. Padding widens the actual hit box
+   to >=32px tall without widening the box the surrounding text's line
+   layout sees — an equal, opposite margin folds the padding straight back
+   out of flow (the standard touch-target trick), so this can never be the
+   thing that pushes a short-viewport line count or #24's own budget over.
+   Colour/underline only (no border/background) so it still reads as
+   ordinary log text at a glance, just linked, matching every theme's
+   --gold without a side-specific override (unlike .sheet-q/c/n/s below,
+   these buttons sit in plain --text-dim prose, never on a card's own
+   coloured sheet background). */
+.log-card-link {
+  display: inline-block;
+  padding: 9px 4px;
+  margin: -9px -4px;
+  border: 0;
+  background: none;
+  font: inherit;
+  line-height: 1.4;
+  color: var(--gold);
+  text-decoration: underline;
+  cursor: pointer;
+  vertical-align: baseline;
+}
+.log-card-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 .sheet { flex: none; display: flex; flex-direction: column; gap: 6px; margin: 0 8px; padding: 8px 10px; border-radius: 10px; max-height: 40svh; overflow-y: auto; }
 .sheet:empty { display: none; }
 /* #24 round 3: setPrompt() (round 2's fix #2) always parks its text as a
@@ -560,6 +585,20 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    cover .bar (ZONGHENG/Advisor/Rules/中文) along with the rest of the
    viewport. */
 .sheet.overlay { position: fixed; top: var(--bar-h, 0px); left: 0; right: 0; bottom: 0; z-index: 40; margin: 0; max-height: none; height: auto; border-radius: 0; overflow: hidden; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); }
+/* #34: the read-only peek sheet sits above BOTH the real card sheet (40)
+   and the log panel + its scrim (44/45) — it can be opened from a card
+   name inside either one, and must land on top when it is. An id beats any
+   class combination on specificity, so this always wins over the plain
+   `.sheet.overlay` rule above without needing `!important` or a 3-class
+   selector. */
+#peekSheet { z-index: 50; }
+/* The peek's own footer: always exactly one [Close], full width — a fresh
+   class rather than reusing .sheet-footer, so the two-button Cancel/Confirm
+   sizing below (`.sheet-footer button:first-child`, built for a 110px
+   Cancel beside a wide Confirm) never has to special-case a footer that
+   only ever holds one button. */
+.peek-footer { flex: none; display: flex; margin-top: 2px; }
+.peek-footer button { flex: 1 1 auto; height: 52px; min-height: 52px; border-radius: 26px; }
 .sheet .rowb { display: flex; flex-wrap: wrap; gap: 6px; }
 .sheet .rowb.order { gap: 8px; }
 .sheet button { min-height: 44px; padding: 0 12px; background: none; border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font-size: 13px; }

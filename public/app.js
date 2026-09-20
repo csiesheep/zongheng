@@ -201,7 +201,13 @@ $("setupName").addEventListener("input", () => store.set("zh.name", $("setupName
 $("btnStart").onclick = startSolo;
 
 // ---------- the solo game ----------
-const game = { st: null, me: 0, level: "normal", rng: null, ui: null, botLine: "", botName: "", room: false, spectator: false };
+// `peek` (#34): the read-only card sheet's own state — { card, side } for
+// the card someone tapped in the log/news, or null. Deliberately its own
+// top-level field, never inside `game.ui` (which humanAct/Cancel/headline
+// reject/etc. all wholesale-replace with freshUi()) — a peek must survive
+// every one of those resets untouched, since it doesn't represent anything
+// about the player's own turn.
+const game = { st: null, me: 0, level: "normal", rng: null, ui: null, botLine: "", botName: "", room: false, spectator: false, peek: null };
 // Per-tab: the reconnect token, so two tabs in one browser are two players.
 const sess = {
   get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
@@ -331,6 +337,13 @@ function layoutBar() {
   if (barOverflowing(bar, budget)) bar.classList.add("bar-tighter");
 }
 function render() {
+  // #34: redraw the read-only peek sheet from `game.peek` on every render —
+  // never from `v` or anything else render() computes below, so a language
+  // toggle (setLang() calls render() when a game is on) keeps an open
+  // peek's text in sync without this touching game.ui or any other state a
+  // peek must leave untouched. A no-op render (game.peek still null) just
+  // re-confirms #peekSheet stays hidden.
+  renderPeek();
   // The whole page's accent (buttons, pressed hand card, the block below the
   // map) follows whichever court you sit in; paintBody() sets this once the
   // seat is known (see show()). A spectator gets the neutral default.
@@ -638,21 +651,27 @@ function layoutTable() {
   $("map").style.flex = `0 0 ${mapFinalH}px`;
   fitMap(scale);
 }
-function setSheetOpen(open) {
-  $("sheet").classList.toggle("overlay", open);
+// Whether the whole table is locked into the full-screen-overlay layout
+// (page scroll off, --bar-h set) — shared by the real card sheet (#29) and
+// the read-only peek sheet (#34), since either one alone must lock the
+// background the same way, and closing one while the other is still open
+// must leave the lock in place. #29 item 1 (owner: "頂列留著,牌頁從頂列下面
+// 開始,不要蓋住 .bar"): .bar's own height isn't a constant (the advisor
+// switch, a long turn/mandate line, can widen it — layoutBar()'s own 55px
+// give-way rule), so this measures it fresh every time either overlay
+// opens rather than hardcoding a guess; style.css's .sheet.overlay reads
+// the same `--bar-h` back as its own `top`.
+function refreshSheetLock() {
+  const open = $("sheet").classList.contains("overlay") || !!game.peek;
   document.body.classList.toggle("sheet-open", open);
-  // #29 item 1 (owner: "頂列留著,牌頁從頂列下面開始,不要蓋住 .bar"): the
-  // overlay used to be `position:fixed;inset:0`, covering the top bar
-  // (ZONGHENG/Advisor/Rules/中文) along with everything else. .bar's own
-  // height isn't a constant (the advisor switch, or a long turn/mandate
-  // line, can widen it — see layoutBar()'s own 55px giving-way rule), so
-  // this measures it fresh each time the overlay opens rather than
-  // hardcoding a guess; style.css's .sheet.overlay reads the same
-  // `--bar-h` back as its own `top`.
   if (open) {
     const barH = document.querySelector(".bar")?.getBoundingClientRect().height || 0;
     document.documentElement.style.setProperty("--bar-h", barH + "px");
   }
+}
+function setSheetOpen(open) {
+  $("sheet").classList.toggle("overlay", open);
+  refreshSheetLock();
 }
 function wantsCardOverlay(v) {
   if (v.winner != null) return false;
@@ -1274,7 +1293,11 @@ function renderHand(v, mode) {
   el.classList.toggle("hand-many", el.children.length > 6);
 }
 
-function fmtLog(l) {
+// The i18n substitution table for one log entry — split out of fmtLog()
+// below so logLineNodes() (#34) can build the same line as real DOM nodes
+// (a clickable button in a card-name's own slot) without re-deriving P a
+// second time from `l`.
+function logParams(l) {
   const P = { side: l.side != null ? sideName(l.side) : "", turn: l.turn, era: l.era ? t("eras." + l.era) : "", box: l.box, ops: l.ops, removed: l.removed, placed: l.placed, mandate: l.mandate != null ? mandateText(l.mandate) : "", weariness: l.weariness ? t("weariness." + l.weariness) : "", to: l.to ? t("weariness." + l.to) : "" };
   if (l.points) P.spaces = list(l.points, spaceName);
   if (l.target) P.target = spaceName(l.target);
@@ -1287,9 +1310,113 @@ function fmtLog(l) {
   if (l.type === "jiuding") P.side = sideName(l.to);
   if (l.type === "over") { P.side = sideName(l.winner); P.reason = t("over.reasons." + l.reason); }
   if (l.type === "vp") P.side = sideName(l.side);
+  return P;
+}
+function fmtLog(l) {
   const key = `log.${l.type}`;
-  const s = t(key, P);
+  const s = t(key, logParams(l));
   return s === key ? "" : s;
+}
+// Which of logParams()'s placeholder keys are card ids, for a given log
+// entry (#34) — same log types and field names as logParams() above, kept
+// beside it instead of re-derived from `l` a second time. Only ever covers
+// a placeholder the entry's own template already carries: a covered
+// headline pick or a face-down Nine Cauldrons pass has no {card}/{qin}/
+// {chu} at all in log.headline/log.jiuding above, so "only names already
+// public" falls out of the existing log data rather than needing a filter
+// here.
+function logCardRefs(l) {
+  const refs = {};
+  if ((l.type === "play" || l.type === "discard" || l.type === "bog") && l.card != null) refs.card = { id: l.card, side: l.side };
+  if (l.type === "headline") { refs.qin = { id: l.cards[0], side: E.QIN }; refs.chu = { id: l.cards[1], side: E.CHU }; }
+  return refs;
+}
+// Same line as fmtLog(l), but as real DOM nodes instead of one string:
+// literal text is always a plain text node (never innerHTML — a player's
+// own arbitrary setup name reaching {side} this way can never be mistaken
+// for markup), and each placeholder logCardRefs() names becomes a
+// link-styled button opening the read-only peek sheet (#34) rather than
+// plain text, whenever `clickable`. `clickable` is false during a tutorial
+// (owner: card names still show, they just can't be tapped) — the button
+// is simply never created there, so there's no click handler for a
+// tampered DOM to bypass, no different from how installGuard() in
+// tutorial-ui.js reasons about the map/hand. Returns null exactly where
+// fmtLog(l) would have returned "" (no template for this type).
+function logLineNodes(l, clickable) {
+  const raw = `log.${l.type}`.split(".").reduce((o, k) => (o ? o[k] : undefined), S);
+  if (typeof raw !== "string") return null;
+  const P = logParams(l);
+  const refs = logCardRefs(l);
+  const frag = document.createDocumentFragment();
+  const re = /\{(\w+)\}/g;
+  let last = 0, m;
+  while ((m = re.exec(raw))) {
+    if (m.index > last) frag.appendChild(document.createTextNode(raw.slice(last, m.index)));
+    const k = m[1], ref = refs[k];
+    frag.appendChild(ref && clickable ? cardLinkButton(ref.id, ref.side) : document.createTextNode(k in P ? String(P[k]) : `{${k}}`));
+    last = re.lastIndex;
+  }
+  if (last < raw.length) frag.appendChild(document.createTextNode(raw.slice(last)));
+  return frag;
+}
+// A card name inside the log/news, as a clickable link-styled button that
+// opens the read-only peek sheet (#34). `side` is credited in the peek's
+// own "{side} played this" hint line — the seat that put the card down
+// (play/discard/bog) or the card's own headline seat (E.QIN/E.CHU, not
+// necessarily the side who acts first that turn).
+function cardLinkButton(id, side) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "log-card-link";
+  b.textContent = cardName(id);
+  b.onclick = (ev) => { ev.stopPropagation(); openPeek(id, side); };
+  return b;
+}
+// #34: a read-only look at a card already named in the log/news. Its own
+// top-level state (`game.peek`, declared with `game` above), never
+// `game.ui` — humanAct/Cancel/headline-reject/etc. all wholesale-replace
+// `game.ui` with freshUi(), and a peek must survive every one of those
+// resets untouched since it isn't part of the acting player's own turn.
+// Reuses cardHeader()/sheetMid()/cardTextBox() from the real #29 card
+// sheet — identical header and bilingual text box — with none of #29's use
+// grid, order row or Confirm: just the hint line and a single [Close].
+function openPeek(cardId, side) {
+  game.peek = { card: cardId, side };
+  renderPeek();
+}
+function closePeek() {
+  game.peek = null;
+  renderPeek();
+}
+function renderPeek() {
+  const el = $("peekSheet");
+  const open = !!game.peek;
+  el.hidden = !open;
+  refreshSheetLock();
+  if (!open) { el.innerHTML = ""; el.className = "sheet overlay peek-sheet"; return; }
+  const { card, side } = game.peek;
+  el.className = `sheet overlay peek-sheet sheet-${cardSide(card)}`;
+  el.innerHTML = "";
+  cardHeader(el, card);
+  const mid = sheetMid(el);
+  cardTextBox(mid, card);
+  note(mid, t("sheet.hint.played", { side: sideName(side) }));
+  const foot = row(el, "peek-footer");
+  btn(foot, t("buttons.close"), closePeek, "primary");
+}
+// #peekSheet itself is built here rather than added to play.html (owned by
+// no single file in this issue's own list) — #29's existing `.sheet`/
+// `.sheet.overlay`/`.sheet-q/c/n/s` classes (style.css) already give it the
+// mobile full-screen overlay and the desktop sidebar placement for free;
+// only its own stacking order and single-button footer need CSS at all
+// (style.css's #peekSheet/.peek-footer). Appended once, straight into
+// #table beside #sheet, before anything can call renderPeek().
+{
+  const el = document.createElement("section");
+  el.id = "peekSheet";
+  el.className = "sheet overlay peek-sheet";
+  el.hidden = true;
+  $("table").appendChild(el);
 }
 function renderLog(v) {
   syncLogToggleLabel();
@@ -1297,13 +1424,29 @@ function renderLog(v) {
   // label above, which stays as-is) names what's actually inside it — the
   // room's chat is mixed into the same feed there, so it says so.
   $("logTitle").textContent = game.room ? t("buttons.logChat") : t("buttons.log");
-  const lines = v.log.slice(-60).map(fmtLog).filter(Boolean).reverse();
+  // #34: card names in the log/news are clickable everywhere except during
+  // a tutorial (owner: they still show, they just can't open anything) —
+  // Tut.active() is the same switch installGuard() in tutorial-ui.js reads
+  // for the map/hand, so this stays in sync with that gate rather than
+  // keeping a second one.
+  const clickable = !Tut.active();
+  // Newest first, entries whose own template actually produced text — same
+  // filter fmtLog()/logLineNodes() apply, kept here so `panelEntries[0]` is
+  // the same "latest" entry #sideFootText already fell back to.
+  const panelEntries = v.log.slice(-60).filter((l) => !!fmtLog(l)).reverse();
   $("chatForm").hidden = !game.room || game.spectator;
   const said = game.room ? room.chat.slice(-8).reverse().map((s) => `<div class="say">${esc(s)}</div>`).join("") : "";
-  $("logLines").innerHTML = said + (game.botLine ? `<div class="bot">${esc(game.botLine)}</div>` : "") + lines.map((s) => `<div>${esc(s)}</div>`).join("");
+  $("logLines").innerHTML = said + (game.botLine ? `<div class="bot">${esc(game.botLine)}</div>` : "");
+  for (const l of panelEntries) {
+    const frag = logLineNodes(l, clickable);
+    if (!frag) continue;
+    const d = document.createElement("div");
+    d.appendChild(frag);
+    $("logLines").appendChild(d);
+  }
   // Under the prompt: what happened since this seat last acted.
   const NEWS = new Set(["headline", "play", "place", "campaign", "lobby", "score", "tire", "seal", "unseal", "mie", "restore", "reform", "jiuding", "bog", "skip", "era", "turn"]);
-  const news = v.log.filter((l) => l.i > (game.seenLog || 0) && NEWS.has(l.type)).map(fmtLog).filter(Boolean).slice(-7);
+  const newsEntries = v.log.filter((l) => l.i > (game.seenLog || 0) && NEWS.has(l.type) && !!fmtLog(l)).slice(-7);
   // #30: renderLog() is also called directly by #logToggle/#sideFootBtn
   // (opening/closing the panel doesn't need a full render()), which never
   // resets #promptText the way render()'s own setPrompt() does — so a plain
@@ -1313,12 +1456,22 @@ function renderLog(v) {
   // it or how many times.
   const oldNews = $("promptText").querySelector(".news");
   if (oldNews) oldNews.remove();
-  $("promptText").insertAdjacentHTML("beforeend", news.length ? `<div class="news">${news.map((s) => `<div>${esc(s)}</div>`).join("")}</div>` : "");
+  if (newsEntries.length) {
+    const newsDiv = document.createElement("div");
+    newsDiv.className = "news";
+    for (const l of newsEntries) {
+      const frag = logLineNodes(l, clickable);
+      const d = document.createElement("div");
+      d.appendChild(frag);
+      newsDiv.appendChild(d);
+    }
+    $("promptText").appendChild(newsDiv);
+  }
   // Desktop-only (see desktop.css, #7): the sidebar's bottom strip condenses
   // to the single latest line (the bot's own move if it just went, else the
   // newest log entry) plus a button that opens the same #logBody panel as
   // #logToggle. Harmless on mobile: #sideFoot is display:none there.
-  const latest = game.botLine || lines[0] || "";
+  const latest = game.botLine || (panelEntries[0] ? fmtLog(panelEntries[0]) : "") || "";
   $("sideFootText").textContent = latest;
   $("sideFootBtn").textContent = t("buttons.logChat");
 }
