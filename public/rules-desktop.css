@@ -159,7 +159,15 @@
      `cr-year`'s own `flex-basis: 100%` (same trick the mobile row already
      uses to push `cr-en` onto its own line, rules.css) forces it onto line
      2 without touching cr-head's own markup at all. */
-  .d-grid-col .cardrow .cr-head { justify-content: flex-start; align-items: center; flex-wrap: wrap; column-gap: 8px; row-gap: 2px; }
+  /* Round 1 review item 3 (#45): `align-items: center` centred the badge
+     against the name's WHOLE box — for a two-line name that's the middle
+     of both lines together, not the first line the badge is meant to share
+     (measured: 商鞅變法 at 1024 en, badge centre 268 vs the name's own first
+     line centre 249, off by 10px both times). `flex-start` top-aligns the
+     line instead: the badge (a fixed 20px circle) and the name's own first
+     line of text both start at the same y, which is what actually puts
+     them "on" the same line for a name that wraps. */
+  .d-grid-col .cardrow .cr-head { justify-content: flex-start; align-items: flex-start; flex-wrap: wrap; column-gap: 8px; row-gap: 2px; }
   /* The description, the row's own chevron, the second-language line, and
      the mobile row's own always-Chinese .cr-zh never show on the tile
      (review item 3 of #44: the first three belong in the panel beside the
