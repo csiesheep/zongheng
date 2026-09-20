@@ -1543,14 +1543,40 @@ function renderLog(v) {
     // almost always follows a play/headline a moment later), so pills
     // barely ever showed. Every card name visible in the strip is a pill
     // now, on whichever line it's on — newest first (unchanged from part
-    // 4's own ordering; not itself part of this correction, just kept),
-    // so .news's own height cap still clips an older line before it ever
-    // reaches the one the player just triggered.
-    newsEntries.slice().reverse().forEach((l) => {
+    // 4's own ordering; not itself part of this correction, just kept).
+    $("promptText").appendChild(newsDiv); // attach BEFORE measuring below
+    const budget = parseFloat(getComputedStyle(newsDiv).maxHeight) || 0;
+    for (const l of newsEntries.slice().reverse()) {
       const node = logLineNodes(l, clickable, true);
-      if (node) newsDiv.appendChild(node);
-    });
-    $("promptText").appendChild(newsDiv);
+      if (!node) continue;
+      newsDiv.appendChild(node);
+      // A pill (30px) is taller than .news's own max-height was ever sized
+      // for (plain 11px text) — CSS overflow:hidden alone would leave a
+      // line that doesn't fully fit PARTIALLY painted, its top sliver
+      // visible while its own centre (where the strict tap check lands)
+      // is already past the clip and hits whatever's underneath instead
+      // (measured: a two-real-lines-of-pills state, the second pill's own
+      // rect read top:589/bottom:619 against a box that ends at 596 —
+      // visible on paper, untappable in practice). Measuring here, as
+      // each line actually goes in, drops a line outright the moment it
+      // stops fitting rather than leaving it half-shown; promptText can be
+      // transiently `hidden` mid-render (a card overlay, a tutorial lesson)
+      // when this runs, in which case every rect reads zero and nothing
+      // gets trimmed — harmless, since none of it paints there either way.
+      // Applies to the newest line too, not just a second-or-later one: a
+      // long English headline's two pills can wrap to two rows on their
+      // own, taller than the box on the first line alone — growing the
+      // box to fit it costs the same map/hand headroom this box never
+      // had to spend before (measured: removing the cap here turned a
+      // clean, non-scrolling 375x667 into a 42px table-overflow). An
+      // empty strip for one render is a smaller wrong than a pill that's
+      // visibly there but whose own centre already fails the tap check.
+      const top = newsDiv.getBoundingClientRect().top;
+      if (budget && node.getBoundingClientRect().bottom - top > budget) {
+        newsDiv.removeChild(node);
+        break;
+      }
+    }
   }
   // Desktop-only (see desktop.css, #7): the sidebar's bottom strip condenses
   // to the single latest line (the bot's own move if it just went, else the
