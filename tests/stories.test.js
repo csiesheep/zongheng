@@ -3,7 +3,7 @@
 // The owner approved three samples (張儀連橫, 吳起變法, 澠池之會) for tone and
 // length, and ruled that a history shows in ONE language, the interface's.
 // So each language's text and source must stand on its own. These checks
-// keep the other 69 in the same shape; whether a story is TRUE is checked by
+// keep all 72 in the same shape; whether a story is TRUE is checked by
 // reading sources, not here.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -53,8 +53,9 @@ test("house style: one paragraph, no dashes, each language keeps to itself, sour
   assert.deepEqual(bad, []);
 });
 
-// Flip `todo` off when the last batch of #36 lands.
-test("all 72 cards have a story", { todo: "the writer's four batches (#36) are still coming in" }, () => {
+// The writer's four batches (#36) are all in since 2026-09-20: a card without a story is a failure.
+test("all 72 cards have a story", () => {
+  assert.equal(IDS.size, 72);
   const missing = [...IDS].filter((id) => !STORIES[id]);
   assert.deepEqual(missing, []);
 });
