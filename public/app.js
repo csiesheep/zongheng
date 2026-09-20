@@ -22,6 +22,7 @@ import {
   NODE_STAB_RIGHT, NODE_STAB_HI, NODE_PILL_POS,
 } from "./map-draw.js";
 import { computeLastMoveMarks } from "./lastmove.js";
+import { discParts } from "./disc-view.js";
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);
@@ -995,6 +996,23 @@ function clearLastMoveMarks() {
 // 47 design px, chosen so the rendered button is exactly MIN_HIT (40 real
 // css px) at the floor scale; on desktop's larger scale it only grows,
 // same as the disc it covers.
+// #51: turns the DOM-free discParts() shape (disc-view.js) into the disc's
+// own class list and inner markup -- the only place that knows what a part
+// LOOKS like. Tone itself is CSS (style.css's .lone-q/.lone-c/.split/
+// .ctl/.ctl-q/.ctl-c, --qin-inf/--chu-inf); this only says which classes and
+// how many numerals. Numerals stay `<i>` elements (the sweep's `.disc i`
+// selector, #49's hand-over item 4) whether there are one or two.
+function discHTML(parts, cap) {
+  const base = "disc" + (cap ? " sq" : "");
+  if (parts.kind === "empty") return `<span class="${base}"></span>`;
+  if (parts.kind === "lone") {
+    const side = parts.side === E.QIN ? "q" : "c";
+    const cls = `${base} lone-${side}${parts.controlled ? " ctl" : ""}`;
+    return `<span class="${cls}"><i>${parts.n}</i></span>`;
+  }
+  const cls = `${base} split${parts.qin.controlled ? " ctl-q" : ""}${parts.chu.controlled ? " ctl-c" : ""}`;
+  return `<span class="${cls}"><i class="q">${parts.qin.n}</i><i class="c">${parts.chu.n}</i></span>`;
+}
 function renderMap(v) {
   const el = $("mapInner");
   const hitEl = $("hitLayer");
@@ -1031,10 +1049,16 @@ function renderMap(v) {
     // language toggle, a card selection) that redraws the same marks.
     const mv = game.lastMoveMarks[sp.id];
     const mvTag = lastMoveTagText(mv);
+    // #51: the disc's own shape (empty/lone/split) and tone classes come from
+    // discParts() (disc-view.js), not from a node-level ctlq/ctlc class --
+    // the owner's V2 滿盤 decision drops the outer black/red control ring
+    // this used to draw (.node.ctlq/.ctlc .disc, style.css), so control now
+    // only shows as the disc's OWN tone (dark = controlled), computed below.
+    const parts = discParts(q, c, ctl);
     const vis = document.createElement("div");
     vis.className = "node" + (big ? " big" : "") + (empty ? " empty" : "") + (anchor ? ` anchor-${anchor}` : "") +
       (NODE_STAB_RIGHT.has(sp.id) ? " stab-r" : "") + (NODE_STAB_HI.has(sp.id) ? " stab-hi" : "") +
-      (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (lit ? " lit" : "") + (picked ? " picked" : "") + pickSide +
+      (lit ? " lit" : "") + (picked ? " picked" : "") + pickSide +
       (mv ? " lastmove" : "") + (mv && game.lastMoveFresh ? " lastmove-pulse" : "") +
       " pill-" + (NODE_PILL_POS[sp.id] || "tr");
     vis.style.cssText = `left:${x}px;top:${y}px`;
@@ -1045,7 +1069,7 @@ function renderMap(v) {
     // for a control ring or the advisor's suggestion ring at a glance.
     // Both are inert decoration (pointer-events:none, sized/positioned in
     // style.css to track the disc exactly) — present only when `mv` is set.
-    vis.innerHTML = `<span class="disc${cap ? " sq" : ""}">${empty ? "" : `<i class="q">${q || ""}</i><i class="c">${c || ""}</i>`}</span>` +
+    vis.innerHTML = discHTML(parts, cap) +
       (mv ? `<span class="lastmove-frame" aria-hidden="true"></span><span class="lastmove-frame2" aria-hidden="true"></span>` : "") +
       stabilityTagHTML(sp) +
       (picked ? `<span class="badge">+${picked}</span>` : "") +
@@ -1058,7 +1082,13 @@ function renderMap(v) {
     hb.className = "hit";
     hb.style.cssText = `left:${x}px;top:${y}px`;
     hb.disabled = !lit;
-    hb.title = `${spaceName(sp.id)} · ${sp.stability}`;
+    // #51: the outer control ring is gone -- tone (dark vs grey/pink) is now
+    // the ONLY visual sign of who controls a space, so the accessible name
+    // spells out both counts and the controller instead of leaving it to be
+    // read off a colour. spaceName/sp.stability were already here; hitInf/
+    // controls are new (public/i18n/*.js).
+    hb.title = t("map.hitTitle", { space: spaceName(sp.id), stability: sp.stability }) +
+      (empty ? "" : ` · ${t("map.hitInf", { qin: q, chu: c })}` + (ctl != null ? ` · ${t("map.controls", { side: sideName(ctl) })}` : ""));
     hb.onclick = () => mode.onTap(sp.id);
     hitEl.appendChild(hb);
   }

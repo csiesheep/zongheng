@@ -13,6 +13,12 @@
      dot, .tut-btn-dot) clears it at ~3.5:1. Scoped to the mandate fill only;
      the other Chu reds keep their own values. */
   --chu-fill: #e0392b;
+  /* #51: the disc's own tone when that side is present but does NOT control
+     the space (owner: V2 滿盤, tone step 深一階). Two custom properties so a
+     later nudge is one line, same convention as the tokens above -- the
+     CONTROLLED tone stays the literal #0e0e0e/#a31c15 the disc's numerals
+     and the (now-gone) control ring already used, not a third variable. */
+  --qin-inf: #5a5650; --chu-inf: #d9827a;
   --neutral-bg: #ece4d0; --neutral-ink: #1a1a1a;
   --bad: #ff8f7d;
   --serif: "Noto Serif TC", serif; --kai: "LXGW WenKai TC", "Noto Serif TC", serif; --sans: "Noto Sans TC", sans-serif;
@@ -519,19 +525,56 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .node .disc { width: 30px; height: 30px; border-radius: 50%; overflow: hidden; display: flex; box-shadow: 0 0 0 1.5px #86807a; background: #d8d3c8; }
 .node.big .disc { width: 34px; height: 34px; }
 .node .disc.sq { border-radius: 6px; }
-.node .disc i { flex: 1; font: 700 14px/30px var(--sans); text-align: center; font-style: normal; }
+.node .disc i { flex: 1; font: 700 14px/30px var(--sans); text-align: center; font-style: normal; color: #fff; }
 .node.big .disc i { line-height: 34px; }
-.node .disc i.q { background: #0e0e0e; color: #fff; }
-.node .disc i.c { background: #a31c15; color: #fff; }
 .node.empty .disc { background: #e4e0d6; box-shadow: 0 0 0 1.5px #a59f8f; }
+/* #51 owner ruling (V2 滿盤, tone step 深一階, no inner rim): a side with no
+   influence is not drawn at all -- discParts() (disc-view.js) never hands
+   app.js a part for it, so there's nothing here to style. Only one side
+   present ("lone"): the WHOLE disc takes that side's tone with ONE centred
+   16px numeral, not the split's two 14px halves -- font-size is the only
+   override needed, .disc i's flex:1 already fills and centres a single
+   child exactly like it does two. Light tone (grey/pink, --qin-inf/
+   --chu-inf) = present but not controlling; dark tone (the literal
+   #0e0e0e/#a31c15 the numerals and the old control ring both already used)
+   = controlling -- .ctl is discHTML()'s own class for "this part's `ctl`
+   matched its side", not a new idea. The base .node .disc hairline
+   (0 0 0 1.5px #86807a) already satisfies "every non-empty disc keeps a
+   neutral hairline"; pink on parchment is only ~2.6:1 so that hairline is
+   what still holds pink's shape. Numeral colour is white on every tone
+   except pink (Chu, present, uncontrolled) -- #4a0c08, 5.5:1 (white there
+   is 2.8:1, under the 3:1 floor) -- so only Chu's uncontrolled numeral
+   needs an override; Qin's is white in every state (.node .disc i, above)
+   and needs none. */
+.node .disc.lone-q i, .node .disc.lone-c i { font-size: 16px; }
+.node .disc.lone-q { background: var(--qin-inf); }
+.node .disc.lone-q.ctl { background: #0e0e0e; }
+.node .disc.lone-c { background: var(--chu-inf); }
+.node .disc.lone-c i { color: #4a0c08; }
+.node .disc.lone-c.ctl { background: #a31c15; }
+.node .disc.lone-c.ctl i { color: #fff; }
+/* Both present ("split"): left half Qin's tone, right half Chu's, blending
+   into each other in the middle -- the owner's literal gradient stops. Each
+   half's tone still follows whether THAT side controls, independently of
+   the other half, so all four combinations get their own rule; discHTML()
+   puts .ctl-q/.ctl-c on the disc itself (the gradient paints across the
+   whole disc, not each numeral, unlike .lone-q/.lone-c's single .ctl). */
+.node .disc.split { background: linear-gradient(to right, var(--qin-inf) 0%, var(--qin-inf) 36%, var(--chu-inf) 64%, var(--chu-inf) 100%); }
+.node .disc.split.ctl-q { background: linear-gradient(to right, #0e0e0e 0%, #0e0e0e 36%, var(--chu-inf) 64%, var(--chu-inf) 100%); }
+.node .disc.split.ctl-c { background: linear-gradient(to right, var(--qin-inf) 0%, var(--qin-inf) 36%, #a31c15 64%, #a31c15 100%); }
+.node .disc.split.ctl-q.ctl-c { background: linear-gradient(to right, #0e0e0e 0%, #0e0e0e 36%, #a31c15 64%, #a31c15 100%); }
+.node .disc.split i.c { color: #4a0c08; }
+.node .disc.split.ctl-c i.c { color: #fff; }
 .node .nm { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: 2px; display: block; white-space: nowrap; font: 700 13px/1.2 var(--kai); color: #1a1a1a; text-align: center; text-shadow: 0 0 3px #f7f3e8, 0 0 3px #f7f3e8, 0 0 2px #f7f3e8, 0 0 2px #f7f3e8; }
 .node .nm.sm { font-size: 11px; }
 .node .nm.two-line { font-size: 11px; line-height: 1.05; white-space: normal; width: 44px; }
 .node.anchor-top .nm { top: auto; bottom: 100%; margin-top: 0; margin-bottom: 2px; }
 .node.anchor-left .nm { left: auto; right: 100%; top: 50%; transform: translateY(-50%); margin-top: 0; margin-right: 4px; text-align: right; }
 .node.anchor-right .nm { left: 100%; top: 50%; transform: translateY(-50%); margin-top: 0; margin-left: 4px; text-align: left; }
-.node.ctlq .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #0e0e0e; }
-.node.ctlc .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #a31c15; }
+/* #51: the outer black/red CONTROL ring (.node.ctlq/.ctlc .disc) is GONE --
+   the owner's V2 滿盤 ruling makes the disc's own tone the only control
+   mark (see the block above). With it gone, .picked's ring below is the
+   only SOLID ring a disc can still wear. */
 /* Placement: a dashed ring on spaces you can tap, a solid ring on spaces
    you've already placed in this action; a gold badge for the 2x cost where
    the enemy controls. #49 (owner: 「Qin 在放影響力時,+1/+2/... 用黑色」):
@@ -540,10 +583,12 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    (app.js's currentMode() `mode.side`, always `game.me` — see its own
    comment there for the one case, opponent-targeting removal picks, this
    doesn't perfectly disambiguate), the same #0e0e0e/#a31c15 the disc's own
-   two numbers and the control ring above already use — reused directly
-   (no --qin-ink/--chu-ink custom property exists yet for this map ink;
-   .disc i.q/i.c and .ctlq/.ctlc don't use one either, so this doesn't add
-   a third colour, it follows the file's own existing convention). */
+   numerals and tone already use (above) — reused directly (no --qin-ink/
+   --chu-ink custom property exists for this map ink; the disc's own tone
+   rules don't use one either, so this doesn't add a third colour, it
+   follows the file's own existing convention). #51: on a lone BLACK/RED
+   disc the ring must still read as a ring, not a thicker edge -- the 2px
+   paper gap below does that, unchanged by the control ring's removal. */
 .node.lit .disc { outline: 2px dashed var(--gold); outline-offset: 2px; cursor: pointer; }
 .node.picked.pick-q .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #0e0e0e; }
 .node.picked.pick-c .disc { box-shadow: 0 0 0 2px #f7f3e8, 0 0 0 4px #a31c15; }
@@ -654,8 +699,8 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 }
 /* Round 1 review (item 2): 「+2」 also says WHOSE — the tag's background
    follows whichever side's count actually changed (lastmove.js's own
-   `side`, E.QIN/E.CHU), the same black/red the disc's two numbers already
-   use (.disc i.q/i.c above), not the frame's bronze. A destroyed/restored
+   `side`, E.QIN/E.CHU), the same black/red the disc's own controlled tone
+   already uses (#51, above), not the frame's bronze. A destroyed/restored
    mark (app.js's lastMoveTagClass — no side, it's the state's capital,
    not a count) keeps the plain bronze background set above. */
 .node .lastmove-tag.side-q { background: #0e0e0e; }

@@ -37,6 +37,12 @@ export default {
     everyEra: "every era",
   },
   sides: { qin: "Qin", chu: "Chu", neutral: "Neutral", scoring: "Scoring card" },
+  // #51: with the control ring gone and only tone left (black/red = control,
+  // grey/pink = influence without control), "who controls" is no longer
+  // legible without colour vision alone -- the hit button's title spells out
+  // both counts and the controller (hitInf, controls) so it doesn't rely on
+  // the tone.
+  map: { hitTitle: "{space} · stability {stability}", hitInf: "Qin {qin} Chu {chu}", controls: "{side} controls" },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },
   setup: { defaultName: "Player" },
   sys: { joined: "{name} joined.", left: "{name} left.", leftGame: "{name} left; the bot plays the seat.", dealt: "The cards are dealt.", timeout: "{name} ran out of time; the table decided.", over: "{side} ({name}) wins: {reason}." },
@@ -108,7 +114,7 @@ export default {
     skip: "Skip the tutorial", back: "Back", stepOf: "Step {n} of {total}", topbar: "Tutorial {n}/{total}", gotIt: "Got it",
     wrong: "Tap the highlighted spot.",
     steps: {
-      map: { title: "The map", text: "26 spaces in five regions plus Zhou; a star marks a battleground. The disc shows Qin's and Chu's influence.", do: "Tap {space}" },
+      map: { title: "The map", text: "26 spaces in five regions plus Zhou; a star marks a battleground. A disc's colour is influence: black is Qin, red is Chu; grey and pink mean influence without control.", do: "Tap {space}" },
       control: { title: "Control", text: "Control needs yours at least theirs plus stability; the cap is stability + 2. {space}: {qin} is at least {chu} plus {stability}, so it's yours.", do: "Tap {space}" },
       hand: { title: "Your hand", text: "The round badge is the card's points. Black carries Qin's event, red Chu's, white nobody's. A card has five uses; start with the simplest, place.", do: "Tap the lit card" },
       place: { title: "Place", text: "1 op places 1 point, only where you already stand or next to your control; 2 ops per point into enemy control. {n} into {space}: {qin} is at least {chu} plus {stability}, so it's yours.", do: "Tap {space} {n} times" },

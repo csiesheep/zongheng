@@ -31,6 +31,10 @@ export default {
     everyEra: "每個時期",
   },
   sides: { qin: "秦", chu: "楚", neutral: "中立", scoring: "記分卡" },
+  // #51:圓盤的控制環拿掉、只留色調之後,「誰控制」只能靠色調的深淺看出來
+  // (黑/紅 = 控制,灰/粉紅 = 有影響力但沒控制)——所以每個據點的點擊按鈕
+  // title 要把兩邊點數與控制方講清楚(hitInf、controls),不能只靠畫面。
+  map: { hitTitle: "{space} · 安定{stability}", hitInf: "秦{qin} 楚{chu}", controls: "{side}控制" },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },
   setup: { defaultName: "玩家" },
   sys: { joined: "{name} 進來了。", left: "{name} 離開了。", leftGame: "{name} 離開了,由電腦代打。", dealt: "發牌了。", timeout: "{name} 逾時,由桌面代為決定。", over: "{side}({name})獲勝:{reason}。" },
@@ -97,7 +101,7 @@ export default {
     skip: "跳過教學", back: "上一步", stepOf: "第 {n} / {total} 課", topbar: "教學 · 第 {n} / {total} 課", gotIt: "知道了",
     wrong: "要點亮著的地方。",
     steps: {
-      map: { title: "地圖", text: "26 個據點,分五個記分區加上周;★ 是要衝。圓盤兩色是秦、楚的影響力。", do: "點{space}" },
+      map: { title: "地圖", text: "26 個據點,分五個記分區加上周;★ 是要衝。圓盤的顏色是影響力:黑是秦、紅是楚;灰和粉紅是有影響力但還沒控制。", do: "點{space}" },
       control: { title: "控制", text: "我方影響力 ≥ 對方 + 安定值就控制,上限是安定值+2。{space}:{qin}≥{chu}+{stability},所以歸你控制。", do: "點{space}" },
       hand: { title: "手牌", text: "圓形徽章是點數;黑是秦的事件、紅是楚的、白是中立的。一張牌有五種用法,先學最簡單的:放置。", do: "點亮著的牌" },
       place: { title: "放置", text: "放在已有自己影響力的據點,或自己控制的據點旁邊,每點花 1;對方控制的據點每點花 2。放 {n} 點到 {space},它就歸你控制。", do: "點{space} {n} 次" },
