@@ -1833,17 +1833,32 @@ $("sideFootBtn").onclick = () => { setLogOpen($("logBody").hidden); if (game.st)
 // nation background") — #over.winner-qin/winner-chu carry that in
 // screens.css, set here rather than through paintBody (which still colours
 // the header/buttons by your own seat, unchanged for the table).
+// #50 "B 燼": the LOSER gets a different page instead — their own emblem
+// broken in the ash/fire (art/ui/lose_qin.jpg / lose_chu.jpg), no filter, no
+// big glyph, on their own (dark, unglamorous) ground — #over.loser-qin/
+// loser-chu instead of winner-qin/winner-chu. The winner and the spectator
+// still see exactly what they saw before this issue.
 const overGlyphChar = (side) => (side === E.QIN ? "秦" : "楚");
 function renderOver() {
   const st = game.st;
   const winner = st.winner;
   const lost = !game.spectator && game.me !== winner;
+  const loserSide = lost ? game.me : null;
   const p = { winner: sideName(winner), loser: sideName(1 - winner) };
-  $("overImg").src = `art/ui/win_${E.SIDES[winner]}.jpg`;
-  $("overImg").style.filter = lost ? "grayscale(.85) brightness(.7)" : "";
-  $("overGlyph").textContent = overGlyphChar(winner);
-  $("overGlyph").classList.toggle("glyph-chu", winner === E.CHU);
-  $("overGlyph").classList.toggle("glyph-qin", winner === E.QIN);
+  $("overImg").src = lost ? `art/ui/lose_${E.SIDES[loserSide]}.jpg` : `art/ui/win_${E.SIDES[winner]}.jpg`;
+  // Neither page uses the greyscale filter any more: it existed only because
+  // the loser used to see the WINNER's own picture, unweathered, and needed
+  // muting; the loser's own broken-emblem picture is already sombre.
+  $("overImg").style.filter = "";
+  // #overGlyph is the winner's big 秦/楚 seal — meaningless (and wrong) on
+  // the loser's page, so it is hidden via the `hidden` attribute (removes it
+  // from the accessibility tree too), not left empty.
+  $("overGlyph").hidden = lost;
+  if (!lost) {
+    $("overGlyph").textContent = overGlyphChar(winner);
+    $("overGlyph").classList.toggle("glyph-chu", winner === E.CHU);
+    $("overGlyph").classList.toggle("glyph-qin", winner === E.QIN);
+  }
   $("overReasonTitle").textContent = t(`over.reasons.${st.reason}.title`, p);
   $("overLine").textContent = t(`over.reasons.${st.reason}.${lost ? "lose" : "win"}`, p);
   $("overBody").textContent = t(`over.reasons.${st.reason}.body`, p);
@@ -1858,9 +1873,15 @@ function renderOver() {
   // #over.winner-chu/winner-qin (set here by #6) is also what desktop.css
   // (#7) keys its full-viewport winner-territory backdrop off — see
   // `body:has(#over.winner-chu:not([hidden]))` there. No separate
-  // win-qin/win-chu body class needed.
-  $("over").classList.toggle("winner-chu", winner === E.CHU);
-  $("over").classList.toggle("winner-qin", winner === E.QIN);
+  // win-qin/win-chu body class needed. #50: the loser gets loser-qin/
+  // loser-chu instead (by their OWN seat, not the winner's), same idea,
+  // desktop.css keys its own plain-ground backdrop off those too.
+  $("over").classList.toggle("winner-chu", !lost && winner === E.CHU);
+  $("over").classList.toggle("winner-qin", !lost && winner === E.QIN);
+  $("over").classList.toggle("loser-chu", loserSide === E.CHU);
+  $("over").classList.toggle("loser-qin", loserSide === E.QIN);
+  // aria-label is unchanged by #50 — it always names the WINNER ("X 獲勝"),
+  // win or lose.
   $("over").setAttribute("aria-label", t("over.winner", { side: sideName(winner) }));
   show("over");
 }
