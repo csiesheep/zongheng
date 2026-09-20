@@ -691,15 +691,37 @@ function wantsCardOverlay(v) {
   return false; // campaign/lobby target picking, or place once ops are known: the map is in play
 }
 
-// Above the map: just the turn and the Mandate tug-of-war bar (C2_Game's
+// Above the map: the turn line and the Mandate tug-of-war bar (C2_Game's
 // header + mandate strip, condensed — the seat portrait row is #6's).
+// #39 part 2: a real tug bar instead of the old 3px line + 8px dot -- Qin's
+// own fill runs from the left edge to the marker, Chu's from the marker to
+// the right edge (owner's spec, literally: which side "wins" the reading
+// isn't the point, matching the two segments named is), a gold diamond
+// marker, 秦/楚 at the two ends (the same hardcoded glyphs overGlyphChar()
+// already uses on the result screen -- not sideName(), which is localized
+// and reads as a whole word in English, not the single glyph the design
+// canvas draws at each end regardless of language). role="img" carries the
+// bar's own spoken value since none of its children are real text a screen
+// reader should read individually.
 function renderTopBar(v) {
   const pos = Math.max(2, Math.min(98, 50 - (v.mandate / E.MANDATE_TO_WIN) * 50));
   const phase = v.phase === "setup" ? "" : ` · ${t("tracks.round")} ${v.round}${t("tracks.of")}${v.rounds}`;
+  const m = v.mandate;
+  const leadColor = m > 0 ? "var(--qin-text)" : m < 0 ? "var(--chu-gold)" : "var(--text)";
+  const spoken = `${t("tracks.mandate")} ${mandateText(m)}`;
   $("topbar").innerHTML =
-    `<div class="tb-turn"><b>${t("tracks.turn")} ${v.turn}</b>${v.era ? " · " + t("eras." + v.era) : ""}${phase}</div>` +
-    `<div class="mandate"><span class="mid"></span><span class="dot" style="left:${pos}%"></span></div>` +
-    `<div class="tb-mandate">${t("tracks.mandate")} <b>${mandateText(v.mandate)}</b></div>`;
+    `<div class="tb-turn"><b>${t("tracks.turn")} ${v.turn}</b>${v.era ? " · " + t("eras." + v.era) : ""}${phase} · ` +
+      `<span class="tb-mandate-label">${esc(t("tracks.mandate"))}</span> <b class="tb-mandate-val" style="color:${leadColor}">${esc(mandateText(m))}</b></div>` +
+    `<div class="mandate" role="img" aria-label="${esc(spoken)}">` +
+      `<span class="m-end m-end-qin" aria-hidden="true">${overGlyphChar(E.QIN)}</span>` +
+      `<span class="m-track">` +
+        `<span class="m-fill m-fill-qin" style="width:${pos}%"></span>` +
+        `<span class="m-fill m-fill-chu" style="width:${100 - pos}%"></span>` +
+        `<span class="m-mid"></span>` +
+        `<span class="m-marker" style="left:${pos}%"></span>` +
+      `</span>` +
+      `<span class="m-end m-end-chu" aria-hidden="true">${overGlyphChar(E.CHU)}</span>` +
+    `</div>`;
 }
 // Below the map: one condensed row (C2_Game's 5-column stat strip) —
 // weariness, reform, seals, destroyed, cauldrons. Per-state detail and

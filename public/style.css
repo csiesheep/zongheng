@@ -405,26 +405,34 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    the header reads as the same piece of cloth as the table -- #table
    itself is transparent so that single background shows through both. */
 #table { padding: 6px 0; gap: 4px; background: transparent; }
-.topbar { flex: none; padding: 1px 8px; font-size: 12px; color: var(--text-dim); }
+.topbar { flex: none; padding: 4px 8px 5px; font-size: 12px; color: var(--text-dim); }
 .tb-turn { font-size: 12px; }
 .tb-turn b { color: var(--text); font-weight: 600; }
-.tb-mandate { font-size: 11px; text-align: right; margin-top: 1px; }
-.tb-mandate b { color: var(--text); }
-.mandate { position: relative; height: 10px; border-left: 2px solid #777; border-right: 2px solid var(--chu-btn); margin: 3px 0; }
-.mandate .mid { position: absolute; left: 50%; top: 0; width: 1px; height: 10px; background: var(--gold); }
-.mandate .dot { position: absolute; top: 0; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--gold); }
-/* Short viewport (owner's round 5, #2): the turn/era line, the mandate bar
-   and the mandate number used to stack as three lines (~51px) — squash them
-   into one ~30px row instead, with the mandate bar flattened into this row's
-   own bottom edge ("the tick line as this row's baseline") rather than
-   dropped. Same three child elements as always, just laid out differently;
-   #topbar's own id/children are untouched for #7/#15 to build on. */
-@media (max-height: 719px) {
-  .topbar { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 7px; }
-  .topbar .mandate { position: absolute; left: 8px; right: 8px; bottom: 0; height: 3px; margin: 0; border-left: none; border-right: none; background: #777; }
-  .topbar .mandate .mid { height: 3px; }
-  .topbar .mandate .dot { top: -3px; width: 8px; height: 8px; }
-  .topbar .tb-mandate { margin-top: 0; }
+.tb-mandate-label { font-size: 12px; }
+.tb-mandate-val { font-size: 14px; font-weight: 700; }
+/* #39 part 2: a real tug bar. .m-track is the 10px rounded rail (radius 5 +
+   overflow:hidden rounds both ends together, no separate border-radius math
+   needed on the two fills); the two absolutely-positioned fills sit inside
+   it sized by inline `style` from renderTopBar()'s own `pos` (same
+   E.MANDATE_TO_WIN-derived position the old dot used), the hairline and the
+   14x14 diamond marker (a square rotated 45deg) stack above them. One
+   layout, every viewport -- the old max-height:719px squash (a 3px line
+   overlaid on the row) doesn't carry over: there's no 3px version of a bar
+   with rounded ends, two fills and end labels left to squash into, and the
+   owner's spec draws one bar, not two. */
+.mandate { display: flex; align-items: center; gap: 6px; height: 14px; margin: 3px 0; }
+.mandate .m-end { flex: none; font-family: var(--kai); font-size: 11px; line-height: 1; color: var(--text-dim); }
+.mandate .m-end-qin { color: var(--qin-text); }
+.mandate .m-end-chu { color: var(--chu-gold); }
+.mandate .m-track { position: relative; flex: 1 1 auto; height: 10px; border-radius: 5px; overflow: hidden; background: var(--gold-line); }
+.mandate .m-fill { position: absolute; top: 0; bottom: 0; }
+.mandate .m-fill-qin { left: 0; background: var(--qin-bg); }
+.mandate .m-fill-chu { right: 0; background: var(--chu-btn); }
+.mandate .m-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--gold); opacity: 0.7; z-index: 1; }
+.mandate .m-marker {
+  position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  background: var(--gold); border-radius: 2px; transform: rotate(45deg);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4); z-index: 2;
 }
 /* The map: width comes from the column, height from whatever's left after
    every flex:none sibling took its share — see fitMap() in app.js, which
