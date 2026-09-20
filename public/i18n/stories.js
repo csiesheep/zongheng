@@ -349,7 +349,7 @@ export default {
   },
   lianpo: {
     zh: "廉頗與李牧都是趙國後期名將。前260年,秦將王齕攻趙,廉頗於長平堅壁抵禦,七月趙孝成王中反間計換以趙括,終致慘敗。李牧常年鎮守雁門,大破匈奴十餘萬騎,又屢次擊退秦軍。前229年,趙王遷聽讒言處死李牧,三個月後趙國即為秦所滅,後世常感嘆李牧一死、趙國隨之覆亡。",
-    en: "Lian Po and Li Mu were both late Zhao generals. In 260 BC, Qin's Wang He attacked Zhao, and Lian Po held Changping by refusing battle, until King Xiaocheng replaced him with Zhao Kuo that July through a rumor, leading to disaster. Li Mu guarded the north at Yanmen for years, crushing Xiongnu horsemen, and beat back Qin's armies too. In 229 BC, King Qian had Li Mu executed on false charges, and Zhao fell three months later, long called cause and effect.",
+    en: "Lian Po and Li Mu were both late Zhao generals. In 260 BC, Qin's Wang He attacked Zhao, and Lian Po held Changping by refusing battle, until King Xiaocheng replaced him with Zhao Kuo in the seventh month through a rumor, leading to disaster. Li Mu guarded the north at Yanmen for years, crushing Xiongnu horsemen, and beat back Qin's armies too. In 229 BC, King Qian had Li Mu executed on false charges, and Zhao fell three months later, long called cause and effect.",
     srcZh: "《史記·廉頗藺相如列傳》",
     srcEn: "Shiji, Biographies of Lian Po and Lin Xiangru",
   },
@@ -390,7 +390,7 @@ export default {
     srcEn: "Shiji, Biographies of Fan Ju and Cai Ze",
   },
   zhukeling: {
-    zh: "前237年,鄭國渠被揭穿是間諜之計,同年呂不韋也因嫪毐之亂免相,〈秦始皇本紀〉皆記在這一年。秦國宗室大臣趁機進言:「諸侯人來事秦者,大抵為其主游間於秦耳,請一切逐客。」秦王政下令驅逐非秦國出身的客卿;李斯也在被逐之列,途中上書勸阻,秦王政遂收回成命,復其官職。",
+    zh: "前237年,鄭國渠被揭穿是間諜之計。〈秦始皇本紀〉把呂不韋因嫪毐之亂免相與逐客令記在同一年。秦國宗室大臣趁機進言:「諸侯人來事秦者,大抵為其主游間於秦耳,請一切逐客。」秦王政下令驅逐非秦國出身的客卿;李斯也在被逐之列,上書勸阻,秦王政遂收回成命,復其官職。",
     en: "In 237 BC, the Zhengguo Canal was exposed as a spying scheme, and the Annals of the First Emperor records Lü Buwei was also dismissed that year over the Lao Ai affair. Qin's own nobles told the king that outsiders serving Qin mostly worked for their home states, so all such guests should be expelled, and the king ordered every official not born in Qin driven out. Li Si, among those expelled, petitioned against it, and the king reversed the order and restored his post.",
     srcZh: "《史記·李斯列傳》、《史記·秦始皇本紀》",
     srcEn: "Shiji, Biography of Li Si; Basic Annals of the First Emperor",
@@ -403,7 +403,7 @@ export default {
   },
   mibing: {
     zh: "「弭兵」一詞源自春秋末年向戌弭兵之會。前546年,宋國大夫向戌倡議弭兵,促成晉、楚等十四國在宋會盟,約定除齊、秦外互相朝見,此後晉楚之間大規模戰爭停止近四十年。戰國時,宋牼聽聞秦楚交兵,也說「吾聞秦楚構兵,我將見楚王說而罷之」,可見弭兵的想法戰國仍有人提起。",
-    en: "The term for laying down arms traces to the Covenant of Song near the end of the Spring and Autumn period. In 546 BC, Xiang Xu of Song proposed a truce, bringing fourteen states, including Jin and Chu, to a covenant of mutual visits except Qi and Qin; large fighting between Jin and Chu stopped for forty years. In the Warring States, Song Keng, hearing Qin and Chu were at war, said he meant to see the Chu king and talk him out of it.",
+    en: "The term for laying down arms traces to the Covenant of Song near the end of the Spring and Autumn period. In 546 BC, Xiang Xu of Song proposed a truce, bringing fourteen states, including Jin and Chu, to a covenant of mutual visits except Qi and Qin; fighting between Jin and Chu stopped for nearly forty years. In the Warring States, Song Keng, hearing Qin and Chu were at war, said he meant to see the Chu king and talk him out of it.",
     srcZh: "《左傳·襄公二十七年》、《孟子·告子下》",
     srcEn: "Zuo Zhuan, Duke Xiang Year 27; Mengzi, Gaozi II",
   },
@@ -412,5 +412,43 @@ export default {
     en: "Small states often survived only precariously wedged between the great powers, and Lu is one example. In 249 BC, King Kaolie of Chu destroyed Lu, stripped Duke Qing of his rank, and moved him to Xiayi, ending Lu's sacrifices. Wey held on much longer, and only in 209 BC, the first year of the Second Emperor, was its last ruler stripped of rank, making it the last of the Ji-surnamed states to fall.",
     srcZh: "《史記·魯周公世家》、《史記·衛康叔世家》",
     srcEn: "Shiji, House of the Duke of Zhou at Lu; House of Kangshu of Wey",
+  },
+
+  // #36 batch 4: the five scoring cards plus 九鼎 (E.JIUDING), completing all 72.
+  score_jin: {
+    zh: "三晉(韓、魏、趙)地處天下之中,是列國交兵必經之地,戰禍也最頻繁。前403年,周威烈王正式冊封晉大夫魏斯、趙籍、韓虔為諸侯,《史記·周本紀》記此事為「命韓、魏、趙為諸侯」,《資治通鑑》開篇更記「初命晉大夫魏斯、趙籍、韓虔為諸侯」,史稱三家分晉。",
+    en: "The Three Jin, Han, Wei, and Zhao, sat at the crossroads of the realm, ground every army had to cross, and the fighting there was heaviest. In 403 BC, King Weilie of Zhou formally recognized the Jin ministers Wei Si, Zhao Ji, and Han Qian as lords in their own right; the Shiji's Basic Annals of Zhou record this, and the Zizhi Tongjian opens with the same event, calling it the Partition of Jin and the start of the Warring States era.",
+    srcZh: "《史記·周本紀》、《資治通鑑》",
+    srcEn: "Shiji, Basic Annals of Zhou; Zizhi Tongjian",
+  },
+  score_west: {
+    zh: "西土是秦國的根基所在。蘇秦游說秦惠王時形容關中:「秦四塞之國,被山帶渭,東有關河,西有漢中,南有巴蜀,北有代馬,此天府也。」巴蜀是前316年司馬錯滅蜀所得,漢中則是前312年丹陽之戰後從楚國奪來,兩地連同關中,構成秦國東出的糧倉與屏障。",
+    en: "The West was Qin's home base. Su Qin, urging King Hui of Qin to act, described Guanzhong as walled in on four sides, backed by mountains and the Wei River, with the Yellow River and Hangu Pass east, Hanzhong west, Ba-Shu south, and the horses of Dai north, a natural storehouse for a ruler. Sima Cuo took Ba-Shu in 316 BC, and Qin won Hanzhong from Chu after Danyang in 312 BC, giving Qin its granary and shield for pushing east.",
+    srcZh: "《史記·蘇秦列傳》",
+    srcEn: "Shiji, Biography of Su Qin",
+  },
+  score_south: {
+    zh: "楚國以疆域廣大著稱。蘇秦游說楚威王時說:「楚,天下之強國也……地方五千餘里,帶甲百萬,車千乘,騎萬匹,粟支十年。」楚國本都郢,前278年秦將白起攻破郢都後,楚被迫東遷,先徙都陳;前241年五國合縱攻秦不利而還,楚又再遷都壽春,國勢從此一蹶不振。",
+    en: "Chu was known for the size of its territory. Su Qin, urging King Wei of Chu to lead the alliance, called Chu the strongest state under heaven, more than five thousand li across, with a million soldiers, a thousand chariots, ten thousand horsemen, and grain for ten years. Its capital was originally Ying, but after Bai Qi took it in 278 BC, the court fled east to Chen; after the failed 241 BC coalition against Qin, Chu moved again, to Shouchun, and never recovered.",
+    srcZh: "《史記·蘇秦列傳》、《史記·楚世家》",
+    srcEn: "Shiji, Biography of Su Qin; House of Chu",
+  },
+  score_east: {
+    zh: "齊國以臨淄的富庶聞名。蘇秦游說齊宣王時說:「臨菑之中七萬戶……車轂擊,人肩摩,連衽成帷,舉袂成幕,揮汗成雨。」齊國自太公建國起便「通商工之業,便魚鹽之利」,以漁鹽致富。宋、魯兩個小國夾在齊、楚、魏等大國之間,同在此區,難逃被兼併的命運。",
+    en: "Qi was known for the wealth of its capital, Linzi. Su Qin told King Xuan of Qi that Linzi alone held seventy thousand households, its streets so packed that carriage hubs knocked together, shoulders brushed shoulders, and sweat fell like rain. Since the founding of Qi, its rulers had opened trade and craft and taken advantage of fish and salt, building wealth from the coast. Song and Lu, wedged between Qi, Chu, and Wei in this same region, could not escape being swallowed eventually.",
+    srcZh: "《史記·蘇秦列傳》、《史記·齊太公世家》",
+    srcEn: "Shiji, Biography of Su Qin; House of Duke Tai of Qi",
+  },
+  score_north: {
+    zh: "北疆是趙、燕兩國對抗胡人的邊疆地帶。趙武靈王胡服騎射後拓地雲中、雁門、代地,前296年趙又滅中山國,遷其王於膚施。燕國則在名將秦開大破東胡後,於新拓邊境設上谷、漁陽、右北平、遼西、遼東五郡。這裡是戰國少數同時面對中原混戰與塞外遊牧民族的地帶。",
+    en: "The North was the frontier where Zhao and Yan faced the nomadic peoples beyond the settled states. After King Wuling of Zhao adopted nomad dress and mounted archery, Zhao expanded into Yunzhong, Yanmen, and Dai, and in 296 BC destroyed Zhongshan, exiling its king to Fushi. Yan, after its general Qin Kai crushed the Donghu, set up five commanderies on its new frontier: Shanggu, Yuyang, Youbeiping, Liaoxi, and Liaodong. It was one of the few regions facing both rivalry and the steppe.",
+    srcZh: "《史記·趙世家》、《史記·匈奴列傳》",
+    srcEn: "Shiji, House of Zhao; Treatise on the Xiongnu",
+  },
+  jiuding: {
+    zh: "《史記·封禪書》說夏禹收九牧之金鑄九鼎,象徵九州。前606年,楚莊王陳兵周郊,問周使者王孫滿鼎之輕重,王孫滿答以「在德不在鼎」,楚莊王遂退兵。九鼎下落有兩說:〈秦本紀〉說前255年「其器九鼎入秦」;另一說是始皇二十八年經彭城,曾派人打撈沉入泗水的一鼎,未獲。",
+    en: "The Shiji says Yu cast the Nine Cauldrons from metal of the nine chiefs to represent the nine regions. In 606 BC, King Zhuang of Chu camped at the Zhou border and asked how heavy they were; the envoy Wangsun Man said the Mandate rests on virtue, not cauldrons, and Zhuang withdrew. Their end has two versions: Qin's Annals has them reaching Qin in 255 BC; another has the First Emperor pass Pengcheng in 219 BC and search the Si River for one, in vain.",
+    srcZh: "《史記·封禪書》、《史記·秦本紀》、《史記·秦始皇本紀》、《左傳·宣公三年》",
+    srcEn: "Shiji, Treatise on the Feng and Shan Sacrifices; Basic Annals of Qin; Basic Annals of the First Emperor; Zuo Zhuan, Duke Xuan Year 3",
   },
 };
