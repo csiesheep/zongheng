@@ -30,6 +30,22 @@
   }
   .rules { max-width: none; padding: 0 20px 40px; }
 
+  /* #45 (owner, desktop): no browser scrollbar anywhere on this page — not
+     on #pageCard (the scroller both tabs share) and not on any inner
+     scroller (.d-sticky: the rail, the pinned map, the card panel). Hiding
+     the bar only, never the scrolling itself: no overflow: hidden here (
+     #pageCard/.d-sticky keep their own overflow-y: auto/scroll, set
+     elsewhere), so wheel/trackpad/keyboard/rail-click scrolling all still
+     work exactly as before — only the drawn gutter goes away. */
+  body:has(#rules) .page-card,
+  body:has(#rules) .d-sticky {
+    scrollbar-width: none;
+  }
+  body:has(#rules) .page-card::-webkit-scrollbar,
+  body:has(#rules) .d-sticky::-webkit-scrollbar {
+    display: none;
+  }
+
   /* ---------- the bar: tabs instead of the mid label / #40's chip row ---------- */
   /* Round 1 review (#44): `.bar` was `position: static` inside `.page-card`
      (the scroller here) so it scrolled away with the text, leaving the tabs
@@ -116,40 +132,84 @@
 
   /* The grid's tiles are the SAME .cardrow buttons the mobile column uses
      (one source of truth for filters/search/data-*, see rules.js) — this
-     only restyles them from a horizontal row into a compact tile: the
-     picture, a badge, the name and the year — nothing else (review item 3:
-     the card's own rules text and its second-language line belong in the
-     panel beside the grid, not the tile; "nothing under 12px anywhere in
-     the tile"). Two columns from 1024 to 1199px, three from 1200px up —
-     the grid column's own width (.d-cards-grid's 1fr) is what actually
-     narrows in that band, this only decides how many tiles share it. */
+     only restyles them from a horizontal row into the design's own tile.
+     Two columns from 1024 to 1199px, three from 1200px up — the grid
+     column's own width (.d-cards-grid's 1fr) is what actually narrows in
+     that band, this only decides how many tiles share it. */
   .d-grid-col .cardlist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   @media (max-width: 1199px) {
     .d-grid-col .cardlist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
-  /* The badge overlaps the picture's own top-left corner (the row's own
-     background/border still comes from .cardrow's side-q/side-c/side-n
-     classes, untouched) rather than sitting in its own row — the only way
-     to fit picture + badge + name + year into "about 72 to 80px" without
-     shrinking the 44x58 picture the spec fixes. */
-  .d-grid-col .cardrow { position: relative; flex-direction: column; align-items: center; gap: 1px; padding: 2px 4px 3px; text-align: center; min-height: 0; }
-  .d-grid-col .cardrow img { width: 44px; height: 58px; }
-  .d-grid-col .cardrow .cr-body { align-items: center; width: 100%; gap: 0; }
-  .d-grid-col .cardrow .cr-head { justify-content: center; flex-wrap: nowrap; gap: 3px; }
-  /* The description and the row's own chevron never show; the second-
-     language line (review item 3) doesn't either — only the Chinese name
-     (the same headline name the mobile row itself leads with) and the year
-     share the tile's one text line, right under the picture. */
-  .d-grid-col .cardrow .cr-text, .d-grid-col .cardrow .cr-chevron, .d-grid-col .cardrow .cr-en { display: none; }
-  .d-grid-col .cardrow .cr-zh { font-size: 12px; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
-  .d-grid-col .cardrow .cr-year { display: inline; font-size: 12px; line-height: 1.25; color: var(--text-dim); }
+  /* #45 (owner, comparing the design board to the live tile): the picture
+     belongs at the LEFT with nothing drawn over it — round 2 of #44's own
+     badge-over-the-corner tile was a different design, caught in review.
+     Back to a plain flex row (the button's own default direction): picture
+     left (44x58, radius 6 here — the mobile 8px is untouched), the text
+     column at the right. `min-height` only (not a fixed height): a long
+     name (信陵君竊符救趙, most English names) is allowed to wrap and grow
+     the tile past its own ~72px baseline rather than clip or ellipsis. */
+  .d-grid-col .cardrow {
+    flex-direction: row; align-items: flex-start; gap: 10px;
+    padding: 6px 10px 6px 6px; border-radius: 10px; border-width: 1px;
+    min-height: 72px; text-align: left;
+  }
+  .d-grid-col .cardrow img { width: 44px; height: 58px; border-radius: 6px; flex: none; }
+  .d-grid-col .cardrow .cr-body { align-items: flex-start; width: auto; min-width: 0; flex: 1 1 auto; gap: 2px; }
+  /* Line 1: the badge and the name, vertically centred on each other —
+     `cr-year`'s own `flex-basis: 100%` (same trick the mobile row already
+     uses to push `cr-en` onto its own line, rules.css) forces it onto line
+     2 without touching cr-head's own markup at all. */
+  /* Round 1 review item 3 (#45): `align-items: center` centred the badge
+     against the name's WHOLE box — for a two-line name that's the middle
+     of both lines together, not the first line the badge is meant to share
+     (measured: 商鞅變法 at 1024 en, badge centre 268 vs the name's own first
+     line centre 249, off by 10px both times). `flex-start` top-aligns the
+     line instead: the badge (a fixed 20px circle) and the name's own first
+     line of text both start at the same y, which is what actually puts
+     them "on" the same line for a name that wraps. */
+  .d-grid-col .cardrow .cr-head { justify-content: flex-start; align-items: flex-start; flex-wrap: wrap; column-gap: 8px; row-gap: 2px; }
+  /* The description, the row's own chevron, the second-language line, and
+     the mobile row's own always-Chinese .cr-zh never show on the tile
+     (review item 3 of #44: the first three belong in the panel beside the
+     grid, not here; .cr-zh is superseded here by .cr-tile-name — see
+     cardRow()'s own note — which already carries the right name for
+     whichever language is current). */
+  .d-grid-col .cardrow .cr-text, .d-grid-col .cardrow .cr-chevron,
+  .d-grid-col .cardrow .cr-en, .d-grid-col .cardrow .cr-zh { display: none; }
+  /* The name: 15px/600, the design's own numbers. Free to wrap (no
+     ellipsis, no nowrap) — see the tile's own min-height note above.
+     `flex: 1 1 0` (not the default `0 1 auto`): a wrapping flex container
+     decides whether an item fits ITS OWN line using that item's hypothetical
+     (max-content, i.e. the whole name unbroken) size — a long name like
+     信陵君竊符救趙 was wider than the space left beside the badge, so the
+     WHOLE name box got pushed to its own line under the badge instead of
+     wrapping its own text next to it (measured while building this: badge
+     and name ended up on two different lines, not sharing one — #45's own
+     "share a line" acceptance). A 0 basis makes that fit-check always pass
+     (hypothetical size 0), then flex-grow fills the actual remaining width
+     on line 1, and the name's own text wraps inside THAT box instead. */
+  .d-grid-col .cardrow .cr-tile-name {
+    display: block; flex: 1 1 0; min-width: 60px;
+    font-size: 15px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere;
+  }
+  .d-grid-col .cardrow.side-q .cr-tile-name { color: var(--qin-text); }
+  .d-grid-col .cardrow.side-c .cr-tile-name { color: var(--chu-gold); font-family: var(--kai); }
+  .d-grid-col .cardrow.side-n .cr-tile-name, .d-grid-col .cardrow.side-s .cr-tile-name { color: var(--neutral-ink); }
+  .d-grid-col .cardrow .cr-year {
+    display: block; flex-basis: 100%; font-size: 12px; line-height: 1.3;
+    color: var(--text-dim); overflow-wrap: anywhere;
+  }
   .d-grid-col .cardrow .cr-year small { font-size: 12px; }
+  .d-grid-col .cardrow .cr-badge { width: 20px; height: 20px; font-size: 12px; line-height: 20px; flex: none; }
+  /* Ground/border/dim-year colour by side, the design's own hex values.
+     Qin's ground (#16130e) is its own tile-only tone, darker than the
+     mobile row's shared var(--bg) — everything else here already matched. */
+  .d-grid-col .cardrow.side-q { background: #16130e; border-color: #3a3325; }
+  .d-grid-col .cardrow.side-c { background: #4f0e0a; border-color: #3a3325; }
+  .d-grid-col .cardrow.side-n, .d-grid-col .cardrow.side-s { background: #f7f3e8; border-color: #b7ab8d; }
   .d-grid-col .cardrow.side-q .cr-year { color: var(--text-soft); }
   .d-grid-col .cardrow.side-c .cr-year { color: #fff3d2; }
-  .d-grid-col .cardrow .cr-badge {
-    position: absolute; top: 3px; left: 3px; z-index: 1;
-    width: 18px; height: 18px; font-size: 12px; line-height: 18px;
-  }
+  .d-grid-col .cardrow.side-n .cr-year, .d-grid-col .cardrow.side-s .cr-year { color: #6b6450; }
   /* #44 acceptance: "the chosen tile has a 2px gold border". */
   .d-grid-col .cardrow.chosen { border: 2px solid var(--gold); }
 
@@ -158,11 +218,27 @@
      is `position: fixed`) into an ordinary box that sits still inside its
      own sticky column. No Close button here (there is nothing to close: the
      panel just always shows whatever is chosen, or the hint). */
+  /* #45 round 1 review: putting the 16px padding on `#dCardPanel` (the
+     .d-sticky wrapper) didn't work — the element that actually clips
+     `.sheet-img`'s frame (a 4px box-shadow ring, drawn PAST the picture's
+     own box) is `#dCardPanelInner` itself (`.sheet.overlay`'s own
+     `overflow: hidden`, style.css), which still had zero padding of its
+     own; `#dCardPanel`'s padding only pushed that already-tightly-clipping
+     box further from the OUTER edge, it never gave the ring any more room
+     inside the box that was actually doing the clipping (measured: the
+     picture and its clipping ancestor shared the exact same left edge,
+     661.0 == 661.0). The padding — and the design's own board-style border
+     + radius, since this is now the element that visually needs to read as
+     a framed panel — belong on `.sheet.overlay` (#dCardPanelInner) instead:
+     the ring now sits inside ITS padding edge, which is where its own
+     `overflow: hidden` clips. */
   .d-card-panel .sheet.overlay {
     position: static; top: auto; left: auto; right: auto; bottom: auto;
-    height: auto; max-height: none; z-index: auto; margin: 0; padding: 0;
+    height: auto; max-height: none; z-index: auto; margin: 0;
+    padding: 16px; border: 1px solid var(--gold-line); border-radius: 12px;
+    box-sizing: border-box;
   }
   .d-card-panel .peek-footer { display: none; }
   .d-card-panel .sheet-mid { max-height: none; overflow: visible; }
-  .d-card-hint { margin: 20px 4px; color: var(--text-dim); font-size: 13px; }
+  .d-card-hint { margin: 4px; color: var(--text-dim); font-size: 13px; }
 }

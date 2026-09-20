@@ -163,14 +163,23 @@ function table(head, rows, cls = []) {
 // visible text line is the two of them together — hidden at mobile by
 // rules.css's own default (.cr-year{display:none}), same as it always was
 // before this element existed at all.
+// #45 (owner, comparing the design board to the live tile): the design's
+// own long-name example list names 信陵君竊符救趙 AND "most English names" —
+// the tile shows whichever language the interface is currently in (not
+// always 楚/中文, the mobile row's own bilingual-always convention), so
+// `cr-tile-name` (hidden at mobile, same default as `cr-year`) carries
+// `enName` under `en` and the plain zh name under `zh-Hant`; the mobile
+// row's own `cr-zh`/`cr-en` are untouched either way.
 function cardRow(side, id, zhName, enLine, badge, text, era, filterSideKey, searchName, year = "") {
   const enName = enLine.split(" · ")[0];
+  const tileName = lang === "en" ? esc(enName) : zhName;
   return `<button type="button" class="cardrow side-${side}" data-card="${esc(id)}" data-era="${esc(era)}" data-side="${esc(filterSideKey)}" data-name="${esc(searchName.toLowerCase())}">` +
     `<img src="art/cards/${id}.jpg" width="60" height="80" loading="lazy" alt="${esc(zhName.replace(/ \*$/, ""))} ${esc(enName)}">` +
     `<div class="cr-body">` +
     `<span class="cr-head">` +
     `<span class="cr-badge">${badge}</span>` +
     `<span class="cr-zh" lang="zh-Hant">${zhName}</span>` +
+    `<span class="cr-tile-name"${lang === "en" ? "" : ' lang="zh-Hant"'}>${tileName}</span>` +
     `<span class="cr-year">${year}</span>` +
     `<span class="cr-en">${esc(enLine)}</span>` +
     `</span>` +
@@ -225,7 +234,15 @@ function cardList(S, N, cardEn, opts = {}) {
       : esc(lang === "en" ? cardEn[c.id] ?? c.text : c.text);
     const year = c.year ? ` <small>(${lang === "en" ? "" : "前"}${c.year}${lang === "en" ? " BC" : ""})</small>` : "";
     const enLine = `${c.en} · ${S.era[c.era]} · ${c.scoring ? S.scoringCard : S.side[c.side]}`;
-    return cardRow(side, c.id, zhName, enLine, c.scoring ? "–" : c.ops, text + year, c.era, filterSideKeyOf(c), `${c.zh} ${c.en}`, year);
+    // #45 round 1: the desktop tile's own line 2 is never empty (the design
+    // never shows the name alone) — reuse `year` when there is one (same
+    // string the mobile description already carries), otherwise a scoring
+    // card falls back to its own era and every other undated card falls
+    // back to N.rules.undated. This is deliberately a SEPARATE value from
+    // `year` above: `year` still only ever feeds the mobile row's own
+    // `text + year` description, unaffected by any of this.
+    const tileLine2 = year || (c.scoring ? esc(S.era[c.era]) : esc(N.rules.undated));
+    return cardRow(side, c.id, zhName, enLine, c.scoring ? "–" : c.ops, text + year, c.era, filterSideKeyOf(c), `${c.zh} ${c.en}`, tileLine2);
   });
   // Name is bilingual regardless of the active language, same as every
   // other card row (names are the exception to the no-mixing rule); the
@@ -237,7 +254,10 @@ function cardList(S, N, cardEn, opts = {}) {
   // filter — never under 變法期/縱橫期/兼併期 specifically (era: "" never
   // equals any of those three) — orchestrator's call on #40. Side-wise
   // they're plain 中立, same as every other non-Qin/Chu/scoring card.
-  rows.push(cardRow("n", "jiuding", esc(zh.rules.jiuding), jiudingEnLine, jiudingOps, esc(N.rules.jiudingText), "", "neutral", `${zh.rules.jiuding} ${en.rules.jiuding}`));
+  // #45 round 1: the Cauldrons' own tile line 2 — "every era" (N.rules.
+  // everyEra), not a specific one, matching the same era==="" special case
+  // noted above (never any of 變法期/縱橫期/兼併期 specifically).
+  rows.push(cardRow("n", "jiuding", esc(zh.rules.jiuding), jiudingEnLine, jiudingOps, esc(N.rules.jiudingText), "", "neutral", `${zh.rules.jiuding} ${en.rules.jiuding}`, esc(N.rules.everyEra)));
   const filters = opts.withFilters === false ? "" : cardFiltersHTML();
   return `${filters}<div class="cardlist" id="cardListWrap">${rows.join("")}</div><p class="card-empty" id="cardEmpty" hidden>${esc(N.rules.empty)}</p>`;
 }

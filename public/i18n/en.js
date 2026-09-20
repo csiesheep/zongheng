@@ -28,6 +28,13 @@ export default {
     // before anything is chosen.
     tabs: { rules: "Rules", cards: "The 72 cards" },
     pickHint: "Pick a card from the list to see it here.",
+    // #45 round 1: the desktop tile's own second line — every undated card
+    // still needs one (never just the name alone): a plain card shows
+    // "undated", a scoring card shows its own era, the Nine Cauldrons shows
+    // "every era" (it isn't tied to one — see rules.js's own note on
+    // era === "").
+    undated: "undated",
+    everyEra: "every era",
   },
   sides: { qin: "Qin", chu: "Chu", neutral: "Neutral", scoring: "Scoring card" },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },
