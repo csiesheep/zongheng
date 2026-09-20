@@ -691,6 +691,23 @@ function renderDetail() {
   renderCardView(el, openCardId, lang, { onClose: closeCardDetail });
   positionDetailOverlay();
 }
+// Review item 4 (#44): a pick used to call the full render() every time —
+// measured at 40 childList mutations and a brand-new #cardListWrap per
+// click, so the button the reader's own click landed on was never the node
+// that ended up wearing .chosen a moment later. A pick now only ever does
+// the three things the review named: fill the panel (renderDetail()), move
+// .chosen from the old tile to the new one, replaceState. render() (the
+// whole DOM rebuild) is reserved for the one real structural change a pick
+// can also cause — entering the cards tab in the first place, e.g. straight
+// from a hash on a cold load, or from the 規則 tab's own filters/rail
+// having never mounted #cardListWrap at all.
+function selectCardTile(id) {
+  const prev = openCardId;
+  openCardId = id;
+  if (prev && prev !== id) document.querySelector(`#cardListWrap .cardrow[data-card="${prev}"]`)?.classList.remove("chosen");
+  document.querySelector(`#cardListWrap .cardrow[data-card="${id}"]`)?.classList.add("chosen");
+  renderDetail();
+}
 // #44: on desktop, choosing a card always switches to the cards tab (tiles
 // only ever appear there) and replaces the address (never stacks a history
 // entry per card — switchTab() above already pushed the one entry for
@@ -698,12 +715,11 @@ function renderDetail() {
 // touches history at all, same rule as mobile.
 function openCardDetail(id, fromHash = false) {
   if (!CARD_IDS.has(id)) return;
-  openCardId = id;
   cameFromHash = fromHash;
   if (isDesktopScroller()) {
     const enteringTab = activeTab !== "cards";
-    activeTab = "cards";
-    render();
+    if (enteringTab) { activeTab = "cards"; openCardId = id; render(); }
+    else selectCardTile(id);
     scrollTileIntoView(id);
     if (!fromHash) {
       if (enteringTab) history.pushState(null, "", "#card-" + id);
@@ -711,6 +727,7 @@ function openCardDetail(id, fromHash = false) {
     }
     return;
   }
+  openCardId = id;
   renderDetail();
   if (!fromHash) location.hash = "#card-" + id;
 }
@@ -739,9 +756,16 @@ function closeCardDetail() {
 window.addEventListener("hashchange", () => {
   const m = /^#card-([a-z0-9_]+)$/.exec(location.hash);
   if (isDesktopScroller()) {
-    if (m && CARD_IDS.has(m[1])) { openCardId = m[1]; cameFromHash = true; activeTab = "cards"; render(); scrollTileIntoView(m[1]); }
-    else if (location.hash === "#cards") { activeTab = "cards"; openCardId = null; render(); }
-    else { activeTab = "rules"; openCardId = null; render(); }
+    if (m && CARD_IDS.has(m[1])) {
+      cameFromHash = true;
+      if (activeTab !== "cards") { activeTab = "cards"; openCardId = m[1]; render(); }
+      else selectCardTile(m[1]); // review item 4: no full render() for a plain selection change
+      scrollTileIntoView(m[1]);
+    } else if (location.hash === "#cards") {
+      if (activeTab !== "cards" || openCardId) { activeTab = "cards"; openCardId = null; render(); }
+    } else if (activeTab !== "rules" || openCardId) {
+      activeTab = "rules"; openCardId = null; render();
+    }
     return;
   }
   if (m && CARD_IDS.has(m[1])) { openCardId = m[1]; cameFromHash = false; renderDetail(); }
