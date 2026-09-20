@@ -534,6 +534,56 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .prompt-text { flex: 1; min-width: 0; }
 .prompt .err { color: var(--bad); }
 .prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 3.6em; overflow: hidden; }
+/* #34 round 2 (orchestrator's ruling): a line naming exactly one card is
+   the WHOLE row, one <button> — see logLineNodes() in app.js. It resets
+   every default button style back to a plain row (a <div> would have had
+   none of these), so it reads and lays out exactly like the other,
+   non-clickable lines around it — only the .log-card-name span inside it
+   (below) looks linked. Its hit area is just its own line's ordinary block
+   box: no padding trick, so it can never reach into the row above or
+   below (round 1's own be5df4b bug — a padding+negative-margin link bled
+   onto the next line's text, `elementFromPoint` on one line resolving to
+   the wrong card entirely). */
+.log-line-link {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.log-line-link:focus-visible { outline: 2px solid var(--gold); outline-offset: -1px; }
+/* The card name's own link look — a plain <span> inside a .log-line-link
+   row (the common case, one name per line), or log.headline's two-name
+   line's own <button> (the only line where a whole-row button can't work,
+   since tapping either name would have to open ONE card). Either way:
+   colour/underline only, horizontal padding at most, NEVER vertical
+   padding or any negative margin — round 1's own be5df4b bug was exactly a
+   vertical padding+negative-margin trick letting one line's hit area bleed
+   onto its neighbour's text (measured: a name's own glyphs resolved to the
+   next line's button). Nothing here may grow past its own text's
+   line-height. log.headline's two buttons are kept apart by the
+   template's own "and"/"、" (i18n/*.js) rather than any added margin —
+   that literal text is already wider than the 8px minimum the ruling
+   asked for, in both languages. */
+.log-card-name, .log-card-link {
+  color: var(--gold);
+  text-decoration: underline;
+}
+.log-card-link {
+  display: inline;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.log-card-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 .sheet { flex: none; display: flex; flex-direction: column; gap: 6px; margin: 0 8px; padding: 8px 10px; border-radius: 10px; max-height: 40svh; overflow-y: auto; }
 .sheet:empty { display: none; }
 /* #24 round 3: setPrompt() (round 2's fix #2) always parks its text as a
@@ -560,6 +610,20 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    cover .bar (ZONGHENG/Advisor/Rules/中文) along with the rest of the
    viewport. */
 .sheet.overlay { position: fixed; top: var(--bar-h, 0px); left: 0; right: 0; bottom: 0; z-index: 40; margin: 0; max-height: none; height: auto; border-radius: 0; overflow: hidden; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); }
+/* #34: the read-only peek sheet sits above BOTH the real card sheet (40)
+   and the log panel + its scrim (44/45) — it can be opened from a card
+   name inside either one, and must land on top when it is. An id beats any
+   class combination on specificity, so this always wins over the plain
+   `.sheet.overlay` rule above without needing `!important` or a 3-class
+   selector. */
+#peekSheet { z-index: 50; }
+/* The peek's own footer: always exactly one [Close], full width — a fresh
+   class rather than reusing .sheet-footer, so the two-button Cancel/Confirm
+   sizing below (`.sheet-footer button:first-child`, built for a 110px
+   Cancel beside a wide Confirm) never has to special-case a footer that
+   only ever holds one button. */
+.peek-footer { flex: none; display: flex; margin-top: 2px; }
+.peek-footer button { flex: 1 1 auto; height: 52px; min-height: 52px; border-radius: 26px; }
 .sheet .rowb { display: flex; flex-wrap: wrap; gap: 6px; }
 .sheet .rowb.order { gap: 8px; }
 .sheet button { min-height: 44px; padding: 0 12px; background: none; border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font-size: 13px; }

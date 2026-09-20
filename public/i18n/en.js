@@ -46,7 +46,7 @@ export default {
     over: "Game over.",
   },
   uses: { event: "Event", place: "Place", campaign: "Campaign", lobby: "Lobby", reform: "Reform", bog: "Discard (bogged)", pair: "Pair with", opsFirst: "Ops first", eventFirst: "Event first" },
-  buttons: { send: "Send", board: "View the board", result: "Result", confirm: "Confirm", done: "Done", cancel: "Cancel", skip: "Skip", playAgain: "Play again", swap: "Swap sides", home: "Home", headline: "Commit headline", show: "Show", hide: "Hide", log: "Log", logChat: "Log and chat", expand: "Card", collapse: "Collapse" },
+  buttons: { send: "Send", board: "View the board", result: "Result", confirm: "Confirm", done: "Done", cancel: "Cancel", skip: "Skip", playAgain: "Play again", swap: "Swap sides", home: "Home", headline: "Commit headline", show: "Show", hide: "Hide", log: "Log", logChat: "Log and chat", expand: "Card", collapse: "Collapse", close: "Close" },
   preview: { campaign: "Removes {removed} of theirs, places {placed} of yours; weariness {w}.", lobby: "Edge {edge}: removes up to {n}.", locked: "Locked by weariness.", enemyEvent: "This is their card: its event will happen too." },
   // The result screen's colour and art always follow the WINNER, not your
   // own seat, so each ending's line and body read as fact from the table,
@@ -157,6 +157,10 @@ export default {
       neutral: "A neutral card: the event or the ops, never both.",
       enemy: "An enemy card: you use the ops, and its event still happens; you choose the order.",
       score: "A scoring card: it must be played this turn.",
+      // #34: the read-only peek sheet's own one-line hint (owner-authorised
+      // copy) — {side} is the seat who played/discarded/headlined it, not
+      // the viewer's own seat, so it reads the same for either player.
+      played: "Played by {side}.",
     },
   },
 };
