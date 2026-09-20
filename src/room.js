@@ -19,11 +19,85 @@ const CLOCK_MS = { headline: 60_000, action: 90_000, choose: 45_000 };
 const BOT_MS = 900;          // pause before a bot moves so the table reads as a sequence
 const GRACE_MS = 20_000;     // a disconnected human's decisions go to the bot after this
 const IDLE_MS = 30 * 60_000; // a room nobody is connected to is deleted after this
+const BOT_RETRY = 3;         // refusals on one position before the table plays for the seat (#25)
 const MAX_SEATS = E.MAX_PLAYERS;
 const LOG_KEEP = 120, CHAT_MAX = 200;
 
 const clean = (s) => String(s ?? "").replace(/[^\p{L}\p{N} _.\-]/gu, "").trim().slice(0, 16);
 const newToken = () => crypto.randomUUID().replace(/-/g, "");
+
+// ---------- the fallback a refused bot is carried by (#25) ----------
+// How many more of `id` this pending still allows. The limits are the ones the
+// pending itself carries, so this reads what the engine published rather than
+// keeping a second copy of the rule.
+function roomFor(st, p, id, counts) {
+  let r = Infinity;
+  if (p.distinct) r = Math.min(r, 1);
+  if (p.maxPer) r = Math.min(r, p.maxPer);
+  if (p.maxOf) r = Math.min(r, p.maxOf[id] ?? 0);
+  if (p.side != null) r = Math.min(r, E.capOf(st, id) - E.infOf(st, id)[p.side]);
+  return r - (counts[id] || 0);
+}
+function* pendingCandidates(st, side, p) {
+  const mk = (choice) => ({ type: "choose", side, choice });
+  switch (p.kind) {
+    case "points": {
+      const min = p.min ?? 0;
+      if (min === 0) yield mk([]);
+      const counts = {}, out = [], want = Math.max(min, 1);
+      for (const id of p.options) {
+        while (out.length < want && roomFor(st, p, id, counts) > 0) { counts[id] = (counts[id] || 0) + 1; out.push(id); }
+        if (out.length >= want) break;
+      }
+      if (out.length >= min) yield mk(out);
+      if (min <= 1) for (const id of p.options) yield mk([id]);
+      break;
+    }
+    case "card": {
+      const min = p.min ?? 1;
+      if (min === 0) yield mk([]);
+      if (p.options.length >= min) yield mk(p.options.slice(0, Math.max(min, 1)));
+      if (min <= 1) for (const c of p.options) yield mk([c]);
+      break;
+    }
+    case "option":
+      for (const o of p.options) yield mk(o.id);
+      break;
+    case "ops": {
+      const o = E.opsOptions(st, side);
+      if (p.allowed.includes("campaign")) for (const t of o.campaignTargets) yield mk({ use: "campaign", target: t });
+      if (p.allowed.includes("lobby")) for (const t of o.lobbyTargets) yield mk({ use: "lobby", target: t.id });
+      if (p.allowed.includes("place")) for (const x of o.placeOptions) if (x.cost <= p.ops) yield mk({ use: "place", points: [x.id] });
+      break;
+    }
+  }
+}
+// Candidates for the seat, simplest first. `event` leads because it has no
+// payload to get wrong and always spends a card, so the table moves. Nothing
+// here is trusted: `fallbackFor` hands each one to the engine and keeps the
+// first the engine does not refuse.
+function* fallbackCandidates(st, side) {
+  const L = E.legal(st, side);
+  if (L.kind === "pending") { yield* pendingCandidates(st, side, L.pending); return; }
+  if (L.kind === "headline") { for (const card of L.cards) yield { type: "headline", side, card }; return; }
+  if (L.kind !== "action") return;
+  if (L.bog && L.bog.length) { for (const card of L.bog) yield { type: "play", side, card, use: "bog" }; return; }
+  for (const c of L.cards) {
+    const u = c.uses || {};
+    yield { type: "play", side, card: c.id, use: "event" };
+    if (u.place) for (const o of u.place.options) if (o.cost <= u.place.ops) yield { type: "play", side, card: c.id, use: "place", order: "opsFirst", points: [o.id] };
+    if (u.campaign) for (const t of u.campaign.targets) yield { type: "play", side, card: c.id, use: "campaign", order: "opsFirst", target: t };
+    if (u.lobby) for (const t of u.lobby.targets) yield { type: "play", side, card: c.id, use: "lobby", order: "opsFirst", target: t.id };
+    if (u.reform) yield { type: "play", side, card: c.id, use: "reform" };
+  }
+  const j = L.jiuding;
+  if (j) {
+    if (j.place) for (const o of j.place.options) if (o.cost <= 4) yield { type: "play", side, card: E.JIUDING, use: "place", points: [o.id] };
+    if (j.campaign) for (const t of j.campaign.targets) yield { type: "play", side, card: E.JIUDING, use: "campaign", target: t };
+    if (j.lobby) for (const t of j.lobby.targets) yield { type: "play", side, card: E.JIUDING, use: "lobby", target: t.id };
+  }
+}
+const describe = (a) => (a.type === "play" ? `${a.card} as ${a.use}` : a.type === "headline" ? `${a.card} as its headline` : `a ${JSON.stringify(a.choice)} choice`);
 
 export class Room {
   constructor(ctx, env) {
@@ -138,6 +212,7 @@ export class Room {
         code, phase: "lobby", seats: [], settings: { level: "normal", lang },
         state: null, rngState: E.randomSeed(), gen: 0, deadline: 0, clockKey: "",
         log: [], alarmAt: 0, idle: false, lastActive: Date.now(),
+        botFail: null, botStuck: "",
       };
       seat = this.addSeat(name || this.t("setup.defaultName"), E.QIN);
     } else if (tok && (seat = room.seats.find((s) => s.token === tok && !s.ai))) {
@@ -289,6 +364,7 @@ export class Room {
     const room = this.room;
     room.state = E.createGame(E.randomSeed(), room.settings.options || {});
     room.phase = "game"; room.gen++; room.deadline = 0; room.clockKey = ""; room.log = [];
+    room.botFail = null; room.botStuck = "";
     for (const s of room.seats) s.ready = false;
     this.pushLobby();
     this.broadcast({ type: "log", entries: [] });
@@ -323,6 +399,41 @@ export class Room {
     await this.scheduleAt(bots.length ? Math.min(now + BOT_MS, room.deadline) : room.deadline);
   }
 
+  // ---------- a bot the engine refuses (#25) ----------
+  // What "the same position" means: the seat plus everything the engine would
+  // have had to move for the decision to be a different one. `apply` clones
+  // and throws, so a refusal leaves `state` untouched and this string equal.
+  // `logSeq`, not `log.length`: the log itself is capped at 400 entries
+  // (engine.js), so past that point its length stops changing and a count or a
+  // `botStuck` mark could carry over to a position it does not belong to.
+  // `logSeq` is the engine's running number and never stops.
+  failKey(side, st) {
+    return [
+      side, st.logSeq ?? 0, st.plan.length, st.turn, st.round, st.phase, st.actor,
+      st.pending ? `${st.pending.kind}/${st.pending.who}` : "-",
+      st.headline.map((h) => (h == null ? 0 : 1)).join(""),
+    ].join(":");
+  }
+  // The first action the engine accepts, or null if it accepts none.
+  fallbackFor(side) {
+    const st = this.room.state;
+    for (const action of fallbackCandidates(st, side)) {
+      try { return { action, state: E.apply(st, action) }; } catch { /* not that one */ }
+    }
+    return null;
+  }
+  // Nothing left to ask: keep the clock if one is running, otherwise stop
+  // waking up. With nobody connected the room parks on the idle sweep, so the
+  // Durable Object can be evicted instead of ticking every 900 ms.
+  async park() {
+    const r = this.room, now = Date.now();
+    if (this.sockets().length === 0) {
+      if (!r.idle || !(r.alarmAt > now)) { r.idle = true; await this.scheduleAt(now + IDLE_MS); }
+    } else if (r.deadline > now) {
+      if (r.alarmAt !== r.deadline) await this.scheduleAt(r.deadline);
+    } else if (r.alarmAt) await this.clearAlarm();
+  }
+
   // The alarm handler: let a bot act, or enforce the clock.
   async pump() {
     const room = this.room, st = room.state;
@@ -330,21 +441,45 @@ export class Room {
     const now = Date.now();
     const need = E.mustAct(st);
     if (!need.length) return;
-    const bots = this.botSides(need);
+    // A seat the room has given up on for this exact position is not asked
+    // again; the moment anything moves the key differs and it comes back.
+    const open = need.filter((s) => this.failKey(s, st) !== room.botStuck);
+    if (!open.length) { await this.park(); return; }
+    const bots = this.botSides(open);
     let side = null, timeout = false;
     if (bots.length) side = bots[0];
-    else if (room.deadline && now >= room.deadline - 50) { side = need[0]; timeout = true; }
+    else if (room.deadline && now >= room.deadline - 50) { side = open[0]; timeout = true; }
     if (side == null) { await this.scheduleAt(room.deadline); return; }
     const seat = this.seatBySide(side);
     if (timeout && seat) this.say(null, this.t("sys.timeout", { name: seat.name }));
     const action = this.decideFor(side);
-    if (!action) { await this.scheduleAt(now + BOT_MS); return; }
-    try { room.state = E.apply(room.state, action); } catch (err) {
-      // A bot action the engine refuses is a bug; log it and try again shortly.
-      this.say(null, `bot error: ${err.message}`, true);
-      await this.scheduleAt(now + BOT_MS);
-      return;
+    let refused = action ? null : "the bot produced no action";
+    if (action) {
+      try { room.state = E.apply(room.state, action); } catch (err) { refused = err.message; }
     }
+    if (refused != null) {
+      // A bot action the engine refuses is a bug. Retry the same position a few
+      // times (the rng moves on, so the next try is a different roll), then
+      // play a fallback the engine accepts. Retrying forever kept the room
+      // awake and scrolled the only evidence out of the 120-line log (#25).
+      this.say(null, `bot error: ${refused}`, true);
+      const key = this.failKey(side, st);
+      const n = room.botFail && room.botFail.key === key ? room.botFail.n + 1 : 1;
+      room.botFail = { key, n };
+      if (n < BOT_RETRY) { await this.scheduleAt(now + BOT_MS); return; }
+      room.botFail = null;
+      const who = seat ? seat.name : E.SIDES[side];
+      const fb = this.fallbackFor(side);
+      if (!fb) {
+        this.say(null, `bot stuck: nothing the engine accepts for ${who} after ${n} refused actions; no more retries`, true);
+        room.botStuck = key;
+        await this.park();
+        return;
+      }
+      this.say(null, `bot fallback: ${who} plays ${describe(fb.action)} after ${n} refused actions (${refused})`, true);
+      room.state = fb.state;
+    }
+    room.botFail = null; room.botStuck = "";
     await this.afterChange();
   }
 
