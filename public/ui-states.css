@@ -129,6 +129,15 @@ a[href], [role="button"] { cursor: pointer; }
     color: var(--gold);
     transition: background var(--ui-t) ease, color var(--ui-t) ease;
   }
+  /* Round 2 (coverage script): the ACTIVE (currently-selected) rail item
+     had no hover rule at all -- .d-filter-item.active and .rules-tab.active
+     already get one further down (the filled-gold group, since their rest
+     background is literally var(--gold)), but .d-rail-item.active's own
+     rest background is only a 0.14 tint (rules-desktop.css), not a solid
+     fill, so it belongs here instead: a deeper tint of the same colour. */
+  .d-rail-item.active:hover {
+    background: rgba(212, 175, 55, 0.22);
+  }
 
   /* ---- Filled gold buttons (background: var(--gold) literally): lighter ---- */
   .ctl-btn.ctl-fill:hover,
@@ -177,7 +186,8 @@ a[href], [role="button"] { cursor: pointer; }
   .bar .hub:hover,
   .bar .back:hover,
   .landing-bar .rules:hover,
-  .actions .link:not(:disabled):hover {
+  .actions .link:not(:disabled):hover,
+  .tut-skip:hover {
     color: #f4d98a;
     text-decoration: underline;
   }
@@ -245,6 +255,7 @@ a[href], [role="button"] { cursor: pointer; }
 .d-rail-item:not(:disabled):active,
 .d-filter-item:not(:disabled):active,
 .rules-tab:active,
+.tut-head:active,
 .ctl-btn:not(.ctl-fill):not(:disabled):active,
 .pills button:not([aria-pressed="true"]):not(:disabled):active,
 .seg button:not([aria-pressed="true"]):not(:disabled):active,
@@ -320,7 +331,8 @@ a[href], [role="button"] { cursor: pointer; }
 .bar .hub:active,
 .bar .back:active,
 .landing-bar .rules:active,
-.actions .link:not(:disabled):active {
+.actions .link:not(:disabled):active,
+.tut-skip:active {
   color: #b8944a;
   text-decoration: underline;
 }
