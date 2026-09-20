@@ -559,20 +559,28 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .hit { position: absolute; width: 47px; height: 47px; transform: translate(-50%, -50%); clip-path: circle(50%); padding: 0; border: none; background: none; cursor: default; }
 .hit:not(:disabled) { cursor: pointer; }
 .card:disabled { opacity: 0.85; }
-/* Below the map: one condensed stat row, then the prompt, then the hand. */
-.statline { flex: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 3px 8px; font-size: 10px; }
-.statline .sl-label { display: block; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-size: 9px; white-space: nowrap; }
-/* #24 (found while walking a real 390x669 game, not one of this issue's
-   three named defects, but it broke the same "never scroll" promise):
-   "Qin (face down)" in the Cauldrons column doesn't fit its ~74px slot at
-   11px and used to wrap to 2 lines, growing .statline from 33px to 47px --
-   enough, on its own, to push the map past its floor spec and force
-   table-overflow during a campaign/lobby/place target pick even after the
-   hand/prompt/sheet give-way (#24) had already done everything it could.
-   One line + ellipsis keeps the row's height fixed; the value is still a
-   read-only status readout, not something a phone player edits or must
-   read in full without expanding it. */
-.statline .sl-val { display: block; color: var(--text); font-weight: 600; font-size: 11px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Below the map: one condensed stat row, then the prompt, then the hand.
+   #39 part 3: an equal 5-column grid left the Cauldrons column (the widest
+   value, see the comment this replaces below) no more room than Seals or
+   Reform ever needed. Flex with each column sized to its own content
+   (never shrunk below it — no min-width:0 override) fixes that: the five
+   natural widths add up to comfortably less than a 375px-wide row, so
+   nothing needs to be clipped or wrapped to make it fit. */
+.statline { flex: none; display: flex; justify-content: space-between; gap: 6px; padding: 3px 8px; overflow: hidden; }
+.statline > div { flex: none; }
+.statline .sl-label { display: block; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; white-space: nowrap; }
+/* #24's own note (kept — still true of what this replaces): "Qin (face
+   down)" in the Cauldrons column used to force a 2-line wrap and grow
+   .statline by 14px, enough on its own to push the map past its floor spec.
+   The owner's #39 spec forbids the ellipsis #24 used to fix that (never
+   wrap, clip or ellipsize, in EITHER language, at 375px) — the flex row
+   above is the replacement fix: every column keeps its own natural width
+   instead of being forced into an equal fifth, so the widest value no
+   longer needs truncating to fit. English can still run wide ("Qin (face
+   down)"), so its value alone may drop to 12px; the row is still short
+   enough at that size to fit 375px with all five natural widths intact. */
+.statline .sl-val { display: block; color: var(--text); font-weight: 600; font-size: 13px; line-height: 1.25; white-space: nowrap; }
+:root[lang="en"] .statline .sl-val { font-size: 12px; }
 /* #30: the log toggle moved to the top bar (style.css's own .bar rules,
    next to Advisor/Rules/lang) -- #promptText now uses the row's full
    width instead of sharing it with that button. */
