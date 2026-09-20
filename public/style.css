@@ -546,6 +546,87 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    bigger lift only for the handful of nodes this close to an edge — none
    of the others (checked: Wuyue at y=378 already clears at -2px). */
 .node.stab-hi .stab { bottom: 2px; }
+/* #41: the last-move mark — every space computeLastMoveMarks() (lastmove.js)
+   flagged as changed by the LAST resolved action gets a frame around its
+   disc plus a tag near the upper-right corner (the one corner none of
+   .cost/.badge/.stab/.adv-badge use by default — see NODE_LASTMOVE_LEFT in
+   map-draw.js for the nodes whose own city name reaches into it instead).
+   Round 1 review (orchestrator, item 1): a 3px outline on the disc's own
+   edge read as "a slightly thicker border" next to a control ring
+   (.ctlq/.ctlc, above) and didn't catch the eye — replaced with four
+   viewfinder-style corner brackets standing 3px CLEAR of the disc, so the
+   shape itself (not just a colour) is what says "changed", against a red
+   ring, a black ring or the parchment alike. Ink #1a1a1a with a paper
+   (#f7f3e8) halo so the dark brackets hold on the map's own dark region
+   tints too. Both .lastmove-frame and its sibling .lastmove-frame2 are
+   sized to match the disc exactly (.big below) and centred on it the same
+   way the disc is centred in .node (top/left 50% + translate, not the
+   node's own box) — each contributes two OPPOSITE corners via its own
+   ::before/::after (one real element only gets two pseudo-elements), so
+   two elements make all four. Absolutely positioned, pointer-events:none,
+   zero layout — the node's own box and the disc's own box are exactly the
+   same size with or without this class, #41's "no layout change"
+   requirement, same rule as the advisor's ring below. The advisor's
+   suggestion ring (advisor.css, #e9b92e) is a circle floating OUTSIDE the
+   disc with a bright glow; these are square brackets, no glow, a
+   different (darker, cooler) colour — a disc that is both an advisor
+   target and a last-move space still reads as two distinct marks, not one
+   thicker ring. */
+.node .lastmove-frame, .node .lastmove-frame2 {
+  position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 5;
+}
+.node.big .lastmove-frame, .node.big .lastmove-frame2 { width: 34px; height: 34px; }
+.node .lastmove-frame::before, .node .lastmove-frame::after,
+.node .lastmove-frame2::before, .node .lastmove-frame2::after {
+  content: ""; position: absolute; width: 9px; height: 9px; border-color: #1a1a1a; border-style: solid;
+  filter: drop-shadow(0 0 1.5px #f7f3e8) drop-shadow(0 0 1.5px #f7f3e8);
+}
+.node .lastmove-frame::before { top: -3px; left: -3px; border-width: 3px 0 0 3px; }
+.node .lastmove-frame::after { bottom: -3px; right: -3px; border-width: 0 3px 3px 0; }
+.node .lastmove-frame2::before { top: -3px; right: -3px; border-width: 3px 3px 0 0; }
+.node .lastmove-frame2::after { bottom: -3px; left: -3px; border-width: 0 0 3px 3px; }
+.node .lastmove-tag {
+  position: absolute; top: -6px; right: -8px; min-width: 18px; height: 18px; box-sizing: border-box;
+  border-radius: 9px; background: #8a5a12; color: #fff; font: 700 12px/18px var(--sans); text-align: center;
+  padding: 0 4px; z-index: 6; pointer-events: none; white-space: nowrap; box-shadow: 0 0 0 1.5px #f7f3e8;
+}
+/* Round 1 review (item 2): 「+2」 also says WHOSE — the tag's background
+   follows whichever side's count actually changed (lastmove.js's own
+   `side`, E.QIN/E.CHU), the same black/red the disc's two numbers already
+   use (.disc i.q/i.c above), not the frame's bronze. A destroyed/restored
+   mark (app.js's lastMoveTagClass — no side, it's the state's capital,
+   not a count) keeps the plain bronze background set above. */
+.node .lastmove-tag.side-q { background: #0e0e0e; }
+.node .lastmove-tag.side-c { background: #a31c15; }
+.node.lastmove-l .lastmove-tag { right: auto; left: -8px; }
+/* Ying and Wuyue (map-draw.js's NODE_LASTMOVE_LEFT) anchor their own city
+   name ABOVE the disc, centred (.anchor-top .nm, style.css above) rather
+   than to one side — the default top-left corner still clipped the name's
+   own bottom-left corner there (measured with all 26 nodes marked at once
+   at 390x669, both languages; not visible eyeballing one node at a time —
+   re-measured after the round-1 resize since the bigger tag changes the
+   footprint). Lifted and nudged further left, clear of both. */
+.node.anchor-top.lastmove-l .lastmove-tag { top: -1px; left: -13px; }
+/* The pulse: the brackets closing in once from a wider stance to their
+   resting position (round 1 review's own suggestion), on top of the
+   already-visible, non-animated resting frame above — so a browser that
+   never runs this animation at all (the hidden test pane throttles timers
+   and never runs requestAnimationFrame) still shows the correct RESTING
+   mark, never waiting on the animation to begin with. app.js adds this
+   class for exactly one renderMap() call, right after a new action
+   resolves (game.lastMoveFresh) — never on a later, unrelated re-render
+   that redraws the same mark. */
+.node.lastmove-pulse .lastmove-frame, .node.lastmove-pulse .lastmove-frame2 {
+  animation: lastmove-pulse 0.6s ease-out;
+}
+@keyframes lastmove-pulse {
+  from { transform: translate(-50%, -50%) scale(1.7); }
+  to { transform: translate(-50%, -50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .node.lastmove-pulse .lastmove-frame, .node.lastmove-pulse .lastmove-frame2 { animation: none; }
+}
 /* #7/#32: .hit-layer used to sit flush with .map's own box (inset:0) and
    position each button by percentage of THAT box, which drifted away from
    the visual disc (inside .map-inner, a fixed design canvas fitMap()

@@ -58,6 +58,11 @@ export default {
   },
   eras: { reform: "Reform era", alliance: "Alliance era", conquest: "Conquest era" },
   tracks: { mandate: "Mandate", weariness: "Weariness", reform: "Reform", seals: "Seals", mie: "Destroyed", jiuding: "Cauldrons", faceDown: "face down", turn: "Turn", round: "Action", of: " of " },
+  // #41: the short tag on a space's last-move mark when its state's
+  // destroyed flag just flipped (checkMarkers()'s mie/restore) -- not the
+  // full log sentence (that stays in log.mie/log.restore above), a badge a
+  // few px wide next to the disc.
+  lastMove: { destroyed: "Fell", restored: "Restored" },
   weariness: { 5: "Peace", 4: "War", 3: "Strife", 2: "Misery", 1: "Collapse" },
   prompt: {
     setup: "Place {n} free influence ({left} left). Tap spaces.", setupBonus: "Place {n} bonus influence where you already are ({left} left).",

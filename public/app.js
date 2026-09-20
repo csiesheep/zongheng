@@ -19,8 +19,9 @@ import {
   DESIGN_W, DESIGN_H, NODE_POS, nodeCenter, regionMembers, isCapital,
   renderRegionBlobs, renderRoads, REGION_LABEL_POS,
   NODE_BREAK_EN, NODE_SMALL_EN, NODE_ANCHOR, nodeLabelHTML, stabilityTagHTML,
-  NODE_STAB_RIGHT, NODE_STAB_HI,
+  NODE_STAB_RIGHT, NODE_STAB_HI, NODE_LASTMOVE_LEFT,
 } from "./map-draw.js";
+import { computeLastMoveMarks } from "./lastmove.js";
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);
@@ -209,6 +210,14 @@ $("btnStart").onclick = startSolo;
 // every one of those resets untouched, since it doesn't represent anything
 // about the player's own turn.
 const game = { st: null, me: 0, level: "normal", rng: null, ui: null, botLine: "", botName: "", room: false, spectator: false, peek: null };
+// #41: the last-move mark on the map -- { [spaceId]: {delta} | {destroyed} }
+// for every space whose influence/control/destroyed-state changed in the
+// last resolved action, plus a one-shot flag so the pulse plays exactly
+// once (see computeLastMoveMarks/render/clearLastMoveMarks below). Kept on
+// `game`, not local to render(), because a tap must be able to clear it
+// (clearLastMoveMarks) without going through a full render() itself.
+game.lastMoveMarks = {};
+game.lastMoveFresh = false;
 // Per-tab: the reconnect token, so two tabs in one browser are two players.
 const sess = {
   get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
@@ -350,8 +359,10 @@ function render() {
   // seat is known (see show()). A spectator gets the neutral default.
   if (!$("table").hidden) paintBody("table");
   // In a room the state on hand is already this seat's view.
+  const prevView = game.lastView; // #41: the view from just before this action, read BEFORE it's overwritten below
   const v = game.room ? game.st : E.view(game.st, game.me);
   game.lastView = v; // layoutTable() re-renders the hand off this if it flips full<->chip
+  updateLastMoveMarks(prevView, v); // #41 — renderMap()/decorateAdvisor() below read game.lastMoveMarks off this
   // #30 (owner, iPhone repro): "Turn N · Side" duplicated the topbar's own
   // "Turn N · Era · Action X/Y" line right below it — dropped from ordinary
   // play; the tutorial's "Lesson n/10" is #barMid's only remaining content
@@ -363,6 +374,7 @@ function render() {
   if (game.spectator) {
     setSheetOpen(false);
     renderMap({ ...v, winner: 0 }); // nothing lit
+    game.lastMoveFresh = false; // #41: the pulse (if any) has now been drawn once — see updateLastMoveMarks()
     renderStatLine(v);
     $("promptText").textContent = ""; $("sheet").innerHTML = ""; $("hand").innerHTML = "";
     renderLog(v);
@@ -374,6 +386,7 @@ function render() {
   // already lights up its region, not one render-cycle late.
   scoreHighlight = game.ui.card != null && game.ui.card !== E.JIUDING && E.CARD[game.ui.card].scoring ? E.CARD[game.ui.card].scoring : null;
   renderMap(v);
+  game.lastMoveFresh = false; // #41: same reason as the spectator branch above
   renderStatLine(v);
   renderPromptAndSheet(v); // sets #sheet's className outright, so setSheetOpen must come after this, not before
   renderHand(v);
@@ -848,6 +861,86 @@ function cardInfo(L, card) {
   return { id: card, ops, enemy: !!c.uses.enemy, uses: c.uses };
 }
 
+// The last-move mark's own tag text — "+2" / "−2" (U+2212, a true minus,
+// not a hyphen) for an influence swing, or the localized destroyed/restored
+// word for a capital whose state's mie flag just flipped. Kept in app.js
+// (not lastmove.js, round 1 review) because it needs t()/i18n — computing
+// the marks themselves stays a pure diff of two views with no i18n/DOM
+// dependency, importable on its own; see lastmove.js's own comment.
+function lastMoveTagText(mark) {
+  if (!mark) return null;
+  if (mark.destroyed != null) return t(mark.destroyed ? "lastMove.destroyed" : "lastMove.restored");
+  const d = mark.delta;
+  return d ? (d > 0 ? `+${d}` : `−${-d}`) : null;
+}
+// The tag's own background colour (round 1 review, item 2): the side whose
+// count actually changed, the same black/red the disc's own two numbers
+// already use (style.css's `.disc i.q`/`.disc i.c`) — so a bare "+2" also
+// says WHOSE +2 it is, without a second glance at the disc. A destroyed/
+// restored mark has no side (it's the state's capital, not a count) and
+// keeps the frame's own bronze.
+function lastMoveTagClass(mark) {
+  if (!mark || mark.destroyed != null) return "";
+  return mark.side === E.QIN ? " side-q" : " side-c";
+}
+// #41: the log's own running index (engine.js's log(), `st.logSeq`) of the
+// latest entry in `view`, or 0 for an empty/missing log — used only to tell
+// whether a new action resolved between two renders, never read as text.
+function lastLogI(view) {
+  const log = view && view.log;
+  return log && log.length ? log[log.length - 1].i : 0;
+}
+// Decides whether THIS render() call is the one right after a new action
+// resolved, and if so recomputes game.lastMoveMarks from the two views —
+// otherwise leaves whatever is already there untouched (including "cleared
+// by a tap", see clearLastMoveMarks() below: a UI-only re-render, like a
+// language toggle or picking a card, must not resurrect a cleared mark).
+function updateLastMoveMarks(prevView, v) {
+  // #41 round 2 review (orchestrator): the tutorial dims the map and lights
+  // ONE scripted target per step (tutorial-ui.js's own spotlight) — none of
+  // its ten lessons explains the brackets, so they must not appear at all
+  // while it's running, not just "not fight" the spotlight visually. Same
+  // gate decorateAdvisor() already uses to stay out of the tutorial
+  // (render()'s own `solo: !game.room && !game.spectator && !Tut.active()`
+  // call below). Checked first and unconditionally — not folded into the
+  // "did a new action resolve" branches below — because marks left over
+  // from a solo game already on screen when the tutorial starts must be
+  // cleared too, not just suppressed for the tutorial's OWN actions.
+  if (Tut.active()) {
+    game.lastMoveMarks = {};
+    game.lastMoveFresh = false;
+    return;
+  }
+  const prevI = lastLogI(prevView), curI = lastLogI(v);
+  if (prevView && curI > prevI) {
+    game.lastMoveMarks = computeLastMoveMarks(prevView, v);
+    game.lastMoveFresh = true; // this render's renderMap() gets the one-shot pulse class
+  } else if (!prevView || curI < prevI) {
+    // First render of a game, or the log's index just went backwards (a
+    // new game replaced the old one under this tab) — nothing to diff yet.
+    game.lastMoveMarks = {};
+    game.lastMoveFresh = false;
+  }
+}
+// Removes the last-move mark from the map WITHOUT a render(): the owner's
+// iPhone lost taps to nodes rebuilt under the finger once before (see the
+// map/hand notes elsewhere in this file), and render() rebuilds every node
+// in #mapInner from scratch every time — so "the viewer's next tap clears
+// it" only touches the few elements the marks themselves added, never
+// re-renders the map, the hand or the sheet.
+function clearLastMoveMarks() {
+  if (!Object.keys(game.lastMoveMarks).length) return;
+  game.lastMoveMarks = {};
+  game.lastMoveFresh = false;
+  const mapInner = $("mapInner");
+  if (!mapInner) return;
+  mapInner.querySelectorAll(".node.lastmove").forEach((n) => {
+    n.classList.remove("lastmove", "lastmove-pulse");
+    const tag = n.querySelector(".lastmove-tag");
+    if (tag) tag.remove();
+    n.querySelectorAll(".lastmove-frame, .lastmove-frame2").forEach((f) => f.remove());
+  });
+}
 // Touch targets are a physical requirement, not a design one: they must
 // stay >=44x44 real px no matter how much the map's own art is scaled down
 // on a narrow phone. So each city is two elements — a VISUAL node (disc +
@@ -889,15 +982,35 @@ function renderMap(v) {
     const empty = !q && !c;
     const anchor = NODE_ANCHOR[sp.id];
     const lit = mode.lit.has(sp.id), picked = mode.picked[sp.id];
+    // #41: the last-move mark — a frame around the disc plus a small tag
+    // near its upper right, for every space computeLastMoveMarks() (called
+    // from render(), once per action) flagged. `mv` is undefined for every
+    // other space; `game.lastMoveFresh` is true for exactly the one
+    // renderMap() call right after a new action resolved, so the pulse
+    // plays once and not again on some later, unrelated re-render (a
+    // language toggle, a card selection) that redraws the same marks.
+    const mv = game.lastMoveMarks[sp.id];
+    const mvTag = lastMoveTagText(mv);
     const vis = document.createElement("div");
     vis.className = "node" + (big ? " big" : "") + (empty ? " empty" : "") + (anchor ? ` anchor-${anchor}` : "") +
       (NODE_STAB_RIGHT.has(sp.id) ? " stab-r" : "") + (NODE_STAB_HI.has(sp.id) ? " stab-hi" : "") +
-      (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (lit ? " lit" : "") + (picked ? " picked" : "");
+      (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (lit ? " lit" : "") + (picked ? " picked" : "") +
+      (mv ? " lastmove" : "") + (mv && game.lastMoveFresh ? " lastmove-pulse" : "") +
+      (NODE_LASTMOVE_LEFT.has(sp.id) ? " lastmove-l" : "");
     vis.style.cssText = `left:${x}px;top:${y}px`;
+    // #41 round 1 review (item 1): the mark reads as two viewfinder-style
+    // corner brackets (.lastmove-frame/-frame2, each contributing two
+    // opposite corners via its own ::before/::after — see style.css)
+    // instead of an outline on the disc itself, so it can't be mistaken
+    // for a control ring or the advisor's suggestion ring at a glance.
+    // Both are inert decoration (pointer-events:none, sized/positioned in
+    // style.css to track the disc exactly) — present only when `mv` is set.
     vis.innerHTML = `<span class="disc${cap ? " sq" : ""}">${empty ? "" : `<i class="q">${q || ""}</i><i class="c">${c || ""}</i>`}</span>` +
+      (mv ? `<span class="lastmove-frame" aria-hidden="true"></span><span class="lastmove-frame2" aria-hidden="true"></span>` : "") +
       stabilityTagHTML(sp) +
       (picked ? `<span class="badge">+${picked}</span>` : "") +
       (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
+      (mvTag ? `<span class="lastmove-tag${lastMoveTagClass(mv)}" aria-hidden="true">${esc(mvTag)}</span>` : "") +
       nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc);
     el.appendChild(vis);
     const hb = document.createElement("button");
@@ -927,6 +1040,16 @@ function fitMap(scale) {
   }
 }
 window.addEventListener("resize", () => { if (!$("table").hidden && game.st) { layoutBar(); layoutTable(); } });
+// #41: "the viewer's next tap on the table" clears the last-move mark —
+// #table wraps the map, the prompt/sheet and the hand (play.html), so one
+// capturing listener here covers "a tap on the map, the hand or a button"
+// in one place. Capturing (not bubbling) so it fires even on a `.hit`
+// button that's `disabled` (a disabled button never dispatches a bubbling
+// click at all) and even when the SAME tap goes on to resolve a new
+// action — in that case updateLastMoveMarks() overwrites game.lastMoveMarks
+// a moment later in the render() that action triggers, so clearing first
+// here is harmless. clearLastMoveMarks() itself never renders anything.
+$("table").addEventListener("pointerdown", clearLastMoveMarks, true);
 
 function btn(parent, label, onClick, cls = "", pressed = null, disabled = false) {
   const b = document.createElement("button");
