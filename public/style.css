@@ -405,7 +405,7 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    the header reads as the same piece of cloth as the table -- #table
    itself is transparent so that single background shows through both. */
 #table { padding: 6px 0; gap: 4px; background: transparent; }
-.topbar { flex: none; padding: 4px 8px 5px; font-size: 12px; color: var(--text-dim); }
+.topbar { flex: none; padding: 2px 8px 3px; font-size: 12px; color: var(--text-dim); }
 .tb-turn { font-size: 12px; }
 .tb-turn b { color: var(--text); font-weight: 600; }
 .tb-mandate-label { font-size: 12px; }
@@ -420,7 +420,7 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    overlaid on the row) doesn't carry over: there's no 3px version of a bar
    with rounded ends, two fills and end labels left to squash into, and the
    owner's spec draws one bar, not two. */
-.mandate { display: flex; align-items: center; gap: 6px; height: 14px; margin: 3px 0; }
+.mandate { display: flex; align-items: center; gap: 6px; height: 14px; margin: 2px 0 1px; }
 .mandate .m-end { flex: none; font-family: var(--kai); font-size: 11px; line-height: 1; color: var(--text-dim); }
 .mandate .m-end-qin { color: var(--qin-text); }
 .mandate .m-end-chu { color: var(--chu-gold); }
