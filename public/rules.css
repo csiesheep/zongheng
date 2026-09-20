@@ -25,6 +25,12 @@
 .rules b { color: var(--text); }
 .rules a { color: var(--gold); }
 
+/* #44: the desktop two-tab pill switch lives in the bar (rules.html), but
+   only means anything from the 1024px breakpoint (rules-desktop.css) — below
+   that #barMid's own label is still the bar's middle content, same as before
+   this issue. */
+#rulesTabs { display: none; }
+
 /* #40: the sticky section-nav row, right under the page's header bar (first
    child of #rulesBody, ahead of <h1>) so it reads that way at rest; once the
    reader scrolls even a little the bar (not part of #rulesBody, not sticky)
