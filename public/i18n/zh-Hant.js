@@ -12,7 +12,7 @@ export default {
   // 那樣直接從牌堆讀名字/說明。文字沿用這個檔案裡規則頁本來就有的「九鼎」
   // 那句話(見 rules.js 自己的 specialText)。
   rules: { jiuding: "九鼎", jiudingText: "4 點行動點,全部用在三晉或周視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。" },
-  sides: { qin: "秦", chu: "楚" },
+  sides: { qin: "秦", chu: "楚", neutral: "中立", scoring: "記分卡" },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },
   setup: { defaultName: "玩家" },
   sys: { joined: "{name} 進來了。", left: "{name} 離開了。", leftGame: "{name} 離開了,由電腦代打。", dealt: "發牌了。", timeout: "{name} 逾時,由桌面代為決定。", over: "{side}({name})獲勝:{reason}。" },
@@ -152,5 +152,11 @@ export default {
       // 蓋標題牌的那一方,不是目前看牌的玩家自己那一邊。
       played: "{side}打出的牌。",
     },
+    // #35:唯讀牌頁自己多出的兩行——牌頭第二行的陣營/是否移除(card-view.js),
+    // 以及牌文下方的史事區塊(只有 stories.js 有這張牌的資料時才顯示)。
+    removeYes: "事件觸發後移除。",
+    removeNo: "打出後入棄牌堆。",
+    history: "史事",
+    source: "出處",
   },
 };

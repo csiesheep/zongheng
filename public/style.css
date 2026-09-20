@@ -667,6 +667,13 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .sheet-textbox { flex: none; margin: 0; padding: 12px; border-radius: 10px; border: 1px solid var(--sheet-line, var(--gold-line)); background: var(--sheet-box, var(--field-bg)); display: flex; flex-direction: column; gap: 6px; }
 .sheet-text-zh { margin: 0; font: 400 14px/1.55 var(--serif); }
 .sheet-text-en { margin: 0; font: 400 12.5px/1.5 var(--serif); }
+/* #35: the history section — the same bordered/tinted box as the card-text
+   panel above it (.sheet-textbox is shared), plus a small bold label and,
+   when the entry has one, a one-line source credit. Absent entirely (no
+   empty shell) when the card has no story (see historyBox() in
+   card-view.js). */
+.sheet-history-title { font: 700 12px/1.3 var(--sans); letter-spacing: 0.5px; opacity: 0.85; }
+.sheet-history-src { margin: 2px 0 0; font-size: 10.5px; opacity: 0.65; }
 /* The full card page's own scrollable middle (#29 — see sheetMid() in
    app.js): everything between the fixed head above and the pinned footer
    below lives here, so a long card's text or the enemy order row scrolls
