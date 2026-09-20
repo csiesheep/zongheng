@@ -537,5 +537,21 @@
     "h": 512,
     "seed": 6205,
     "prompt": "A close-up of a glossy vermilion red lacquer surface painted with fine flowing cloud scrolls in slightly darker red and thin gold lines, even light, seamless texture, no objects. No text, no characters, no seals, no calligraphy, no writing anywhere."
+  },
+  "lose_qin": {
+    "key": "lose_qin",
+    "w": 768,
+    "h": 1024,
+    "seed": 7303,
+    "prompt": "A museum studio photograph: an ancient Chinese Warring States bronze tiger statue with swirling gold inlaid patterns, toppled over on its side and half buried in a bed of grey ash and charred rubble, heavily corroded with thick green verdigris, the gold inlay dull and blackened by fire, one leg broken off, a few small orange embers still glowing in the ash, thin smoke rising, pure black background, faint warm light from the embers and a cold dim light from above, sombre, vertical composition, the fallen statue in the lower third, a lot of empty black space above. No text, no characters, no seals, no calligraphy, no writing anywhere.",
+    "note": "generated at 768x1024 with the statue in the lower third (per the prompt); public/art/ui/lose_qin.jpg is a re-framed crop of this same source (crop_top=379, tiger/smoke shifted up so the statue sits about 22-51% of the frame height, bottom extended with a procedural grain fade of the source's own ash color to #12100e), not a re-generation."
+  },
+  "lose_chu": {
+    "key": "lose_chu",
+    "w": 768,
+    "h": 1024,
+    "seed": 7402,
+    "prompt": "A museum studio photograph, straight frontal view, symmetrical: a Warring States Chu lacquer phoenix wall relief with antlers, both wings spread wide, long tail feathers hanging down, burnt in a fire: the carved wood charred black like charcoal, the vermilion red and gold lacquer blistered and peeling, only traces of red and gold left, the wing tips burnt away to ragged stumps, small orange embers glowing along the cracks, grey ash drifting down and piled on the floor beneath, thin smoke rising, the dark red lacquer wall behind it scorched black with soot around the bird, dim light, sombre mood, vertical composition. No text, no characters, no seals, no calligraphy, no writing anywhere.",
+    "note": "public/art/ui/lose_chu.jpg keeps this source's framing as-is; only the bottom 15% (below y=870 of 1024) is faded toward #1c0907."
   }
 }
