@@ -56,12 +56,22 @@ export function* pendingCandidates(st, side, p) {
 }
 // Candidates for the seat, simplest first. `event` leads because it has no
 // payload to get wrong and always spends a card, so the table moves.
+//
+// A scoring card goes before everything else in an action round. It has to
+// leave the hand before the turn ends -- a side still holding one when the
+// turn ends loses (`win(st, other(holding[0]), "scoring")` in engine.js) --
+// and a safety net must not lose the game by its own neglect: carried only by
+// the hand-order fallback, seeds 1, 7 and 42 all ended in turn 1 or 2 with
+// reason "scoring" (#53). A scoring card is one with `E.CARD[id].scoring`
+// (its region), and the engine takes it only as its event ("a scoring card
+// must be played as its event"), which is also how `bots.js` plays one.
 export function* fallbackCandidates(st, side) {
   const L = E.legal(st, side);
   if (L.kind === "pending") { yield* pendingCandidates(st, side, L.pending); return; }
   if (L.kind === "headline") { for (const card of L.cards) yield { type: "headline", side, card }; return; }
   if (L.kind !== "action") return;
   if (L.bog && L.bog.length) { for (const card of L.bog) yield { type: "play", side, card, use: "bog" }; return; }
+  for (const c of L.cards) if (E.CARD[c.id] && E.CARD[c.id].scoring) yield { type: "play", side, card: c.id, use: "event" };
   for (const c of L.cards) {
     const u = c.uses || {};
     yield { type: "play", side, card: c.id, use: "event" };
