@@ -160,19 +160,44 @@ export const NODE_STAB_HI = new Set(["ying"]);
 // (today's corner) applies to every id not listed. Each entry below was
 // chosen MECHANICALLY, not by eye: for that space, in the try-order
 // tr(default, already known bad or it wouldn't be listed) → tl → r → l → t
-// → b, the first position with ZERO overlaps (name/stability tag/cost tag/
-// region label/another pill/the disc's own digits/the map's own edge, at
-// 390x669 zh, 375x667 en and 1280x800 zh together) wins. One space has no
-// clean position in that set at every size — ★郢/Ying's "r" still clips
-// Huai-Si's name by 1.9x9.7px at 375x667 en only, the least-bad of the five
-// — flagged in the #49 hand-over for the owner to rule on, not silently
-// picked around.
+// → b, the first position with ZERO overlaps wins, where "overlap" also
+// now means a pill sitting closer to a NEIGHBOUR's disc than to its own —
+// a pill must read as belonging to its own city, not the one it happens to
+// be closest to. Checked: name/stability tag/cost tag/region label/another
+// pill/the disc's own digits/the map's own edge, AND (round 2 review's
+// second pass) that no other disc's edge sits closer than the pill's own
+// disc + 6px — at 390x669 zh, 375x667 en and 1280x800 zh together. One
+// space has no clean position in that set at every size — ★郢/Ying's "r"
+// still clips Huai-Si's name by 1.9x9.7px at 375x667 en only, the
+// least-bad of the five — owner's ruling (#49): keep it, a sliver under a
+// pill a tap clears is accepted.
+//
+// Round 2's SECOND review caught a bug in the try-order above: once a
+// space was flagged (its "tr" disqualified by the ORIGINAL all-"tr"
+// baseline sweep), the procedure never tried "tr" again for it, even after
+// OTHER spaces around it changed. 薊/Ji's own "tr" reads clean now (own
+// disc 0px, nearest other disc 18px+, at all three sizes) — it only ever
+// looked disqualified because of the map's own top edge, which round 1's
+// "tl"/"b" alternatives don't actually fix any better in every
+// measurement (this table's own author found the edge check gave
+// inconsistent readings for a top-row space across repeated resizes in
+// their own browser pane — a real instrument gap, flagged in the #49
+// hand-over, not resolved here) — so remove `ji` and go back to the
+// default. That, in turn, removes the ONLY reason ★邯鄲/Handan was ever in
+// this table: its own "l" existed purely to dodge Ji's old "b" pill
+// landing 0px from Handan's own disc. With Ji back at "tr", Handan's own
+// "tr" re-checked clean at all three sizes too (re-verified three times
+// each, with the app's resize handler dispatched and awaited before every
+// sweep) — remove it as well. Every remaining entry was re-checked against
+// its own original reason (not just re-run once) before this hand-in;
+// `shangdang: "b"` stays — its own reason (Hedong's name, once Hedong
+// moved to "r") is untouched by the Ji/Handan fix.
 export const NODE_PILL_POS = {
   guanzhong: "l", hangu: "tl", bashu: "l", yiqu: "tl",
-  xinzheng: "r", hedong: "r", shangdang: "b", handan: "l",
+  xinzheng: "r", hedong: "r", shangdang: "b",
   luoyi: "tl", linzi: "r", jimo: "tl", song: "tl",
   ying: "r", wuyue: "r",
-  ji: "b", zhongshan: "r", dai: "r",
+  zhongshan: "r", dai: "r",
 };
 // `name` is the already-resolved display name (the caller's own spaceName()
 // — app.js and rules.js each have their own, reading the same E.SPACE[id]

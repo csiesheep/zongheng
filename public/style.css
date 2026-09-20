@@ -553,14 +553,16 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    shared with .lastmove-tag through one per-space table, NODE_PILL_POS
    (map-draw.js) — see the pill-tr/tl/t/b/r/l rules below .lastmove-tag's
    own declaration, which both pills read off the same class. Round 2
-   (orchestrator's review of 4d65d2a) replaced the six-node NODE_LASTMOVE_LEFT
-   guess with a 17-node table chosen mechanically against the owner's
-   `__sweep` instrument (every space forced to wear the pill, both disc
-   digits and a fake .cost, at once, at 390x669 zh / 375x667 en / 1280x800
-   zh): 0 overlaps at all three sizes except ★郢/Ying, whose "r" still
-   clips Huai-Si's name by 1.9x9.7px at 375x667 en — none of the five
-   positions are clean there, "r" is the least bad, flagged in the #49
-   hand-over for the owner to rule on. */
+   (orchestrator's review of 4d65d2a, then a second pass on the table
+   itself) replaced the six-node NODE_LASTMOVE_LEFT guess with a 15-node
+   table chosen mechanically against the owner's `__sweep` instrument
+   (every space forced to wear the pill, both disc digits and a fake
+   .cost, at once, at 390x669 zh / 375x667 en / 1280x800 zh): 0 overlaps
+   at all three sizes except ★郢/Ying, whose "r" still clips Huai-Si's
+   name by 1.9x9.7px at 375x667 en — the owner's ruling (#49): keep it,
+   a sliver under a pill a tap clears is accepted. See map-draw.js's own
+   comment for the "own disc + 6px" ownership rule the second pass added,
+   and why 薊/Ji and ★邯鄲/Handan dropped back out of the table. */
 .node .badge {
   position: absolute; top: -6px; right: -8px; min-width: 18px; height: 18px; box-sizing: border-box;
   border-radius: 9px; color: #fff; font: 700 12px/18px var(--sans); text-align: center;
