@@ -775,7 +775,7 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    :root[lang="zh-Hant"] below, same convention as the hand's own
    :root[lang] rules in this file. */
 .sheet-name { font-family: var(--serif); font-size: 24px; line-height: 1.15; font-weight: 600; letter-spacing: 1px; margin: 0; }
-.sheet-info { font-size: 11px; line-height: 1.5; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--sheet-line, var(--gold-line)); }
+.sheet-info { font-size: 12px; line-height: 1.5; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--sheet-line, var(--gold-line)); }
 /* The card-text panel: its own bordered/tinted box (parchment for a
    neutral/scoring card, lacquer for Chu, bronze-black for Qin — the same
    three backgrounds .sheet-n/.sheet-c/.sheet-q already paint the header
@@ -790,7 +790,7 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    empty shell) when the card has no story (see historyBox() in
    card-view.js). */
 .sheet-history-title { font: 700 12px/1.3 var(--sans); letter-spacing: 0.5px; opacity: 0.85; }
-.sheet-history-src { margin: 2px 0 0; font-size: 10.5px; opacity: 0.65; }
+.sheet-history-src { margin: 2px 0 0; font-size: 12px; opacity: 0.65; }
 /* The full card page's own scrollable middle (see sheetMid() in app.js):
    the card's own variable-length content — the text box, a scoring tally,
    the advisor's own suggestion banner when it's on, then the history (#46)
