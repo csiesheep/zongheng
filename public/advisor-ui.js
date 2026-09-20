@@ -480,7 +480,16 @@ function applyDecorations(view, meta, force, switchVisible) {
     if (myGen !== gen) return;
     cache.adv = adv;
     cache.hasResult = true;
-    if (!adv) { banner.root.hidden = true; decorateHand(null, view, meta); decorateSheet(null, meta); decorateMap(null, meta); return; }
+    if (!adv) {
+      banner.root.hidden = true;
+      decorateHand(null, view, meta); decorateSheet(null, meta); decorateMap(null, meta);
+      // #39 item 3: the placeholder banner (a normal flow row) had a real
+      // height when THIS render's layoutTable() ran; hiding it outright
+      // changes the chrome sum layoutTable() already measured, same as the
+      // real-text case below.
+      meta.layoutTable && meta.layoutTable();
+      return;
+    }
     setBannerText(adv, meta, true);
     placeBanner(meta); // the real text may be a different length -- re-measure/re-place now that it's known
     banner.root.hidden = false;
@@ -488,6 +497,18 @@ function applyDecorations(view, meta, force, switchVisible) {
     decorateHand(adv, view, meta);
     decorateSheet(adv, meta);
     decorateMap(adv, meta);
+    // #39 item 3 (round 1 review — a pre-existing defect, not new to this
+    // issue): advise() answers async, so the render that just ran measured
+    // the banner at its short synchronous placeholder size, not the real
+    // text's. Re-running layoutTable() now, with the banner's real final
+    // height already in the DOM, corrects the same render's map/hand split
+    // instead of leaving it wrong until the NEXT click re-measures it
+    // (measured: English, advisor on, first render of "setup placement"
+    // and "action hand" left the sheet/hand 11px past a screen that
+    // couldn't scroll). layoutTable() itself never rebuilds the hand or
+    // sheet except on an actual chip<->full mode flip (its own existing
+    // rule, untouched) -- nothing here risks losing a tap mid-render.
+    meta.layoutTable && meta.layoutTable();
   }, 0);
 }
 

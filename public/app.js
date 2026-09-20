@@ -396,6 +396,20 @@ function render() {
     solo: !game.room && !game.spectator && !Tut.active(), side: game.me, uiCard: game.ui.card,
     pickedSpaces: (game.ui.picks && game.ui.picks.length ? game.ui.picks : game.ui.points) || [],
     t, spaceName, stateName, regionName, cardName, sep,
+    // Round 1 review (#39, item 3 — a pre-existing defect, not new here):
+    // a genuinely new position's real advice text arrives async (advise()
+    // itself can take real time — see advisor-ui.js's own setTimeout), so
+    // THIS render's layoutTable() call below still measures the banner at
+    // its short synchronous placeholder size. On English, advisor on, that
+    // placeholder-vs-real gap was enough to leave the sheet/hand 11px below
+    // a screen layoutTable() had already decided didn't need to scroll —
+    // fixed on the NEXT render only, because by then the answer is cached
+    // and arrives synchronously. advisor-ui.js calls this back once the
+    // real text (and the banner's real height) is actually in the DOM, so
+    // this same render's layout gets corrected without waiting for another
+    // click; layoutTable() itself already avoids rebuilding the hand/sheet
+    // except an actual chip<->full mode flip (unchanged, existing rule).
+    layoutTable,
   });
   layoutTable(); // the map's real box depends on the hand's, so both are sized together, then fitMap() scales the map's content
   Tut.decorate(); // no-op unless a tutorial is running (#15)
