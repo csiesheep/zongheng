@@ -53,14 +53,26 @@
   /* ---------- the shared three-column grid ---------- */
   .d-tab-grid { display: grid; gap: 32px; margin-top: 10px; }
   /* Reference measure (owner's canvas): rail 190, gap, text ~580, gap, map
-     400 (sums to 1250 inside the 1280 frame). Below 1200px-ish there isn't
-     room for all three at their target widths; this project's own choice
-     (documented on #44's hand-in) is to let the TEXT column narrow first —
-     `1fr` — and keep the map at its full width until the viewport is too
-     narrow even for that, at which point its own `minmax` floor (320px, the
-     issue's own floor) takes over instead of clipping or overlapping. */
+     400 (sums to 1250 inside the 1280 frame). >=1200px the default below
+     gives the map its own room to reach that 400: a `minmax(320px, 400px)`
+     non-flex track is sized toward its OWN max before any leftover space
+     reaches the text's `1fr` at all (Grid's "Maximize Tracks" step runs
+     before "Expand Flexible Tracks" — the map, the only track here with
+     room left to grow, gets first claim on any free space, not last). */
   .d-rules-grid { grid-template-columns: 190px 1fr minmax(320px, 400px); }
   .d-cards-grid { grid-template-columns: 190px 1fr 360px; }
+  /* Round 1 review (#44): at 1024 that left the text at 315px, narrower
+     than the phone's own 347px column, beside a map that was still its full
+     400. 1024-1199px: pin the map at its floor (320px, the issue's own
+     number) instead of a `minmax` upper end it would otherwise keep
+     chasing, so `1fr` gets everything else — the map only grows back once
+     there's room for both it and a text column at least as wide as the
+     phone's. fitRulesMap() (rules.js, already wired to `resize` and to
+     every render()) re-reads `.rules-map`'s own resulting clientWidth on
+     its own; nothing else in this band needs to know the map shrank. */
+  @media (min-width: 1024px) and (max-width: 1199px) {
+    .d-rules-grid { grid-template-columns: 190px 1fr 320px; }
+  }
   .d-col { min-width: 0; }
   /* The sticky trick: each rail/map/panel column is stretched (grid default)
      to the tall middle column's own height, so this inner box has a tall
