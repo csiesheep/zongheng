@@ -357,7 +357,13 @@ function decorateSheet(adv, meta) {
     const grid = sheet.querySelector(".sheet-grid");
     if (grid) {
       const order = adv.card === E.JIUDING ? USE_ORDER_JIUDING : USE_ORDER_FULL;
-      const idx = order.indexOf(adv.use);
+      // #56: useOf() in shared/advisor.js deliberately answers "score" for a
+      // scoring card (the banner's sentence and reason key on that string) --
+      // but a scoring card's page still renders the same five-button grid as
+      // any other card (app.js's own loop is unconditional), with only 事件
+      // usable, so the button to gold-ring here is the same one "event" ever
+      // marks. Translate only at this lookup, not at the source.
+      const idx = order.indexOf(adv.use === "score" ? "event" : adv.use);
       const btns = grid.querySelectorAll("button");
       if (idx >= 0 && btns[idx]) btns[idx].classList.add("adv-pick");
     }
