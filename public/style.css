@@ -34,6 +34,20 @@ button:disabled { opacity: 0.45; cursor: default; }
    fail contrast; higher would wash it out toward flat colour. */
 body.side-chu { --accent: var(--chu-gold); --accent-ink: #6f120d; --accent-font: var(--kai); --accent-weight: 700; --table-bg: linear-gradient(rgba(79, 14, 10, 0.70), rgba(79, 14, 10, 0.70)), url(art/ui/chutex.jpg); }
 body.side-qin { --accent: var(--qin-text); --accent-ink: var(--bg); --accent-font: var(--serif); --accent-weight: 900; --table-bg: linear-gradient(rgba(12, 11, 10, 0.72), rgba(12, 11, 10, 0.72)), url(art/ui/qintex.jpg); }
+/* #30 (owner, iPhone repro screenshot): the same ground now paints the
+   header too, so the top bar and the table read as one continuous piece
+   instead of a flat-black strip sitting on top of a textured one. Moved
+   onto body itself (scoped to the table view via [data-view="table"] —
+   paintBody() sets both that attribute and side-qin/side-chu together in
+   show(), and NEITHER is scoped to just the table on its own: side-qin/chu
+   alone also covers the result screen, which #30 keeps out of scope, and
+   table-lock alone doesn't know which side) rather than replacing
+   --table-bg, since #7's desktop frame reads the same variable for its own
+   sidebar-and-map area independently of this. #table and .bar (below) are
+   both transparent so this single background shows through continuously
+   behind them; same measured alpha as before, unchanged. */
+body[data-view="table"].side-chu { background: var(--table-bg); background-size: cover; background-position: center; background-repeat: no-repeat; }
+body[data-view="table"].side-qin { background: var(--table-bg); background-size: cover; background-position: center; background-repeat: no-repeat; }
 
 /* The solo setup screen re-skins its whole page by which side is picked:
    Qin default black, Chu lacquer red, Random a light parchment (ink on
@@ -77,7 +91,7 @@ body.setup-chu {
   background-size: cover; background-position: center; background-repeat: no-repeat;
 }
 
-.bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 0; gap: 8px; }
+.bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 0; gap: 8px; background: transparent; }
 /* #24 addendum: Rules (also a .hub link, back in the header next to the
    advisor switch and lang button) needs the same real 44px tap target
    those two already have via their own min-height -- its own text is only
@@ -95,12 +109,53 @@ body.setup-chu {
 .bar-right { display: inline-flex; align-items: center; gap: 8px; }
 .bar button, .small { background: none; border: 1px solid var(--gold-line); color: var(--gold); font-size: 12px; padding: 5px 9px; min-height: 44px; min-width: 44px; border-radius: 8px; }
 #barMid { font-size: 12px; color: var(--text-dim); }
+/* #30: the table's own header row (own comment at app.js's layoutBar()) is
+   shorter than every other view's -- 48px on a touch device, 44px button +
+   2px top/bottom instead of the 54px (44 + 10 + 0) every other view still
+   gets. Scoped to [data-view="table"], which show() sets only for the
+   table/lobby/setup/over views' own attribute, so setup/lobby/over/rules
+   (none of which carry it) keep the original 54px bar untouched. Desktop's
+   >=1024px rule (desktop.css) overrides this again, to 40px. */
+body[data-view="table"] .bar { padding: 2px 14px; }
+/* #30: caught by the new 360-390 x en/zh x advisor matrix -- 規則/Rules's
+   own box (`.bar .hub`, above) never had a min-width, only min-height, so
+   its short Chinese text ("規則", 2 characters) fell under 44px wide even
+   before this issue touched anything. Scoped to the table view only, same
+   as everything else in this block, since #30 doesn't ask for the other
+   views' 54px bar to change and their own Rules text (English "Rules" is
+   already >=44px, and the mobile column never had this squeeze) isn't
+   failing anything today. */
+body[data-view="table"] .bar .hub { min-width: 44px; justify-content: center; }
+/* #30 giveaway ①: same track-only shape advisor.css already used below
+   380px wide, now also reachable by app.js's layoutBar() measuring the row
+   at ANY width once the Log button's added width can push it past budget
+   (a width breakpoint alone can't know that -- it depends on the current
+   language's other label lengths too). */
+.bar.bar-tight #advisorSlot .adv-toggle-label { display: none; }
+.bar.bar-tight #advisorSlot .adv-toggle { min-width: 44px; justify-content: center; padding: 0; gap: 0; }
 .view { padding: 16px 14px 24px; max-width: 640px; width: 100%; margin: 0 auto; }
 h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px 0 14px; color: var(--gold); }
 .about { line-height: 1.7; color: var(--text-dim); margin: 0 0 16px; }
 .soon { font-size: 13px; line-height: 1.6; border-left: 3px solid var(--gold-line); padding-left: 10px; margin: 16px 0 0; color: var(--text-dim); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .bar .back { font-family: var(--kai); font-size: 15px; letter-spacing: 2px; padding: 8px 10px 8px 0; min-height: 44px; display: inline-flex; align-items: center; }
+/* #30: the back link is now two spans (app.js's renderBackLink(), which
+   parses "‹ Name" out of the one existing nav.back string instead of a new
+   i18n key) so giveaway ② can drop everything after the chevron on its own
+   -- the aria-label (set by the same function) keeps the full name for a
+   screen reader even once the visible text is gone. */
+.bar .back .back-chevron { margin-right: 4px; }
+.bar.bar-tighter .back .back-label { display: none; }
+.bar.bar-tighter .back .back-chevron { margin-right: 0; }
+/* A bare "‹" is a couple of pixels wide on its own -- min-width plus
+   centering keeps its own tap target a real 44px square, same as the
+   advisor switch's track-only shape just above. */
+.bar.bar-tighter .back { min-width: 44px; justify-content: center; padding-right: 0; }
+/* #30: this button used to live in the prompt row (see .prompt-text below,
+   which now uses the full row width) -- only the table view's own header
+   (table-lock, set by show()) shows it; every other view's header keeps
+   its previous three controls. */
+body:not(.table-lock) #logToggle { display: none; }
 
 /* Solo setup: three picture tiles (Qin/Chu/Random), the level pills, a name
    field and a description that follows the pick, with Back/Start pinned to
@@ -308,7 +363,10 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 /* No horizontal padding here: the map needs the phone's full width to hit
    its disc/text/tap-target minimums (see fitMap in app.js), so every OTHER
    row carries its own 8px side padding instead of #table doing it for all. */
-#table { padding: 6px 0; gap: 4px; background: var(--table-bg); background-size: cover; background-position: center; background-repeat: no-repeat; }
+/* #30: the textured ground moved onto body[data-view="table"] (above) so
+   the header reads as the same piece of cloth as the table -- #table
+   itself is transparent so that single background shows through both. */
+#table { padding: 6px 0; gap: 4px; background: transparent; }
 .topbar { flex: none; padding: 1px 8px; font-size: 12px; color: var(--text-dim); }
 .tb-turn { font-size: 12px; }
 .tb-turn b { color: var(--text); font-weight: 600; }
@@ -451,11 +509,11 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    read-only status readout, not something a phone player edits or must
    read in full without expanding it. */
 .statline .sl-val { display: block; color: var(--text); font-weight: 600; font-size: 11px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* The log toggle sits in the prompt row instead of owning a row of its
-   own (~57px) — that height goes back to the map. */
+/* #30: the log toggle moved to the top bar (style.css's own .bar rules,
+   next to Advisor/Rules/lang) -- #promptText now uses the row's full
+   width instead of sharing it with that button. */
 .prompt { flex: none; display: flex; align-items: flex-start; gap: 8px; padding: 3px 8px; font-size: 13px; line-height: 1.35; }
 .prompt-text { flex: 1; min-width: 0; }
-.prompt-log { flex: none; }
 .prompt .err { color: var(--bad); }
 .prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 3.6em; overflow: hidden; }
 .sheet { flex: none; display: flex; flex-direction: column; gap: 6px; margin: 0 8px; padding: 8px 10px; border-radius: 10px; max-height: 40svh; overflow-y: auto; }
