@@ -19,7 +19,7 @@ import {
   DESIGN_W, DESIGN_H, NODE_POS, nodeCenter, regionMembers, isCapital,
   renderRegionBlobs, renderRoads, REGION_LABEL_POS,
   NODE_BREAK_EN, NODE_SMALL_EN, NODE_ANCHOR, nodeLabelHTML, stabilityTagHTML,
-  NODE_STAB_RIGHT, NODE_STAB_HI, NODE_LASTMOVE_LEFT,
+  NODE_STAB_RIGHT, NODE_STAB_HI, NODE_PILL_POS,
 } from "./map-draw.js";
 import { computeLastMoveMarks } from "./lastmove.js";
 
@@ -1036,7 +1036,7 @@ function renderMap(v) {
       (NODE_STAB_RIGHT.has(sp.id) ? " stab-r" : "") + (NODE_STAB_HI.has(sp.id) ? " stab-hi" : "") +
       (ctl === 0 ? " ctlq" : ctl === 1 ? " ctlc" : "") + (lit ? " lit" : "") + (picked ? " picked" : "") + pickSide +
       (mv ? " lastmove" : "") + (mv && game.lastMoveFresh ? " lastmove-pulse" : "") +
-      (NODE_LASTMOVE_LEFT.has(sp.id) ? " lastmove-l" : "");
+      " pill-" + (NODE_PILL_POS[sp.id] || "tr");
     vis.style.cssText = `left:${x}px;top:${y}px`;
     // #41 round 1 review (item 1): the mark reads as two viewfinder-style
     // corner brackets (.lastmove-frame/-frame2, each contributing two

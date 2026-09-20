@@ -134,25 +134,46 @@ export const NODE_STAB_RIGHT = new Set(["shangdang"]);
 //   for nodes this close to an edge; Wuyue (y=378) was checked and already
 //   clears at the default -2px, so it's not in this set.
 export const NODE_STAB_HI = new Set(["ying"]);
-// #41: the last-move tag (a small "+2"/"−1"/destroyed-word badge) defaults
-// to the disc's upper-right corner, the one corner none of the other three
-// per-node decorations above ever use — free on all 26 nodes except where
-// the CITY NAME itself reaches into it: an anchor-top name (centred right
-// above the disc — ying, wuyue) or an anchor-right name (starts flush
-// against the disc's own right edge, vertically centred — every node whose
-// own NODE_ANCHOR is "right": bashu, shangdang, liaodong, hangu) both run
-// close enough to the upper-right corner at the map's floor scale (#39) to
-// collide with a tag there once real text is measured, not eyeballed —
-// checked by rendering all 26 spaces with a mark at once, at 390x669 floor
-// scale, in BOTH languages (English names are the wider case: catching
-// "Ba-Shu" needed the English pass, plain "巴蜀" alone would have missed
-// it). The other 22 (including anchor-left, whose name moves to the
-// OPPOSITE side, and every plain below-the-disc name) leave it clear.
-// These six flip the tag to the upper-left instead — the same corner
-// .cost (setup/opening-placement's own transient badge) uses, which is
-// never on screen at the same time as a last-move tag (cost only shows
-// while a target is still being chosen, before an action has resolved).
-export const NODE_LASTMOVE_LEFT = new Set(["ying", "wuyue", "bashu", "shangdang", "liaodong", "hangu"]);
+// #49 round 2 (orchestrator's review of 4d65d2a): the small pill that sits
+// near a disc's corner — #41's last-move tag AND #49's own placement badge,
+// now one visual language sharing one position rule — used to be placed by
+// NODE_LASTMOVE_LEFT, a set hand-picked by eye for the tag alone before the
+// badge existed. The badge coexists with more of the map's other per-node
+// decorations than the tag ever did (.cost, in particular, and the disc's
+// OWN digits once picking is in progress) and defaults on more nodes than
+// the tag's own upper-right corner ever collided on, so the six-node set
+// stopped being enough — round 2 found 6 more nodes broke under the
+// owner's `__sweep` instrument (forces the pill, both disc digits and
+// `.cost` onto all 26 spaces, both languages, three sizes) that eyeballing
+// one mark in one real game never surfaced: 義渠/Yiqu, 河東/Hedong, ★郢/Ying
+// and 吳越/Wu-Yue's own anchor-top names reaching into their own top-right
+// corner, ★關中/Guanzhong's default pill reaching a neighbour's stability
+// tag, 新鄭/Xinzheng's and ★臨淄/Linzi's reaching a region label — plus,
+// only at 1280px wide (the map scales up past its floor scale there, so a
+// fixed-px offset that clears a neighbour at 390/375 no longer does), 薊/Ji,
+// 中山/Zhongshan and 代/Dai running past the map's own top edge, taking
+// ★邯鄲/Handan's default spot down with them once Ji moved to clear it.
+//
+// NODE_PILL_POS replaces NODE_LASTMOVE_LEFT with one table for both pills,
+// read through a class (app.js: "pill-" + (NODE_PILL_POS[id] || "tr")) that
+// both `.badge` and `.lastmove-tag` style off in style.css. Default "tr"
+// (today's corner) applies to every id not listed. Each entry below was
+// chosen MECHANICALLY, not by eye: for that space, in the try-order
+// tr(default, already known bad or it wouldn't be listed) → tl → r → l → t
+// → b, the first position with ZERO overlaps (name/stability tag/cost tag/
+// region label/another pill/the disc's own digits/the map's own edge, at
+// 390x669 zh, 375x667 en and 1280x800 zh together) wins. One space has no
+// clean position in that set at every size — ★郢/Ying's "r" still clips
+// Huai-Si's name by 1.9x9.7px at 375x667 en only, the least-bad of the five
+// — flagged in the #49 hand-over for the owner to rule on, not silently
+// picked around.
+export const NODE_PILL_POS = {
+  guanzhong: "l", hangu: "tl", bashu: "l", yiqu: "tl",
+  xinzheng: "r", hedong: "r", shangdang: "b", handan: "l",
+  luoyi: "tl", linzi: "r", jimo: "tl", song: "tl",
+  ying: "r", wuyue: "r",
+  ji: "b", zhongshan: "r", dai: "r",
+};
 // `name` is the already-resolved display name (the caller's own spaceName()
 // — app.js and rules.js each have their own, reading the same E.SPACE[id]
 // but keyed to their own current language); `esc` is the caller's own HTML
