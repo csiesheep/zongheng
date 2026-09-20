@@ -15,7 +15,7 @@ export default {
   // other 71. Wording matches the existing "Nine Cauldrons" sentence in this
   // file's rules page prose (see rules.js's own specialText).
   rules: { jiuding: "The Nine Cauldrons", jiudingText: "4 ops, 5 if all of it lands in the Three Jin or Zhou; place, campaign or lobby only; then it passes face down and the other side may use it from the next turn; Chu holds it at the start." },
-  sides: { qin: "Qin", chu: "Chu" },
+  sides: { qin: "Qin", chu: "Chu", neutral: "Neutral", scoring: "Scoring card" },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },
   setup: { defaultName: "Player" },
   sys: { joined: "{name} joined.", left: "{name} left.", leftGame: "{name} left; the bot plays the seat.", dealt: "The cards are dealt.", timeout: "{name} ran out of time; the table decided.", over: "{side} ({name}) wins: {reason}." },
@@ -162,5 +162,13 @@ export default {
       // the viewer's own seat, so it reads the same for either player.
       played: "Played by {side}.",
     },
+    // #35: the read-only card view's own extra facts (side/removal, shown on
+    // the header's second line by card-view.js) and the history section
+    // below the card text (shown only when stories.js has an entry for the
+    // card).
+    removeYes: "Removed after its event.",
+    removeNo: "Kept for the discard pile.",
+    history: "The history",
+    source: "Source: ",
   },
 };

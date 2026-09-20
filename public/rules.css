@@ -40,7 +40,18 @@
    a glance. Flex rows (not a rigid grid) so the effect text can wrap freely
    on a 375px phone without ever forcing side-scroll. */
 .cardlist { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
-.cardrow { display: flex; gap: 10px; padding: 8px; border-radius: 10px; border: 1px solid var(--gold-line); }
+/* #35: each row is a real <button> now (opens the card's detail page) — the
+   look stays a plain row, so the button's own UA chrome is reset back to
+   what the old <div> looked like, plus a min-height floor (the 60x80 art
+   already clears 44px comfortably, this just makes the floor explicit) and
+   a focus ring for keyboard use. */
+.cardrow {
+  display: flex; gap: 10px; padding: 8px; border-radius: 10px; border: 1px solid var(--gold-line);
+  width: 100%; min-height: 44px; box-sizing: border-box; text-align: left; cursor: pointer;
+  font: inherit; color: inherit; -webkit-appearance: none; appearance: none;
+}
+.cardrow:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.cardrow .cr-chevron { flex: none; align-self: center; font-size: 18px; line-height: 1; opacity: 0.6; }
 .cardrow.side-c { background: #4f0e0a; border-color: var(--gold); }
 .cardrow.side-q { background: var(--bg); }
 .cardrow.side-n, .cardrow.side-s { background: #f7f3e8; }
@@ -65,3 +76,7 @@
 .cardrow.side-n .cr-zh, .cardrow.side-n .cr-en, .cardrow.side-s .cr-zh, .cardrow.side-s .cr-en { color: var(--neutral-ink); }
 .cardrow.side-n .cr-text, .cardrow.side-s .cr-text { color: #4a463c; }
 .cardrow.side-n .cr-badge, .cardrow.side-s .cr-badge { background: var(--neutral-ink); color: #fff; }
+/* #35: the row's own light-on-dark default (inherited from body) reads fine
+   on side-q/side-c's dark backgrounds, but side-n/side-s's parchment needs
+   the same dark ink the rest of that row's text already switches to. */
+.cardrow.side-n .cr-chevron, .cardrow.side-s .cr-chevron { color: var(--neutral-ink); }

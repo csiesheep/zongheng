@@ -14,6 +14,7 @@ import zh from "./i18n/zh-Hant.js";
 import CARD_EN from "./i18n/cards.en.js";
 import { mountAdvisorToggle, decorate as decorateAdvisor } from "./advisor-ui.js";
 import * as Tut from "./tutorial-ui.js";
+import { renderCardView } from "./card-view.js";
 import {
   DESIGN_W, DESIGN_H, NODE_POS, nodeCenter, regionMembers, isCapital,
   renderRegionBlobs, renderRoads, REGION_LABEL_POS,
@@ -1412,9 +1413,13 @@ function cardLinkButton(id, side) {
 // `game.ui` — humanAct/Cancel/headline-reject/etc. all wholesale-replace
 // `game.ui` with freshUi(), and a peek must survive every one of those
 // resets untouched since it isn't part of the acting player's own turn.
-// Reuses cardHeader()/sheetMid()/cardTextBox() from the real #29 card
-// sheet — identical header and bilingual text box — with none of #29's use
-// grid, order row or Confirm: just the hint line and a single [Close].
+// #35: drawn by the shared card-view.js module (renderCardView) instead of
+// this file's own cardHeader()/sheetMid()/cardTextBox() — the same module
+// the rules page's card detail view uses, so the peek sheet picked up the
+// history section (below the card text) for free. The interactive full card
+// page (renderPromptAndSheet, below) still draws itself with this file's own
+// cardHeader/cardTextBox/sheetMid: it has no room for history at 669px and
+// the owner never asked for it there.
 function openPeek(cardId, side) {
   game.peek = { card: cardId, side };
   renderPeek();
@@ -1430,14 +1435,7 @@ function renderPeek() {
   refreshSheetLock();
   if (!open) { el.innerHTML = ""; el.className = "sheet overlay peek-sheet"; return; }
   const { card, side } = game.peek;
-  el.className = `sheet overlay peek-sheet sheet-${cardSide(card)}`;
-  el.innerHTML = "";
-  cardHeader(el, card);
-  const mid = sheetMid(el);
-  cardTextBox(mid, card);
-  note(mid, t("sheet.hint.played", { side: sideName(side) }));
-  const foot = row(el, "peek-footer");
-  btn(foot, t("buttons.close"), closePeek, "primary");
+  renderCardView(el, card, lang, { note: t("sheet.hint.played", { side: sideName(side) }), onClose: closePeek });
 }
 // #peekSheet itself is built here rather than added to play.html (owned by
 // no single file in this issue's own list) — #29's existing `.sheet`/

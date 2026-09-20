@@ -9,6 +9,7 @@ import {
   renderRegionBlobs, renderRoads, REGION_LABEL_POS, NODE_ANCHOR, nodeLabelHTML,
   stabilityTagHTML, NODE_STAB_RIGHT, NODE_STAB_HI,
 } from "./map-draw.js";
+import { renderCardView } from "./card-view.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -111,9 +112,13 @@ const T = {
 function table(head, rows, cls = []) {
   return `<table><thead><tr>${head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c, i) => `<td class="${cls[i] || ""}">${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
+// #35: each row is a real <button> (>=44px tall, keyboard-focusable) that
+// opens the card's detail page — see openCardDetail()/the click-delegation
+// listener near the bottom of this file. data-card carries the id; the
+// row's own look (background/border/text colour by side) is untouched.
 function cardRow(side, id, zhName, enLine, badge, text) {
   const enName = enLine.split(" · ")[0];
-  return `<div class="cardrow side-${side}">` +
+  return `<button type="button" class="cardrow side-${side}" data-card="${esc(id)}">` +
     `<img src="art/cards/${id}.jpg" width="60" height="80" loading="lazy" alt="${esc(zhName.replace(/ \*$/, ""))} ${esc(enName)}">` +
     `<div class="cr-body">` +
     `<span class="cr-head">` +
@@ -122,7 +127,9 @@ function cardRow(side, id, zhName, enLine, badge, text) {
     `<span class="cr-en">${esc(enLine)}</span>` +
     `</span>` +
     `<span class="cr-text">${text}</span>` +
-    `</div></div>`;
+    `</div>` +
+    `<span class="cr-chevron" aria-hidden="true">›</span>` +
+    `</button>`;
 }
 // One row per card, art on the left, background/badge/name colour keyed to
 // the card's owner — the same three tones the card sheet uses (楚 #4f0e0a,
@@ -208,7 +215,7 @@ function render() {
   $("langBtn").textContent = N.nav.lang;
   $("credit").textContent = S.credit;
   const regionRows = E.SCORED_REGIONS.map((r) => { const R = E.REGIONS[r]; return [esc(lang === "en" ? R.en : R.zh), R.presence, R.domination, R.control, E.spacesOf(r).filter((id) => E.SPACE[id].battleground).length]; });
-  $("rules").innerHTML =
+  $("rulesBody").innerHTML =
     `<h1>${esc(S.title)}</h1><p>${esc(S.intro)}</p>` +
     `<h2>${esc(S.ends)}</h2>${table([], S.endsRows.map(([a, b]) => [`<b>${esc(a)}</b>`, esc(b)]))}` +
     `<h2>${esc(S.board)}</h2><p>${esc(S.boardText)}</p>${mapSectionHTML(S)}` +
@@ -220,6 +227,104 @@ function render() {
     `<h2>${esc(S.scoring)}</h2><p>${esc(S.scoringText)}</p>${table(S.scoringHead, regionRows)}` +
     `<h2>${esc(S.cards)}</h2><p>${esc(S.remove)}</p>${cardList(S, N, CARD_EN)}`;
   fitRulesMap();
+  renderDetail(); // #35: re-draw the open card's detail (if any) in the new language
 }
 $("langBtn").onclick = () => { lang = lang === "en" ? "zh-Hant" : "en"; try { localStorage.setItem("zh.lang", lang); } catch {} render(); };
+
+// #35: the card detail page, opened by tapping a row in the 72-card table
+// (cardRow()/cardList() above) — drawn by the same card-view.js module the
+// table's own read-only peek sheet (#34) uses, so a rules-page detail and a
+// table peek can never drift apart. #cardDetail is a sibling of #rulesBody
+// (never touched by render()'s innerHTML replace above) so it survives a
+// language switch and every re-render.
+const CARD_IDS = new Set([...E.CARDS.map((c) => c.id), E.JIUDING]);
+let openCardId = null;
+// True only while the CURRENTLY open card was reached by loading the page
+// with its hash already in the address bar (no click happened this
+// session) — in that one case there is no history entry of ours to pop, so
+// Close must clear the hash outright instead of calling history.back()
+// (which could leave the site: #35's own falsifiable case).
+let cameFromHash = false;
+
+function refreshDetailLock(open) {
+  document.body.classList.toggle("sheet-open", open);
+  if (open) {
+    const barH = document.querySelector(".bar")?.getBoundingClientRect().height || 0;
+    document.documentElement.style.setProperty("--bar-h", barH + "px");
+  }
+}
+// >=1024px, `.page-card` is the thing that scrolls the (long) rules content
+// (desktop.css) — a CSS-only `position: absolute` overlay would have that
+// same `.page-card` as its containing block and scroll away with the text
+// underneath it instead of staying put (measured while building this: the
+// overlay landed thousands of px off screen after scrolling the list first).
+// Pinning it with `position: fixed` and an inline rect taken fresh off
+// `.page-card`'s own box — which doesn't move just because ITS content
+// scrolls — sidesteps that without touching the existing scroll behaviour
+// at all. Below 1024px `.page-card` is `display: contents` (no box of its
+// own) and the mobile `.sheet.overlay` CSS (fixed, full window below the
+// bar) already does the right thing untouched, so this clears any inline
+// override back to that.
+function positionDetailOverlay() {
+  const el = $("cardDetail");
+  if (el.hidden) return;
+  if (window.matchMedia("(min-width: 1024px)").matches) {
+    const r = $("pageCard").getBoundingClientRect();
+    Object.assign(el.style, { position: "fixed", left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px", right: "auto", bottom: "auto" });
+  } else {
+    Object.assign(el.style, { position: "", left: "", top: "", width: "", height: "", right: "", bottom: "" });
+  }
+}
+window.addEventListener("resize", positionDetailOverlay);
+function renderDetail() {
+  const el = $("cardDetail");
+  if (!openCardId) { el.hidden = true; el.innerHTML = ""; refreshDetailLock(false); return; }
+  el.hidden = false;
+  refreshDetailLock(true);
+  renderCardView(el, openCardId, lang, { onClose: closeCardDetail });
+  positionDetailOverlay();
+}
+function openCardDetail(id, fromHash = false) {
+  if (!CARD_IDS.has(id)) return;
+  openCardId = id;
+  cameFromHash = fromHash;
+  renderDetail();
+  if (!fromHash) location.hash = "#card-" + id;
+}
+function closeCardDetail() {
+  if (cameFromHash) {
+    openCardId = null; cameFromHash = false;
+    renderDetail();
+    history.replaceState(null, "", location.pathname + location.search);
+  } else if (location.hash.startsWith("#card-")) {
+    history.back(); // triggers the hashchange listener below, which closes it
+  } else {
+    openCardId = null;
+    renderDetail();
+  }
+}
+window.addEventListener("hashchange", () => {
+  const m = /^#card-([a-z0-9]+)$/.exec(location.hash);
+  if (m && CARD_IDS.has(m[1])) { openCardId = m[1]; cameFromHash = false; renderDetail(); }
+  else if (openCardId) { openCardId = null; renderDetail(); }
+});
+{
+  const el = document.createElement("section");
+  el.id = "cardDetail";
+  el.hidden = true;
+  $("rules").appendChild(el);
+}
+// One delegated listener on the table's own container, rather than one per
+// row: cardList() rebuilds all 72 rows on every render() (language switch),
+// so a per-row listener would need re-attaching every time too.
+$("rulesBody").addEventListener("click", (ev) => {
+  const btn = ev.target.closest(".cardrow[data-card]");
+  if (btn) openCardDetail(btn.dataset.card);
+});
 render();
+// Opening straight into a card, e.g. rules.html#card-zhangyi shared as a
+// link: read the hash once at load, after the table exists to open into.
+{
+  const m = /^#card-([a-z0-9]+)$/.exec(location.hash);
+  if (m) openCardDetail(m[1], true);
+}

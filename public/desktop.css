@@ -100,6 +100,17 @@
      no-scroll requirement (unlike the table), so the card itself scrolls
      instead of being clipped. */
   body:has(#rules) .page-card { height: min(844px, 100vh); overflow-y: auto; }
+  /* #35: the rules page's own card detail overlay (#cardDetail) stays
+     confined to the 390px page-card instead of covering the whole window —
+     ".page-card is itself the thing that scrolls" here (the rule right
+     above), so a CSS-only `position: absolute` on the overlay would scroll
+     away with the rules text instead of staying put (measured: opening a
+     card after scrolling the list moved the overlay thousands of px off
+     screen). rules.js's own positionCardDetail() instead pins it with
+     `position: fixed` and an inline rect copied from .page-card's own
+     getBoundingClientRect() — recomputed on open and on resize — which
+     doesn't move when .page-card's CONTENT scrolls, only when the card
+     itself does (a window resize). See rules.js. */
 
   /* #28: on the mobile column this same texture is painted straight onto
      <body> (style.css: body.setup-qin/chu), but here the card sits ON TOP
