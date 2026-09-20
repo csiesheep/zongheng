@@ -169,6 +169,6 @@ export default {
     removeYes: "Removed after its event.",
     removeNo: "Kept for the discard pile.",
     history: "The history",
-    source: "Source",
+    source: "Source: ",
   },
 };

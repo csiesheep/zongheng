@@ -157,6 +157,6 @@ export default {
     removeYes: "事件觸發後移除。",
     removeNo: "打出後入棄牌堆。",
     history: "史事",
-    source: "出處",
+    source: "出處:",
   },
 };

@@ -100,19 +100,17 @@
      no-scroll requirement (unlike the table), so the card itself scrolls
      instead of being clipped. */
   body:has(#rules) .page-card { height: min(844px, 100vh); overflow-y: auto; }
-  /* #35: the rules page's own card detail overlay (#cardDetail, drawn by
-     card-view.js) — mobile's `.sheet.overlay` (style.css) is `position:
-     fixed`, covering the whole window; here it becomes `absolute` instead,
-     so its containing block is `.page-card` (position:relative, set above)
-     rather than the viewport, and it stays inside the 390px card exactly
-     like every other view on this page — never full-screen, per the owner's
-     "蓋在 390px 的規則頁卡片裡,不要全螢幕". #cardDetail is a DOM child of
-     #rules (a plain static element, not itself a scroll container), so this
-     positions relative to .page-card's own box regardless of how far
-     #rules's own (possibly much taller) content has scrolled — same reason
-     the table's own sidebar-confined overlay above works while #table
-     scrolls its hand/log around it. */
-  body:has(#rules) .sheet.overlay { position: absolute; }
+  /* #35: the rules page's own card detail overlay (#cardDetail) stays
+     confined to the 390px page-card instead of covering the whole window —
+     ".page-card is itself the thing that scrolls" here (the rule right
+     above), so a CSS-only `position: absolute` on the overlay would scroll
+     away with the rules text instead of staying put (measured: opening a
+     card after scrolling the list moved the overlay thousands of px off
+     screen). rules.js's own positionCardDetail() instead pins it with
+     `position: fixed` and an inline rect copied from .page-card's own
+     getBoundingClientRect() — recomputed on open and on resize — which
+     doesn't move when .page-card's CONTENT scrolls, only when the card
+     itself does (a window resize). See rules.js. */
 
   /* #28: on the mobile column this same texture is painted straight onto
      <body> (style.css: body.setup-qin/chu), but here the card sits ON TOP

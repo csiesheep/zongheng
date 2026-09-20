@@ -80,17 +80,22 @@ export function cardTextBox(parent, id) {
 
 // #35: the history section — only appended (and only takes up space) when
 // the card actually has one in stories.js; a card with none gets no empty
-// shell. Same zh-above-en convention as the text box, plus a small source
-// line when the entry gives one.
+// shell. #35 追加(owner): unlike the text box above it, this reads in ONE
+// language only, the current UI language — the OTHER language's text/source
+// is never put in the DOM at all (not CSS-hidden), so a language switch
+// (renderDetail()/renderPeek() both fully rebuild this via renderCardView)
+// removes it outright rather than just hiding it.
 export function historyBox(parent, id, lang) {
   const story = STORIES[id];
   if (!story) return null;
+  const text = lang === "en" ? story.en : story.zh;
+  const src = lang === "en" ? story.srcEn : story.srcZh;
   const box = document.createElement("div"); box.className = "sheet-textbox sheet-history";
+  const textCls = lang === "en" ? "sheet-text-en" : "sheet-text-zh";
   box.innerHTML =
     `<div class="sheet-history-title">${esc(t(lang, "sheet.history"))}</div>` +
-    `<p class="sheet-text-zh" lang="zh-Hant">${esc(story.zh)}</p>` +
-    `<p class="sheet-text-en">${esc(story.en)}</p>` +
-    (story.src ? `<p class="sheet-history-src">${esc(t(lang, "sheet.source"))}${lang === "en" ? ": " : "："}${esc(story.src)}</p>` : "");
+    `<p class="${textCls}"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(text)}</p>` +
+    (src ? `<p class="sheet-history-src">${esc(t(lang, "sheet.source"))}${esc(src)}</p>` : "");
   parent.appendChild(box);
   return box;
 }

@@ -236,9 +236,7 @@ $("langBtn").onclick = () => { lang = lang === "en" ? "zh-Hant" : "en"; try { lo
 // table's own read-only peek sheet (#34) uses, so a rules-page detail and a
 // table peek can never drift apart. #cardDetail is a sibling of #rulesBody
 // (never touched by render()'s innerHTML replace above) so it survives a
-// language switch and every re-render; on desktop (>=1024px) it stays
-// confined to the 390px page-card instead of covering the window (see
-// desktop.css's own `.sheet.overlay` override for `body:has(#rules)`).
+// language switch and every re-render.
 const CARD_IDS = new Set([...E.CARDS.map((c) => c.id), E.JIUDING]);
 let openCardId = null;
 // True only while the CURRENTLY open card was reached by loading the page
@@ -255,12 +253,36 @@ function refreshDetailLock(open) {
     document.documentElement.style.setProperty("--bar-h", barH + "px");
   }
 }
+// >=1024px, `.page-card` is the thing that scrolls the (long) rules content
+// (desktop.css) — a CSS-only `position: absolute` overlay would have that
+// same `.page-card` as its containing block and scroll away with the text
+// underneath it instead of staying put (measured while building this: the
+// overlay landed thousands of px off screen after scrolling the list first).
+// Pinning it with `position: fixed` and an inline rect taken fresh off
+// `.page-card`'s own box — which doesn't move just because ITS content
+// scrolls — sidesteps that without touching the existing scroll behaviour
+// at all. Below 1024px `.page-card` is `display: contents` (no box of its
+// own) and the mobile `.sheet.overlay` CSS (fixed, full window below the
+// bar) already does the right thing untouched, so this clears any inline
+// override back to that.
+function positionDetailOverlay() {
+  const el = $("cardDetail");
+  if (el.hidden) return;
+  if (window.matchMedia("(min-width: 1024px)").matches) {
+    const r = $("pageCard").getBoundingClientRect();
+    Object.assign(el.style, { position: "fixed", left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px", right: "auto", bottom: "auto" });
+  } else {
+    Object.assign(el.style, { position: "", left: "", top: "", width: "", height: "", right: "", bottom: "" });
+  }
+}
+window.addEventListener("resize", positionDetailOverlay);
 function renderDetail() {
   const el = $("cardDetail");
   if (!openCardId) { el.hidden = true; el.innerHTML = ""; refreshDetailLock(false); return; }
   el.hidden = false;
   refreshDetailLock(true);
   renderCardView(el, openCardId, lang, { onClose: closeCardDetail });
+  positionDetailOverlay();
 }
 function openCardDetail(id, fromHash = false) {
   if (!CARD_IDS.has(id)) return;
