@@ -14,7 +14,17 @@ export default {
   // rules.js can't read this name/text off the deck the way it does for the
   // other 71. Wording matches the existing "Nine Cauldrons" sentence in this
   // file's rules page prose (see rules.js's own specialText).
-  rules: { jiuding: "The Nine Cauldrons", jiudingText: "4 ops, 5 if all of it lands in the Three Jin or Zhou; place, campaign or lobby only; then it passes face down and the other side may use it from the next turn; Chu holds it at the start." },
+  rules: {
+    jiuding: "The Nine Cauldrons", jiudingText: "4 ops, 5 if all of it lands in the Three Jin or Zhou; place, campaign or lobby only; then it passes face down and the other side may use it from the next turn; Chu holds it at the start.",
+    // #40: the rules page's sticky section-nav chip labels, in the same
+    // order as rules.js render()'s h2s; "top" is the fixed last chip.
+    nav: { ends: "Endings", board: "Map", control: "Control", uses: "Uses", tracks: "Tracks", special: "Special", turn: "Turn", scoring: "Scoring", cards: "Cards", top: "Top ↑" },
+    search: "Search card name…",
+    eraFilter: { all: "All", reform: "Reform", alliance: "Alliance", conquest: "Conquest" },
+    sideFilter: { all: "All", qin: "Qin", chu: "Chu", neutral: "Neutral", scoring: "Scoring" },
+    count: "{n} cards",
+    empty: "No cards match.",
+  },
   sides: { qin: "Qin", chu: "Chu", neutral: "Neutral", scoring: "Scoring card" },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },
   setup: { defaultName: "Player" },

@@ -109,6 +109,18 @@ const T = {
   },
 };
 
+// #40: section chips (sticky nav) — one entry per h2 rendered by render(),
+// in the exact order they appear there. "top" isn't a section; it's the
+// fixed last chip that scrolls back to the very top of the page.
+const NAV_SECTIONS = ["ends", "board", "control", "uses", "tracks", "special", "turn", "scoring", "cards"];
+
+// #40: card search + era/side filters. Plain module state (not DOM, not
+// reset by render()) so a language switch or reopening a card from the
+// list never loses what the reader had typed or picked.
+let filterEra = "all";
+let filterSide = "all";
+let filterSearch = "";
+
 function table(head, rows, cls = []) {
   return `<table><thead><tr>${head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c, i) => `<td class="${cls[i] || ""}">${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
@@ -116,9 +128,15 @@ function table(head, rows, cls = []) {
 // opens the card's detail page — see openCardDetail()/the click-delegation
 // listener near the bottom of this file. data-card carries the id; the
 // row's own look (background/border/text colour by side) is untouched.
-function cardRow(side, id, zhName, enLine, badge, text) {
+// #40: filterEra/filterSide are one of "all"/"reform"/"alliance"/"conquest"
+// and "all"/"qin"/"chu"/"neutral"/"scoring"; era/filterSideKey carry the
+// same values per-card so cardRow can stamp them as data-* for
+// applyCardFilters() to read straight off the DOM (no parallel JS index to
+// keep in sync with the rendered rows). era === "" (the Nine Cauldrons: it
+// isn't any one era) only ever matches the "all" era filter.
+function cardRow(side, id, zhName, enLine, badge, text, era, filterSideKey, searchName) {
   const enName = enLine.split(" · ")[0];
-  return `<button type="button" class="cardrow side-${side}" data-card="${esc(id)}">` +
+  return `<button type="button" class="cardrow side-${side}" data-card="${esc(id)}" data-era="${esc(era)}" data-side="${esc(filterSideKey)}" data-name="${esc(searchName.toLowerCase())}">` +
     `<img src="art/cards/${id}.jpg" width="60" height="80" loading="lazy" alt="${esc(zhName.replace(/ \*$/, ""))} ${esc(enName)}">` +
     `<div class="cr-body">` +
     `<span class="cr-head">` +
@@ -139,6 +157,11 @@ function cardRow(side, id, zhName, enLine, badge, text) {
 // st.jiuding card, dealt with separately by every rule that touches it), so
 // its row is built by hand from NAV's rules.* strings and its ops read live
 // off E.opsOf — never a hand-copied "4".
+// #40: era/side filter chip values, in the order the row draws them.
+const ERA_FILTER_KEYS = ["all", "reform", "alliance", "conquest"];
+const SIDE_FILTER_KEYS = ["all", "qin", "chu", "neutral", "scoring"];
+const filterSideKeyOf = (c) => (c.scoring ? "scoring" : c.side === 0 ? "qin" : c.side === 1 ? "chu" : "neutral");
+
 function cardList(S, N, cardEn) {
   const rows = E.CARDS.map((c) => {
     const side = c.scoring ? "s" : c.side === 0 ? "q" : c.side === 1 ? "c" : "n";
@@ -148,15 +171,67 @@ function cardList(S, N, cardEn) {
       : esc(lang === "en" ? cardEn[c.id] ?? c.text : c.text);
     const year = c.year ? ` <small>(${lang === "en" ? "" : "前"}${c.year}${lang === "en" ? " BC" : ""})</small>` : "";
     const enLine = `${c.en} · ${S.era[c.era]} · ${c.scoring ? S.scoringCard : S.side[c.side]}`;
-    return cardRow(side, c.id, zhName, enLine, c.scoring ? "–" : c.ops, text + year);
+    return cardRow(side, c.id, zhName, enLine, c.scoring ? "–" : c.ops, text + year, c.era, filterSideKeyOf(c), `${c.zh} ${c.en}`);
   });
   // Name is bilingual regardless of the active language, same as every
   // other card row (names are the exception to the no-mixing rule); the
   // description follows the current language like the other cards' text.
   const jiudingOps = E.opsOf({ effects: [] }, E.QIN, E.JIUDING);
   const jiudingEnLine = `${en.rules.jiuding} · ${S.side[null]}`;
-  rows.push(cardRow("n", "jiuding", esc(zh.rules.jiuding), jiudingEnLine, jiudingOps, esc(N.rules.jiudingText)));
-  return `<div class="cardlist">${rows.join("")}</div>`;
+  // #40: the Cauldrons aren't tied to one era (usable from the start, all
+  // the way through the game), so they only ever show under the "all" era
+  // filter — never under 變法期/縱橫期/兼併期 specifically (era: "" never
+  // equals any of those three) — orchestrator's call on #40. Side-wise
+  // they're plain 中立, same as every other non-Qin/Chu/scoring card.
+  rows.push(cardRow("n", "jiuding", esc(zh.rules.jiuding), jiudingEnLine, jiudingOps, esc(N.rules.jiudingText), "", "neutral", `${zh.rules.jiuding} ${en.rules.jiuding}`));
+  return `${cardFiltersHTML()}<div class="cardlist" id="cardListWrap">${rows.join("")}</div><p class="card-empty" id="cardEmpty" hidden>${esc(N.rules.empty)}</p>`;
+}
+
+// #40: search box + era/side filter chip rows, drawn from the live
+// filterEra/filterSide/filterSearch module state so a language switch keeps
+// whatever the reader had picked or typed (render() rebuilds this markup on
+// every call, this just keeps it in sync instead of resetting it). Reads
+// NAV[lang] directly (not a parameter) — applyCardFilters()/render() both
+// need the exact same strings and the former runs outside render()'s own
+// S/N locals (from a delegated event listener).
+function cardFiltersHTML() {
+  const N = NAV[lang];
+  const eraChips = ERA_FILTER_KEYS.map((k) => `<button type="button" class="chip filter-chip${filterEra === k ? " active" : ""}" data-filter="era" data-value="${k}">${esc(N.rules.eraFilter[k])}</button>`).join("");
+  const sideChips = SIDE_FILTER_KEYS.map((k) => `<button type="button" class="chip filter-chip${filterSide === k ? " active" : ""}" data-filter="side" data-value="${k}">${esc(N.rules.sideFilter[k])}</button>`).join("");
+  return `<div class="card-filters">` +
+    `<input type="search" id="cardSearch" class="card-search" placeholder="${esc(N.rules.search)}" value="${esc(filterSearch)}" aria-label="${esc(N.rules.search)}">` +
+    `<div class="chip-row filter-row" id="eraFilterRow">${eraChips}</div>` +
+    `<div class="chip-row filter-row" id="sideFilterRow">${sideChips}</div>` +
+    `<p class="card-count" id="cardCount"></p>` +
+    `</div>`;
+}
+
+// #40: re-applies filterEra/filterSide/filterSearch to the already-rendered
+// 72 rows by toggling `hidden` (not a re-render — render() rebuilds the
+// #cardSearch input too, which would drop keystroke focus/cursor while
+// typing). Called after render() and after every filter/search change.
+function applyCardFilters() {
+  const wrap = $("cardListWrap");
+  if (!wrap) return;
+  const needle = filterSearch.trim().toLowerCase();
+  let shown = 0;
+  wrap.querySelectorAll(".cardrow").forEach((row) => {
+    const match = (filterEra === "all" || row.dataset.era === filterEra) &&
+      (filterSide === "all" || row.dataset.side === filterSide) &&
+      (!needle || row.dataset.name.includes(needle));
+    row.hidden = !match;
+    if (match) shown++;
+  });
+  const N = NAV[lang];
+  const labelParts = [];
+  if (filterEra !== "all") labelParts.push(N.rules.eraFilter[filterEra]);
+  if (filterSide !== "all") labelParts.push(N.rules.sideFilter[filterSide]);
+  if (needle) labelParts.push(`“${filterSearch.trim()}”`);
+  const label = labelParts.length ? labelParts.join(lang === "en" ? " + " : "・") : N.rules.eraFilter.all;
+  const countEl = $("cardCount");
+  if (countEl) countEl.textContent = `${label} · ${N.rules.count.replace("{n}", String(shown))}`;
+  const emptyEl = $("cardEmpty");
+  if (emptyEl) emptyEl.hidden = shown !== 0;
 }
 
 // The board section's map: an empty board (no influence, nobody in
@@ -206,6 +281,90 @@ function fitRulesMap() {
 }
 window.addEventListener("resize", fitRulesMap);
 
+// #40: the sticky section-nav row (chips) that sits right under the page's
+// header bar, one chip per h2 render() draws (NAV_SECTIONS, same order),
+// plus a fixed last chip back to the top. Built fresh on every render() so
+// its labels track the active language; which chip is "active" is driven
+// separately, by scroll position (updateActiveNavChip()), not rebuilt here.
+function rulesNavHTML(S) {
+  const N = NAV[lang];
+  const chips = NAV_SECTIONS.map((key) => `<button type="button" class="chip nav-chip" data-sec="${key}">${esc(N.rules.nav[key])}</button>`).join("");
+  return `<nav class="rules-nav" id="rulesNav" aria-label="${esc(S.title)}">` +
+    `<div class="rules-nav-scroll" id="rulesNavScroll">${chips}` +
+    `<button type="button" class="chip nav-chip nav-chip-top" data-sec="top">${esc(N.rules.nav.top)}</button>` +
+    `</div></nav>`;
+}
+
+// #40: scrolls so `key`'s h2 clears the sticky bar+chips, using each
+// heading's live getBoundingClientRect() rather than a cached offsetTop
+// (map/table sizes shift with viewport width, so absolute offsets would go
+// stale) — see the file's own note on why this reads off a `scroll`
+// listener instead of IntersectionObserver for the reverse direction
+// (highlighting the current chip, below). Mobile scrolls <html>/<body>;
+// >=1024px `.page-card` is its own scroll box (desktop.css) — same
+// breakpoint positionDetailOverlay() already uses.
+function isDesktopScroller() { return matchMedia("(min-width: 1024px)").matches; }
+// The same breathing room scrollSectionIntoView() leaves below the sticky
+// chips is also how far a heading is allowed to sit and still count as "in
+// view" for updateActiveNavChip() below — a smaller spy threshold would
+// mean tapping a chip scrolls to a spot its own scroll-spy doesn't yet
+// recognise as that section (measured while building this: every tap
+// highlighted the PREVIOUS chip instead of the one just tapped).
+const SECTION_GAP = 10;
+// nav.offsetHeight (its own height), not getBoundingClientRect().bottom: at
+// rest (page unscrolled) the nav hasn't reached its `position: sticky` point
+// yet, so its on-screen bottom edge still includes the header bar sitting
+// above it — using that pre-scroll bottom as the target undershot every
+// first tap (measured while building this: the destination heading landed
+// ~70px, the bar's own height, below where it should). Once actually
+// scrolled the sticky nav's top is pinned at 0, so its bottom is exactly
+// its own height — the only value that's right both before and after.
+function scrollSectionIntoView(key) {
+  const el = $("sec-" + key);
+  const nav = $("rulesNav");
+  if (!el || !nav) return;
+  const delta = el.getBoundingClientRect().top - nav.offsetHeight - SECTION_GAP;
+  if (isDesktopScroller()) { const card = $("pageCard"); if (card) card.scrollTop += delta; }
+  else window.scrollBy(0, delta);
+}
+function scrollRulesToTop() {
+  if (isDesktopScroller()) { const card = $("pageCard"); if (card) card.scrollTop = 0; }
+  else window.scrollTo(0, 0);
+}
+// Nudges the row's own scrollLeft (a synchronous property write) just far
+// enough that `chip` clears both edges — not Element.scrollIntoView(),
+// which measurably never moved this row in the pane this ships to (no
+// requestAnimationFrame; see updateActiveNavChip()'s own note). Used both
+// for the section chip the reader just tapped and, since it's the one chip
+// updateActiveNavChip() never marks active, for "Top ↑" itself.
+function scrollChipIntoView(chip) {
+  const scroller = $("rulesNavScroll");
+  if (!scroller || !chip) return;
+  const contRect = scroller.getBoundingClientRect(), chipRect = chip.getBoundingClientRect();
+  if (chipRect.left < contRect.left) scroller.scrollLeft -= (contRect.left - chipRect.left + 14);
+  else if (chipRect.right > contRect.right) scroller.scrollLeft += (chipRect.right - contRect.right + 14);
+}
+// #40: which chip is gold — read straight off the headings' current
+// on-screen position every time this runs (a `scroll` listener, cheap
+// enough at nine headings) instead of an IntersectionObserver, whose
+// callback the harness this ships to may never fire at all (see the file
+// top note / issue #40). The last heading whose top has crossed above the
+// chips' own bottom edge is the section in view.
+function updateActiveNavChip() {
+  const nav = $("rulesNav"), scroller = $("rulesNavScroll");
+  if (!nav || !scroller) return;
+  const threshold = Math.max(nav.getBoundingClientRect().bottom, nav.offsetHeight) + SECTION_GAP + 2;
+  let activeKey = NAV_SECTIONS[0];
+  for (const key of NAV_SECTIONS) {
+    const el = $("sec-" + key);
+    if (el && el.getBoundingClientRect().top <= threshold) activeKey = key;
+  }
+  scroller.querySelectorAll(".nav-chip").forEach((btn) => btn.classList.toggle("active", btn.dataset.sec === activeKey));
+  scrollChipIntoView(scroller.querySelector(`.nav-chip[data-sec="${activeKey}"]`));
+}
+window.addEventListener("scroll", updateActiveNavChip, { passive: true });
+$("pageCard")?.addEventListener("scroll", updateActiveNavChip, { passive: true });
+
 function render() {
   const S = T[lang];
   const N = NAV[lang];
@@ -216,17 +375,20 @@ function render() {
   $("credit").textContent = S.credit;
   const regionRows = E.SCORED_REGIONS.map((r) => { const R = E.REGIONS[r]; return [esc(lang === "en" ? R.en : R.zh), R.presence, R.domination, R.control, E.spacesOf(r).filter((id) => E.SPACE[id].battleground).length]; });
   $("rulesBody").innerHTML =
+    rulesNavHTML(S) +
     `<h1>${esc(S.title)}</h1><p>${esc(S.intro)}</p>` +
-    `<h2>${esc(S.ends)}</h2>${table([], S.endsRows.map(([a, b]) => [`<b>${esc(a)}</b>`, esc(b)]))}` +
-    `<h2>${esc(S.board)}</h2><p>${esc(S.boardText)}</p>${mapSectionHTML(S)}` +
-    `<h2>${esc(S.control)}</h2><p>${esc(S.controlText)}</p>` +
-    `<h2>${esc(S.uses)}</h2>${table([], S.usesRows.map(([a, b]) => [`<b>${esc(a)}</b>`, esc(b)]))}` +
-    `<h2>${esc(S.tracks)}</h2><p>${esc(S.weariness)}</p><p>${esc(S.reformText)}</p>${table(S.reformHead, S.reformRows.map((r) => r.map(esc)))}` +
-    `<h2>${esc(S.special)}</h2><p>${esc(S.specialText)}</p>` +
-    `<h2>${esc(S.turn)}</h2><p>${esc(S.turnEras)}</p><ol class="turn-steps">${S.turnSteps.map(([t, b]) => `<li><b>${esc(t)}:</b> ${esc(b)}</li>`).join("")}</ol>` +
-    `<h2>${esc(S.scoring)}</h2><p>${esc(S.scoringText)}</p>${table(S.scoringHead, regionRows)}` +
-    `<h2>${esc(S.cards)}</h2><p>${esc(S.remove)}</p>${cardList(S, N, CARD_EN)}`;
+    `<h2 id="sec-ends">${esc(S.ends)}</h2>${table([], S.endsRows.map(([a, b]) => [`<b>${esc(a)}</b>`, esc(b)]))}` +
+    `<h2 id="sec-board">${esc(S.board)}</h2><p>${esc(S.boardText)}</p>${mapSectionHTML(S)}` +
+    `<h2 id="sec-control">${esc(S.control)}</h2><p>${esc(S.controlText)}</p>` +
+    `<h2 id="sec-uses">${esc(S.uses)}</h2>${table([], S.usesRows.map(([a, b]) => [`<b>${esc(a)}</b>`, esc(b)]))}` +
+    `<h2 id="sec-tracks">${esc(S.tracks)}</h2><p>${esc(S.weariness)}</p><p>${esc(S.reformText)}</p>${table(S.reformHead, S.reformRows.map((r) => r.map(esc)))}` +
+    `<h2 id="sec-special">${esc(S.special)}</h2><p>${esc(S.specialText)}</p>` +
+    `<h2 id="sec-turn">${esc(S.turn)}</h2><p>${esc(S.turnEras)}</p><ol class="turn-steps">${S.turnSteps.map(([t, b]) => `<li><b>${esc(t)}:</b> ${esc(b)}</li>`).join("")}</ol>` +
+    `<h2 id="sec-scoring">${esc(S.scoring)}</h2><p>${esc(S.scoringText)}</p>${table(S.scoringHead, regionRows)}` +
+    `<h2 id="sec-cards">${esc(S.cards)}</h2><p>${esc(S.remove)}</p>${cardList(S, N, CARD_EN)}`;
   fitRulesMap();
+  applyCardFilters(); // #40: reapply the reader's search/era/side filters onto the freshly-drawn rows
+  updateActiveNavChip(); // #40: re-highlight the section chip for wherever the reader already was
   renderDetail(); // #35: re-draw the open card's detail (if any) in the new language
 }
 $("langBtn").onclick = () => { lang = lang === "en" ? "zh-Hant" : "en"; try { localStorage.setItem("zh.lang", lang); } catch {} render(); };
@@ -303,8 +465,14 @@ function closeCardDetail() {
     renderDetail();
   }
 }
+// #40 (found while testing the new side filter, not part of its brief —
+// noted in the hand-in): this pattern excluded "_", so opening one of the
+// five scoring cards (ids like score_jin) via openCardDetail()'s own
+// location.hash write immediately failed this same regex on the very
+// hashchange that write triggers, closing the sheet right back — a
+// pre-existing bug in this file, unrelated to card-view.js/the table.
 window.addEventListener("hashchange", () => {
-  const m = /^#card-([a-z0-9]+)$/.exec(location.hash);
+  const m = /^#card-([a-z0-9_]+)$/.exec(location.hash);
   if (m && CARD_IDS.has(m[1])) { openCardId = m[1]; cameFromHash = false; renderDetail(); }
   else if (openCardId) { openCardId = null; renderDetail(); }
 });
@@ -316,15 +484,38 @@ window.addEventListener("hashchange", () => {
 }
 // One delegated listener on the table's own container, rather than one per
 // row: cardList() rebuilds all 72 rows on every render() (language switch),
-// so a per-row listener would need re-attaching every time too.
+// so a per-row listener would need re-attaching every time too. #40 folds
+// the section-nav chips and the era/side filter chips into the same
+// listener for the same reason (both are also rebuilt by every render()).
 $("rulesBody").addEventListener("click", (ev) => {
-  const btn = ev.target.closest(".cardrow[data-card]");
-  if (btn) openCardDetail(btn.dataset.card);
+  const cardBtn = ev.target.closest(".cardrow[data-card]");
+  if (cardBtn) { openCardDetail(cardBtn.dataset.card); return; }
+  const navBtn = ev.target.closest(".nav-chip[data-sec]");
+  if (navBtn) {
+    if (navBtn.dataset.sec === "top") scrollRulesToTop();
+    else scrollSectionIntoView(navBtn.dataset.sec);
+    updateActiveNavChip(); // don't wait on a `scroll` event that may not fire (see file-top note)
+    scrollChipIntoView(navBtn); // "Top ↑" itself: the one chip updateActiveNavChip() never marks active
+    return;
+  }
+  const filterBtn = ev.target.closest(".filter-chip[data-filter]");
+  if (filterBtn) {
+    if (filterBtn.dataset.filter === "era") filterEra = filterBtn.dataset.value;
+    else filterSide = filterBtn.dataset.value;
+    filterBtn.parentElement.querySelectorAll(".filter-chip").forEach((b) => b.classList.toggle("active", b === filterBtn));
+    applyCardFilters();
+  }
+});
+// #40: search-as-you-type. Delegated (not re-attached per render()) and
+// kept to applyCardFilters() only — never render() — so typing doesn't lose
+// the input's own focus/cursor position on every keystroke.
+$("rulesBody").addEventListener("input", (ev) => {
+  if (ev.target.id === "cardSearch") { filterSearch = ev.target.value; applyCardFilters(); }
 });
 render();
 // Opening straight into a card, e.g. rules.html#card-zhangyi shared as a
 // link: read the hash once at load, after the table exists to open into.
 {
-  const m = /^#card-([a-z0-9]+)$/.exec(location.hash);
+  const m = /^#card-([a-z0-9_]+)$/.exec(location.hash);
   if (m) openCardDetail(m[1], true);
 }
