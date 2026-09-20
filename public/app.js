@@ -538,14 +538,25 @@ function layoutTable() {
   // picking, scoring) gets zero hand row, not a blank 200px+ strip under the
   // map — the map takes back every pixel the hand isn't using.
   const hasHand = hand.children.length > 0;
-  // #24 ruling: while the map is actively in play (campaign/lobby target
-  // picking, placing points — including an event's forced placement, which
-  // can land here with a real hand still showing) a short viewport gives
-  // way, one step at a time: hand row, then prompt row, then the sheet's
-  // own use/order rows collapse to a mini chip + preview + Cancel/Confirm.
-  // Re-decided from scratch every pass (not remembered) so leaving the
-  // state, or a tall viewport that never needed it, is never stuck compact.
-  const mapActive = !!game.mapActive;
+  // #24 ruling, widened by #54: while the map is actively in play
+  // (campaign/lobby target picking, placing points — including an event's
+  // forced placement, which can land here with a real hand still showing)
+  // OR any other pending choice is up (an opponent's card resolved its
+  // event and is waiting for "怎麼用?", a forced card/option pick), a short
+  // viewport gives way, one step at a time: hand row, then prompt row, then
+  // the sheet's own use/order rows collapse to a mini chip + preview +
+  // Cancel/Confirm. In every one of these states the hand's own cards are
+  // not what's being chosen — the choice lives entirely in the sheet's
+  // buttons — so hiding the hand costs nothing. #54 found the ops-pending
+  // "which use?" sub-state (game.mapActive used to stay false there, since
+  // the map itself isn't tapped until AFTER a use is picked) cut off the
+  // hand row at 390x669/375x667 with the advisor off. `game.givesWay` is
+  // set by renderPending()/renderPromptAndSheet() — see #54's own comment
+  // there — and is the ONLY reader of that flag, so broadening it here
+  // cannot affect anything else. Re-decided from scratch every pass (not
+  // remembered) so leaving the state, or a tall viewport that never needed
+  // it, is never stuck compact.
+  const mapActive = !!game.givesWay;
   const sheetTitle = sheetEl.querySelector(".sheet-title");
   hand.hidden = !hasHand;
   // #33: a tutorial lesson's decorate() (tutorial-ui.js) hides #prompt right
@@ -1288,12 +1299,15 @@ function scoringPanel(sh, v, region) {
 function renderPromptAndSheet(v) {
   const p = $("promptText"), sh = $("sheet");
   sh.innerHTML = "";
-  // Whether the map is actively in play right now (picking a campaign/lobby
-  // target, placing points, including an event's forced placement) — set
-  // false here and overridden by whichever branch below actually needs the
-  // map; layoutTable() (#24) reads this to decide whether a short viewport
-  // may give way (hand -> prompt -> sheet) instead of overflowing.
-  game.mapActive = false;
+  // Whether a short viewport may fold the hand/prompt/sheet away (#24, widened
+  // by #54): true while the map is actively in play (picking a campaign/lobby
+  // target, placing points, including an event's forced placement) OR any
+  // pending choice (renderPending() below sets it unconditionally — see its
+  // own comment) is up. Set false here and overridden by whichever branch
+  // below actually needs it; layoutTable() reads this flag to decide whether
+  // a short viewport may give way (hand -> prompt -> sheet) instead of
+  // overflowing.
+  game.givesWay = false;
   // The sheet's own background follows the selected card's owner, like the
   // card-sheet mockups (a Chu card opens on lacquer red, Qin on black,
   // neutral/scoring on parchment).
@@ -1355,7 +1369,7 @@ function renderPromptAndSheet(v) {
   // target) the sheet shrinks to a mini chip so the map stays visible and
   // tappable (C2_Place/C2_Campaign) — "Expand" swaps in the full card.
   const mapActive = ui.use === "campaign" || ui.use === "lobby" || (ui.use === "place" && !(info.enemy && ui.order === "eventFirst" && !ui.pair));
-  game.mapActive = mapActive;
+  game.givesWay = mapActive;
   // #24 round 2, fix #3: whenever the CHIP is shown (map active, not
   // expanded) the order/pair choice is already made — the interactive rows
   // move to whenever the FULL card is on screen instead (browsing it before
@@ -1500,12 +1514,21 @@ function renderPromptAndSheet(v) {
 
 function renderPending(v, p, setPrompt, sh) {
   const ui = game.ui;
+  // #54: every pending kind (points/card/option/ops) answers entirely
+  // through the sheet's own buttons — never by tapping a card in the hand
+  // — so a short viewport may always fold the hand (then the prompt row,
+  // then compact the sheet) away here, the same #24 give-way layoutTable()
+  // already applies while the map is active. Unconditional (not per-kind):
+  // #54 was exactly the "ops" kind's own pre-use-pick moment, which used to
+  // leave this false (the map itself isn't tapped until AFTER a use is
+  // picked) and cut the hand row off at 390x669/375x667 with the advisor
+  // off. "points" was already unconditionally true before this widening —
+  // it's still the map in play there too (points are placed by tapping
+  // spaces), even for an event's forced placement, which can land here
+  // while the player still holds a real hand (#24's "待放置" defect: the
+  // hand row stayed up and pushed Confirm off a short screen).
+  game.givesWay = true;
   if (p.kind === "points") {
-    // Always the map in play (points are placed by tapping spaces) — even
-    // an event's forced placement, which can land here while the player
-    // still holds a real hand (#24's "待放置" defect: the hand row stayed
-    // up and pushed Confirm off a short screen).
-    game.mapActive = true;
     const key = p.tag === "setup" ? (p.min === v.options.comp && v.turn === 0 && game.me === 1 && !p.options.includes("ying") ? "setupBonus" : "setup") : p.min < p.n ? "pointsMin" : "points";
     setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t(`prompt.${key}`, { n: p.n, left: p.n - ui.picks.length })}`);
     const r = row(sh);
@@ -1532,10 +1555,17 @@ function renderPending(v, p, setPrompt, sh) {
   }
   if (p.kind === "ops") {
     setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t("prompt.ops", { ops: p.ops })}`);
-    // Once a use is picked, the map is in play the same way it is for a
-    // normal card (place: tapping spaces; campaign/lobby: picking a target)
-    // — before that, it's just the use-buttons above, no map interaction yet.
-    game.mapActive = !!ui.opsUse;
+    // #54: this used to only set the top-of-function `game.givesWay` while a
+    // use was already picked (once a use is picked, the map is in play the
+    // same way it is for a normal card: place taps spaces, campaign/lobby
+    // picks a target) — before that, the "怎麼用?" use-buttons state left it
+    // false, and a real hangu-style play (an opponent's card, event first,
+    // ops left over) measured the hand row cut off 24-25px at 390x669/
+    // 375x667 with the advisor off (the log strip's news line pushes the
+    // sheet down just enough). The use-buttons are answered from the sheet
+    // exactly like every other pending kind, so `game.givesWay = true` at
+    // the top of this function already covers this state too — nothing
+    // else to set here.
     const r = row(sh);
     // #52: same hook, keyed by the use id ("place"/"campaign"/"lobby") --
     // advise()'s own action for a pending "ops" choice is
