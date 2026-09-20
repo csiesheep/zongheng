@@ -183,11 +183,24 @@ function placeBanner(meta) {
   // it exists; only the compact chip (no .sheet-mid) still gets #sheet
   // itself, same as before.
   const sheetContentTarget = sheet ? sheet.querySelector(":scope > .sheet-mid") || sheet : sheet;
+  // #46: when the open card has a history block, the owner's own order
+  // (picture/names, rules text, the advice strip, THEN the history) puts
+  // the banner right before it rather than after — insertBefore instead of
+  // a plain appendChild, so this holds regardless of which gets built
+  // first (app.js always builds the history synchronously; this file's own
+  // real-answer text can arrive later, via the setTimeout in
+  // applyDecorations, and re-run this same placement) or how many times
+  // the banner moves between slots.
+  const appendToSheetContent = () => {
+    const history = sheetContentTarget.querySelector(":scope > .sheet-history");
+    if (history) sheetContentTarget.insertBefore(banner.root, history);
+    else sheetContentTarget.appendChild(banner.root);
+  };
   const desktop = window.innerWidth >= 1024;
   if (desktop) {
     if (sheetHasContent) {
       if (promptText) promptText.hidden = false;
-      sheetContentTarget.appendChild(banner.root);
+      appendToSheetContent();
       setSlot("adv-slot-sheet");
       return;
     }
@@ -217,7 +230,7 @@ function placeBanner(meta) {
   // Phone column.
   if (sheetHasContent) {
     if (promptText) promptText.hidden = false;
-    sheetContentTarget.appendChild(banner.root);
+    appendToSheetContent();
     setSlot("adv-slot-sheet");
     if (overflowsTable()) { sheetContentTarget.removeChild(banner.root); takeOverPrompt(); }
     return;

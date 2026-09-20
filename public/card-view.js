@@ -33,7 +33,11 @@ const cardZh = (id) => (id === E.JIUDING ? "九鼎" : E.CARD[id].zh);
 const cardEn = (id) => (id === E.JIUDING ? "The Nine Cauldrons" : E.CARD[id].en);
 const cardTextZh = (id) => (id === E.JIUDING ? "4 點;全部用在三晉或周室視為 5。用後蓋著交給對手。" : E.CARD[id].text);
 const cardTextEn = (id) => (id === E.JIUDING ? "4 ops; 5 if all of it lands in the Three Jin or Zhou. Then it passes face down." : CARD_EN[id] ?? E.CARD[id].text);
-const opsLabel = (id) => (id === E.JIUDING ? "4" : E.CARD[id].scoring ? "計" : String(E.CARD[id].ops));
+// #46: the scoring badge's own "計" was Chinese regardless of the
+// interface language (a pre-existing gap from #29, caught by the owner's
+// "every face, one language" ruling) — en now gets the same plain "S" the
+// hand tile already uses for a scoring card.
+const opsLabel = (id, lang) => (id === E.JIUDING ? "4" : E.CARD[id].scoring ? (lang === "en" ? "S" : "計") : String(E.CARD[id].ops));
 
 // Which of the sheet's three colour skins (Qin/Chu/neutral-or-scoring) a
 // card belongs to — same rule app.js's own cardSide() uses.
@@ -49,6 +53,9 @@ export function cardSide(id) {
 // rather than only for rules.js so the table's own peek sheet gains them
 // too, same module, same look). Always appended straight into the sheet
 // itself (never the scrollable middle), so it never scrolls out of view.
+// #46 (owner: 「卡牌,只顯示一語言」): every face of a card shows the
+// interface language only — the name is a single node, the text box a
+// single line, neither carries the other language anywhere in the DOM.
 export function cardHeader(sh, id, lang) {
   const m = id === E.JIUDING ? null : E.CARD[id];
   const info = m ? `${t(lang, "eras." + m.era)}${m.num ? ` · No. ${m.num}` : ""}${m.year ? ` · ${lang === "en" ? m.year + " BC" : "前" + m.year + "年"}` : ""}` : "";
@@ -57,24 +64,25 @@ export function cardHeader(sh, id, lang) {
     : m.side === 0 ? t(lang, "sides.qin") : t(lang, "sides.chu");
   const removeLabel = id === E.JIUDING ? "" : (m.remove ? t(lang, "sheet.removeYes") : t(lang, "sheet.removeNo"));
   const metaLine2 = [sideLabel, removeLabel].filter(Boolean).join(sep(lang));
+  const name = lang === "en" ? cardEn(id) : cardZh(id);
   const head = document.createElement("div"); head.className = "sheet-head";
   head.innerHTML =
     `<img class="sheet-img" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
-    `<div class="sheet-meta"><span class="sheet-badge">${esc(opsLabel(id))}</span>` +
-    `<div class="sheet-name-zh" lang="zh-Hant">${esc(cardZh(id))}</div>` +
-    `<div class="sheet-name-en">${esc(cardEn(id))}</div>` +
+    `<div class="sheet-meta"><span class="sheet-badge">${esc(opsLabel(id, lang))}</span>` +
+    `<div class="sheet-name"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(name)}</div>` +
     `<div class="sheet-info">${esc(info)}${info ? "<br>" : ""}${esc(metaLine2)}</div>` +
     `</div>`;
   sh.appendChild(head);
 }
 const sep = (lang) => (lang === "en" ? ", " : "、");
 
-// The bilingual card-text box (#29): Chinese above English, in the sheet's
-// own bordered panel — unchanged from app.js's original cardTextBox, just
-// moved here so both callers share one copy.
-export function cardTextBox(parent, id) {
+// The card-text box (#46: one language only, was bilingual per #29 until
+// the owner's ruling reversed that) — the sheet's own bordered/tinted panel,
+// now a single line in the interface language.
+export function cardTextBox(parent, id, lang) {
   const box = document.createElement("div"); box.className = "sheet-textbox";
-  box.innerHTML = `<p class="sheet-text-zh" lang="zh-Hant">${esc(cardTextZh(id))}</p><p class="sheet-text-en">${esc(cardTextEn(id))}</p>`;
+  const text = lang === "en" ? cardTextEn(id) : cardTextZh(id);
+  box.innerHTML = `<p class="sheet-text"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(text)}</p>`;
   parent.appendChild(box);
 }
 
@@ -109,7 +117,7 @@ export function renderCardView(container, id, lang, opts = {}) {
   container.className = `sheet overlay peek-sheet sheet-${cardSide(id)}`;
   cardHeader(container, id, lang);
   const mid = document.createElement("div"); mid.className = "sheet-mid"; container.appendChild(mid);
-  cardTextBox(mid, id);
+  cardTextBox(mid, id, lang);
   historyBox(mid, id, lang);
   if (opts.note) {
     const n = document.createElement("div"); n.className = "note"; n.textContent = opts.note;
