@@ -349,7 +349,7 @@ export default {
   },
   lianpo: {
     zh: "廉頗與李牧都是趙國後期名將。前260年,秦將王齕攻趙,廉頗於長平堅壁抵禦,七月趙孝成王中反間計換以趙括,終致慘敗。李牧常年鎮守雁門,大破匈奴十餘萬騎,又屢次擊退秦軍。前229年,趙王遷聽讒言處死李牧,三個月後趙國即為秦所滅,後世常感嘆李牧一死、趙國隨之覆亡。",
-    en: "Lian Po and Li Mu were both late Zhao generals. In 260 BC, Qin's Wang He attacked Zhao, and Lian Po held Changping by refusing battle, until King Xiaocheng replaced him with Zhao Kuo that July through a rumor, leading to disaster. Li Mu guarded the north at Yanmen for years, crushing Xiongnu horsemen, and beat back Qin's armies too. In 229 BC, King Qian had Li Mu executed on false charges, and Zhao fell three months later, long called cause and effect.",
+    en: "Lian Po and Li Mu were both late Zhao generals. In 260 BC, Qin's Wang He attacked Zhao, and Lian Po held Changping by refusing battle, until King Xiaocheng replaced him with Zhao Kuo in the seventh month through a rumor, leading to disaster. Li Mu guarded the north at Yanmen for years, crushing Xiongnu horsemen, and beat back Qin's armies too. In 229 BC, King Qian had Li Mu executed on false charges, and Zhao fell three months later, long called cause and effect.",
     srcZh: "《史記·廉頗藺相如列傳》",
     srcEn: "Shiji, Biographies of Lian Po and Lin Xiangru",
   },
@@ -390,7 +390,7 @@ export default {
     srcEn: "Shiji, Biographies of Fan Ju and Cai Ze",
   },
   zhukeling: {
-    zh: "前237年,鄭國渠被揭穿是間諜之計,同年呂不韋也因嫪毐之亂免相,〈秦始皇本紀〉皆記在這一年。秦國宗室大臣趁機進言:「諸侯人來事秦者,大抵為其主游間於秦耳,請一切逐客。」秦王政下令驅逐非秦國出身的客卿;李斯也在被逐之列,途中上書勸阻,秦王政遂收回成命,復其官職。",
+    zh: "前237年,鄭國渠被揭穿是間諜之計。〈秦始皇本紀〉把呂不韋因嫪毐之亂免相與逐客令記在同一年。秦國宗室大臣趁機進言:「諸侯人來事秦者,大抵為其主游間於秦耳,請一切逐客。」秦王政下令驅逐非秦國出身的客卿;李斯也在被逐之列,上書勸阻,秦王政遂收回成命,復其官職。",
     en: "In 237 BC, the Zhengguo Canal was exposed as a spying scheme, and the Annals of the First Emperor records Lü Buwei was also dismissed that year over the Lao Ai affair. Qin's own nobles told the king that outsiders serving Qin mostly worked for their home states, so all such guests should be expelled, and the king ordered every official not born in Qin driven out. Li Si, among those expelled, petitioned against it, and the king reversed the order and restored his post.",
     srcZh: "《史記·李斯列傳》、《史記·秦始皇本紀》",
     srcEn: "Shiji, Biography of Li Si; Basic Annals of the First Emperor",
@@ -403,7 +403,7 @@ export default {
   },
   mibing: {
     zh: "「弭兵」一詞源自春秋末年向戌弭兵之會。前546年,宋國大夫向戌倡議弭兵,促成晉、楚等十四國在宋會盟,約定除齊、秦外互相朝見,此後晉楚之間大規模戰爭停止近四十年。戰國時,宋牼聽聞秦楚交兵,也說「吾聞秦楚構兵,我將見楚王說而罷之」,可見弭兵的想法戰國仍有人提起。",
-    en: "The term for laying down arms traces to the Covenant of Song near the end of the Spring and Autumn period. In 546 BC, Xiang Xu of Song proposed a truce, bringing fourteen states, including Jin and Chu, to a covenant of mutual visits except Qi and Qin; large fighting between Jin and Chu stopped for forty years. In the Warring States, Song Keng, hearing Qin and Chu were at war, said he meant to see the Chu king and talk him out of it.",
+    en: "The term for laying down arms traces to the Covenant of Song near the end of the Spring and Autumn period. In 546 BC, Xiang Xu of Song proposed a truce, bringing fourteen states, including Jin and Chu, to a covenant of mutual visits except Qi and Qin; fighting between Jin and Chu stopped for nearly forty years. In the Warring States, Song Keng, hearing Qin and Chu were at war, said he meant to see the Chu king and talk him out of it.",
     srcZh: "《左傳·襄公二十七年》、《孟子·告子下》",
     srcEn: "Zuo Zhuan, Duke Xiang Year 27; Mengzi, Gaozi II",
   },
