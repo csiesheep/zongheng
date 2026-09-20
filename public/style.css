@@ -566,7 +566,7 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    (never shrunk below it — no min-width:0 override) fixes that: the five
    natural widths add up to comfortably less than a 375px-wide row, so
    nothing needs to be clipped or wrapped to make it fit. */
-.statline { flex: none; display: flex; justify-content: space-between; gap: 6px; padding: 3px 8px; overflow: hidden; }
+.statline { flex: none; display: flex; justify-content: space-between; gap: 6px; padding: 2px 8px; overflow: hidden; }
 .statline > div { flex: none; }
 .statline .sl-label { display: block; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; white-space: nowrap; }
 /* #24's own note (kept — still true of what this replaces): "Qin (face
