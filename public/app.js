@@ -145,12 +145,16 @@ function seg(el, items, value, onPick) {
     b.onclick = () => onPick(v);
   });
 }
-// A picture tile per side (art/ui/qin.jpg, chu.jpg), plus a plain "random"
-// tile — the selected one gets a thick border and full opacity, the way the
-// C2 setup mockups (C2_SetupQin/Setup/SetupRandom) show all three at once.
-// Built once; later calls (a pick, a language switch) only update
-// aria-pressed and text nodes in place — the <img> is never re-created, so
-// it never re-decodes and never flickers (#20).
+// A picture tile per side (art/ui/qin.jpg, chu.jpg), plus a split tiger/
+// phoenix "random" tile — the selected one gets a thick border and full
+// opacity, the way the C2 setup mockups (C2_SetupQin/Setup/SetupRandom)
+// show all three at once. Built once; later calls (a pick, a language
+// switch) only update aria-pressed and text nodes in place — the <img> is
+// never re-created, so it never re-decodes and never flickers (#20).
+// #42: a side tile says its side once — the glyph plus the stance — and
+// drops the small repeated name under it (only the random tile still
+// carries a .tname line). In English, which can't read the glyph, the
+// stance line itself carries the name too ("Qin · the Horizontal").
 const SIDE_TILES = ["qin", "chu", "random"];
 function renderSideTiles() {
   const el = $("sideTiles");
@@ -160,16 +164,26 @@ function renderSideTiles() {
     for (const v of SIDE_TILES) {
       const b = document.createElement("button");
       b.type = "button"; b.className = `tile ${v}`;
-      if (v !== "random") {
+      if (v === "random") {
+        const half = (side, cls) => { const img = document.createElement("img"); img.className = `tile-half ${cls}`; img.src = `art/ui/${side}.jpg`; img.alt = ""; return img; };
+        const seam = document.createElement("span"); seam.className = "tile-seam";
+        const q = document.createElement("span"); q.className = "tile-q"; q.textContent = "?";
+        b.append(half("qin", "tile-half-l"), half("chu", "tile-half-r"), seam, q);
+      } else {
         const img = document.createElement("img");
         img.src = `art/ui/${v}.jpg`; img.alt = "";
         b.appendChild(img);
       }
       const info = document.createElement("span"); info.className = "tile-info";
-      const tg = document.createElement("span"); tg.className = "tg"; tg.lang = "zh-Hant";
-      const tname = document.createElement("span"); tname.className = "tname";
+      if (v === "random") {
+        const tname = document.createElement("span"); tname.className = "tname";
+        info.appendChild(tname);
+      } else {
+        const tg = document.createElement("span"); tg.className = "tg"; tg.lang = "zh-Hant";
+        info.appendChild(tg);
+      }
       const ttag = document.createElement("span"); ttag.className = "ttag";
-      info.append(tg, tname, ttag);
+      info.appendChild(ttag);
       b.appendChild(info);
       b.onclick = () => pick(v);
       el.appendChild(b);
@@ -178,17 +192,24 @@ function renderSideTiles() {
   SIDE_TILES.forEach((v, i) => {
     const b = el.children[i];
     b.setAttribute("aria-pressed", String(setup.side === v));
-    const glyph = v === "qin" ? "秦" : v === "chu" ? "楚" : "?";
-    const tname = v === "random" ? t("setup.random") : t(`sides.${v}`);
-    const tag = v === "random" ? t("setup.randomTag") : t(`side.${v}.headline`);
+    const tag = v === "random" ? t("setup.randomTag")
+      : lang === "en" ? `${t(`sides.${v}`)} · ${t(`side.${v}.headline`)}`
+      : t(`side.${v}.headline`);
     // textContent's setter unconditionally replaces the text node (a
     // childList mutation) even when the string is unchanged, so guard each
     // one — a side/level pick never changes another tile's text, and only
     // a language switch should touch these (#20).
-    const tg = b.querySelector(".tg"), tn = b.querySelector(".tname"), tt = b.querySelector(".ttag");
-    if (tg.textContent !== glyph) tg.textContent = glyph;
-    if (tn.textContent !== tname) tn.textContent = tname;
+    const tt = b.querySelector(".ttag");
     if (tt.textContent !== tag) tt.textContent = tag;
+    if (v === "random") {
+      const tn = b.querySelector(".tname");
+      const tname = t("setup.random");
+      if (tn.textContent !== tname) tn.textContent = tname;
+    } else {
+      const tg = b.querySelector(".tg");
+      const glyph = v === "qin" ? "秦" : "楚";
+      if (tg.textContent !== glyph) tg.textContent = glyph;
+    }
   });
 }
 function renderSetup() {
