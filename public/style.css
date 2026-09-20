@@ -316,10 +316,10 @@ body:not(.table-lock) #logToggle { display: none; }
 .side-glyph { font-size: clamp(28px, 9vh, 52px); line-height: 1; }
 .side-tap.qin .side-glyph { font: 900 clamp(28px, 9vh, 52px)/1 var(--serif); color: var(--qin-text); }
 .side-tap.chu .side-glyph { font: 700 clamp(28px, 9vh, 52px)/1 var(--kai); color: var(--chu-gold); }
-.side-text { display: flex; flex-direction: column; gap: 3px; font-size: 11px; line-height: 1.4; }
+.side-text { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; line-height: 1.4; }
 .side-tap.qin .side-text { color: var(--text); }
 .side-tap.chu .side-text { color: #fff3d2; }
-.side-headline { font-weight: 900; font-size: 12px; }
+.side-headline { font-weight: 900; font-size: 13.5px; }
 .side-tap.chu .side-headline { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
 /* Both CTAs are the same shape (size, border-width, radius); only the
    colour tells Qin and Chu apart. */

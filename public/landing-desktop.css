@@ -94,4 +94,14 @@
     background: var(--bg);
     box-shadow: 0 0 0 1px #8a7a52, 0 0 80px 10px rgba(0, 0, 0, 0.85);
   }
+
+  /* #42: the two courts' type and the CTA read 15% larger in the desktop
+     column than on the phone (13.5px/12.5px/13px there -> ~15.5/14.5/15px
+     here). Scoped inside this file's own >=768px media query, same as
+     everything else here — the phone sizes in style.css are untouched.
+     The lower part (#38's bronze outline button rows) is out of scope and
+     keeps its phone sizing. */
+  .side-headline { font-size: 15.5px; }
+  .side-text { font-size: 14.5px; }
+  .side-cta { font-size: 15px; }
 }
