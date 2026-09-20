@@ -119,7 +119,10 @@
    desktop tile had a language-aware name, `.cr-tile-name`; the two are now
    one element, shared) carries whichever language the interface is
    currently in (see cardRow()'s own note). */
-.cardrow .cr-badge { flex: none; width: 20px; height: 20px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 11px; line-height: 20px; text-align: center; }
+/* #47: 12px (was 11) — matches the desktop tile's own badge (#44/#45),
+   which no longer needs its own font-size override now that the base
+   value is the same (rules-desktop.css). */
+.cardrow .cr-badge { flex: none; width: 20px; height: 20px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 12px; line-height: 20px; text-align: center; }
 .cardrow .cr-name { font-size: 15px; }
 /* #40: both grown to 12px (were 11 / the <small> year tag's browser-default
    ~83% of 12px, i.e. ~10px) — the smallest text left on a card row now

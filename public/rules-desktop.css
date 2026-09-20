@@ -196,7 +196,9 @@
     color: var(--text-dim); overflow-wrap: anywhere;
   }
   .d-grid-col .cardrow .cr-year small { font-size: 12px; }
-  .d-grid-col .cardrow .cr-badge { width: 20px; height: 20px; font-size: 12px; line-height: 20px; flex: none; }
+  /* #47: the badge needs no override here any more — the base .cr-badge
+     rule (rules.css) is already 20x20/12px, the same numbers this used to
+     repeat, now that the phone row's own badge matches. */
   /* Ground/border/dim-year colour by side, the design's own hex values.
      Qin's ground (#16130e) is its own tile-only tone, darker than the
      mobile row's shared var(--bg) — everything else here already matched. */
