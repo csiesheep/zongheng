@@ -473,21 +473,26 @@ function scrollToSectionDesktop(key) {
   const barH = document.querySelector(".bar")?.getBoundingClientRect().height || 0;
   card.scrollTop += el.getBoundingClientRect().top - barH - SECTION_GAP;
 }
-// Review item 2 (#44): two bugs in one function. (1) it walked NAV_SECTIONS,
-// which includes "cards" — a section that doesn't exist in this tab's own
-// text column at all (see RAIL_SECTIONS' own note), so the loop's threshold
-// could never be satisfied for it and the LAST real heading (記分/Scoring)
-// could never win even scrolled all the way to the very top of the page.
-// (2) the threshold sat right under the bar (~barH + 12px), so a heading
-// only counted as "in view" once it had scrolled almost all the way past
-// the top — measured to mismatch the reader's own sense of "what section am
-// I reading", which sits closer to a third of the way down the viewport.
-// Fixed rule, tested against both of the review's own failing cases: the
-// marked section is the last heading whose top has crossed above a third of
-// `.page-card`'s own height; AND, once scrolled to the very bottom (nothing
-// left below to bring any further heading up to that line), it's simply the
-// last section — the one true edge case the crossing rule alone can't
-// reach if the last section's own content is shorter than that third.
+// Review item 2 (#44), round 1: two bugs in one function. (1) it walked
+// NAV_SECTIONS, which includes "cards" — a section that doesn't exist in
+// this tab's own text column at all (see RAIL_SECTIONS' own note), so the
+// loop's threshold could never be satisfied for it and the LAST real
+// heading (記分/Scoring) could never win even scrolled all the way to the
+// very top of the page. (2) the threshold sat right under the bar
+// (~barH + 12px), so a heading only counted as "in view" once it had
+// scrolled almost all the way past the top.
+//
+// Round 1's fix for (2) — a third of `.page-card`'s own height (266px at
+// 800) — traded that bug for a new one, round 2's own report: any section
+// SHORTER than that (measured: 棋盤 170px, 影響力與控制 142px) loses its own
+// mark the instant its heading reaches the top, because the NEXT heading is
+// already above the line too. Round 2's own rule instead: the marked
+// section is the last heading at or above the bar's own bottom + 100px —
+// comfortably under the shortest section's own height, so a short section
+// gets its full turn at the top before the next one can outrank it. The
+// bottom-of-scroll override stays (round 1's own fix, still needed: it's
+// the one case no top-of-heading threshold can reach on its own, when the
+// last section's own content is shorter than the threshold).
 function updateActiveRail() {
   if (!isDesktopScroller() || activeTab !== "rules") return;
   const rail = $("dRail"), card = $("pageCard");
@@ -497,7 +502,8 @@ function updateActiveRail() {
   if (atBottom) {
     activeKey = RAIL_SECTIONS[RAIL_SECTIONS.length - 1];
   } else {
-    const threshold = card.clientHeight / 3;
+    const barH = document.querySelector(".bar")?.getBoundingClientRect().height || 0;
+    const threshold = barH + 100;
     activeKey = RAIL_SECTIONS[0];
     for (const key of RAIL_SECTIONS) {
       const el = $("sec-" + key);
