@@ -114,6 +114,16 @@ const T = {
 // section; it's the fixed last chip that scrolls back to the very top of
 // the page (mobile-only — #44's desktop rail has no such chip).
 const NAV_SECTIONS = ["ends", "board", "control", "uses", "tracks", "special", "turn", "scoring", "cards"];
+// #44 review item 2: the desktop rail lists the 規則 tab's own sections only
+// — "cards" isn't one of them there (the 72 cards are the OTHER tab, not a
+// heading inside this column at all: textSectionsHTML()'s own withCards:
+// false for the desktop text column means #sec-cards doesn't exist while
+// this tab is showing), so leaving it in the rail gave the scroll-spy a
+// section it could never actually reach — the last real heading (記分/
+// Scoring) could be scrolled to the top of the page and the mark still sat
+// on the second-to-last section, because the loop's threshold could never
+// be satisfied for a heading (#sec-cards) that was never rendered.
+const RAIL_SECTIONS = NAV_SECTIONS.filter((key) => key !== "cards");
 
 // #40: card search + era/side filters. Plain module state (not DOM, not
 // reset by render()) so a language switch or reopening a card from the
@@ -364,11 +374,12 @@ function rulesNavHTML(S) {
     `<button type="button" class="chip nav-chip nav-chip-top" data-sec="top">${esc(N.rules.nav.top)}</button>` +
     `</div></nav>`;
 }
-// #44: the desktop rail's own vertical list — same NAV_SECTIONS/labels as
-// the mobile chips above, no "Top ↑" (the rail itself never scrolls out of
-// view, so there's nothing to return to it from).
+// #44: the desktop rail's own vertical list — RAIL_SECTIONS (the mobile
+// chips' own NAV_SECTIONS, minus "cards": see that constant's own note), no
+// "Top ↑" (the rail itself never scrolls out of view, so there's nothing to
+// return to it from).
 function railHTML(N) {
-  return NAV_SECTIONS.map((key) => `<button type="button" class="d-rail-item" data-sec="${key}">${esc(N.rules.nav[key])}</button>`).join("");
+  return RAIL_SECTIONS.map((key) => `<button type="button" class="d-rail-item" data-sec="${key}">${esc(N.rules.nav[key])}</button>`).join("");
 }
 
 // #40: scrolls so `key`'s h2 clears the sticky bar+chips, using each
@@ -453,16 +464,36 @@ function scrollToSectionDesktop(key) {
   const barH = document.querySelector(".bar")?.getBoundingClientRect().height || 0;
   card.scrollTop += el.getBoundingClientRect().top - barH - SECTION_GAP;
 }
+// Review item 2 (#44): two bugs in one function. (1) it walked NAV_SECTIONS,
+// which includes "cards" — a section that doesn't exist in this tab's own
+// text column at all (see RAIL_SECTIONS' own note), so the loop's threshold
+// could never be satisfied for it and the LAST real heading (記分/Scoring)
+// could never win even scrolled all the way to the very top of the page.
+// (2) the threshold sat right under the bar (~barH + 12px), so a heading
+// only counted as "in view" once it had scrolled almost all the way past
+// the top — measured to mismatch the reader's own sense of "what section am
+// I reading", which sits closer to a third of the way down the viewport.
+// Fixed rule, tested against both of the review's own failing cases: the
+// marked section is the last heading whose top has crossed above a third of
+// `.page-card`'s own height; AND, once scrolled to the very bottom (nothing
+// left below to bring any further heading up to that line), it's simply the
+// last section — the one true edge case the crossing rule alone can't
+// reach if the last section's own content is shorter than that third.
 function updateActiveRail() {
   if (!isDesktopScroller() || activeTab !== "rules") return;
-  const rail = $("dRail");
-  if (!rail) return;
-  const barH = document.querySelector(".bar")?.getBoundingClientRect().height || 0;
-  const threshold = barH + SECTION_GAP + 2;
-  let activeKey = NAV_SECTIONS[0];
-  for (const key of NAV_SECTIONS) {
-    const el = $("sec-" + key);
-    if (el && el.getBoundingClientRect().top <= threshold) activeKey = key;
+  const rail = $("dRail"), card = $("pageCard");
+  if (!rail || !card) return;
+  const atBottom = card.scrollHeight - card.scrollTop - card.clientHeight < 2;
+  let activeKey;
+  if (atBottom) {
+    activeKey = RAIL_SECTIONS[RAIL_SECTIONS.length - 1];
+  } else {
+    const threshold = card.clientHeight / 3;
+    activeKey = RAIL_SECTIONS[0];
+    for (const key of RAIL_SECTIONS) {
+      const el = $("sec-" + key);
+      if (el && el.getBoundingClientRect().top <= threshold) activeKey = key;
+    }
   }
   rail.querySelectorAll(".d-rail-item").forEach((btn) => btn.classList.toggle("active", btn.dataset.sec === activeKey));
 }
