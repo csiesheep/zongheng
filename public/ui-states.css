@@ -77,7 +77,16 @@ a[href], [role="button"] { cursor: pointer; }
      small buttons, setup/lobby/tutorial's outline buttons, the sheet's
      use-grid and order buttons (not the primary/pressed ones -- those are
      filled, see below), rules chips/tabs/rail items, and the setup tile
-     (also bordered). */
+     (also bordered).
+
+     Round 2 (orchestrator's coverage script): .ctl-btn on its own only
+     ever matched the FILLED variant (.ctl-btn.ctl-fill, below) -- the
+     landing's plain outline ones (Tutorial, Create/"Multiplayer", Join --
+     Join is BA_01_States' own named example of an outline button) had no
+     rule at all. Same gap for .pills/.seg buttons that AREN'T the
+     selected one (setup's Easy/Normal/Hard, lobby's level field), and for
+     the ending's three outline buttons (View the board / Swap sides /
+     Home -- .over-footer's own non-primary row, screens.css). */
   .bar button:not(:disabled):hover,
   .small:not(:disabled):hover,
   #btnBack:not(:disabled):hover,
@@ -91,7 +100,11 @@ a[href], [role="button"] { cursor: pointer; }
   .tut-btn-ghost:hover,
   .chip:not(.active):not(:disabled):hover,
   .cardrow:hover,
-  .tile:not(:disabled):hover {
+  .tile:not(:disabled):hover,
+  .ctl-btn:not(.ctl-fill):not(:disabled):hover,
+  .pills button:not([aria-pressed="true"]):not(:disabled):hover,
+  .seg button:not([aria-pressed="true"]):not(:disabled):hover,
+  .over-footer .row button:not(:disabled):hover {
     border-color: var(--gold);
     background: rgba(216, 181, 106, 0.16);
     transition: border-color var(--ui-t) ease, background var(--ui-t) ease;
@@ -157,9 +170,13 @@ a[href], [role="button"] { cursor: pointer; }
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), 0 0 0 2px var(--bg), 0 0 0 3.5px var(--gold);
   }
 
-  /* ---- Links in the bar (plain text, no border/fill of their own) ---- */
+  /* ---- Links in the bar (plain text, no border/fill of their own) ----
+     Round 2: .landing-bar .rules (the landing's own "Rules" link, next to
+     the language button -- .bar .hub/.bar .back don't reach it, it isn't
+     either class) had no rule at all. */
   .bar .hub:hover,
   .bar .back:hover,
+  .landing-bar .rules:hover,
   .actions .link:not(:disabled):hover {
     color: #f4d98a;
     text-decoration: underline;
@@ -227,7 +244,11 @@ a[href], [role="button"] { cursor: pointer; }
 .tile:not(:disabled):active,
 .d-rail-item:not(:disabled):active,
 .d-filter-item:not(:disabled):active,
-.rules-tab:active {
+.rules-tab:active,
+.ctl-btn:not(.ctl-fill):not(:disabled):active,
+.pills button:not([aria-pressed="true"]):not(:disabled):active,
+.seg button:not([aria-pressed="true"]):not(:disabled):active,
+.over-footer .row button:not(:disabled):active {
   transform: scale(0.97);
   background: rgba(216, 181, 106, 0.28);
   border-color: var(--gold);
@@ -290,6 +311,19 @@ a[href], [role="button"] { cursor: pointer; }
 .side-tap:active { transform: scale(0.99); filter: brightness(0.94); }
 .log-line-link:active { background: rgba(216, 181, 106, 0.14); }
 .log-card-link:active { color: #b8944a; }
+
+/* Round 2 (orchestrator's coverage script): the bar's own text links had
+   a hover look (above) but no pressed one at all -- a darker gold plus
+   the same underline hover already adds, "a pressed look of their own
+   kind" per the brief rather than the button scale, since these aren't
+   buttons. */
+.bar .hub:active,
+.bar .back:active,
+.landing-bar .rules:active,
+.actions .link:not(:disabled):active {
+  color: #b8944a;
+  text-decoration: underline;
+}
 
 /* =====================================================================
    MOTION -- the card page (#sheet.overlay, which #peekSheet and the
