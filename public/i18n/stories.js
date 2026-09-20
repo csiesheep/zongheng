@@ -256,7 +256,7 @@ export default {
     srcEn: "Shiji, Biography of Qu Yuan and Jia Yi",
   },
   huangjintai: {
-    zh: "燕昭王即位後(約前312年),欲振興燕國、雪齊破燕之恥,向謀臣郭隗請教招賢之法。郭隗以「千金買骨」的故事勸諫,並自請「先從隗始」為表率。昭王於是築黃金臺,置千金於臺上,以此號召天下賢士,樂毅、鄒衍、劇辛等人才因此陸續來投燕國。",
+    zh: "燕昭王即位後(約前312年),欲振興燕國、雪齊破燕之恥,向謀臣郭隗請教招賢之法。郭隗以千金買千里馬骨的故事勸諫,並自請「先從隗始」為表率。昭王於是築黃金臺,置千金於臺上,以此號召天下賢士,樂毅、鄒衍、劇辛等人才因此陸續來投燕國。",
     en: "After becoming king around 312 BC, King Zhao of Yan wanted to rebuild his state and avenge Qi's earlier conquest of it, and asked his advisor Guo Wei how to attract talent. Guo Wei told him the parable of paying a fortune for a dead horse's bones, urging the king to start by honoring him as proof of sincerity. The king built the Golden Terrace, piled gold on it, and called for talent; Yue Yi, Zou Yan, and Ju Xin all came to serve.",
     srcZh: "《史記·燕召公世家》、《戰國策·燕策一》",
     srcEn: "Shiji, House of Yan; Zhanguo Ce, Stratagems of Yan",
