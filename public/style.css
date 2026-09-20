@@ -827,7 +827,8 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
   text-align: left;
   cursor: pointer;
 }
-.log-line-link:focus-visible { outline: 2px solid var(--gold); outline-offset: -1px; }
+/* #43: the shared gold focus ring (ui-states.css) covers .log-line-link now,
+   with the same inward offset for this full-width, no-margin row. */
 /* The card name's own link look — a plain <span> inside a .log-line-link
    row (the common case, one name per line), or log.headline's two-name
    line's own <button> (the only line where a whole-row button can't work,
@@ -853,7 +854,7 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
   font: inherit;
   cursor: pointer;
 }
-.log-card-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+/* #43: the shared gold focus ring (ui-states.css) covers .log-card-link now. */
 /* #39 part 4, round 1 review: EVERY card name in the news strip is a
    pill, on whichever line it's on (app.js's renderLog() passes `pill`
    for every news entry now -- the main log panel above never does, so it

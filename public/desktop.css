@@ -322,15 +322,7 @@
     border-radius: 14px 14px 0 0;
   }
 
-  /* Keyboard/mouse (issue #7): a visible focus ring on every interactive
-     surface the sidebar and map expose, without moving anything on hover. */
-  body[data-view="table"] .hit:focus-visible,
-  body[data-view="table"] .card:focus-visible,
-  body[data-view="table"] .sheet button:focus-visible,
-  body[data-view="table"] #sideFootBtn:focus-visible,
-  .page-card a:focus-visible,
-  .page-card button:focus-visible {
-    outline: 2px solid var(--gold);
-    outline-offset: 2px;
-  }
+  /* #43: the one shared gold focus ring (ui-states.css) now covers every
+     button/link/.hit here too -- this narrower, desktop-only duplicate is
+     removed. */
 }

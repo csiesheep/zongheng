@@ -1,0 +1,395 @@
+/* #43: hover / pressed / focus for every interactive control, and the
+   160ms arrival for the card page (#sheet), the log panel and the
+   read-only card. ONE file, linked from index.html/play.html/rules.html
+   AFTER each page's own stylesheets (so equal-specificity rules here win
+   without !important) -- the pages keep only what's special to them.
+
+   --ui-t is the shared hover/press transition length; forcing it to 0s
+   under reduced motion satisfies acceptance #5 ("no animation, no
+   transition") without a second copy of every rule. The arrival keyframes
+   below are instead scoped entirely inside
+   @media (prefers-reduced-motion: no-preference) per the issue's own
+   instruction, so a reduced-motion browser never even parses them. */
+:root { --ui-t: 120ms; }
+@media (prefers-reduced-motion: reduce) {
+  :root { --ui-t: 0s; }
+}
+
+/* =====================================================================
+   FOCUS: one gold ring everywhere, replacing the nine narrower rules that
+   used to live in desktop.css/rules.css/style.css (removed there in this
+   same commit -- see those files' history). Every real interactive
+   element in this codebase is a native <button>, <a href>, or <input>, so
+   one rule reaches all of them; a resting page never matches
+   :focus-visible, so this cannot change any resting computed style.
+   ===================================================================== */
+:where(button, a[href], input, [role="button"]):not(.hit):focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+/* Full-bleed rows with no surrounding margin: an outward ring would be
+   clipped by an ancestor's own overflow:hidden (checked: .landing-page,
+   body.table-lock). Same fix the codebase already used for
+   .log-line-link (style.css, removed above and folded in here) -- pull
+   the ring inward instead of pushing it out. */
+.side-tap:focus-visible,
+.log-line-link:focus-visible {
+  outline-offset: -3px;
+}
+.log-card-link:focus-visible {
+  outline-offset: 1px;
+}
+/* .hit has `clip-path: circle(50%)` (style.css): clip-path clips the
+   WHOLE element, including its own outline, so an outward ring on .hit
+   itself would be cut off by its own clip. Its map disc is a different,
+   non-adjacent element (#hitLayer is a sibling of #mapInner, not a
+   parent/child of any .node), so CSS can't select "the disc under this
+   hit" directly either -- same reason the hover rule below draws its
+   indicator as a ::after INSIDE .hit's own clipped circle instead of
+   touching .disc. */
+.hit:focus-visible {
+  outline: none;
+}
+.hit:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+  pointer-events: none;
+}
+
+/* Insurance only (every button already gets cursor:pointer from style.css's
+   base `button` rule, and every non-disabled .hit/.cardrow/.tile/.chip-ish
+   element already sets its own cursor:pointer inline) -- keeps the promise
+   explicit for anything that doesn't. */
+a[href], [role="button"] { cursor: pointer; }
+
+/* =====================================================================
+   HOVER -- only when the device actually has a hover input, so a phone
+   never keeps a stuck hover after a tap.
+   ===================================================================== */
+@media (hover: hover) {
+
+  /* ---- Outline buttons: border to gold, fill to a soft gold tint ----
+     Every bordered, unfilled control across every page: the bar's own
+     small buttons, setup/lobby/tutorial's outline buttons, the sheet's
+     use-grid and order buttons (not the primary/pressed ones -- those are
+     filled, see below), rules chips/tabs/rail items, and the setup tile
+     (also bordered).
+
+     Round 2 (orchestrator's coverage script): .ctl-btn on its own only
+     ever matched the FILLED variant (.ctl-btn.ctl-fill, below) -- the
+     landing's plain outline ones (Tutorial, Create/"Multiplayer", Join --
+     Join is BA_01_States' own named example of an outline button) had no
+     rule at all. Same gap for .pills/.seg buttons that AREN'T the
+     selected one (setup's Easy/Normal/Hard, lobby's level field), and for
+     the ending's three outline buttons (View the board / Swap sides /
+     Home -- .over-footer's own non-primary row, screens.css). */
+  .bar button:not(:disabled):hover,
+  .small:not(:disabled):hover,
+  #btnBack:not(:disabled):hover,
+  .lobby-row button:not(:disabled):hover,
+  #lobbyCopy:not(:disabled):hover,
+  .seat-btn:not(:disabled):hover,
+  .actions button:not(:disabled):hover,
+  .sheet button:not(:disabled):not(.primary):not([aria-pressed="true"]):hover,
+  .chip-expand:not(:disabled):hover,
+  .tut-back:not(:disabled):hover,
+  .tut-btn-ghost:hover,
+  .chip:not(.active):not(:disabled):hover,
+  .cardrow:hover,
+  .tile:not(:disabled):hover,
+  .ctl-btn:not(.ctl-fill):not(:disabled):hover,
+  .pills button:not([aria-pressed="true"]):not(:disabled):hover,
+  .seg button:not([aria-pressed="true"]):not(:disabled):hover,
+  .over-footer .row button:not(:disabled):hover {
+    border-color: var(--gold);
+    background: rgba(216, 181, 106, 0.16);
+    transition: border-color var(--ui-t) ease, background var(--ui-t) ease;
+  }
+  /* .cardrow paints its own side background (side-q/side-c/side-n) UNDER
+     this -- an outright background swap would fight that, so the tint is
+     an inset highlight instead, layered on the existing background. */
+  .cardrow:hover {
+    background: none;
+    box-shadow: inset 0 0 0 1px var(--gold), inset 0 0 0 40px rgba(216, 181, 106, 0.10);
+  }
+  .tile:not(:disabled):hover { opacity: 0.88; }
+  .tile[aria-pressed="true"]:hover { opacity: 1; }
+
+  /* ---- Borderless rail/rail-like items: a plain background tint (no
+     border to brighten -- these are `border: none` at rest) ---- */
+  .d-rail-item:not(.active):hover,
+  .d-filter-item:not(.active):hover,
+  .rules-tab:not(.active):hover,
+  .tut-head:hover {
+    background: rgba(216, 181, 106, 0.12);
+    color: var(--gold);
+    transition: background var(--ui-t) ease, color var(--ui-t) ease;
+  }
+  /* Round 2 (coverage script): the ACTIVE (currently-selected) rail item
+     had no hover rule at all -- .d-filter-item.active and .rules-tab.active
+     already get one further down (the filled-gold group, since their rest
+     background is literally var(--gold)), but .d-rail-item.active's own
+     rest background is only a 0.14 tint (rules-desktop.css), not a solid
+     fill, so it belongs here instead: a deeper tint of the same colour. */
+  .d-rail-item.active:hover {
+    background: rgba(212, 175, 55, 0.22);
+  }
+
+  /* ---- Filled gold buttons (background: var(--gold) literally): lighter ---- */
+  .ctl-btn.ctl-fill:hover,
+  .setup-footer .primary:not(:disabled):hover,
+  .actions .primary:not(:disabled):hover,
+  #lobbyGateGo:not(:disabled):hover,
+  .over-footer #btnAgain:hover,
+  .pills button[aria-pressed="true"]:hover,
+  .seg button[aria-pressed="true"]:hover,
+  .d-filter-item.active:hover,
+  .rules-tab.active:hover,
+  .chip.active:hover,
+  .tut-btn-primary:hover {
+    background: #e8c987;
+    border-color: #e8c987;
+    transition: background var(--ui-t) ease, border-color var(--ui-t) ease;
+  }
+
+  /* ---- Filled, but the fill is var(--accent) (side-dependent: Qin's
+     off-white, Chu's gold, or the neutral card's ink) -- a literal lighter
+     hex only works for ONE of those tones, so this uses a brightness lift
+     instead, which reads as "lighter" against whichever colour is
+     actually painted underneath it. ---- */
+  .sheet button.primary:not(:disabled):hover,
+  .sheet button[aria-pressed="true"]:not(:disabled):hover {
+    filter: brightness(1.12);
+    transition: filter var(--ui-t) ease;
+  }
+
+  /* ---- Hand cards + the compact hand chip: lift 3px, soft shadow ---- */
+  .hand .card:not(:disabled):hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    transition: transform var(--ui-t) ease, box-shadow var(--ui-t) ease;
+  }
+  .hand .card[aria-pressed="true"]:not(:disabled):hover {
+    /* Keeps its own selected ring (style.css, box-shadow) AND the lift's
+       shadow -- both are box-shadow, so they're combined, not replaced. */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), 0 0 0 2px var(--bg), 0 0 0 3.5px var(--gold);
+  }
+
+  /* ---- Links in the bar (plain text, no border/fill of their own) ----
+     Round 2: .landing-bar .rules (the landing's own "Rules" link, next to
+     the language button -- .bar .hub/.bar .back don't reach it, it isn't
+     either class) had no rule at all. */
+  .bar .hub:hover,
+  .bar .back:hover,
+  .landing-bar .rules:hover,
+  .actions .link:not(:disabled):hover,
+  .tut-skip:hover {
+    color: #f4d98a;
+    text-decoration: underline;
+  }
+  .log-line-link:hover { background: rgba(216, 181, 106, 0.08); }
+  .log-card-link:hover, .news .log-card-link.pill:hover { color: #f4d98a; }
+
+  /* ---- The landing hero CTAs: a big full-bleed link, not a small
+     button -- a whole-border/fill treatment would look like a different
+     control, so this is a soft overall brightening instead (the "visible
+     change of its own kind" the spec asks for). ---- */
+  .side-tap:hover { filter: brightness(1.06); }
+
+  /* ---- Map spaces that can be chosen: #hitLayer .hit sits OVER the
+     disc as a separate, non-adjacent element (see the focus comment
+     above for why CSS can't select ".node .disc under this .hit"
+     directly) -- so the hover mark is drawn as a glow on the hit button
+     ITSELF, inset well inside its own 47px clip-path circle so it is
+     never clipped, landing visually on top of the disc it covers. A
+     soft blurred glow (not a hard-edged ring) on purpose: the dashed
+     ring on .lit is the "you can act here" resting mark, the picked ring
+     (.node.picked .disc, solid box-shadow) means "already placed" --
+     neither is a ring drawn by .hit, so a glow can't be mistaken for
+     either one. */
+  .hit:not(:disabled):hover::after {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    background: rgba(216, 181, 106, 0.30);
+    box-shadow: 0 0 8px 2px rgba(216, 181, 106, 0.55);
+    pointer-events: none;
+  }
+}
+
+/* =====================================================================
+   PRESSED (:active) -- every button/chip/card/row/tile, phone and
+   desktop, scale(0.97) + a darker fill; never on a disabled control.
+   -webkit-tap-highlight-color: transparent stays (existing per-element
+   rules keep it; adding it here too on the controls that gain a new
+   :active look, so the browser's own tap flash never doubles with it).
+   ===================================================================== */
+.bar button, .small, #btnBack, .lobby-row button, #lobbyCopy, .seat-btn,
+.actions button, .sheet button, .chip-expand, .tut-back, .tut-btn-ghost,
+.tut-btn-primary, .chip, .cardrow, .tile, .d-rail-item, .d-filter-item,
+.rules-tab, .ctl-btn, .pills button, .seg button, .hand .card,
+.setup-footer button, .lobby-chat-form button, .chat button, .log-card-link,
+#lobbyGateGo, .tut-gotit, .over-footer button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bar button:not(:disabled):active,
+.small:not(:disabled):active,
+#btnBack:not(:disabled):active,
+.lobby-row button:not(:disabled):active,
+#lobbyCopy:not(:disabled):active,
+.seat-btn:not(:disabled):active,
+.actions button:not(:disabled):active,
+.sheet button:not(:disabled):not(.primary):not([aria-pressed="true"]):active,
+.chip-expand:not(:disabled):active,
+.tut-back:not(:disabled):active,
+.tut-btn-ghost:active,
+.chip:not(:disabled):active,
+.cardrow:active,
+.tile:not(:disabled):active,
+.d-rail-item:not(:disabled):active,
+.d-filter-item:not(:disabled):active,
+.rules-tab:active,
+.tut-head:active,
+.ctl-btn:not(.ctl-fill):not(:disabled):active,
+.pills button:not([aria-pressed="true"]):not(:disabled):active,
+.seg button:not([aria-pressed="true"]):not(:disabled):active,
+.over-footer .row button:not(:disabled):active {
+  transform: scale(0.97);
+  background: rgba(216, 181, 106, 0.28);
+  border-color: var(--gold);
+}
+.cardrow:active {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--gold), inset 0 0 0 40px rgba(216, 181, 106, 0.18);
+}
+.chip.active:not(:disabled):active,
+.d-filter-item.active:not(:disabled):active,
+.rules-tab.active:active {
+  background: #b8944a;
+  border-color: #b8944a;
+}
+
+.ctl-btn.ctl-fill:not(:disabled):active,
+.setup-footer .primary:not(:disabled):active,
+.actions .primary:not(:disabled):active,
+#lobbyGateGo:not(:disabled):active,
+.over-footer #btnAgain:active,
+.pills button[aria-pressed="true"]:not(:disabled):active,
+.seg button[aria-pressed="true"]:not(:disabled):active,
+.tut-btn-primary:active,
+.tut-gotit:not(:disabled):active {
+  transform: scale(0.97);
+  background: #b8944a;
+  border-color: #b8944a;
+}
+
+.sheet button.primary:not(:disabled):active,
+.sheet button[aria-pressed="true"]:not(:disabled):active {
+  transform: scale(0.97);
+  filter: brightness(0.85);
+}
+
+.hand .card:not(:disabled):active {
+  transform: translateY(-1px) scale(0.97);
+  filter: brightness(0.93);
+}
+
+/* .hit and .node already carry their own centring `transform:
+   translate(-50%, -50%)` (style.css) -- :active must compose with it,
+   not replace it, or the disc/hit would jump off its own city. */
+.hit:not(:disabled):active {
+  transform: translate(-50%, -50%) scale(0.97);
+}
+.hit:not(:disabled):active::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: rgba(216, 181, 106, 0.42);
+  box-shadow: 0 0 10px 3px rgba(216, 181, 106, 0.7);
+  pointer-events: none;
+}
+
+/* The landing hero CTA: full-bleed, so the ordinary 0.97 button scale
+   would look like the whole hero panel jumped -- a much smaller nudge
+   reads as "pressed" without that. */
+.side-tap:active { transform: scale(0.99); filter: brightness(0.94); }
+.log-line-link:active { background: rgba(216, 181, 106, 0.14); }
+.log-card-link:active { color: #b8944a; }
+
+/* Round 2 (orchestrator's coverage script): the bar's own text links had
+   a hover look (above) but no pressed one at all -- a darker gold plus
+   the same underline hover already adds, "a pressed look of their own
+   kind" per the brief rather than the button scale, since these aren't
+   buttons. */
+.bar .hub:active,
+.bar .back:active,
+.landing-bar .rules:active,
+.actions .link:not(:disabled):active,
+.tut-skip:active {
+  color: #b8944a;
+  text-decoration: underline;
+}
+
+/* =====================================================================
+   MOTION -- the card page (#sheet.overlay, which #peekSheet and the
+   rules page's #cardDetail share the same class for), and the log panel,
+   arrive with a 160ms rise + fade. Scoped entirely inside
+   prefers-reduced-motion: no-preference (acceptance #5): a reduced-motion
+   browser never even parses the @starting-style block below, so there is
+   nothing to disable per-element.
+
+   The trigger is the existing display:none -> shown transition these
+   elements already go through (.sheet's own :not(:has(>:not([hidden])))
+   rule in style.css collapses it when empty; #logBody toggles the
+   [hidden] attribute) -- no JS change needed.
+
+   This was first written with @keyframes + animation-fill-mode:
+   backwards (the same pattern style.css's own .node.lastmove-pulse
+   already uses), then switched after testing it against this repo's own
+   hidden preview pane and catching exactly the failure this issue warns
+   about: with the pane genuinely backgrounded (document.visibilityState
+   stays "hidden" even after this tool "fronts" the tab -- confirmed via
+   script), the animation never ticked forward at all -- #sheet read
+   opacity:0 immediately on open AND still opacity:0 a full second of
+   real wall-clock time later. backwards-fill's FROM keyframe (opacity:0)
+   is a real, paintable value for as long as the animation is scheduled
+   but hasn't progressed, so a timeline that never ticks leaves it there
+   indefinitely -- the exact #31 shape this issue calls out by name, just
+   arrived at through the new stylesheet's motion instead of a stray
+   resting rule.
+
+   @starting-style has no such window: opacity:0/translateY(24px) are
+   the FROM value of a *transition*, only ever substituted in for that
+   element's very first style resolution after it starts being rendered.
+   Every style resolution after that -- including the very next one, if
+   the transition never gets a single tick -- reads the plain rule below,
+   which sets no opacity/transform of its own at all, so it resolves to
+   the browser's ordinary 1 / none. Tested the same way: forcing the
+   transition to 2s and reading #sheet immediately after opening reads
+   opacity:1 straight away in this pane -- no animation plays, but the
+   card is simply there at once, never caught at 0. A browser that
+   doesn't parse @starting-style at all (Safari <17.5, older Firefox)
+   drops the unknown block and reads that exact same plain rule from the
+   very first frame. Only translateY/opacity ever move -- never height or
+   margin -- so layoutTable()'s own measurement of the sheet (acceptance
+   #3) reads the final, laid-out size throughout. */
+@media (prefers-reduced-motion: no-preference) {
+  .sheet.overlay,
+  #logBody:not([hidden]) {
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+  }
+  @starting-style {
+    .sheet.overlay,
+    #logBody:not([hidden]) {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+  }
+}
