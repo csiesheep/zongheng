@@ -416,10 +416,10 @@ export default {
 
   // #36 batch 4: the five scoring cards plus 九鼎 (E.JIUDING), completing all 72.
   score_jin: {
-    zh: "三晉(韓、魏、趙)地處天下之中,是列國交兵必經之地,戰禍也最頻繁。前403年,周威烈王正式冊封晉大夫魏斯、趙籍、韓虔為諸侯,《史記·六國年表》記此事為「命韓、魏、趙為諸侯」,《資治通鑑》開篇更記「初命晉大夫魏斯、趙籍、韓虔為諸侯」,史稱三家分晉。",
-    en: "The Three Jin, Han, Wei, and Zhao, sat at the crossroads of the realm, ground every army had to cross, and the fighting there was heaviest. In 403 BC, King Weilie of Zhou formally recognized the Jin ministers Wei Si, Zhao Ji, and Han Qian as lords in their own right; the Shiji records this, and the Zizhi Tongjian opens with the same event, calling it the Partition of Jin and the start of the Warring States era.",
-    srcZh: "《史記·六國年表》、《資治通鑑》",
-    srcEn: "Shiji, Chronological Table of the Six States; Zizhi Tongjian",
+    zh: "三晉(韓、魏、趙)地處天下之中,是列國交兵必經之地,戰禍也最頻繁。前403年,周威烈王正式冊封晉大夫魏斯、趙籍、韓虔為諸侯,《史記·周本紀》記此事為「命韓、魏、趙為諸侯」,《資治通鑑》開篇更記「初命晉大夫魏斯、趙籍、韓虔為諸侯」,史稱三家分晉。",
+    en: "The Three Jin, Han, Wei, and Zhao, sat at the crossroads of the realm, ground every army had to cross, and the fighting there was heaviest. In 403 BC, King Weilie of Zhou formally recognized the Jin ministers Wei Si, Zhao Ji, and Han Qian as lords in their own right; the Shiji's Basic Annals of Zhou record this, and the Zizhi Tongjian opens with the same event, calling it the Partition of Jin and the start of the Warring States era.",
+    srcZh: "《史記·周本紀》、《資治通鑑》",
+    srcEn: "Shiji, Basic Annals of Zhou; Zizhi Tongjian",
   },
   score_west: {
     zh: "西土是秦國的根基所在。蘇秦游說秦惠王時形容關中:「秦四塞之國,被山帶渭,東有關河,西有漢中,南有巴蜀,北有代馬,此天府也。」巴蜀是前316年司馬錯滅蜀所得,漢中則是前312年丹陽之戰後從楚國奪來,兩地連同關中,構成秦國東出的糧倉與屏障。",
@@ -428,13 +428,13 @@ export default {
     srcEn: "Shiji, Biography of Su Qin",
   },
   score_south: {
-    zh: "楚國以疆域廣大著稱。蘇秦游說楚威王時說:「楚,天下之強國也……地方五千里,帶甲百萬,車千乘,騎萬匹,粟支十年。」楚國本都郢,前278年秦將白起攻破郢都後,楚被迫東遷,先徙都陳,前241年又因秦軍逼近而再遷壽春,國勢從此一蹶不振。",
-    en: "Chu was known for the size of its territory. Su Qin, urging King Wei of Chu to lead the alliance, called Chu the strongest state under heaven, five thousand li across, with a million soldiers, a thousand chariots, ten thousand horsemen, and grain for ten years. Chu's capital was originally Ying, but after Qin's general Bai Qi took it in 278 BC, the court fled east to Chen, and in 241 BC, with Qin closing in again, moved once more to Shouchun, never to recover.",
-    srcZh: "《史記·蘇秦列傳》",
-    srcEn: "Shiji, Biography of Su Qin",
+    zh: "楚國以疆域廣大著稱。蘇秦游說楚威王時說:「楚,天下之強國也……地方五千餘里,帶甲百萬,車千乘,騎萬匹,粟支十年。」楚國本都郢,前278年秦將白起攻破郢都後,楚被迫東遷,先徙都陳;前241年五國合縱攻秦不利而還,楚又再遷都壽春,國勢從此一蹶不振。",
+    en: "Chu was known for the size of its territory. Su Qin, urging King Wei of Chu to lead the alliance, called Chu the strongest state under heaven, more than five thousand li across, with a million soldiers, a thousand chariots, ten thousand horsemen, and grain for ten years. Its capital was originally Ying, but after Bai Qi took it in 278 BC, the court fled east to Chen; after the failed 241 BC coalition against Qin, Chu moved again, to Shouchun, and never recovered.",
+    srcZh: "《史記·蘇秦列傳》、《史記·楚世家》",
+    srcEn: "Shiji, Biography of Su Qin; House of Chu",
   },
   score_east: {
-    zh: "齊國以臨淄的富庶聞名。蘇秦游說齊宣王時說:「臨淄之中七萬戶……車轂擊,人肩摩,連衽成帷,舉袂成幕,揮汗成雨。」齊國自太公建國起便「通商工之業,便魚鹽之利」,以漁鹽致富。宋、魯兩個小國夾在齊、楚、魏等大國之間,同在此區,難逃被兼併的命運。",
+    zh: "齊國以臨淄的富庶聞名。蘇秦游說齊宣王時說:「臨菑之中七萬戶……車轂擊,人肩摩,連衽成帷,舉袂成幕,揮汗成雨。」齊國自太公建國起便「通商工之業,便魚鹽之利」,以漁鹽致富。宋、魯兩個小國夾在齊、楚、魏等大國之間,同在此區,難逃被兼併的命運。",
     en: "Qi was known for the wealth of its capital, Linzi. Su Qin told King Xuan of Qi that Linzi alone held seventy thousand households, its streets so packed that carriage hubs knocked together, shoulders brushed shoulders, and sweat fell like rain. Since the founding of Qi, its rulers had opened trade and craft and taken advantage of fish and salt, building wealth from the coast. Song and Lu, wedged between Qi, Chu, and Wei in this same region, could not escape being swallowed eventually.",
     srcZh: "《史記·蘇秦列傳》、《史記·齊太公世家》",
     srcEn: "Shiji, Biography of Su Qin; House of Duke Tai of Qi",
@@ -446,9 +446,9 @@ export default {
     srcEn: "Shiji, House of Zhao; Treatise on the Xiongnu",
   },
   jiuding: {
-    zh: "相傳夏禹鑄九鼎象徵九州,是天下共主的象徵。前606年,楚莊王陳兵周郊,向周使者王孫滿問鼎輕重,王孫滿答以「在德不在鼎」,楚莊王因此退兵。九鼎下落有兩說:《史記·秦本紀》說前255年周室東亡,「其器九鼎入秦」;另一說是一鼎沉入泗水,始皇南巡曾派人打撈未果。",
-    en: "The Nine Cauldrons were said to be cast by Yu to represent the nine regions, a symbol of who held the Mandate. In 606 BC, King Zhuang of Chu camped at the Zhou border and asked how heavy they were; the envoy Wangsun Man said the Mandate rests on virtue, not cauldrons, and the king withdrew. Their end has two versions: Qin's Annals has them reaching Qin in 255 BC; another has one lost in the Si River, never found despite a 219 BC search.",
-    srcZh: "《左傳·宣公三年》、《史記·秦本紀》",
-    srcEn: "Zuo Zhuan, Duke Xuan Year 3; Shiji, Basic Annals of Qin",
+    zh: "《史記·封禪書》說夏禹收九牧之金鑄九鼎,象徵九州。前606年,楚莊王陳兵周郊,問周使者王孫滿鼎之輕重,王孫滿答以「在德不在鼎」,楚莊王遂退兵。九鼎下落有兩說:〈秦本紀〉說前255年「其器九鼎入秦」;另一說是始皇二十八年經彭城,曾派人打撈沉入泗水的一鼎,未獲。",
+    en: "The Shiji says Yu cast the Nine Cauldrons from metal of the nine chiefs to represent the nine regions. In 606 BC, King Zhuang of Chu camped at the Zhou border and asked how heavy they were; the envoy Wangsun Man said the Mandate rests on virtue, not cauldrons, and Zhuang withdrew. Their end has two versions: Qin's Annals has them reaching Qin in 255 BC; another has the First Emperor pass Pengcheng in 219 BC and search the Si River for one, in vain.",
+    srcZh: "《史記·封禪書》、《史記·秦本紀》、《史記·秦始皇本紀》、《左傳·宣公三年》",
+    srcEn: "Shiji, Treatise on the Feng and Shan Sacrifices; Basic Annals of Qin; Basic Annals of the First Emperor; Zuo Zhuan, Duke Xuan Year 3",
   },
 };
