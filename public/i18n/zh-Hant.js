@@ -21,6 +21,9 @@ export default {
     sideFilter: { all: "全部", qin: "秦", chu: "楚", neutral: "中立", scoring: "記分" },
     count: "{n} 張",
     empty: "沒有符合的牌。",
+    // #44:桌面版兩個分頁的短標,以及還沒選牌時卡片欄裡的提示字。
+    tabs: { rules: "規則", cards: "七十二張牌" },
+    pickHint: "從左邊選一張牌看詳情。",
   },
   sides: { qin: "秦", chu: "楚", neutral: "中立", scoring: "記分卡" },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },

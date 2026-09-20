@@ -24,6 +24,10 @@ export default {
     sideFilter: { all: "All", qin: "Qin", chu: "Chu", neutral: "Neutral", scoring: "Scoring" },
     count: "{n} cards",
     empty: "No cards match.",
+    // #44: the desktop two-tab labels, and the hint shown in the card panel
+    // before anything is chosen.
+    tabs: { rules: "Rules", cards: "The 72 cards" },
+    pickHint: "Pick a card from the list to see it here.",
   },
   sides: { qin: "Qin", chu: "Chu", neutral: "Neutral", scoring: "Scoring card" },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },

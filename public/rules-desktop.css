@@ -1,0 +1,168 @@
+/* rules.html's own desktop layout (#44): design B, two tabs (規則 /
+   七十二張牌) inside the same up-to-1280px frame desktop.css already gives
+   every non-table view — this file only widens rules.html's own .page-card
+   past desktop.css's 390px "phone column, centred" default and lays out
+   what goes inside it. Kept out of desktop.css on purpose: that file is
+   #39/the table's own breakpoint work, landing on its own branch in
+   parallel, and TEAM.md asks peers not to edit each other's files.
+
+   Loaded after style.css AND desktop.css (rules.html's own <link> order),
+   so equal-specificity selectors here win for anything scoped to rules.html.
+
+   The three columns per tab (rail / text / map, and rail / grid / card) are
+   built by rules.js as three real sibling divs (a `.d-tab-grid` with exactly
+   one row) — CSS Grid's default `align-items: stretch` then gives the rail
+   and map/card columns the SAME height as the tall middle column for free,
+   which is what lets `.d-sticky` (position: sticky, inside each of those
+   columns) actually have room to stay pinned while the middle column
+   scrolls past it. Below 1024px none of this exists — rules.js renders the
+   #40 mobile markup unchanged, and everything in this file stays inert. */
+@media (min-width: 1024px) {
+  /* ---------- the frame ---------- */
+  /* rules.html opts out of desktop.css's default "every other view: the
+     existing 390px mobile column, centred" case (its own comment on
+     .page-card) — the up-to-1280px frame the owner asked for instead. */
+  body:has(#rules) .page-card {
+    width: min(1280px, 100vw);
+    max-width: 1280px;
+    height: min(844px, 100svh);
+    max-height: none;
+  }
+  .rules { max-width: none; padding: 0 20px 40px; }
+
+  /* ---------- the bar: tabs instead of the mid label / #40's chip row ---------- */
+  /* Round 1 review (#44): `.bar` was `position: static` inside `.page-card`
+     (the scroller here) so it scrolled away with the text, leaving the tabs
+     and the language button gone and an empty strip where the bar used to
+     be, while the rail/map's own `.d-sticky` stayed pinned below it. Sticky
+     + a solid background (same token `.page-card` itself already paints
+     with) keeps it in place and opaque; z-index above the rail/map/panel
+     columns' own sticky boxes (default z-index: auto, so anything explicit
+     here already wins) so it stays drawn on top of them, not under. */
+  body:has(#rules) .bar { position: sticky; top: 0; z-index: 20; background: var(--bg); }
+  #barMid { display: none; }
+  #rulesNav { display: none; }
+  #rulesTabs { display: flex; gap: 6px; }
+  .rules-tab {
+    min-height: 0; height: 32px; padding: 0 16px; box-sizing: border-box; border-radius: 16px;
+    border: 1px solid var(--gold-line); background: transparent; color: var(--gold);
+    font-family: var(--sans); font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .rules-tab.active { background: var(--gold); color: var(--bg); border-color: var(--gold); }
+
+  /* ---------- the shared three-column grid ---------- */
+  .d-tab-grid { display: grid; gap: 32px; margin-top: 10px; }
+  /* Reference measure (owner's canvas): rail 190, gap, text ~580, gap, map
+     400 (sums to 1250 inside the 1280 frame). >=1200px the default below
+     gives the map its own room to reach that 400: a `minmax(320px, 400px)`
+     non-flex track is sized toward its OWN max before any leftover space
+     reaches the text's `1fr` at all (Grid's "Maximize Tracks" step runs
+     before "Expand Flexible Tracks" — the map, the only track here with
+     room left to grow, gets first claim on any free space, not last). */
+  .d-rules-grid { grid-template-columns: 190px 1fr minmax(320px, 400px); }
+  .d-cards-grid { grid-template-columns: 190px 1fr 360px; }
+  /* Round 1 review (#44): at 1024 that left the text at 315px, narrower
+     than the phone's own 347px column, beside a map that was still its full
+     400. 1024-1199px: pin the map at its floor (320px, the issue's own
+     number) instead of a `minmax` upper end it would otherwise keep
+     chasing, so `1fr` gets everything else — the map only grows back once
+     there's room for both it and a text column at least as wide as the
+     phone's. fitRulesMap() (rules.js, already wired to `resize` and to
+     every render()) re-reads `.rules-map`'s own resulting clientWidth on
+     its own; nothing else in this band needs to know the map shrank. */
+  @media (min-width: 1024px) and (max-width: 1199px) {
+    .d-rules-grid { grid-template-columns: 190px 1fr 320px; }
+  }
+  .d-col { min-width: 0; }
+  /* The sticky trick: each rail/map/panel column is stretched (grid default)
+     to the tall middle column's own height, so this inner box has a tall
+     parent to stay pinned inside of while that middle column scrolls past —
+     capped to the viewport itself (own scroll, never clipped) so a taller-
+     than-viewport rail/map/panel scrolls internally instead of overflowing. */
+  .d-sticky {
+    position: sticky; top: calc(var(--bar-h, 56px) + 12px);
+    max-height: calc(100svh - var(--bar-h, 56px) - 24px);
+    overflow-y: auto;
+  }
+
+  /* ---------- 規則 tab ---------- */
+  .d-rail { display: flex; flex-direction: column; gap: 2px; }
+  .d-rail-item {
+    text-align: left; padding: 9px 12px; border-radius: 8px; border: none;
+    border-left: 3px solid transparent; background: transparent; cursor: pointer;
+    color: var(--text-soft); font-family: var(--sans); font-size: 13px; font-weight: 700; line-height: 1.35;
+  }
+  /* #44 acceptance: "the section in view marked with a gold bar and tint". */
+  .d-rail-item.active { color: var(--gold); background: rgba(212, 175, 55, 0.14); border-left-color: var(--gold); }
+  .d-text-col { font-size: 15px; line-height: 1.8; }
+  .d-text-col h1 { font-size: 26px; margin-top: 0; }
+  .d-text-col table { font-size: 14px; }
+  .d-map-pinned .rules-map { width: 100%; max-width: 400px; margin: 0; aspect-ratio: 390 / 408; }
+  .d-map-pinned .rules-map-legend { margin: 8px 0 0; }
+
+  /* ---------- 七十二張牌 tab ---------- */
+  .d-cards-rail .card-search { margin: 0 0 14px; }
+  .d-filter-list { display: flex; flex-direction: column; gap: 2px; margin: 0 0 16px; }
+  .d-filter-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    min-height: 0; text-align: left; padding: 8px 10px; border: none; border-radius: 8px;
+    background: transparent; cursor: pointer; color: var(--text-soft);
+    font-family: var(--sans); font-size: 13px; font-weight: 700;
+  }
+  .d-filter-item.active { color: var(--bg); background: var(--gold); }
+  .d-filter-count { font-weight: 400; opacity: 0.75; font-size: 12px; }
+  .d-filter-item.active .d-filter-count { opacity: 0.85; }
+  .d-cards-rail .card-count { font-size: 12px; }
+
+  /* The grid's tiles are the SAME .cardrow buttons the mobile column uses
+     (one source of truth for filters/search/data-*, see rules.js) — this
+     only restyles them from a horizontal row into a compact tile: the
+     picture, a badge, the name and the year — nothing else (review item 3:
+     the card's own rules text and its second-language line belong in the
+     panel beside the grid, not the tile; "nothing under 12px anywhere in
+     the tile"). Two columns from 1024 to 1199px, three from 1200px up —
+     the grid column's own width (.d-cards-grid's 1fr) is what actually
+     narrows in that band, this only decides how many tiles share it. */
+  .d-grid-col .cardlist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 1199px) {
+    .d-grid-col .cardlist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  /* The badge overlaps the picture's own top-left corner (the row's own
+     background/border still comes from .cardrow's side-q/side-c/side-n
+     classes, untouched) rather than sitting in its own row — the only way
+     to fit picture + badge + name + year into "about 72 to 80px" without
+     shrinking the 44x58 picture the spec fixes. */
+  .d-grid-col .cardrow { position: relative; flex-direction: column; align-items: center; gap: 1px; padding: 2px 4px 3px; text-align: center; min-height: 0; }
+  .d-grid-col .cardrow img { width: 44px; height: 58px; }
+  .d-grid-col .cardrow .cr-body { align-items: center; width: 100%; gap: 0; }
+  .d-grid-col .cardrow .cr-head { justify-content: center; flex-wrap: nowrap; gap: 3px; }
+  /* The description and the row's own chevron never show; the second-
+     language line (review item 3) doesn't either — only the Chinese name
+     (the same headline name the mobile row itself leads with) and the year
+     share the tile's one text line, right under the picture. */
+  .d-grid-col .cardrow .cr-text, .d-grid-col .cardrow .cr-chevron, .d-grid-col .cardrow .cr-en { display: none; }
+  .d-grid-col .cardrow .cr-zh { font-size: 12px; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
+  .d-grid-col .cardrow .cr-year { display: inline; font-size: 12px; line-height: 1.25; color: var(--text-dim); }
+  .d-grid-col .cardrow .cr-year small { font-size: 12px; }
+  .d-grid-col .cardrow.side-q .cr-year { color: var(--text-soft); }
+  .d-grid-col .cardrow.side-c .cr-year { color: #fff3d2; }
+  .d-grid-col .cardrow .cr-badge {
+    position: absolute; top: 3px; left: 3px; z-index: 1;
+    width: 18px; height: 18px; font-size: 12px; line-height: 18px;
+  }
+  /* #44 acceptance: "the chosen tile has a 2px gold border". */
+  .d-grid-col .cardrow.chosen { border: 2px solid var(--gold); }
+
+  /* The chosen-card panel: card-view.js's renderCardView() output, unchanged
+     — only repositioned from its normal mobile/table overlay (.sheet.overlay
+     is `position: fixed`) into an ordinary box that sits still inside its
+     own sticky column. No Close button here (there is nothing to close: the
+     panel just always shows whatever is chosen, or the hint). */
+  .d-card-panel .sheet.overlay {
+    position: static; top: auto; left: auto; right: auto; bottom: auto;
+    height: auto; max-height: none; z-index: auto; margin: 0; padding: 0;
+  }
+  .d-card-panel .peek-footer { display: none; }
+  .d-card-panel .sheet-mid { max-height: none; overflow: visible; }
+  .d-card-hint { margin: 20px 4px; color: var(--text-dim); font-size: 13px; }
+}

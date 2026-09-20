@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="rules.css">
 <link rel="stylesheet" href="desktop.css">
+<link rel="stylesheet" href="rules-desktop.css">
 </head>
 <body>
 <div class="d-frame" aria-hidden="true">
@@ -24,6 +25,13 @@
 <header class="bar">
   <a class="hub back" id="backLink" href="./"></a>
   <span id="barMid"></span>
+  <!-- #44: the desktop two-tab pill switch (>=1024px only, rules-desktop.css);
+       hidden below that breakpoint (rules.css), where #barMid's own label
+       plays the same role it always has. -->
+  <nav class="rules-tabs" id="rulesTabs">
+    <button type="button" class="rules-tab" id="tabRules" data-tab="rules"></button>
+    <button type="button" class="rules-tab" id="tabCards" data-tab="cards"></button>
+  </nav>
   <button id="langBtn" class="langBtn" type="button"></button>
 </header>
 <main class="rules" id="rules"><div id="rulesBody"></div></main>
