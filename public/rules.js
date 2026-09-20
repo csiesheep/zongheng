@@ -179,7 +179,17 @@ function table(head, rows, cls = []) {
 function cardRow(side, id, zhName, enLine, badge, text, era, filterSideKey, searchName, year = "") {
   const enName = enLine.split(" · ")[0];
   const meta = enLine.split(" · ").slice(1).join(" · "); // "era · side", already in the interface language (S.era/S.side)
-  const name = lang === "en" ? esc(enName) : zhName;
+  // #47 round 1: the "* removed from the game after its event" mark lived
+  // on `zhName` alone (cardList()'s own `${esc(c.zh)}${c.remove?" *":""}`)
+  // — fine while the row always showed the Chinese name, but English mode
+  // (no longer showing `zhName` at all, #47) lost the mark outright. `zhName
+  // `'s own trailing " *" is the one place `remove` already reaches this
+  // function (no new parameter needed) — read it back off there and mirror
+  // it onto whichever name is actually shown, so the mark rides along with
+  // the name rather than only ever living on the Chinese one.
+  const removed = / \*$/.test(zhName);
+  const enNameShown = removed ? `${enName} *` : enName;
+  const name = lang === "en" ? esc(enNameShown) : zhName;
   return `<button type="button" class="cardrow side-${side}" data-card="${esc(id)}" data-era="${esc(era)}" data-side="${esc(filterSideKey)}" data-name="${esc(searchName.toLowerCase())}">` +
     `<img src="art/cards/${id}.jpg" width="60" height="80" loading="lazy" alt="${esc(zhName.replace(/ \*$/, ""))} ${esc(enName)}">` +
     `<div class="cr-body">` +
