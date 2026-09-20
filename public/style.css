@@ -201,16 +201,30 @@ body:not(.table-lock) #logToggle { display: none; }
 /* #42: the random tile is a dark split of both sides' portraits (tiger
    left, phoenix right) instead of the old cream/plain tile, so it needs
    its own halves rather than the single full-bleed .tile img above. */
+/* Round 1 review (#42): .tile img's own `inset: 0` (left AND right both 0)
+   still applied to these halves, and with left/width/right all non-auto
+   the spec drops `right`, not `left` — so both halves resolved to the
+   same `left: 0`, showing only the left image. Each half now sets its
+   own `left`/`right` explicitly (never both 0) so there's nothing left
+   for the base rule to contribute. object-position is picked from where
+   each portrait's head actually sits in its source photo (sampled by
+   pixel brightness), not guessed: the tiger pair in qin.jpg has one head
+   around x=69% of the frame, and the phoenix's head in chu.jpg is
+   already centred (~x=51%). */
 .tile.random .tile-half { position: absolute; top: 0; bottom: 0; width: 50%; object-fit: cover; }
-.tile.random .tile-half-l { left: 0; object-position: right center; }
-.tile.random .tile-half-r { right: 0; object-position: left center; }
+.tile.random .tile-half-l { left: 0; right: auto; object-position: 69% 30%; }
+.tile.random .tile-half-r { left: 50%; right: auto; object-position: 51% 20%; }
 /* Hard-coded gold, not var(--gold): body.setup-random remaps --gold to a
    dark ink so page text reads on that state's cream ground (see the
    body.setup-random block above) — exactly the state this tile is shown
    selected in, so following the token would turn the seam and the mark
    near-invisible against the tile's own dark portraits. */
 .tile.random .tile-seam { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; background: #d8b56a; z-index: 1; }
-.tile.random .tile-q { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font: 900 22px/1 var(--serif); color: #d8b56a; z-index: 2; text-shadow: 0 1px 3px rgba(6, 5, 4, 0.85); }
+/* The random tile's own glyph (parallel to .tg's 秦/楚, same 26px): fixed
+   in the tile's upper half so it never sits under the tname/ttag block
+   (.tile-info, bottom-anchored with a 24px top pad) at any tile height in
+   the clamp(96px, 24cqh, 150px) range. */
+.tile.random .tile-q { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); font: 900 26px/1 var(--serif); color: #d8b56a; z-index: 2; text-shadow: 0 1px 3px rgba(6, 5, 4, 0.85); }
 .tile .tile-info { position: absolute; left: 0; right: 0; bottom: 0; padding: 24px 6px 10px; background: linear-gradient(to top, rgba(6, 5, 4, 0.95), rgba(6, 5, 4, 0)); display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .tile .tg { font: 900 26px/1 var(--serif); color: var(--qin-text); }
 .tile.chu .tg { font-family: var(--kai); font-weight: 700; color: var(--chu-gold); }
