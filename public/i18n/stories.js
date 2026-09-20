@@ -44,8 +44,8 @@ export default {
     srcEn: "Shiji, Biography of Lord Shang",
   },
   hexi: {
-    zh: "河西之地原屬秦,戰國初年被魏奪去,魏文侯用吳起為西河守,長期據守此地。秦惠文君七年(前330年),秦與魏戰,虜魏將龍賈,斬首八萬;次年魏納河西全境予秦以求和。秦國自此收復河西,東進的門戶洞開,形勢從此逆轉。",
-    en: "Hedong had once belonged to Qin before Wei seized it early in the Warring States, when Marquis Wen of Wei made Wu Qi warden of the west river region. In the seventh year of Lord Huiwen of Qin, 330 BC, Qin defeated Wei, captured its general Long Jia, and took eighty thousand heads; the next year Wei surrendered all of Hedong to make peace. Qin thereby regained the land and opened its gate east, turning the balance of power its way.",
+    zh: "河西之地原屬秦,戰國初年被魏奪去,魏文侯用吳起為西河守,長期據守此地。秦惠文君七年(前331年),秦與魏戰,虜魏將龍賈,斬首八萬;次年(前330年)魏納河西全境予秦以求和。秦國自此收復河西,東進的門戶洞開,形勢從此逆轉。",
+    en: "Hexi had once belonged to Qin before Wei seized it early in the Warring States, when Marquis Wen of Wei made Wu Qi warden of the west river region. In the seventh year of Lord Huiwen of Qin, 331 BC, Qin defeated Wei, captured its general Long Jia, and took eighty thousand heads; the next year, 330 BC, Wei surrendered all of Hexi to make peace. Qin thereby regained the land and opened its gate east, turning the balance of power its way.",
     srcZh: "《史記·秦本紀》",
     srcEn: "Shiji, Basic Annals of Qin",
   },
@@ -74,8 +74,8 @@ export default {
     srcEn: "Shiji, Biography of Zhang Yi",
   },
   suqin: {
-    zh: "蘇秦游說六國合縱抗秦,身佩六國相印,為縱約長。傳統說法認為合縱約成於前333年,秦兵十五年不敢出函谷關;但出土帛書《戰國縱橫家書》顯示,蘇秦主要活動其實較晚,約在齊湣王時。合縱瓦解後,蘇秦在齊為燕行反間,遭大夫刺殺,臨死前自請齊王車裂其屍於市,以誘出真凶。",
-    en: "Su Qin persuaded six states to form the Vertical alliance, carrying all six seals as its leader. Tradition dates the alliance to 333 BC, after which Qin dared not leave Hangu Pass for fifteen years, but a manuscript excavated in modern times suggests his career came later, under King Min of Qi. The alliance broke apart; Su Qin, spying for Yan in Qi, was stabbed by a rival, and before dying asked the king to tear his corpse by chariots to expose the real killer.",
+    zh: "蘇秦游說六國合縱抗秦,身佩六國相印,為縱約長。傳統說法認為合縱約成於前333年,秦兵十五年不敢出函谷關;但帛書《戰國縱橫家書》顯示,蘇秦主要活動較晚,約在齊湣王時。合縱瓦解後,蘇秦在齊為燕行反間,遭爭寵齊大夫遣人行刺,臨死自請齊王車裂其屍於市,以誘出真凶。",
+    en: "Su Qin persuaded six states to form the Vertical alliance, carrying all six seals as its leader. Tradition dates the alliance to 333 BC, after which Qin dared not leave Hangu Pass for fifteen years, but an excavated manuscript suggests his career came later, under King Min of Qi. The alliance broke apart; spying for Yan in Qi, Su Qin was stabbed by an assassin sent by rival ministers, and before dying asked the king to tear his corpse by chariots, exposing the real killer.",
     srcZh: "《史記·蘇秦列傳》",
     srcEn: "Shiji, Biography of Su Qin",
   },
@@ -92,10 +92,10 @@ export default {
     srcEn: "Shiji, Biographies of Sun Bin and Wu Qi",
   },
   jixia: {
-    zh: "齊國在都城臨淄稷門附近設立稷下學宮,招致天下賢士,不任官職而議論國事。齊宣王時學宮盛況空前,學士多達數百上千人。孟子、鄒衍、淳于髡、慎到、田駢等皆曾游學於此,荀子更三度出任學宮祭酒,在稷下諸生中「最為老師」。稷下學宮是戰國百家爭鳴最重要的舞台之一。",
-    en: "Qi built the Jixia Academy near the Ji gate of its capital Linzi, drawing scholars who held no office but debated public affairs freely. Under King Xuan the academy reached its height, with scholars numbering in the hundreds. Mencius, Zou Yan, Chunyu Kun, Shen Dao, and Tian Pian all studied or taught there, and Xunzi served three times as its senior scholar, eventually honored as the most senior teacher among them.",
-    srcZh: "《史記·孟子荀卿列傳》",
-    srcEn: "Shiji, Biographies of Mencius and Xun Qing",
+    zh: "齊國在都城臨淄稷門附近設立稷下學宮,招致天下賢士,不任官職而議論國事。齊宣王時學宮「復盛,且數百千人」。孟子、鄒衍、淳于髡、慎到、田駢等皆曾游學於此,荀子更三度出任學宮祭酒,在稷下諸生中「最為老師」。稷下學宮是戰國百家爭鳴最重要的舞台之一。",
+    en: "Qi built the Jixia Academy near the Ji gate of its capital Linzi, drawing scholars who held no office but debated public affairs freely. Under King Xuan the academy flourished again, with scholars numbering in the hundreds. Mencius, Zou Yan, Chunyu Kun, Shen Dao, and Tian Pian all studied or taught there, and Xunzi served three times as its senior scholar, eventually honored as the most senior teacher among them.",
+    srcZh: "《史記·孟子荀卿列傳》、《史記·田敬仲完世家》",
+    srcEn: "Shiji, Biographies of Mencius and Xun Qing; House of Tian Jingzhong Wan",
   },
   wuguo: {
     zh: "前318年,魏、趙、韓、燕、楚五國合縱,推楚懷王為縱約長,合兵攻秦,屯於函谷關下。秦出兵迎擊,五國聯軍未能同心協力,終於大敗而還。這是戰國中期規模最大的一次合縱攻秦,也暴露出六國各懷異心、難以真正一致行動的弱點。",
@@ -152,8 +152,8 @@ export default {
     srcEn: "Xunzi, Debating Military Affairs; Zhanguo Ce, Stratagems of Han",
   },
   zhouzuo: {
-    zh: "周天子致胙(祭肉)、致伯是天子對強國示好的殊禮,不是正式的冊封。周顯王二十六年,周天子致伯於秦孝公;三十五年,又致文王、武王的祭肉予秦惠王。此後周天子屢次以類似方式賜胙、致伯於崛起的諸侯,象徵性地維繫著名存實亡的天下共主地位。",
-    en: "The Zhou king sending sacrificial meat, or granting the title of hegemon, was a courtesy the fading royal house paid to rising powers, not a formal investiture. In the twenty-sixth year of King Xian, the king granted Duke Xiao of Qin the title; in the thirty-fifth year, he sent King Hui of Qin the meat once offered to Kings Wen and Wu. The Zhou kings kept extending such gestures afterward, a hollow way of still claiming to preside over a realm no longer theirs.",
+    zh: "周天子致胙(祭肉)、致伯是天子對強國示好的殊禮,不是正式的冊封。周顯王九年(約前360年),周天子致文王、武王的祭肉予秦孝公;二十六年,又致伯於秦孝公;三十五年,再致文武胙於秦惠王。",
+    en: "The Zhou king sending sacrificial meat, or granting the title of hegemon, was a courtesy the fading royal house paid to rising powers, not a formal investiture. In the ninth year of King Xian, around 360 BC, the king sent Duke Xiao of Qin the meat once offered to Kings Wen and Wu; in the twenty-sixth year he granted Duke Xiao the title; in the thirty-fifth year he sent King Hui of Qin the same meat again.",
     srcZh: "《史記·周本紀》",
     srcEn: "Shiji, Basic Annals of Zhou",
   },
