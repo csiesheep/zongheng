@@ -416,17 +416,25 @@ function render() {
 }
 // The map's scale is the viewport-width ratio (DESIGN_W is the mockup's own
 // canvas width) UNLESS that would leave no room at all for a shown hand, in
-// which case scale gives up only down to FLOOR_SCALE — the scale at which
-// the disc/name/tap-target minimums are still met (30/34px design discs ->
-// 28/32px drawn). A real 375-390px-wide phone never needs the floor; only a
-// short one (e.g. 390x669 with iOS Chrome's toolbars up) does. Below the
-// floor, it's the hand's card ART that concedes further (see CARD_H below),
-// never the map — a fixed short viewport (no scrolling allowed) has to put
-// the shortfall somewhere, and the map's drawn spec is the one thing that
-// must never move.
-const DESIGN_DISC = 30, DESIGN_BIG_DISC = 34; // keep in sync with .node .disc / .node.big .disc in style.css
-const MIN_DISC = 28, MIN_BIG_DISC = 32; // the owner's C2 touch/legibility floor at any width
-const FLOOR_SCALE = Math.max(MIN_DISC / DESIGN_DISC, MIN_BIG_DISC / DESIGN_BIG_DISC) * 1.01; // +1% safety margin over the exact minimum
+// which case scale gives up only down to FLOOR_SCALE. A real 375-390px-wide
+// phone never needs the floor; only a short one (e.g. 390x669 with iOS
+// Chrome's toolbars up) does. Below the floor, it's the hand's card ART that
+// concedes further (see CARD_H below), never the map — a fixed short
+// viewport (no scrolling allowed) has to put the shortfall somewhere, and
+// the map's drawn spec is the one thing that must never move.
+//
+// #39 round 2 review (owner's own ruling): FLOOR_SCALE used to be set by
+// disc/name legibility (30/34px design discs -> a 28/32px drawn floor) — the
+// owner's call this round is that the HIT BUTTON size (see HIT_SIZE below)
+// is the one binding floor, not disc legibility, and moved it down to
+// exactly MIN_HIT (40px) to free the ~40px of slack (390x669/375x667) that
+// parts 2-4's own chrome growth (mandate bar, statline, pills) needed and
+// didn't have. The disc/name themselves shrink a little further below their
+// old 28/32px floor at this new scale — accepted, per that ruling, since
+// nothing about them is a tap target.
+const HIT_SIZE = 47; // design px — see its own fuller comment at renderMap() below
+const MIN_HIT = 40; // round 2's own floor: never below this real css px
+const FLOOR_SCALE = MIN_HIT / HIT_SIZE;
 const CARD_H = 176, HAND_GUTTER = 31; // 96x176 card + the C2_Game hand row's own headroom (207 total)
 // Below CARD_FULL_MIN the full card's own art has shrunk too far to read —
 // the hand switches to a fixed-height chip row instead (round 5) rather than
@@ -845,11 +853,11 @@ function cardInfo(L, card) {
 // giving #hitLayer the exact same box as #mapInner (fitMap() now sizes and
 // transforms both identically) and positioning each hit button in the same
 // DESIGN_W/DESIGN_H px coordinates as its node, so a button is always
-// centred on its own disc and scales with it. HIT_SIZE (47 design px) is
-// picked so that at FLOOR_SCALE (~0.9506) the rendered button is still
-// >=44 real css px (47 * 0.9506 = 44.68); on desktop's larger scale it only
-// grows, same as the disc it covers.
-const HIT_SIZE = 47;
+// centred on its own disc and scales with it. HIT_SIZE (declared above,
+// alongside FLOOR_SCALE, which is now derived FROM it — #39 round 2) is
+// 47 design px, chosen so the rendered button is exactly MIN_HIT (40 real
+// css px) at the floor scale; on desktop's larger scale it only grows,
+// same as the disc it covers.
 function renderMap(v) {
   const el = $("mapInner");
   const hitEl = $("hitLayer");
