@@ -11,7 +11,17 @@ export default {
   // 特殊牌 st.jiuding,不是一張 CARDS 紀錄),rules.js 沒辦法像其他 71 張
   // 那樣直接從牌堆讀名字/說明。文字沿用這個檔案裡規則頁本來就有的「九鼎」
   // 那句話(見 rules.js 自己的 specialText)。
-  rules: { jiuding: "九鼎", jiudingText: "4 點行動點,全部用在三晉或周視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。" },
+  rules: {
+    jiuding: "九鼎", jiudingText: "4 點行動點,全部用在三晉或周視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。",
+    // #40:規則頁的區塊導覽(sticky chip 列)短標,對應 rules.js render() 裡
+    // 每個 h2 的順序;top 是列尾固定的「回頂端」那顆。
+    nav: { ends: "結局", board: "棋盤", control: "控制", uses: "用法", tracks: "軌道", special: "特殊", turn: "回合", scoring: "記分", cards: "牌表", top: "回到頂端 ↑" },
+    search: "搜尋牌名…",
+    eraFilter: { all: "全部", reform: "變法期", alliance: "縱橫期", conquest: "兼併期" },
+    sideFilter: { all: "全部", qin: "秦", chu: "楚", neutral: "中立", scoring: "記分" },
+    count: "{n} 張",
+    empty: "沒有符合的牌。",
+  },
   sides: { qin: "秦", chu: "楚", neutral: "中立", scoring: "記分卡" },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },
   setup: { defaultName: "玩家" },
