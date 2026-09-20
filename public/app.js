@@ -14,7 +14,7 @@ import zh from "./i18n/zh-Hant.js";
 import CARD_EN from "./i18n/cards.en.js";
 import { mountAdvisorToggle, decorate as decorateAdvisor } from "./advisor-ui.js";
 import * as Tut from "./tutorial-ui.js";
-import { renderCardView } from "./card-view.js";
+import { renderCardView, historyBox } from "./card-view.js";
 import {
   DESIGN_W, DESIGN_H, NODE_POS, nodeCenter, regionMembers, isCapital,
   renderRegionBlobs, renderRoads, REGION_LABEL_POS,
@@ -961,36 +961,52 @@ const useEn = (u) => en.uses[u];
 function sheetMid(sh) {
   const d = document.createElement("div"); d.className = "sheet-mid"; sh.appendChild(d); return d;
 }
-// The full card sheet's fixed header: art, ops badge, both names, era/
-// number/year — the same on every card, only the surrounding colour
-// (sheet-q/c/n/s, set by the caller) tells its owner apart. Text-only (see
-// cardTextBox below); always appended straight to `sh`, never into the
+// #46 (owner: "看手牌沒有卡牌歷史" + a player must never scroll to reach a
+// button): a fixed (non-scrolling) sibling of sheetMid(), between the
+// scrollable text/history and the pinned Cancel/Confirm footer. The use
+// grid, an enemy card's order row, 說客's pairing row and the one-line hint
+// all move here instead of into `mid` — mid now only holds the card's own
+// variable-length content (text box, a scoring tally, the advisor's
+// suggestion banner, the history), so growing that content can never push
+// a button below the fold; only present while the full card (not the
+// compact chip) is on screen, same gate as sheetMid() itself.
+function sheetPinned(sh) {
+  const d = document.createElement("div"); d.className = "sheet-pinned"; sh.appendChild(d); return d;
+}
+// The full card sheet's fixed header: art, ops badge, the name (#46: one
+// language only — the owner's ruling reversed #29's always-both-languages
+// design), era/number/year — the same on every card, only the surrounding
+// colour (sheet-q/c/n/s, set by the caller) tells its owner apart. Text-only
+// (see cardTextBox below); always appended straight to `sh`, never into the
 // scrollable sheetMid(), so it never scrolls out of view either.
 function cardHeader(sh, id) {
   const meta = id === E.JIUDING ? null : E.CARD[id];
   const info = meta ? `${t("eras." + meta.era)}${meta.num ? ` · No. ${meta.num}` : ""}${meta.year ? ` · ${lang === "en" ? meta.year + " BC" : "前" + meta.year + "年"}` : ""}` : "";
-  // The round badge reads the scoring region's own "計" (issue #29's design:
-  // a scoring card's badge is not the hand tile's plain "S") — a header-only
-  // override, opsLabel() itself (shared with the hand tile) is untouched.
-  const badge = meta && meta.scoring ? "計" : opsLabel(id);
+  // The round badge reads the scoring region's own "計" in zh (issue #29's
+  // design: a scoring card's badge is not the hand tile's plain "S") — a
+  // header-only override, opsLabel() itself (shared with the hand tile) is
+  // untouched. #46: "計" is Chinese-only, so en falls back to the same "S"
+  // the hand tile already uses, matching the one-language ruling.
+  const badge = meta && meta.scoring ? (lang === "en" ? "S" : "計") : opsLabel(id);
+  const name = lang === "en" ? cardEn(id) : cardZh(id);
   const head = document.createElement("div"); head.className = "sheet-head";
   head.innerHTML =
     `<img class="sheet-img" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
     `<div class="sheet-meta"><span class="sheet-badge">${esc(badge)}</span>` +
-    `<div class="sheet-name-zh" lang="zh-Hant">${esc(cardZh(id))}</div>` +
-    `<div class="sheet-name-en">${esc(cardEn(id))}</div>` +
+    `<div class="sheet-name"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(name)}</div>` +
     (info ? `<div class="sheet-info">${esc(info)}</div>` : "") + `</div>`;
   sh.appendChild(head);
 }
-// The card-text box (#29: both languages always shown, Chinese above
-// English, in its own bordered parchment/lacquer/bronze panel per side) —
-// appended wherever the caller's own scrollable middle is (sheetMid()'s
-// div for the full browsing/event/reform/pre-order states, `sh` directly
-// for the short headline/bog confirmations, which have no other content to
-// share a scroll region with).
+// The card-text box (#46: one language only, was bilingual per #29 until
+// the owner's ruling reversed that) — appended wherever the caller's own
+// scrollable middle is (sheetMid()'s div for the full browsing/event/
+// reform/pre-order states, `sh` directly for the short headline/bog
+// confirmations, which have no other content to share a scroll region
+// with).
 function cardTextBox(parent, id) {
   const box = document.createElement("div"); box.className = "sheet-textbox";
-  box.innerHTML = `<p class="sheet-text-zh" lang="zh-Hant">${esc(cardTextZh(id))}</p><p class="sheet-text-en">${esc(cardTextEn(id))}</p>`;
+  const text = lang === "en" ? cardTextEn(id) : cardTextZh(id);
+  box.innerHTML = `<p class="sheet-text"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(text)}</p>`;
   parent.appendChild(box);
 }
 // The mini chip used instead of the full card header while the map is in
@@ -1000,8 +1016,13 @@ function cardTextBox(parent, id) {
 // this mode (see wantsCardOverlay/mapActive in renderPromptAndSheet).
 function cardChip(sh, id) {
   const wrap = document.createElement("div"); wrap.className = "sheet-chip";
+  const name = lang === "en" ? cardEn(id) : cardZh(id);
+  // #46: one language only, same ruling as the full card page — the chip's
+  // own aria-label carries the other one (below), same convention as the
+  // hand tile's tile().
   wrap.innerHTML = `<span class="ops ${cardSide(id)}">${esc(opsLabel(id))}</span>` +
-    `<span class="chip-nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span>`;
+    `<span class="chip-nm"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(name)}</span>`;
+  wrap.setAttribute("aria-label", `${cardZh(id)} / ${cardEn(id)}`);
   const expand = document.createElement("button");
   expand.type = "button"; expand.className = "chip-expand"; expand.textContent = t("buttons.expand");
   expand.onclick = () => { game.ui.chipExpanded = true; render(); };
@@ -1011,11 +1032,16 @@ function cardChip(sh, id) {
 // The acting seat's own confirm phrase (#29's design: "令尹曰可" for a Chu
 // court, "制曰可" for Qin's — the SEATED player's own turn of phrase, not
 // the open card's owner; C2_CardEnemy confirms with the Chu viewer's own
-// "令尹曰可" even though the open card is Qin's Bai Qi) plus the plain
-// English "Confirm", used by the full card page's own Confirm button
-// (browsing/event/reform/place-pre-order) — everywhere else (headline,
-// bog, the compact place/campaign/lobby footers) keeps its own plain label.
+// "令尹曰可" even though the open card is Qin's Bai Qi), used by the full
+// card page's own Confirm button (browsing/event/reform/place-pre-order) —
+// everywhere else (headline, bog, the compact place/campaign/lobby
+// footers) keeps its own plain label. #46 (owner: one language only): in
+// zh this still pairs the court's own word with 確認, exactly as before —
+// both are Chinese, so nothing was ever mixed there; in en the court's
+// word is dropped outright rather than shown alongside English, leaving
+// just "Confirm".
 function confirmPhrase() {
+  if (lang === "en") return `<span class="confirm-en">${esc(t("buttons.confirm"))}</span>`;
   const chu = game.me === E.CHU;
   const zhWord = chu ? "令尹曰可" : "制曰可";
   return `<span lang="zh-Hant" class="confirm-zh">${esc(zhWord)}</span><span class="confirm-en">${esc(t("buttons.confirm"))}</span>`;
@@ -1037,17 +1063,17 @@ function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel, richHTML
   }
   return r;
 }
-// The five-use grid's own button: both languages stacked (zh 600/16px, en
-// 400/11px — #29's design, same bilingual convention as the hand tile and
-// card name), not the plain single-language text btn() gives every other
-// sheet button. Still a plain <button>, so decorateSheet()'s
-// ".sheet-grid button" selector and tutorial.css's own hiding rule need no
-// change.
+// The five-use grid's own button: one label, in the interface language
+// (#46 — was two lines stacked, zh over en, per #29's original bilingual
+// design; the owner's ruling reversed that for every card face). Still a
+// plain <button>, so decorateSheet()'s ".sheet-grid button" selector and
+// tutorial.css's own hiding rule need no change.
 function useBtn(parent, use, onClick, pressed, disabled) {
   const b = document.createElement("button");
   b.type = "button"; b.disabled = disabled;
   b.setAttribute("aria-pressed", String(pressed));
-  b.innerHTML = `<span lang="zh-Hant">${esc(useZh(use))}</span><span class="use-en">${esc(useEn(use))}</span>`;
+  if (lang === "zh-Hant") b.lang = "zh-Hant";
+  b.textContent = lang === "en" ? useEn(use) : useZh(use);
   b.onclick = onClick;
   parent.appendChild(b);
   return b;
@@ -1109,6 +1135,11 @@ function renderPromptAndSheet(v) {
       const mid = sheetMid(sh);
       cardTextBox(mid, ui.card);
       if (ui.card !== E.JIUDING && E.CARD[ui.card].scoring) scoringPanel(mid, v, E.CARD[ui.card].scoring);
+      // #46: the headline phase has no use buttons, so the history has the
+      // most room here of any state — added straight into `mid`, after
+      // whatever the advisor's own banner will be inserted before (see
+      // placeBanner()'s insertBefore(.sheet-history) in advisor-ui.js).
+      if (!Tut.active()) historyBox(mid, ui.card, lang);
       footer(sh, t("buttons.headline"), () => humanAct({ type: "headline", card: ui.card }), false, () => { game.ui = freshUi(); render(); });
     }
     return;
@@ -1119,7 +1150,9 @@ function renderPromptAndSheet(v) {
   if (L.bog && L.bog.length) {
     setPrompt(t("uses.bog"));
     cardHeader(sh, ui.card);
-    cardTextBox(sheetMid(sh), ui.card);
+    const bogMid = sheetMid(sh);
+    cardTextBox(bogMid, ui.card);
+    if (!Tut.active()) historyBox(bogMid, ui.card, lang);
     footer(sh, t("buttons.confirm"), () => humanAct({ type: "play", card: ui.card, use: "bog" }), false);
     return;
   }
@@ -1144,7 +1177,7 @@ function renderPromptAndSheet(v) {
   // matter how long the card's own text or the enemy order row runs. Only
   // set when the full card is actually shown; the compact chip path
   // (mapActive && !chipExpanded) keeps its old flat, unwrapped layout.
-  let mid = null;
+  let mid = null, pinned = null;
   if (!showFullCard) {
     cardChip(sh, ui.card);
   } else {
@@ -1155,7 +1188,20 @@ function renderPromptAndSheet(v) {
   }
   const target = showFullCard ? mid : sh;
   if (ui.card !== E.JIUDING && E.CARD[ui.card].scoring) scoringPanel(target, v, E.CARD[ui.card].scoring);
-  const uses = row(target, "rowb sheet-grid");
+  // #46: the history goes in `mid` too (the last thing in the scrolling
+  // part — the advisor's own banner, when it's on, gets inserted just
+  // before it instead of after, see advisor-ui.js), never in the tutorial
+  // (the coach panel needs the room) and never for the compact chip (no
+  // `mid` at all there).
+  if (showFullCard && !Tut.active()) historyBox(mid, ui.card, lang);
+  // #46 (owner: a player must never scroll to reach a button): the use
+  // grid, the enemy order row, 說客's pairing and the hint below all move
+  // to `pinned` — a fixed sibling of `mid`, not `mid` itself — so growing
+  // the card's own text/history can never push one of them past the fold.
+  // The compact chip has no `mid`/`pinned` split at all; its own rows still
+  // go straight onto `sh`, already fully on screen there (unchanged).
+  pinned = showFullCard ? sheetPinned(sh) : sh;
+  const uses = row(pinned, "rowb sheet-grid");
   const usable = (u) => (u === "event" ? info.uses.event : u === "reform" ? info.uses.reform : !!info.uses[u]);
   for (const u of ["event", "place", "campaign", "lobby", "reform"]) {
     if (ui.card === E.JIUDING && (u === "event" || u === "reform")) continue;
@@ -1180,7 +1226,7 @@ function renderPromptAndSheet(v) {
   const targetPreviewComing = !showFullCard && (ui.use === "campaign" || ui.use === "lobby") && ui.target;
   if (info.enemy) {
     if (showFullCard) {
-      const r = row(mid, "rowb order");
+      const r = row(pinned, "rowb order");
       for (const o of ["opsFirst", "eventFirst"]) btn(r, t(`uses.${o}`), () => { ui.order = o; ui.points = []; render(); }, "", ui.order === o);
     } else if (!targetPreviewComing) {
       note(sh, t(`advisor.suggestOrder.${ui.order}`));
@@ -1188,8 +1234,8 @@ function renderPromptAndSheet(v) {
   }
   if (ui.card === "shuoke" && info.uses.pair && info.uses.pair.length) {
     if (showFullCard) {
-      const r = row(mid);
-      note(mid, t("uses.pair"));
+      const r = row(pinned);
+      note(pinned, t("uses.pair"));
       for (const c of info.uses.pair) btn(r, `${cardName(c)} (${E.opsOf(game.st, me, c)})`, () => { ui.pair = ui.pair === c ? null : c; ui.points = []; render(); }, "", ui.pair === c);
     } else if (ui.pair && !targetPreviewComing) {
       note(sh, `${t("uses.pair")} ${cardName(ui.pair)} (${E.opsOf(game.st, me, ui.pair)})`);
@@ -1200,11 +1246,13 @@ function renderPromptAndSheet(v) {
   // (whose event still fires), or a scoring card. Only on the full card
   // page (the `sheet.hint.*` copy assumes the reader can already see the
   // use grid/order row above it); the compact chip already has its own
-  // target-preview notes doing the same job in less space.
+  // target-preview notes doing the same job in less space. #46: moved into
+  // `pinned` along with the rest of this row — it's part of the "always
+  // reachable" chrome, not the scrolling card text.
   if (showFullCard) {
     const meta = ui.card === E.JIUDING ? null : E.CARD[ui.card];
     const kind = meta && meta.scoring ? "score" : info.enemy ? "enemy" : meta && meta.side != null ? "own" : "neutral";
-    note(mid, t("sheet.hint." + kind));
+    note(pinned, t("sheet.hint." + kind));
   }
   const base = { type: "play", card: ui.card, use: ui.use };
   if (ui.pair) base.pair = ui.pair;
