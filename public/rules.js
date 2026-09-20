@@ -234,7 +234,15 @@ function cardList(S, N, cardEn, opts = {}) {
       : esc(lang === "en" ? cardEn[c.id] ?? c.text : c.text);
     const year = c.year ? ` <small>(${lang === "en" ? "" : "前"}${c.year}${lang === "en" ? " BC" : ""})</small>` : "";
     const enLine = `${c.en} · ${S.era[c.era]} · ${c.scoring ? S.scoringCard : S.side[c.side]}`;
-    return cardRow(side, c.id, zhName, enLine, c.scoring ? "–" : c.ops, text + year, c.era, filterSideKeyOf(c), `${c.zh} ${c.en}`, year);
+    // #45 round 1: the desktop tile's own line 2 is never empty (the design
+    // never shows the name alone) — reuse `year` when there is one (same
+    // string the mobile description already carries), otherwise a scoring
+    // card falls back to its own era and every other undated card falls
+    // back to N.rules.undated. This is deliberately a SEPARATE value from
+    // `year` above: `year` still only ever feeds the mobile row's own
+    // `text + year` description, unaffected by any of this.
+    const tileLine2 = year || (c.scoring ? esc(S.era[c.era]) : esc(N.rules.undated));
+    return cardRow(side, c.id, zhName, enLine, c.scoring ? "–" : c.ops, text + year, c.era, filterSideKeyOf(c), `${c.zh} ${c.en}`, tileLine2);
   });
   // Name is bilingual regardless of the active language, same as every
   // other card row (names are the exception to the no-mixing rule); the
@@ -246,7 +254,10 @@ function cardList(S, N, cardEn, opts = {}) {
   // filter — never under 變法期/縱橫期/兼併期 specifically (era: "" never
   // equals any of those three) — orchestrator's call on #40. Side-wise
   // they're plain 中立, same as every other non-Qin/Chu/scoring card.
-  rows.push(cardRow("n", "jiuding", esc(zh.rules.jiuding), jiudingEnLine, jiudingOps, esc(N.rules.jiudingText), "", "neutral", `${zh.rules.jiuding} ${en.rules.jiuding}`));
+  // #45 round 1: the Cauldrons' own tile line 2 — "every era" (N.rules.
+  // everyEra), not a specific one, matching the same era==="" special case
+  // noted above (never any of 變法期/縱橫期/兼併期 specifically).
+  rows.push(cardRow("n", "jiuding", esc(zh.rules.jiuding), jiudingEnLine, jiudingOps, esc(N.rules.jiudingText), "", "neutral", `${zh.rules.jiuding} ${en.rules.jiuding}`, esc(N.rules.everyEra)));
   const filters = opts.withFilters === false ? "" : cardFiltersHTML();
   return `${filters}<div class="cardlist" id="cardListWrap">${rows.join("")}</div><p class="card-empty" id="cardEmpty" hidden>${esc(N.rules.empty)}</p>`;
 }
