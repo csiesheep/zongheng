@@ -1331,39 +1331,74 @@ function logCardRefs(l) {
   if (l.type === "headline") { refs.qin = { id: l.cards[0], side: E.QIN }; refs.chu = { id: l.cards[1], side: E.CHU }; }
   return refs;
 }
-// Same line as fmtLog(l), but as real DOM nodes instead of one string:
+// Same line as fmtLog(l), but as a real DOM element instead of one string:
 // literal text is always a plain text node (never innerHTML — a player's
 // own arbitrary setup name reaching {side} this way can never be mistaken
-// for markup), and each placeholder logCardRefs() names becomes a
-// link-styled button opening the read-only peek sheet (#34) rather than
-// plain text, whenever `clickable`. `clickable` is false during a tutorial
-// (owner: card names still show, they just can't be tapped) — the button
-// is simply never created there, so there's no click handler for a
-// tampered DOM to bypass, no different from how installGuard() in
-// tutorial-ui.js reasons about the map/hand. Returns null exactly where
-// fmtLog(l) would have returned "" (no template for this type).
+// for markup), and each placeholder logCardRefs() names opens the
+// read-only peek sheet (#34) instead of just naming the card, whenever
+// `clickable`. `clickable` is false during a tutorial (owner: card names
+// still show, they just can't be tapped) — no click handler is ever
+// created there, so there's nothing for a tampered DOM to bypass, the same
+// way installGuard() in tutorial-ui.js reasons about the map/hand. Returns
+// null exactly where fmtLog(l) would have returned "" (no template for
+// this type).
+//
+// #34 round 2 (orchestrator's ruling, be5df4b's own .log-card-link padding
+// + negative margin trick let one line's hit area bleed onto its
+// NEIGHBOUR'S text — measured: "客卿制度"'s own glyphs, centre and lower
+// half, resolved to "張儀連橫"'s button instead, one line down. A line
+// naming exactly one card becomes the whole row as ONE <button> instead:
+// its hit area is just its own line's normal box, which by ordinary block
+// layout can never reach past that box into a sibling's — no padding
+// trick, so nothing to bleed. log.headline is the one template with TWO
+// names in one line; there a single row-button can't work (it would open
+// one card no matter which name was tapped), so that line stays a plain
+// row with two inline .log-card-link buttons — separated by the
+// template's own "and"/"、", never enlarged past their own text metrics,
+// so neither one can encroach on the other or on the row above/below.
 function logLineNodes(l, clickable) {
   const raw = `log.${l.type}`.split(".").reduce((o, k) => (o ? o[k] : undefined), S);
   if (typeof raw !== "string") return null;
   const P = logParams(l);
   const refs = logCardRefs(l);
-  const frag = document.createDocumentFragment();
+  const wholeLine = clickable && Object.keys(refs).length === 1;
+  const root = document.createElement(wholeLine ? "button" : "div");
+  if (wholeLine) {
+    root.type = "button";
+    root.className = "log-line-link";
+    const [ref] = Object.values(refs);
+    root.onclick = (ev) => { ev.stopPropagation(); openPeek(ref.id, ref.side); };
+  }
   const re = /\{(\w+)\}/g;
   let last = 0, m;
   while ((m = re.exec(raw))) {
-    if (m.index > last) frag.appendChild(document.createTextNode(raw.slice(last, m.index)));
+    if (m.index > last) root.appendChild(document.createTextNode(raw.slice(last, m.index)));
     const k = m[1], ref = refs[k];
-    frag.appendChild(ref && clickable ? cardLinkButton(ref.id, ref.side) : document.createTextNode(k in P ? String(P[k]) : `{${k}}`));
+    if (ref && wholeLine) {
+      // The card's own name still reads as a link inside the row-button —
+      // a plain <span>, not a nested button (buttons can't nest); the
+      // <button> ancestor is what actually answers the click.
+      const span = document.createElement("span");
+      span.className = "log-card-name";
+      span.textContent = cardName(ref.id);
+      root.appendChild(span);
+    } else if (ref && clickable) {
+      root.appendChild(cardLinkButton(ref.id, ref.side));
+    } else {
+      root.appendChild(document.createTextNode(k in P ? String(P[k]) : `{${k}}`));
+    }
     last = re.lastIndex;
   }
-  if (last < raw.length) frag.appendChild(document.createTextNode(raw.slice(last)));
-  return frag;
+  if (last < raw.length) root.appendChild(document.createTextNode(raw.slice(last)));
+  return root;
 }
-// A card name inside the log/news, as a clickable link-styled button that
-// opens the read-only peek sheet (#34). `side` is credited in the peek's
-// own "{side} played this" hint line — the seat that put the card down
-// (play/discard/bog) or the card's own headline seat (E.QIN/E.CHU, not
-// necessarily the side who acts first that turn).
+// A card name inside a two-name log line (only log.headline), as a
+// clickable link-styled button that opens the read-only peek sheet (#34).
+// Never padded or margined past its own text metrics (round 2's fix — see
+// logLineNodes() above): the ONLY thing that keeps this from bleeding into
+// its neighbour is that its box is exactly its own glyphs, nothing more.
+// `side` is credited in the peek's own "{side} played this" hint line —
+// here always the card's own headline seat (E.QIN/E.CHU).
 function cardLinkButton(id, side) {
   const b = document.createElement("button");
   b.type = "button";
@@ -1438,11 +1473,8 @@ function renderLog(v) {
   const said = game.room ? room.chat.slice(-8).reverse().map((s) => `<div class="say">${esc(s)}</div>`).join("") : "";
   $("logLines").innerHTML = said + (game.botLine ? `<div class="bot">${esc(game.botLine)}</div>` : "");
   for (const l of panelEntries) {
-    const frag = logLineNodes(l, clickable);
-    if (!frag) continue;
-    const d = document.createElement("div");
-    d.appendChild(frag);
-    $("logLines").appendChild(d);
+    const node = logLineNodes(l, clickable);
+    if (node) $("logLines").appendChild(node);
   }
   // Under the prompt: what happened since this seat last acted.
   const NEWS = new Set(["headline", "play", "place", "campaign", "lobby", "score", "tire", "seal", "unseal", "mie", "restore", "reform", "jiuding", "bog", "skip", "era", "turn"]);
@@ -1460,10 +1492,8 @@ function renderLog(v) {
     const newsDiv = document.createElement("div");
     newsDiv.className = "news";
     for (const l of newsEntries) {
-      const frag = logLineNodes(l, clickable);
-      const d = document.createElement("div");
-      d.appendChild(frag);
-      newsDiv.appendChild(d);
+      const node = logLineNodes(l, clickable);
+      if (node) newsDiv.appendChild(node);
     }
     $("promptText").appendChild(newsDiv);
   }
