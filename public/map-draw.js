@@ -134,70 +134,35 @@ export const NODE_STAB_RIGHT = new Set(["shangdang"]);
 //   for nodes this close to an edge; Wuyue (y=378) was checked and already
 //   clears at the default -2px, so it's not in this set.
 export const NODE_STAB_HI = new Set(["ying"]);
-// #49 round 2 (orchestrator's review of 4d65d2a): the small pill that sits
-// near a disc's corner — #41's last-move tag AND #49's own placement badge,
-// now one visual language sharing one position rule — used to be placed by
-// NODE_LASTMOVE_LEFT, a set hand-picked by eye for the tag alone before the
-// badge existed. The badge coexists with more of the map's other per-node
-// decorations than the tag ever did (.cost, in particular, and the disc's
-// OWN digits once picking is in progress) and defaults on more nodes than
-// the tag's own upper-right corner ever collided on, so the six-node set
-// stopped being enough — round 2 found 6 more nodes broke under the
-// owner's `__sweep` instrument (forces the pill, both disc digits and
-// `.cost` onto all 26 spaces, both languages, three sizes) that eyeballing
-// one mark in one real game never surfaced: 義渠/Yiqu, 河東/Hedong, ★郢/Ying
-// and 吳越/Wu-Yue's own anchor-top names reaching into their own top-right
-// corner, ★關中/Guanzhong's default pill reaching a neighbour's stability
-// tag, 新鄭/Xinzheng's and ★臨淄/Linzi's reaching a region label — plus,
-// only at 1280px wide (the map scales up past its floor scale there, so a
-// fixed-px offset that clears a neighbour at 390/375 no longer does), 薊/Ji,
-// 中山/Zhongshan and 代/Dai running past the map's own top edge, taking
-// ★邯鄲/Handan's default spot down with them once Ji moved to clear it.
+// #49: NODE_PILL_POS places the small pill that sits near a disc's corner —
+// #41's last-move tag AND #49's own placement badge, one visual language
+// sharing one position rule — through a class (app.js: "pill-" +
+// (NODE_PILL_POS[id] || "tr")) that both `.badge` and `.lastmove-tag` style
+// off in style.css. Default "tr" (top-right) applies to every id not
+// listed; the other positions are "tl" (top-left), "trl" (top-right, 5px
+// lower — clears the map's own top edge for a top-row space without
+// leaving the corner), "t"/"b" (centred above/below the disc) and "r"/"l"
+// (beside the disc, outside it, vertically centred).
 //
-// NODE_PILL_POS replaces NODE_LASTMOVE_LEFT with one table for both pills,
-// read through a class (app.js: "pill-" + (NODE_PILL_POS[id] || "tr")) that
-// both `.badge` and `.lastmove-tag` style off in style.css. Default "tr"
-// (today's corner) applies to every id not listed. Each entry below was
-// chosen MECHANICALLY, not by eye: for that space, in the try-order
-// tr(default, already known bad or it wouldn't be listed) → tl → r → l → t
-// → b, the first position with ZERO overlaps wins, where "overlap" also
-// now means a pill sitting closer to a NEIGHBOUR's disc than to its own —
-// a pill must read as belonging to its own city, not the one it happens to
-// be closest to. Checked: name/stability tag/cost tag/region label/another
-// pill/the disc's own digits/the map's own edge, AND (round 2 review's
-// second pass) that no other disc's edge sits closer than the pill's own
-// disc + 6px — at 390x669 zh, 375x667 en and 1280x800 zh together. One
-// space has no clean position in that set at every size — ★郢/Ying's "r"
-// still clips Huai-Si's name by 1.9x9.7px at 375x667 en only, the
-// least-bad of the five — owner's ruling (#49): keep it, a sliver under a
-// pill a tap clears is accepted.
+// A space's position must have ZERO overlaps against: the disc's own
+// digits, the coming single-side disc's centred digit, every space's name/
+// stability tag/cost tag, every region label, every other pill, and the
+// map's own edge — AND it must not sit closer to a NEIGHBOUR's disc than
+// to its own + 6px (a pill has to read as belonging to its own city, not
+// whichever one it happens to be nearest). Checked at 390x669 zh, 375x667
+// en and 1280x800 zh together — a position clean at one size is not
+// necessarily clean at another.
 //
-// Round 2's SECOND review caught a bug in the try-order above: once a
-// space was flagged (its "tr" disqualified by the ORIGINAL all-"tr"
-// baseline sweep), the procedure never tried "tr" again for it, even after
-// OTHER spaces around it changed. 薊/Ji's own "tr" reads clean now (own
-// disc 0px, nearest other disc 18px+, at all three sizes) — it only ever
-// looked disqualified because of the map's own top edge, which round 1's
-// "tl"/"b" alternatives don't actually fix any better in every
-// measurement (this table's own author found the edge check gave
-// inconsistent readings for a top-row space across repeated resizes in
-// their own browser pane — a real instrument gap, flagged in the #49
-// hand-over, not resolved here) — so remove `ji` and go back to the
-// default. That, in turn, removes the ONLY reason ★邯鄲/Handan was ever in
-// this table: its own "l" existed purely to dodge Ji's old "b" pill
-// landing 0px from Handan's own disc. With Ji back at "tr", Handan's own
-// "tr" re-checked clean at all three sizes too (re-verified three times
-// each, with the app's resize handler dispatched and awaited before every
-// sweep) — remove it as well. Every remaining entry was re-checked against
-// its own original reason (not just re-run once) before this hand-in;
-// `shangdang: "b"` stays — its own reason (Hedong's name, once Hedong
-// moved to "r") is untouched by the Ji/Handan fix.
+// One space has no clean position in that set at every size: ★郢/Ying's
+// "r" still clips Huai-Si's name by 1.9x9.7px at 375x667 en, the
+// least-bad of the five candidates — orchestrator's ruling (#49): keep it,
+// a sliver under a pill a tap clears is accepted.
 export const NODE_PILL_POS = {
   guanzhong: "l", hangu: "tl", bashu: "l", yiqu: "tl",
   xinzheng: "r", hedong: "r", shangdang: "b",
   luoyi: "tl", linzi: "r", jimo: "tl", song: "tl",
   ying: "r", wuyue: "r",
-  zhongshan: "r", dai: "r",
+  ji: "trl", zhongshan: "r", dai: "r",
 };
 // `name` is the already-resolved display name (the caller's own spaceName()
 // — app.js and rules.js each have their own, reading the same E.SPACE[id]
