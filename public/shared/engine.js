@@ -388,8 +388,15 @@ export function createGame(seed, options = {}) {
 
 // ---------- the plan runner ----------
 export function run(st) {
-  for (let guard = 0; !st.pending && st.winner == null && st.plan.length; guard++) {
+  for (let guard = 0; !st.pending && st.winner == null; guard++) {
     if (guard > 10000) fail("run: plan did not settle");
+    if (!st.plan.length) {
+      // Nothing planned and nobody owes a headline: with an empty hand on both
+      // sides (#57) there is no action left that could end the phase, so the
+      // headlines resolve themselves rather than the table waiting for ever.
+      if (st.phase !== "headline" || mustAct(st).length) break;
+      st.plan.push({ do: "headline" });
+    }
     const step = st.plan[0];
     if (exec(st, step)) st.plan.shift();
   }
@@ -512,12 +519,24 @@ function startTurn(st) {
   st.phase = "headline";
   log(st, { type: "turn", turn: st.turn, era: st.era });
 }
+// Who still owes a headline. The deal in `startTurn` stops when `drawOne` runs
+// out of cards (draw and discard both empty), so a side can reach the headline
+// phase holding nothing: it commits no headline -- orchestrator's ruling
+// (#57), flagged to the owner. Before this the phase simply never ended, for
+// anyone: `legal()` answered `{ kind: "headline", cards: [] }` for ever and
+// `mustAct` kept naming a side that could do nothing.
+function needsHeadline(st, side) { return st.headline[side] == null && st.hands[side].length > 0; }
 
 function resolveHeadlines(st) {
-  const [q, c] = st.headline;
-  const first = CARD[c].ops > CARD[q].ops ? CHU : QIN; // ties go to Qin
-  const order = first === QIN ? [QIN, CHU] : [CHU, QIN];
-  log(st, { type: "headline", cards: st.headline, first });
+  const played = [QIN, CHU].filter((s) => st.headline[s] != null);
+  // Ties go to Qin. With only one headline it goes alone; with none (both
+  // hands empty) the phase is over before it began. A side that committed
+  // nothing is logged the way `beginAction` logs an action-round skip.
+  const order = played.length === 2
+    ? (CARD[st.headline[CHU]].ops > CARD[st.headline[QIN]].ops ? [CHU, QIN] : [QIN, CHU])
+    : played;
+  for (const side of [QIN, CHU]) if (st.headline[side] == null) log(st, { type: "skip", side });
+  log(st, { type: "headline", cards: st.headline, first: order[0] ?? null });
   const steps = [];
   for (const side of order) {
     const card = st.headline[side];
@@ -612,7 +631,7 @@ function doOps(st, side, card, ops, choice) {
 export function mustAct(st) {
   if (st.winner != null) return [];
   if (st.pending) return [st.pending.who];
-  if (st.phase === "headline") return [QIN, CHU].filter((s) => st.headline[s] == null);
+  if (st.phase === "headline") return [QIN, CHU].filter((s) => needsHeadline(st, s));
   if (st.phase === "action") return [st.actor];
   return [];
 }
@@ -686,7 +705,8 @@ function headline(st, action) {
   if (i < 0) fail("card not in hand");
   h.splice(i, 1);
   st.headline[side] = c;
-  if (st.headline[QIN] != null && st.headline[CHU] != null) st.plan.unshift({ do: "headline" });
+  // Everyone who owed a headline has one now (a side with no card owes none, #57).
+  if (![QIN, CHU].some((s) => needsHeadline(st, s))) st.plan.unshift({ do: "headline" });
   return run(st);
 }
 
@@ -795,7 +815,7 @@ export function legal(st, side) {
   if (st.winner != null) return { kind: "over" };
   if (st.pending) return st.pending.who === side ? { kind: "pending", pending: st.pending } : { kind: "wait" };
   if (st.phase === "headline") {
-    return st.headline[side] == null ? { kind: "headline", cards: st.hands[side].slice() } : { kind: "wait" };
+    return needsHeadline(st, side) ? { kind: "headline", cards: st.hands[side].slice() } : { kind: "wait" };
   }
   if (st.phase !== "action" || st.actor !== side) return { kind: "wait" };
   const h = st.hands[side];
