@@ -168,11 +168,20 @@
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 390px;
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
+    /* #33: #prompt and #sheet used to share the "prompt" area (the cell's
+       own height was whichever of the two was taller, prompt pinned to the
+       top and sheet pinned to the bottom via align-self:end) — any state
+       with both non-empty at once stacked the sheet's Confirm/Cancel right
+       on top of the prompt's own text (measured at 1440x900: an event's
+       "pick 2" prompt and the sheet's Confirm/Cancel occupied the identical
+       207-329px rect). #sheet now gets its own row between prompt and hand,
+       same as the rest of the sidebar's stacked rows. */
+    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto;
     grid-template-areas:
       "map topbar"
       "map statline"
       "map prompt"
+      "map sheet"
       "map hand"
       "map chat"
       "map foot";
@@ -185,7 +194,7 @@
   body[data-view="table"] #topbar { grid-area: topbar; padding: 8px 14px 4px; }
   body[data-view="table"] #statline { grid-area: statline; padding: 6px 14px; }
   body[data-view="table"] #prompt { grid-area: prompt; padding: 6px 14px; }
-  body[data-view="table"] #sheet:not(.overlay) { grid-area: prompt; margin: 0 14px; align-self: end; }
+  body[data-view="table"] #sheet:not(.overlay) { grid-area: sheet; margin: 0 14px; align-self: start; }
   body[data-view="table"] #hand { grid-area: hand; }
   body[data-view="table"] #chatForm { grid-area: chat; padding: 4px 14px; }
   body[data-view="table"] #sideFoot { grid-area: foot; }

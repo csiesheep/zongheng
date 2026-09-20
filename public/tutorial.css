@@ -62,10 +62,11 @@ body.tut-on #table { position: relative; }
       "map statline"
       "map coach"
       "map prompt"
+      "map sheet"
       "map hand"
       "map chat"
       "map foot";
-    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto auto auto auto minmax(0, 1fr) auto auto;
   }
 }
 .tut-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; }

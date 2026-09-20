@@ -477,7 +477,16 @@ function layoutTable() {
   const mapActive = !!game.mapActive;
   const sheetTitle = sheetEl.querySelector(".sheet-title");
   hand.hidden = !hasHand;
-  promptEl.hidden = false;
+  // #33: a tutorial lesson's decorate() (tutorial-ui.js) hides #prompt right
+  // after render() writes into it — the coach panel is the only copy of the
+  // question while a lesson is running. decorate() itself calls back into
+  // this function (updateCoach() -> layoutTable()) to redo the map/hand
+  // budget, and unconditionally un-hiding #prompt here undid that hide on
+  // every such pass (measured: 390x669, lesson 1, #prompt 636-660 visible
+  // reading "輪到你,選一張牌。" underneath the coach panel). Tutorial state
+  // (body.tut-on, set for the whole run — tutorial-ui.js) decides this
+  // instead of a blanket "always show".
+  promptEl.hidden = document.body.classList.contains("tut-on");
   sheetEl.classList.remove("sheet-compact");
   if (sheetTitle) sheetTitle.hidden = true;
   if (advBanner) advBanner.hidden = false;
