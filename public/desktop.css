@@ -17,6 +17,17 @@
        inside a rounded gold-bordered card, per "手機那一欄置中" in #7. */
 
 @media (min-width: 1024px) {
+  /* #86 round 2 (owner: "desktop 上的所有按鈕都可以考慮縮小" -- widened from
+     the compact sheet alone to every desktop button): one shared size token
+     for every button family this file touches -- a mouse doesn't need a
+     44px tap target (already #83's own reasoning for the top bar/sheet), so
+     everything still sized off the touch-device floor (style.css/
+     screens.css/tutorial.css's own 44-52px buttons) goes down to this same
+     32px/14px (13px en) pair on desktop, never lower than #86's own
+     original spec for the sheet. Set on :root (not body[data-view]) so
+     every view's buttons below can share it with one declaration. */
+  :root { --d-btn-h: 32px; --d-btn-fs: 14px; }
+  :root[lang="en"] { --d-btn-fs: 13px; }
   html, body { height: 100%; }
   body {
     display: flex;
@@ -172,10 +183,29 @@
   body[data-view="table"] .bar .hub,
   body[data-view="table"] .bar .back,
   body[data-view="table"] .bar-right button {
-    min-height: 0; height: 32px; min-width: 0; padding: 0 9px;
+    min-height: 0; height: var(--d-btn-h); min-width: 0; padding: 0 9px;
     display: inline-flex; align-items: center; justify-content: center;
   }
-  body[data-view="table"] #advisorSlot .adv-toggle { height: 32px; }
+  /* #86 round 2: #logToggle/#langBtn (both plain `.bar-right button`, above)
+     already had their own tap-target font (style.css's `.bar button, .small`,
+     12px) -- bumped to the shared token so they read like every other
+     desktop control, not a leftover mobile size. `.bar .hub` (Rules, a link
+     styled as uppercase nav trim, not a button) and the advisor switch's own
+     label (advisor.css's `.adv-toggle-label`, already 13px, higher
+     specificity than anything here) are deliberately left alone -- neither
+     is the same "plain button text" this token is for. */
+  body[data-view="table"] .bar-right button { font-size: var(--d-btn-fs); }
+  body[data-view="table"] #advisorSlot .adv-toggle { height: var(--d-btn-h); }
+  /* Log panel's own "收起" (#logClose, style.css's `.small` -- 44px/12px)
+     and the chat row's "送出" (`.chat button.small`, same base rule): both
+     only ever show inside the table's sidebar, so scoping to
+     body[data-view="table"] is enough to reach them without touching
+     style.css. min-width reset for the same reason #30 already dropped it
+     from the top bar -- a mouse doesn't need the touch-device 44px floor. */
+  body[data-view="table"] .logbody-close,
+  body[data-view="table"] .chat button.small {
+    height: var(--d-btn-h); min-height: var(--d-btn-h); min-width: 0; font-size: var(--d-btn-fs);
+  }
   body[data-view="table"] #table {
     flex: 1 1 auto;
     min-height: 0;
@@ -324,22 +354,87 @@
     border-radius: 14px 14px 0 0;
   }
 
-  /* #83 (owner: "縮小一點按鈕..在 desktop"): style.css's own sizes (this
-     same button set) are the 44px/~17px phone floor; a mouse doesn't need
-     a 44px target, so desktop goes smaller again, same ratio #30 already
-     used for the top bar (40px there vs. mobile's 44+). Covers the five use
-     buttons, both Cancel/Confirm rows (compact/pending and the full card
-     page's own), and — since .sheet-grid/.sheet-footer are shared, unscoped
-     classes — the card page overlay's identical buttons for free. */
-  body[data-view="table"] .sheet-grid button { height: 40px; min-height: 40px; font-size: 16px; }
-  :root[lang="en"] body[data-view="table"] .sheet-grid button { font-size: 13px; }
-  body[data-view="table"] .sheet-footer button { height: 40px; min-height: 40px; font-size: 16px; }
-  :root[lang="en"] body[data-view="table"] .sheet-footer button { font-size: 13px; }
-  body[data-view="table"] .sheet:has(.sheet-head) .sheet-footer button { height: 40px; min-height: 40px; }
-  body[data-view="table"] .sheet:has(.sheet-head) .sheet-footer .confirm-zh { font-size: 16px; }
-  body[data-view="table"] .sheet:has(.sheet-head) .sheet-footer .confirm-en { font-size: 13px; }
+  /* #83, widened by #86 round 2 (owner: first "縮小一點按鈕..在 desktop" for
+     just the sheet, then "所有按鈕都可以考虑縮小" for every desktop button):
+     one rule for every button living inside #sheet now, at the shared
+     --d-btn-h/--d-btn-fs token -- the five-use grid, both Cancel/Confirm
+     rows (compact/pending AND the full card page's own -- .sheet-grid/
+     .sheet-footer are shared, unscoped classes per #83's own note, so this
+     reaches the card-page overlay for free), the headline commit row and
+     bog's own footer (no .sheet-grid, same footer classes), the enemy order
+     row and 說客's pairing row (plain `.sheet button`, style.css's own
+     44px/13px base), every pending-choice button (renderPending() in
+     app.js -- also a bare `.sheet button`), and the read-only peek sheet's
+     own Close (`.peek-footer`, a sibling id, not #sheet, so listed
+     separately). No more "the full overlay stays put" carve-out from #86's
+     first round -- the owner's widened ask covers it too. `:not(.chip-
+     expand)` keeps "看牌" at its own smaller 12px label (only its height
+     moves, per #86's own explicit "「看牌」matches at 32px" -- text size was
+     never part of that spec) instead of growing it to the token's 14px. */
+  body[data-view="table"] .sheet button,
+  body[data-view="table"] .peek-footer button {
+    height: var(--d-btn-h); min-height: var(--d-btn-h);
+  }
+  body[data-view="table"] .sheet button:not(.chip-expand),
+  body[data-view="table"] .peek-footer button {
+    font-size: var(--d-btn-fs);
+  }
+  /* `.sheet:has(.sheet-head) .sheet-footer button` (style.css) is a 3-class-
+     deep selector that otherwise beats the plainer `.sheet button` above on
+     specificity alone -- named explicitly here, same as #83 already had to. */
+  body[data-view="table"] .sheet:has(.sheet-head) .sheet-footer button {
+    height: var(--d-btn-h); min-height: var(--d-btn-h);
+  }
+  body[data-view="table"] .sheet:has(.sheet-head) .sheet-footer .confirm-zh,
+  body[data-view="table"] .sheet:has(.sheet-head) .sheet-footer .confirm-en {
+    font-size: var(--d-btn-fs);
+  }
+
+  /* #86 round 2: the tutorial coach's own buttons (tutorial.css, loaded
+     AFTER this file -- these selectors carry more specificity than its
+     plain `.tut-back`/`.tut-gotit`/`.tut-skip` so they still win) were the
+     same 44px+ touch floor as everything else here. The coach only ever
+     shows inside the table's sidebar (tutorial-ui.js appends it into
+     #table), so body[data-view="table"] reaches it without editing
+     tutorial.css (peer's own file boundary). `.tut-skip`'s own 11px label
+     is deliberately left alone, same reasoning as chip-expand above -- it
+     reads as a small link, not a button, even at a smaller height. */
+  body[data-view="table"] .tut-back,
+  body[data-view="table"] .tut-gotit {
+    height: var(--d-btn-h); min-height: var(--d-btn-h); font-size: var(--d-btn-fs);
+  }
+  body[data-view="table"] .tut-skip { min-height: var(--d-btn-h); min-width: var(--d-btn-h); }
 
   /* #43: the one shared gold focus ring (ui-states.css) now covers every
      button/link/.hit here too -- this narrower, desktop-only duplicate is
      removed. */
+
+  /* ---------- #86 round 2: setup / lobby / result screens ---------- */
+  /* Same token, same reasoning, for the three non-table views this file
+     already gives the mobile column's own desktop frame (the "Default
+     (setup/lobby/over...)" rule near the top) -- style.css's own button
+     families for these three screens are all still the 44-52px touch
+     floor. Solo setup uses `.pills`/`.setup-footer` (play.html's own
+     #segLevel/#btnBack/#btnStart -- NOT `.seg`/`.actions`, which is what
+     the ROOM lobby's matching fields use instead, per app.js's shared
+     seg()/renderSetup(), so both spellings are listed). `.tile` (the
+     side-picture cards) is deliberately untouched -- it's sized by its own
+     image aspect ratio (a clamp()), not a button height rule, so it's the
+     "card-like tile" the orchestrator said to leave alone. */
+  body[data-view="setup"] .pills button,
+  body[data-view="setup"] .setup-footer button,
+  body[data-view="lobby"] .actions button,
+  body[data-view="lobby"] .seg button,
+  body[data-view="lobby"] #lobbyGateGo,
+  body[data-view="lobby"] #lobbyCopy,
+  body[data-view="lobby"] .lobby-row button,
+  body[data-view="lobby"] .seat .seat-btn,
+  body[data-view="over"] .over-footer button {
+    height: var(--d-btn-h); min-height: var(--d-btn-h); font-size: var(--d-btn-fs);
+  }
+  body[data-view="lobby"] .actions .primary,
+  body[data-view="lobby"] .actions a.primary,
+  body[data-view="lobby"] .actions .link {
+    font-size: var(--d-btn-fs); line-height: var(--d-btn-h);
+  }
 }
