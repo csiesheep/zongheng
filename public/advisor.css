@@ -149,7 +149,10 @@ body:not(.table-lock) .advisor-banner {
    "option" pending choice, a "card" pending choice) -- same ring, no
    layout change: box-shadow paints outside the button's own box, border-
    color reuses the border width/radius the row's own buttons already have. */
-.rowb button[data-use].adv-pick, .rowb button[data-option].adv-pick, .rowb button[data-card].adv-pick {
+.rowb button[data-use].adv-pick, .rowb button[data-option].adv-pick, .rowb button[data-card].adv-pick,
+/* #60: the headline phase's own confirm button (footer(), app.js) sits in
+   a plain .sheet-footer row, not a .rowb -- same ring, its own selector. */
+.sheet-footer button[data-use].adv-pick {
   box-shadow: 0 0 0 2px #e9b92e, 0 0 10px 3px rgba(233, 185, 46, 0.55);
   border-color: #e9b92e;
 }

@@ -342,10 +342,11 @@ function botLoop() {
     // say so where the player can see it -- this is a client-side notice,
     // not the room's own log (that one is #53 part 1's `describe()`, and it
     // is not ours to write into). `fallbackNote` (round 2) is what actually
-    // reaches the table: renderLog() below shows it as the newest line of
-    // the news strip under the prompt, on the phone, without opening 記錄 --
-    // `botLine` alone only ever reached the closed log panel / desktop
-    // sidebar (the orchestrator's own measurement, round 2).
+    // reaches the table: renderLog() below writes it into #fallbackBanner,
+    // a sibling of #promptText the player sees without opening 記錄, on the
+    // phone or on desktop alike (#53 part 2 gave it that own home; it is no
+    // longer folded into the news strip under the prompt) -- `botLine` alone
+    // only ever reached the closed log panel / desktop sidebar foot.
     const fb = fallbackFor(game.st, bot);
     if (fb) {
       game.st = fb.state;
@@ -372,7 +373,16 @@ function botLoop() {
   }, game.auto ? 120 : 700);
 }
 function actionText(a) {
-  if (a.type === "headline") return t("prompt.headline");
+  // #60: `prompt.headline` is the instruction shown to the PLAYER during
+  // their own headline phase ("Commit one card face down..."); actionText()
+  // feeds both describeAction() ("{botName}: {actionText}", the sidebar
+  // foot / log panel line for what the bot just did) and sys.fallback's
+  // {action} -- reusing prompt.headline there made both read as if the
+  // instruction itself were the bot's move. `prompt.headlineDone` is a
+  // short phrase (no subject, matching this function's other branches,
+  // which never name the actor) that names WHAT HAPPENED instead; the
+  // card stays secret either way (headline() never took a card arg here).
+  if (a.type === "headline") return t("prompt.headlineDone");
   if (a.type === "choose") return "…";
   return `${cardName(a.card)} · ${t(`useNames.${a.use || "event"}`)}${a.pair ? ` + ${cardName(a.pair)}` : ""}`;
 }
@@ -1313,17 +1323,25 @@ function confirmPhrase() {
 // final commit (event/reform, place, campaign/lobby). `richHTML` marks the
 // full card page's own Confirm (confirmPhrase() above) — every other caller
 // keeps passing a plain translated label, unescaped changes here.
-function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel, richHTML) {
+// #60: `confirmDataUse` gives the confirm button a stable `[data-use]` hook
+// (the same idea #52 used for the five-use grid) instead of leaving
+// decorateSheet() to find it by position or text -- this footer is shared
+// by every confirm/cancel row (place/campaign/lobby/bog/headline), so the
+// attribute is only ever set when a caller actually passes one (today,
+// only the headline commit button below).
+function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel, richHTML, confirmDataUse) {
   const r = row(sh, "sheet-footer");
   btn(r, t("buttons.cancel"), onCancel || (() => { game.ui = freshUi(); render(); }));
+  let c;
   if (richHTML) {
-    const c = document.createElement("button");
+    c = document.createElement("button");
     c.type = "button"; c.className = "primary"; c.disabled = !!confirmDisabled; c.innerHTML = confirmLabel;
     c.onclick = onConfirm;
     r.appendChild(c);
   } else {
-    btn(r, confirmLabel, onConfirm, "primary", null, confirmDisabled);
+    c = btn(r, confirmLabel, onConfirm, "primary", null, confirmDisabled);
   }
+  if (confirmDataUse) c.dataset.use = confirmDataUse;
   return r;
 }
 // The five-use grid's own button: one label, in the interface language
@@ -1411,7 +1429,7 @@ function renderPromptAndSheet(v) {
       // whatever the advisor's own banner will be inserted before (see
       // placeBanner()'s insertBefore(.sheet-history) in advisor-ui.js).
       if (!Tut.active()) historyBox(mid, ui.card, lang);
-      footer(sh, t("buttons.headline"), () => humanAct({ type: "headline", card: ui.card }), false, () => { game.ui = freshUi(); render(); });
+      footer(sh, t("buttons.headline"), () => humanAct({ type: "headline", card: ui.card }), false, () => { game.ui = freshUi(); render(); }, false, "headline");
     }
     return;
   }
@@ -1758,6 +1776,11 @@ function fmtLog(l) {
     const s = t(key, logParams(l));
     return s === key ? "" : s;
   } catch (e) {
+    // #60: silent for the player (one blank line, not the table -- #58),
+    // but a shape logParams()/t() can't resolve is still a real bug a
+    // developer should hear about. Once per bad entry is enough; this must
+    // never itself throw (a broken console in some embedder, say).
+    try { console.error(`fmtLog: log entry type "${l && l.type}" failed`, e); } catch {}
     return "";
   }
 }
@@ -1857,6 +1880,8 @@ function logLineNodes(l, clickable, pill) {
     if (last < raw.length) root.appendChild(document.createTextNode(raw.slice(last)));
     return root;
   } catch (e) {
+    // #60: same reasoning as fmtLog()'s own catch above.
+    try { console.error(`logLineNodes: log entry type "${l && l.type}" failed`, e); } catch {}
     return null;
   }
 }
