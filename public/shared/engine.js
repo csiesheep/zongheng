@@ -734,6 +734,9 @@ function play(st, action) {
     validateOps(st, side, JIUDING, 4, { use, points: action.points, target: action.target }, true);
     steps.push({ do: "ops", side, card: JIUDING, ops: 4, payload: { use, points: action.points, target: action.target } });
     steps.push({ do: "jiudingPass", side }, { do: "endAction" });
+    // Logged like any card's play, before its ops (#81): the news, the
+    // opponent's-move reveal (#79) and the log panel read a move's start here.
+    log(st, { type: "play", side, card: JIUDING, use });
     st.plan.unshift(...steps);
     return run(st);
   }

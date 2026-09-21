@@ -161,9 +161,8 @@ function useLineFor(mv, lang) {
   return t(lang, "oppmove.useOps", { use: t(lang, `useNames.${mv.use}`), ops: opsOf(mv.card) });
 }
 // ---------- ① the card panel ----------
-// The Nine Cauldrons (oppmove.js's own "jiuding" sentinel, round 2's fix 7:
-// it never logs a `play` entry, so opponentMoves() opens its move at its
-// first place/campaign/lobby step instead) is action points only -- it has
+// The Nine Cauldrons (its `play` entry names card "jiuding", #81) is action
+// points only -- it has
 // no event, unlike a genuine neutral/enemy card played for ops, so it gets
 // no event line at all, never the "its event also happens" wording.
 function eventLineFor(mv, lang) {
