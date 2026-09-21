@@ -193,3 +193,17 @@
    table (five short lines, a table's own borders/head would be overkill). */
 .mie-states { margin: 6px 0 14px; padding-left: 18px; font-size: 13px; color: var(--text-soft); }
 .mie-states li { margin: 2px 0; }
+/* The 滅韓 figure's own small caption plate (brief #91, item 6: "the table
+   has no destroyed marker on the map, so in the figure put a small caption
+   plate 「韓・滅」 next to the state's spaces — do not add a map marker to
+   the game"). Absolutely positioned off the node's own centre (same
+   containing block as .stab/.nm) so it never grows the node's flex box —
+   an earlier draft left this class with no rule at all, which let the
+   plate's own text act as an unstyled flex child and stretch the 44px node
+   box wide enough to overlap unrelated figures below it on the page. */
+.node .fig-mie-plate {
+  position: absolute; left: 50%; bottom: -20px; transform: translateX(-50%);
+  white-space: nowrap; font: 700 11px/1.3 var(--sans); color: #c8321f;
+  background: rgba(247, 243, 232, .92); border: 1px solid #c8321f; border-radius: 4px;
+  padding: 1px 5px; z-index: 3;
+}

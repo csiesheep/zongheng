@@ -254,13 +254,18 @@ const EX = {};
   const a = E.clone(b); const res = E.campaign(a, QIN, "daliang", 3);
   EX.campaign = { ids: ["handan", "daliang", "song"], before: b, after: a, res };
 }
-// 4. 遊說: 秦 controls 河東/大梁 (2 neighbours of 邯鄲), 楚 controls 上黨 (1
-// neighbour); edge = E.edge(st, QIN, "handan") = 2 - 1 = 1. 2 ops.
+// 4. 遊說: 秦 controls 河東/中山 (2 neighbours of 邯鄲, one from 魏 one from
+// 趙 — NOT both of 魏's own two spaces, which would accidentally trigger
+// 滅國 as a side effect of E.lobby's own E.checkMarkers call, caught while
+// screenshot-checking this branch: the first draft used 河東+大梁, 魏's
+// only two spaces, and a stray "滅"/Destroyed plate showed up on this
+// example's own crop), 楚 controls 上黨 (1 neighbour, 趙);
+// edge = E.edge(st, QIN, "handan") = 2 - 1 = 1. 2 ops.
 {
-  const b = base(); b.inf.hedong = [2, 0]; b.inf.daliang = [2, 0]; b.inf.shangdang = [0, 2]; b.inf.handan = [0, 1];
+  const b = base(); b.inf.hedong = [2, 0]; b.inf.zhongshan = [2, 0]; b.inf.shangdang = [0, 2]; b.inf.handan = [0, 1];
   const e = E.edge(b, QIN, "handan");
   const a = E.clone(b); const removed = E.lobby(a, QIN, "handan", 2);
-  EX.lobby = { ids: ["hedong", "shangdang", "daliang", "handan", "zhongshan"], before: b, after: a, edge: e, removed };
+  EX.lobby = { ids: ["hedong", "shangdang", "zhongshan", "handan"], before: b, after: a, edge: e, removed };
 }
 // 1. 事件: 商鞅變法 (shangyang)'s own effect(st) — reformAdvance(Qin,1) plus
 // a +1-ops-all-Qin-cards effect for the turn (E.CARD.shangyang.effect).
@@ -299,12 +304,22 @@ const EX = {};
     return { id, st, cap: E.capOf(st, id), inf: st.inf[id][CHU] };
   });
 }
-// 9. 失印/復國: 新鄭 already sealed (楚 4, at cap); 秦 campaigns it back
-// with 6 ops — E.checkMarkers removes the seal once Qin controls the capital.
+// 9. 失印/復國: checkMarkers' own two lines —
+// "if (st.seals[id] && capCtl === QIN) delete st.seals[id]" and
+// "if (st.mie[id] && capCtl === CHU) delete st.mie[id]" — both key off
+// controlling the CAPITAL, nothing else. (a) 秦 removes some 楚 influence
+// from a sealed 新鄭 (楚 4 → 3) without taking control (still 楚, stability
+// 2): capCtl stays CHU, so the seal stays — the owner's own report (臨淄:
+// 楚 2, cap 5, nobody in control) is the same rule one step further (capCtl
+// is neither QIN nor CHU there, so neither line fires; 相印 is unaffected by
+// influence alone, only by who holds the capital). (b) 秦 then takes control
+// outright (6 ops): capCtl becomes QIN, the seal is removed.
 {
   const b = base(); b.inf.xinzheng = [0, 4]; E.checkMarkers(b);
-  const a = E.clone(b); const res = E.campaign(a, QIN, "xinzheng", 6);
-  EX.unseal = { ids: ["xinzheng"], before: b, after: a, res };
+  const a = E.clone(b); const res = E.campaign(a, QIN, "xinzheng", 1);
+  EX.sealKeep = { ids: ["xinzheng"], before: b, after: a, res };
+  const c = E.clone(b); const res2 = E.campaign(c, QIN, "xinzheng", 6);
+  EX.unseal = { ids: ["xinzheng"], before: b, after: c, res: res2 };
 }
 // 10. 九鼎: engine.js's own condition (doOps, the JIUDING branches) —
 // "if (card === JIUDING && choice.points.every(inZhou)) ops += 1" for
@@ -368,9 +383,14 @@ function cardFigureHTML(id, l) {
   cardHeader(div, id, l);
   return div.outerHTML;
 }
-// Weariness: five boxes, 承平(5) down to 土崩(1), the current one lit.
+// Weariness: five boxes, 承平(5) down to 土崩(1), the current one lit. Names
+// come from NAV[l].weariness (the same i18n table app.js's status line
+// reads), not E.WEARINESS_NAMES (Chinese only, engine-internal) — a bug
+// caught in this branch's own English screenshot check (the strip showed
+// 承平/兵連/... under lang=en until this fix).
 function wearinessStripHTML(w, l) {
-  const boxes = [5, 4, 3, 2, 1].map((n) => `<span class="fig-strip-box${n === w ? " on" : ""}">${esc(E.WEARINESS_NAMES[n])}</span>`).join("");
+  const names = NAV[l].weariness;
+  const boxes = [5, 4, 3, 2, 1].map((n) => `<span class="fig-strip-box${n === w ? " on" : ""}">${esc(names[n])}</span>`).join("");
   return `<div class="fig-strip fig-weariness">${boxes}</div>`;
 }
 // Reform: six boxes, the side's own current box (0..6) lit.
@@ -444,10 +464,12 @@ function mieSectionHTML(l) {
   const rulesP = zh
     ? [`<b>滅國(秦):</b> 控制某國<b>全部</b>據點,不只國都。秦得該國天命一次(韓、魏、燕 2,趙、齊 3)。`,
        `<b>復國:</b> 楚拿回國都時解除滅國,可再滅一次,但第二次不再得分。秦同時滅三國即勝。`,
-       `<b>相印(楚):</b> 控制某國<b>國都</b>且影響力達到上限(安定值 + 2)。每國一次,天命 +1。秦拿下該國都即解除。楚同時持四國相印即勝。`]
+       `<b>相印(楚):</b> 控制某國<b>國都</b>且影響力達到上限(安定值 + 2)。每國一次,天命 +1。秦拿下該國都即解除。楚同時持四國相印即勝。`,
+       `相印一旦取得,楚的影響力被削減、甚至掉到沒有人控制,也不會失去——只有<b>秦控制該國都</b>才會失印;滅國/復國同理,只有<b>楚控制該國都</b>才會復國,丟掉國都以外的據點不會復國。`]
     : [`<b>Destruction (Qin):</b> control <b>every</b> space of a state, not just its capital. Qin scores that state's value once (2 for Han, Wei, Yan; 3 for Zhao, Qi).`,
        `<b>Restoration:</b> Chu retaking the capital lifts the destroyed mark; it can be destroyed again, but scores nothing the second time. Qin wins on three destroyed at once.`,
-       `<b>Seals (Chu):</b> control a state's <b>capital</b> with influence there at the cap (stability + 2). Once per state, +1 Mandate. Qin taking that capital removes it. Chu wins on four seals at once.`];
+       `<b>Seals (Chu):</b> control a state's <b>capital</b> with influence there at the cap (stability + 2). Once per state, +1 Mandate. Qin taking that capital removes it. Chu wins on four seals at once.`,
+       `Once held, a seal survives Chu's influence there dropping, even to where nobody controls the capital — only <b>Qin controlling that capital</b> removes it. The same is true the other way for destruction/restoration: only <b>Chu controlling the capital</b> restores it; losing any other space does not.`];
   const p = rulesP.map((t) => `<p>${t}</p>`).join("");
   const han = "han", zhao = "zhao";
   const mieHanCap1 = zh ? `宜陽 ${infPair(EX.mieHan.before, "yiyang")} · 新鄭 ${infPair(EX.mieHan.before, "xinzheng")}` : `Yiyang ${infPair(EX.mieHan.before, "yiyang")} · Xinzheng ${infPair(EX.mieHan.before, "xinzheng")}`;
@@ -459,9 +481,13 @@ function mieSectionHTML(l) {
     ids: [s.id], st: s.st,
     cap: esc(`${spName(s.id, l)}: ${zh ? "楚" : "Chu"} ${s.inf}, ${zh ? "上限" : "cap"} ${s.cap}` + (s.inf < s.cap ? (zh ? `,差 ${s.cap - s.inf}` : `, short ${s.cap - s.inf}`) : (zh ? "（已得相印）" : " (sealed)"))),
   })));
+  const sealBeforeCap = zh ? `新鄭:楚 ${EX.sealKeep.before.inf.xinzheng[1]}（已得相印）` : `Xinzheng: Chu ${EX.sealKeep.before.inf.xinzheng[1]} (sealed)`;
+  const sealKeepCap = zh ? `新鄭:楚 ${EX.sealKeep.after.inf.xinzheng[1]},仍是楚控制——相印仍在` : `Xinzheng: Chu ${EX.sealKeep.after.inf.xinzheng[1]}, still Chu-controlled — the seal stays`;
+  const ex9a = figPairHTML(EX.sealKeep.ids, EX.sealKeep.before, EX.sealKeep.after, esc(sealBeforeCap), esc(sealKeepCap), zh ? "秦 征伐 新鄭,1 點" : "Qin campaigns Xinzheng, 1 op");
   const unsealCap1 = zh ? `新鄭:楚 ${EX.unseal.before.inf.xinzheng[1]}（已得相印）` : `Xinzheng: Chu ${EX.unseal.before.inf.xinzheng[1]} (sealed)`;
-  const unsealCap2 = zh ? `新鄭:秦 ${EX.unseal.after.inf.xinzheng[0]},相印解除` : `Xinzheng: Qin ${EX.unseal.after.inf.xinzheng[0]}, seal removed`;
-  const ex9 = figPairHTML(EX.unseal.ids, EX.unseal.before, EX.unseal.after, esc(unsealCap1), esc(unsealCap2), zh ? "秦 征伐 新鄭,6 點" : "Qin campaigns Xinzheng, 6 ops");
+  const unsealCap2 = zh ? `新鄭:秦 ${EX.unseal.after.inf.xinzheng[0]},秦控制——相印解除` : `Xinzheng: Qin ${EX.unseal.after.inf.xinzheng[0]}, Qin controls — the seal is removed`;
+  const ex9b = figPairHTML(EX.unseal.ids, EX.unseal.before, EX.unseal.after, esc(unsealCap1), esc(unsealCap2), zh ? "秦 征伐 新鄭,6 點" : "Qin campaigns Xinzheng, 6 ops");
+  const ex9 = ex9a + ex9b;
   const cmpHead = zh ? ["", "秦 滅國", "楚 相印"] : ["", "Qin destruction", "Chu seals"];
   const cmpRows = zh
     ? [["要佔", "全國每個據點", "國都一處"], ["要多少", "控制即可", "影響力堆到上限（安定值 +2）"], ["得分", "天命 +2 或 +3，每國一次", "天命 +1，每國一次"], ["被奪回", "楚拿回國都", "秦拿下國都"], ["勝利", "三國同滅", "四國同時相印"]]
