@@ -50,6 +50,42 @@ let ctx = { view: null, me: 0, lang: "zh-Hant", mapTargeting: false, acted: fals
 
 function lastLogSeq(log) { return Array.isArray(log) && log.length ? log[log.length - 1].i : 0; }
 
+// ---------- DOM (built once, lazily; a fixed-position layer, never a child
+// of #map -- so nothing here can ever change #map's own box, #68's rule). ----------
+let dom = null;
+function ensureDom() {
+  if (dom) return dom;
+  const root = document.createElement("div");
+  root.id = "oppReveal";
+  root.innerHTML =
+    `<div id="oppDim" class="opp-dim" hidden></div>` +
+    `<div id="oppCard" class="opp-card" hidden></div>` +
+    `<div id="oppRings" class="opp-rings" hidden></div>` +
+    `<div id="oppTicker" class="opp-ticker" hidden></div>` +
+    `<button type="button" id="oppChip" class="opp-chip no-tap-sound" hidden></button>`;
+  document.body.appendChild(root);
+  const scrim = document.createElement("div"); scrim.id = "oppScrim"; scrim.className = "opp-scrim"; scrim.hidden = true;
+  const sheet = document.createElement("div"); sheet.id = "oppSheet"; sheet.className = "opp-sheet"; sheet.hidden = true;
+  document.body.appendChild(scrim);
+  document.body.appendChild(sheet);
+  dom = {
+    dim: root.querySelector("#oppDim"), card: root.querySelector("#oppCard"),
+    rings: root.querySelector("#oppRings"), ticker: root.querySelector("#oppTicker"),
+    chip: root.querySelector("#oppChip"), scrim, sheet,
+  };
+  dom.dim.addEventListener("click", skip);
+  dom.card.addEventListener("click", skip);
+  dom.ticker.addEventListener("click", skip);
+  dom.chip.addEventListener("click", () => openSheet(null));
+  scrim.addEventListener("click", closeSheet);
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && sheetOpen) closeSheet(); });
+  return dom;
+}
+function mapEl() { return document.getElementById("map"); }
+function spaceEl(id) { return id ? document.querySelector(`.node[data-space="${id}"]`) : null; }
+function statEl(name) { return document.querySelector(`[data-stat="${name}"]`); }
+function rectOf(el) { return el ? el.getBoundingClientRect() : null; }
+
 // ---------- public API (filled in by later edits) ----------
 export function sync(view, info) {}
 export function onAction() {}
