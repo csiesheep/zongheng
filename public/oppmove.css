@@ -1,0 +1,113 @@
+/* #79: the opponent's-move reveal. Every element here is `position: fixed`,
+   appended straight to <body> by oppmove-ui.js -- none of it is a child of
+   #map or #table, so nothing here can ever change #map's own box (#68's
+   rule stays the engine's/app.js's alone to keep). z-index sits below the
+   card sheet's own overlay (40) and the log panel (44/45), above the map's
+   ordinary content (2-6), so a real card page or the log always wins. */
+#oppReveal { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
+.opp-dim { position: fixed; background: rgba(8, 6, 4, 0.32); border-radius: 14px; pointer-events: auto; cursor: pointer; }
+/* ②: the same element, full map height, invisible -- still catches a tap
+   anywhere on the map (the brief's own skip rule) without dimming it. */
+.opp-dim.opp-dim-clear { background: transparent; }
+.opp-card {
+  position: fixed; box-sizing: border-box; padding: 12px 12px 30px; display: flex; gap: 12px;
+  background: #1a1611; border: 2px solid var(--chu-btn); border-radius: 14px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7); pointer-events: auto; cursor: pointer;
+}
+.opp-card.side-q { border-color: var(--qin-text); }
+.opp-card-art { width: 84px; height: 112px; object-fit: cover; border-radius: 6px; flex: none; box-shadow: 0 0 0 1px #5a4a36; }
+.opp-card-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.opp-card-tag { align-self: flex-start; padding: 3px 8px; background: var(--chu-btn); color: #fff; border-radius: 5px; font: 900 12px/1 var(--sans); }
+.opp-card.side-q .opp-card-tag { background: var(--qin-text); color: var(--bg); }
+.opp-card-name { font: 900 20px/1.15 var(--serif); color: var(--text); letter-spacing: 0.5px; }
+.opp-useops { font: 600 13px/1.3 var(--sans); color: var(--text); }
+.opp-card-event { padding-top: 6px; border-top: 1px solid #4a3c28; font: 400 12.5px/1.5 var(--serif); color: var(--gold); }
+.opp-card-hint {
+  position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; font: 400 11.5px/1.4 var(--sans);
+  color: var(--text-dim); pointer-events: none;
+}
+.opp-rings { position: fixed; inset: 0; pointer-events: none; }
+.opp-ring {
+  position: fixed; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%;
+  border: 4px solid var(--chu-btn); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55), 0 0 18px 6px rgba(163, 28, 21, 0.55);
+  pointer-events: none;
+}
+.opp-ring.side-q { border-color: var(--qin-text); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55), 0 0 18px 6px rgba(233, 223, 196, 0.4); }
+.opp-ring.opp-ring-gold { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5), 0 0 18px 6px rgba(216, 181, 106, 0.5); }
+.opp-ring-badge {
+  position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; padding: 0 4px; border-radius: 50%;
+  background: var(--chu-btn); color: #fff; font: 900 12px/22px var(--sans); text-align: center; box-shadow: 0 0 0 2px #fff;
+}
+.opp-ring.side-q .opp-ring-badge { background: var(--qin-text); color: var(--bg); }
+.opp-glow {
+  position: fixed; border-radius: 8px; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--gold), 0 0 16px 5px rgba(216, 181, 106, 0.6);
+}
+/* pointer-events: auto -- a tap on the ticker is one of the brief's own
+   "tap anywhere on the map" skip targets; .opp-rings above/around it stays
+   none so a ring/glow never steals a tap meant for the map underneath. */
+.opp-ticker {
+  position: fixed; box-sizing: border-box; height: 30px; padding: 0 14px; border-radius: 15px;
+  background: rgba(22, 19, 14, 0.9); border: 1px solid var(--chu-btn); color: var(--text);
+  font: 600 13px/28px var(--sans); text-align: center; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; pointer-events: auto; cursor: pointer;
+}
+/* ③ the chip: >=44px tall (a real tap target), top-left over the map --
+   z-index above .opp-rings/.opp-ticker so it stays visible while ② plays,
+   but below the card sheet's own .sheet.overlay (40) so a real card page
+   covers it outright rather than sitting side by side with it. */
+.opp-chip {
+  position: fixed; z-index: 21; height: 44px; padding: 0 10px 0 4px; box-sizing: border-box;
+  display: flex; align-items: center; gap: 8px; background: rgba(22, 19, 14, 0.92);
+  border: 1.5px solid var(--chu-btn); border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  pointer-events: auto; cursor: pointer; text-align: left; font: inherit; color: inherit;
+}
+.opp-chip-art { width: 27px; height: 36px; object-fit: cover; border-radius: 3px; flex: none; }
+.opp-chip-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.opp-chip-line1 { font: 900 13px/1 var(--serif); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.opp-chip-line1 b.side-q { color: var(--qin-text); } .opp-chip-line1 b.side-c { color: var(--chu-fill); }
+.opp-chip-line2 { font: 400 11px/1 var(--sans); color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ④ the sheet: same fixed bottom-sheet + scrim pattern as #logBody/#logScrim
+   (style.css), its own ids so neither can collide with the log panel's. */
+.opp-scrim { position: fixed; inset: 0; z-index: 44; background: rgba(0, 0, 0, 0.45); }
+.opp-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; max-height: 78svh; overflow-y: auto;
+  box-sizing: border-box; padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  background: #120f0b; border-top: 2px solid var(--chu-btn); border-radius: 14px 14px 0 0;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; gap: 8px;
+}
+.opp-sheet-head { display: flex; gap: 12px; }
+.opp-sheet-art { width: 72px; height: 96px; object-fit: cover; border-radius: 5px; flex: none; }
+.opp-sheet-meta { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.opp-sheet-name { font: 900 18px/1.15 var(--serif); color: var(--text); }
+.opp-sheet-name b.side-q { color: var(--qin-text); } .opp-sheet-name b.side-c { color: var(--chu-fill); }
+.opp-sheet-sub { font: 600 12.5px/1.2 var(--sans); color: var(--text-dim); }
+.opp-sheet-text { font: 400 12.5px/1.45 var(--serif); color: var(--gold); }
+.opp-sheet-subhead { font: 700 12px/1 var(--sans); color: var(--text-dim); letter-spacing: 1px; margin-top: 2px; }
+.opp-sheet-rows { display: flex; flex-direction: column; gap: 2px; }
+.opp-sheet-row {
+  display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border-radius: 6px;
+  background: none; border: none; text-align: left; color: var(--text); cursor: pointer; width: 100%;
+}
+.opp-sheet-row:hover, .opp-sheet-row:active { background: rgba(163, 28, 21, 0.18); }
+.opp-sheet-n {
+  width: 20px; height: 20px; border-radius: 50%; background: var(--chu-btn); color: #fff; flex: none;
+  font: 900 11px/20px var(--sans); text-align: center;
+}
+.opp-sheet-foot { display: flex; gap: 8px; margin-top: auto; padding-top: 4px; }
+.opp-sheet-foot button {
+  min-height: 44px; box-sizing: border-box; border-radius: 10px; font: 700 14px/1 var(--sans); cursor: pointer;
+  border: 1.5px solid var(--gold); background: none; color: var(--gold);
+}
+.opp-sheet-prev { flex: none; padding: 0 16px; }
+.opp-sheet-close { flex: 1; }
+.opp-sheet-close.primary { background: var(--gold); border-color: var(--gold); color: var(--bg); font-weight: 900; }
+.opp-sheet-prev:disabled { opacity: 0.4; cursor: default; }
+
+/* A row's or chip's tap flashing the space/status it names (④'s own spec). */
+.node.opp-flash .disc, [data-stat].opp-flash { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .opp-card, .opp-chip { transition: none; }
+}

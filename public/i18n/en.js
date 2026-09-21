@@ -120,6 +120,29 @@ export default {
     bog: "{side} is bogged down and discards {card}.", skip: "{side} has no card to play.", opsLost: "{side} has nowhere to spend {ops} ops.", reshuffle: "The discards are reshuffled.", era: "The {era} deck is shuffled in.",
     endTurn: "Turn {turn} ends; weariness {weariness}.", over: "Game over: {side}, {reason}.",
   },
+  // #79: the opponent's-move reveal -- the card panel (①), the map playback
+  // (②), the persistent chip (③) and its bottom sheet (④). oppmove-ui.js is
+  // the only file that reads this section.
+  oppmove: {
+    playedTag: "{side} played", useOps: "For {use} · {ops} ops",
+    useEvent: "Played as event", useScoringEvent: "Scoring card · played as event",
+    eventMine: "This is {side}'s card -- its event happens for you too: {text}",
+    eventNeutral: "A neutral card -- its event happens for you too: {text}",
+    eventTheirs: "Event: {text}", eventHeadline: "Headline: {text}",
+    tapHint: "Tap to skip",
+    tickerPlace: "{side} places {n} at {space}", tickerCampaign: "{side} campaigns {target}: removes {removed}, places {placed}",
+    tickerLobby: "{side} lobbies {target}: removes {removed}", tickerReform: "{side}'s reform reaches box {box}",
+    // The change and who got it, e.g. "Mandate Chu +1" -- never the resulting
+    // total alone (that reads as the OTHER side's number). tickerMandateArrow
+    // is appended only when the total is worth showing alongside the change.
+    tickerMandate: "Mandate {side} +{n}", tickerMandateArrow: " → {to}",
+    tickerScore: "{region} scores: Qin {q}, Chu {c}",
+    tickerTire: "Weariness falls to {to}", tickerSeal: "Chu gains {state}'s seal",
+    tickerUnseal: "Chu loses {state}'s seal", tickerMie: "Qin destroys {state}", tickerRestore: "{state} is restored",
+    tickerJiuding: "The Cauldrons pass face down to {side}", tickerFinal: "Changes from the event",
+    chipHeadline: "Headline ›", chipEvent: "Event ›", chipOpsEvent: "{use} {ops} · event also happens ›", chipOps: "{use} {ops} ›",
+    playedVerb: "played", sheetHeading: "In order · tap a row to see it on the map", prevMove: "‹ Previous move",
+  },
   useNames: { event: "event", place: "place", campaign: "campaign", lobby: "lobby", reform: "reform", bog: "bog" },
   scoringLevel: { none: "None", presence: "Presence", domination: "Domination", control: "Control" },
   regionShort: { west: "West", jin: "Three Jin", zhou: "Zhou", east: "East", south: "South", north: "North" },

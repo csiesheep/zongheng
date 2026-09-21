@@ -23,6 +23,7 @@ import {
   NODE_STAB_RIGHT, NODE_STAB_HI, NODE_PILL_POS,
 } from "./map-draw.js";
 import { computeLastMoveMarks } from "./lastmove.js";
+import * as OppUI from "./oppmove-ui.js"; // #79: the opponent's-move reveal (card panel/steps/chip/sheet)
 import { discParts } from "./disc-view.js";
 import * as Audio from "./audio.js";
 import * as Cues from "./audio-cues.js";
@@ -363,6 +364,7 @@ function resetVoicingState() {
   game.lastLegalKind = null;
   placeTapSpace = null; placeTapStreak = 0;
   lastClockS = null;
+  OppUI.reset(); // #79: a new/resumed game, or a room's first view, has nothing "new" to reveal yet
 }
 // Per-tab: the reconnect token, so two tabs in one browser are two players.
 const sess = {
@@ -413,6 +415,7 @@ function resumeSolo() {
 }
 function humanAct(action) {
   if (game.spectator) return;
+  OppUI.onAction(); // #79: a real action ends the reveal/chip at once, before anything else runs
   // The tutorial's gate (#15): refuses anything but the current lesson's own
   // move, legal or not, so a script step is the only thing that can land.
   if (Tut.active() && !Tut.allowsAction(action)) { game.ui.err = t("tutorial.wrong"); render(); return; }
@@ -617,6 +620,7 @@ function render() {
     decorateAdvisor(v, { solo: false, side: game.me });
     updateSceneMusic(); // a spectator's era/winner can still change the scene
     updateUnderlay(v); // #64: a spectator hears the tension layer too
+    OppUI.disable(); // #79: never for a spectator
     return;
   }
   // Computed before renderMap so a scoring card selected this same render
@@ -665,6 +669,11 @@ function render() {
   Tut.decorate(); // no-op unless a tutorial is running (#15)
   updateSceneMusic(); // era change (turn 4/7) or the game ending can happen mid-table, without a show() transition
   updateUnderlay(v); // #64: same reasoning -- a new danger flag or the game ending can land mid-table too
+  // #79: never during the tutorial (the coach drives the tutorial) -- called
+  // last, after layoutTable()/fitMap(), so the map/statline/mandate rects it
+  // reads (via data-space/data-stat) are this render's real, final ones.
+  if (Tut.active()) OppUI.disable();
+  else OppUI.sync(v, { me: game.me, lang, mapTargeting: game.ui.card != null && !wantsCardOverlay(v), acted: game.ui.card != null, lastMoveMarks: game.lastMoveMarks });
 }
 // The map's scale is the viewport-width ratio (DESIGN_W is the mockup's own
 // canvas width) UNLESS that would leave no room at all for a shown hand, in
@@ -1029,7 +1038,7 @@ function renderTopBar(v) {
   $("topbar").innerHTML =
     `<div class="tb-turn"><b>${t("tracks.turn")} ${v.turn}</b>${v.era ? " · " + t("eras." + v.era) : ""}${phase} · ` +
       `<span class="tb-mandate-label">${esc(t("tracks.mandate"))}</span> <b class="tb-mandate-val" style="color:${leadColor}">${esc(mandateText(m))}</b></div>` +
-    `<div class="mandate" role="img" aria-label="${esc(spoken)}">` +
+    `<div class="mandate" role="img" aria-label="${esc(spoken)}" data-stat="mandate">` +
       `<span class="m-end m-end-qin" aria-hidden="true">${overGlyphChar(E.QIN)}</span>` +
       `<span class="m-track">` +
         `<span class="m-fill${fillClass}" style="left:${fillLeft}%;width:${fillWidth}%"></span>` +
@@ -1044,13 +1053,15 @@ function renderTopBar(v) {
 // hand counts stay in the log instead of taking permanent screen space.
 function renderStatLine(v) {
   const seals = Object.keys(v.seals).length, mie = Object.keys(v.mie).length;
-  const col = (label, val) => `<div><span class="sl-label">${esc(label)}</span><span class="sl-val">${val}</span></div>`;
+  // `stat` (#79): a data-stat hook so oppmove-ui.js can find this column's
+  // real on-screen rect for a gold glow -- no other reader of this markup.
+  const col = (label, val, stat) => `<div data-stat="${stat}"><span class="sl-label">${esc(label)}</span><span class="sl-val">${val}</span></div>`;
   $("statline").innerHTML =
-    col(t("tracks.weariness"), esc(t("weariness." + v.weariness))) +
-    col(t("tracks.reform"), `${v.reform[0]} · ${v.reform[1]}`) +
-    col(t("tracks.seals"), `${seals} / 4`) +
-    col(t("tracks.mie"), `${mie} / 3`) +
-    col(t("tracks.jiuding"), esc(sideName(v.jiuding.holder)) + (v.jiuding.faceDown ? ` (${esc(t("tracks.faceDown"))})` : ""));
+    col(t("tracks.weariness"), esc(t("weariness." + v.weariness)), "weariness") +
+    col(t("tracks.reform"), `${v.reform[0]} · ${v.reform[1]}`, "reform") +
+    col(t("tracks.seals"), `${seals} / 4`, "seals") +
+    col(t("tracks.mie"), `${mie} / 3`, "mie") +
+    col(t("tracks.jiuding"), esc(sideName(v.jiuding.holder)) + (v.jiuding.faceDown ? ` (${esc(t("tracks.faceDown"))})` : ""), "jiuding");
 }
 
 // DESIGN_W/H, NODE_POS/nodeCenter, regionMembers(), isCapital(),
@@ -1397,6 +1408,7 @@ function renderMap(v) {
       (mv ? " lastmove" : "") + (mv && game.lastMoveFresh ? " lastmove-pulse" : "") +
       " pill-" + (NODE_PILL_POS[sp.id] || "tr");
     vis.style.cssText = `left:${x}px;top:${y}px`;
+    vis.dataset.space = sp.id; // #79: oppmove-ui.js finds a space's real on-screen rect by this, never by re-deriving fitMap()'s own transform
     // #41 round 1 review (item 1): the mark reads as two viewfinder-style
     // corner brackets (.lastmove-frame/-frame2, each contributing two
     // opposite corners via its own ::before/::after — see style.css)

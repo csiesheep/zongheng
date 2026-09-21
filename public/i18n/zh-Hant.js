@@ -104,6 +104,27 @@ export default {
     bog: "{side}頓兵堅城,棄掉{card}。", skip: "{side}無牌可出。", opsLost: "{side}的 {ops} 點行動點無處可用。", reshuffle: "棄牌堆重洗。", era: "{era}牌庫洗入。",
     endTurn: "第 {turn} 回合結束;疲敝{weariness}。", over: "遊戲結束:{side},{reason}。",
   },
+  // #79:對手的一手亮牌——卡牌面板(①)、地圖演出(②)、常駐膠囊(③)與底部清單
+  // (④)。只有 oppmove-ui.js 讀這一段。
+  oppmove: {
+    playedTag: "{side}打出", useOps: "用來{use} · {ops} 點",
+    useEvent: "當事件打出", useScoringEvent: "記分牌 · 當事件打出",
+    eventMine: "這是{side}的牌,它的事件也為你發生:{text}",
+    eventNeutral: "這是中立牌,它的事件也為你發生:{text}",
+    eventTheirs: "事件:{text}", eventHeadline: "標題:{text}",
+    tapHint: "點一下立刻收起",
+    tickerPlace: "{side}在{space}放置 {n}", tickerCampaign: "{side}征伐{target}:移除{removed}、放置{placed}",
+    tickerLobby: "{side}遊說{target}:移除{removed}", tickerReform: "{side}變法軌到第 {box} 格",
+    // 天命變化與得利方,例如「天命 楚 +1」——絕不只顯示結果總值(那樣讀起來像
+    // 對面得利)。tickerMandateArrow 只在總值也值得一併顯示時才接在後面。
+    tickerMandate: "天命 {side} +{n}", tickerMandateArrow: " → {to}",
+    tickerScore: "{region}結算:秦 {q},楚 {c}",
+    tickerTire: "疲敝降至{to}", tickerSeal: "楚取得{state}相印",
+    tickerUnseal: "楚失去{state}相印", tickerMie: "秦滅{state}", tickerRestore: "{state}復國",
+    tickerJiuding: "九鼎蓋著交給{side}", tickerFinal: "事件造成的改變",
+    chipHeadline: "標題 ›", chipEvent: "事件 ›", chipOpsEvent: "{use} {ops} · 事件也發生 ›", chipOps: "{use} {ops} ›",
+    playedVerb: "打出", sheetHeading: "依序發生 · 點一行看地圖", prevMove: "‹ 上一手",
+  },
   useNames: { event: "事件", place: "放置", campaign: "征伐", lobby: "遊說", reform: "變法", bog: "頓兵" },
   scoringLevel: { none: "無", presence: "存在", domination: "優勢", control: "獨佔" },
   regionShort: { west: "西土", jin: "三晉", zhou: "周", east: "東方", south: "南方", north: "北疆" },
