@@ -135,6 +135,8 @@ export default {
   // #62: 同 advisor.* 的形狀(標籤 + 開/關的 aria-label)。
   // #62 part 2(owner裁決:音效音樂同一開關):只剩一對字串。
   audio: { on: "聲音:開", off: "聲音:關" },
+  // #67:開場影片的起手層,每個瀏覽器只播一次(?opening 可重播)。
+  opening: { tap: "點一下開始", skip: "跳過" },
   advisor: {
     name: "軍師",
     on: "軍師:開", off: "軍師:關",
