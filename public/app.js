@@ -1075,7 +1075,7 @@ function roomFor(p, v, id, counts) {
 let placeTapSpace = null, placeTapStreak = 0;
 function placeTapSound(arr, id) {
   if (arr.length === 0 || id !== placeTapSpace) { placeTapSpace = id; placeTapStreak = 0; }
-  Audio.play("sfx.map.place", { rate: 1 + placeTapStreak * 0.06 });
+  Audio.play("sfx.map.place", { rate: 1 + placeTapStreak * 0.06, isPress: true }); // #66 S5 follow-up
   placeTapStreak++;
 }
 function currentMode(v) {
@@ -1564,7 +1564,7 @@ function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel, richHTML
   const r = row(sh, "sheet-footer");
   btn(r, t("buttons.cancel"), onCancel || (() => { game.ui = freshUi(); render(); }));
   let c;
-  const confirm = sound ? () => { Audio.play(sound); onConfirm(); } : onConfirm;
+  const confirm = sound ? () => { Audio.play(sound, { isPress: true }); onConfirm(); } : onConfirm; // #66 S5 follow-up
   if (richHTML) {
     c = document.createElement("button");
     c.type = "button"; c.className = "primary"; c.disabled = !!confirmDisabled; c.innerHTML = confirmLabel;
@@ -1838,7 +1838,7 @@ function renderPromptAndSheet(v) {
 // `sound` before `onClick`, and marks the button so the generic sfx.ui.tap
 // listener (below) skips it.
 function btnSound(parent, label, onClick, sound, cls = "primary", pressed = null, disabled = false) {
-  const b = btn(parent, label, () => { Audio.play(sound); onClick(); }, cls, pressed, disabled);
+  const b = btn(parent, label, () => { Audio.play(sound, { isPress: true }); onClick(); }, cls, pressed, disabled); // #66 S5 follow-up
   b.classList.add("no-tap-sound");
   return b;
 }
@@ -1953,7 +1953,7 @@ function renderHand(v, mode) {
     b.onclick = () => {
       const opening = ui.card !== id; // #62 part 2: "a hand card opens" -- not closing it back down (tapping the same open card again)
       game.ui = freshUi(ui.card === id ? null : id);
-      if (opening) Audio.play("sfx.card.pick");
+      if (opening) Audio.play("sfx.card.pick", { isPress: true }); // #66 S5 follow-up
       render();
     };
     el.appendChild(b);
@@ -2699,7 +2699,7 @@ setInterval(() => {
 document.addEventListener("click", (ev) => {
   const el = ev.target.closest("button, a");
   if (!el || el.closest("#hitLayer") || el.closest(".hand") || el.closest(".no-tap-sound")) return;
-  Audio.play("sfx.ui.tap");
+  Audio.play("sfx.ui.tap", { isPress: true }); // #66 S5 follow-up: a Confirm's own batch waits on this
 }, true);
 
 // ---------- boot ----------
