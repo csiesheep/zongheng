@@ -401,7 +401,19 @@ function reformStripHTML(box, l) {
 // A plain "+N"/"−N" tick, used for both the mandate move and the lobby
 // edge's per-neighbour ticks.
 const tick = (n) => `<span class="fig-tick ${n >= 0 ? "up" : "dn"}">${n >= 0 ? "+" : ""}${n}</span>`;
-const infPair = (st, id) => `${st.inf[id] ? st.inf[id][0] : 0}/${st.inf[id] ? st.inf[id][1] : 0}`;
+// orchestrator's #91 fix: a bare "2/0" q/c pair reads as noise to anyone who
+// hasn't memorised which side is first — every caption now spells out
+// "秦 2"/"Qin 2", drops a side that is 0 instead of printing it, and shows
+// both ("秦 1 楚 3"/"Qin 1 Chu 3") only when both sides actually have
+// influence there. A space with nobody at all reads as a bare "0".
+function infWords(st, id, l) {
+  const [q, c] = (st.inf && st.inf[id]) || [0, 0];
+  const qw = l === "en" ? "Qin" : "秦", cw = l === "en" ? "Chu" : "楚";
+  const parts = [];
+  if (q > 0) parts.push(`${qw} ${q}`);
+  if (c > 0) parts.push(`${cw} ${c}`);
+  return parts.length ? parts.join(" ") : "0";
+}
 
 // #91: one worked example per use, right under the summary table (uses table
 // keeps every number from the summary text unchanged — these are additions,
@@ -412,19 +424,19 @@ function usesExamplesHTML(l) {
   const T5 = zh
     ? { arrowE: "商鞅變法", capE1: `變法軌:秦 0`, capE2: `變法軌:秦 1(本回合秦所有牌 +1 行動點)`,
         noteE: "沒有事件先/事件後的差別要考慮:標題牌的事件一定發生,就算是對手陣營的牌,見上表「事件」列。",
-        arrowP: "秦 放置 3", capP1: `宜陽 ${infPair(EX.place.before, "yiyang")} · 洛邑 ${infPair(EX.place.before, "luoyi")}`,
+        arrowP: "秦 放置 3", capP1: `宜陽 ${infWords(EX.place.before, "yiyang", l)} · 洛邑 ${infWords(EX.place.before, "luoyi", l)}`,
         capP2: `宜陽 +1(1 點,鄰函谷關)· 洛邑 +1(2 點,楚控制)`,
-        arrowC: "秦 征伐 3", capC1: `大梁:秦 0 楚 2`, capC2: `大梁:秦 1 楚 0(移除 min(3,2)=2,剩 1 點落地)`,
-        arrowL: "楚 遊說 2", capL1: `邯鄲:楚 0 秦 1`, capL2: `邯鄲:楚 0 秦 0`,
+        arrowC: "秦 征伐 3", capC1: `大梁:${infWords(EX.campaign.before, "daliang", l)}`, capC2: `大梁:${infWords(EX.campaign.after, "daliang", l)}(移除 min(3,2)=2,剩 1 點落地)`,
+        arrowL: "楚 遊說 2", capL1: `邯鄲:${infWords(EX.lobby.before, "handan", l)}`, capL2: `邯鄲:${infWords(EX.lobby.after, "handan", l)}`,
         edgeCap: `局勢 = 2 − 1 = 1,移除 min(2, 1) = 1`,
         arrowR: "秦 變法", capR1: `變法軌:秦 0`, capR2: `變法軌:秦 1(門檻 ${EX.reform.threshold} 點,棄牌 收復河西 2 點)`,
         noteR: "沒有事件觸發。" }
     : { arrowE: "Shang Yang's Reforms", capE1: `Reform track: Qin 0`, capE2: `Reform track: Qin 1 (+1 op on every Qin card this turn)`,
         noteE: "No event-first/ops-first choice to make here: a headline's event always happens, even for the other side's card — see the Event row above.",
-        arrowP: "Qin places, 3 ops", capP1: `Yiyang ${infPair(EX.place.before, "yiyang")} · Luoyi ${infPair(EX.place.before, "luoyi")}`,
+        arrowP: "Qin places, 3 ops", capP1: `Yiyang ${infWords(EX.place.before, "yiyang", l)} · Luoyi ${infWords(EX.place.before, "luoyi", l)}`,
         capP2: `Yiyang +1 (1 op, next to Hangu Pass) · Luoyi +1 (2 ops, Chu-controlled)`,
-        arrowC: "Qin campaigns, 3 ops", capC1: `Daliang: Qin 0 Chu 2`, capC2: `Daliang: Qin 1 Chu 0 (removes min(3,2)=2, 1 left to place)`,
-        arrowL: "Chu lobbies, 2 ops", capL1: `Handan: Chu 0 Qin 1`, capL2: `Handan: Chu 0 Qin 0`,
+        arrowC: "Qin campaigns, 3 ops", capC1: `Daliang: ${infWords(EX.campaign.before, "daliang", l)}`, capC2: `Daliang: ${infWords(EX.campaign.after, "daliang", l)} (removes min(3,2)=2, 1 left to place)`,
+        arrowL: "Chu lobbies, 2 ops", capL1: `Handan: ${infWords(EX.lobby.before, "handan", l)}`, capL2: `Handan: ${infWords(EX.lobby.after, "handan", l)}`,
         edgeCap: `Edge = 2 − 1 = 1, removes min(2, 1) = 1`,
         arrowR: "Qin reforms", capR1: `Reform track: Qin 0`, capR2: `Reform track: Qin 1 (needs ${EX.reform.threshold} ops, discards Retaking Hexi's 2)`,
         noteR: "No event happens." };
@@ -472,7 +484,7 @@ function mieSectionHTML(l) {
        `Once held, a seal survives Chu's influence there dropping, even to where nobody controls the capital — only <b>Qin controlling that capital</b> removes it. The same is true the other way for destruction/restoration: only <b>Chu controlling the capital</b> restores it; losing any other space does not.`];
   const p = rulesP.map((t) => `<p>${t}</p>`).join("");
   const han = "han", zhao = "zhao";
-  const mieHanCap1 = zh ? `宜陽 ${infPair(EX.mieHan.before, "yiyang")} · 新鄭 ${infPair(EX.mieHan.before, "xinzheng")}` : `Yiyang ${infPair(EX.mieHan.before, "yiyang")} · Xinzheng ${infPair(EX.mieHan.before, "xinzheng")}`;
+  const mieHanCap1 = zh ? `宜陽 ${infWords(EX.mieHan.before, "yiyang", l)} · 新鄭 ${infWords(EX.mieHan.before, "xinzheng", l)}` : `Yiyang ${infWords(EX.mieHan.before, "yiyang", l)} · Xinzheng ${infWords(EX.mieHan.before, "xinzheng", l)}`;
   const mieHanCap2 = zh ? `${stName(han, l)} · 滅,天命 秦 +${E.STATES.han.vp}（${EX.mieHan.before.mandate} → ${EX.mieHan.after.mandate}）` : `${stName(han, l)} · Destroyed, Mandate Qin +${E.STATES.han.vp} (${EX.mieHan.before.mandate} → ${EX.mieHan.after.mandate})`;
   const ex6 = figPairHTML(EX.mieHan.ids, EX.mieHan.before, EX.mieHan.after, esc(mieHanCap1), esc(mieHanCap2), zh ? "秦 征伐 新鄭,4 點" : "Qin campaigns Xinzheng, 4 ops");
   const zhaoCap = zh ? `${stName(zhao, l)}還差${spName("dai", l)}` : `${stName(zhao, l)} still needs ${spName("dai", l)}`;
@@ -501,10 +513,10 @@ function mieSectionHTML(l) {
 // ending it).
 function specialExtrasHTML(l) {
   const zh = l !== "en";
-  const capA1 = zh ? EX.jiudingA.ids.map((id) => `${spName(id, l)} ${infPair(EX.jiudingA.before, id)}`).join(" · ") : EX.jiudingA.ids.map((id) => `${spName(id, l)} ${infPair(EX.jiudingA.before, id)}`).join(" · ");
+  const capA1 = EX.jiudingA.ids.map((id) => `${spName(id, l)} ${infWords(EX.jiudingA.before, id, l)}`).join(" · ");
   const capA2 = zh ? `全部落在三晉／周,5 點：${EX.jiudingA.ids.map((id) => `${spName(id, l)} +${EX.jiudingA.after.inf[id][1] - EX.jiudingA.before.inf[id][1]}`).join("、")}` : `all in the Three Jin/Zhou, 5 ops: ${EX.jiudingA.ids.map((id) => `${spName(id, l)} +${EX.jiudingA.after.inf[id][1] - EX.jiudingA.before.inf[id][1]}`).join(", ")}`;
   const exA = figPairHTML(EX.jiudingA.ids, EX.jiudingA.before, EX.jiudingA.after, esc(capA1), esc(capA2), zh ? "楚 九鼎（4→5）" : "Chu, the Cauldrons (4→5)");
-  const capB1 = EX.jiudingB.ids.map((id) => `${spName(id, l)} ${infPair(EX.jiudingB.before, id)}`).join(" · ");
+  const capB1 = EX.jiudingB.ids.map((id) => `${spName(id, l)} ${infWords(EX.jiudingB.before, id, l)}`).join(" · ");
   const capB2 = zh ? `${spName("hangu", l)}在三晉／周之外,仍是 4 點：${EX.jiudingB.ids.map((id) => `${spName(id, l)} +1`).join("、")}` : `${spName("hangu", l)} is outside the Three Jin/Zhou, still 4 ops: ${EX.jiudingB.ids.map((id) => `${spName(id, l)} +1`).join(", ")}`;
   const exB = figPairHTML(EX.jiudingB.ids, EX.jiudingB.before, EX.jiudingB.after, esc(capB1), esc(capB2), zh ? "楚 九鼎（仍 4）" : "Chu, the Cauldrons (still 4)");
   const condNote = zh
