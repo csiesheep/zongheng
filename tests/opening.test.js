@@ -5,19 +5,19 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import * as O from "../public/opening.js";
 
-test("the opening plays once per browser, never for reduced motion, and ?opening forces it for testing", () => {
+test("the opening plays on every visit (owner, 2026-09-21), never for reduced motion or a room link, and ?opening forces it", () => {
   assert.equal(O.OPENING_KEY, "zh.opening");
   const p = (q = "") => new URLSearchParams(q);
   assert.equal(O.shouldPlayOpening({ seen: false, reducedMotion: false, params: p() }), true, "a first visit plays it");
-  assert.equal(O.shouldPlayOpening({ seen: true, reducedMotion: false, params: p() }), false, "once seen, never again");
+  assert.equal(O.shouldPlayOpening({ seen: true, reducedMotion: false, params: p() }), true, "every visit plays it: having seen it before no longer skips it");
   assert.equal(O.shouldPlayOpening({ seen: false, reducedMotion: true, params: p() }), false, "reduced motion: straight to the landing");
-  assert.equal(O.shouldPlayOpening({ seen: true, reducedMotion: false, params: p("opening") }), true, "?opening replays it (testing, and a way back to it)");
+  assert.equal(O.shouldPlayOpening({ seen: true, reducedMotion: false, params: p("opening") }), true, "?opening plays it");
   assert.equal(O.shouldPlayOpening({ seen: true, reducedMotion: true, params: p("opening") }), true, "an explicit ?opening wins over reduced motion");
   assert.equal(O.shouldPlayOpening({ seen: false, reducedMotion: false, params: p("room=ABCD") }), false, "a room link goes straight to the landing");
   assert.equal(O.shouldPlayOpening({ seen: false, reducedMotion: false, params: p("code=ABCD") }), false);
-  assert.equal(O.shouldPlayOpening({ seen: false, reducedMotion: false, params: p("lang=en") }), true, "a language link is still a first visit");
-  // storage that throws (a private window) is "not seen": it plays, and nothing crashes
+  assert.equal(O.shouldPlayOpening({ seen: true, reducedMotion: false, params: p("lang=en") }), true, "a language link plays it too");
   assert.doesNotThrow(() => O.shouldPlayOpening({ seen: undefined, reducedMotion: false, params: p() }));
+  assert.doesNotThrow(() => O.shouldPlayOpening({}));
 });
 
 test("the files are there, small enough for a phone, and the video ends on the landing's own picture", () => {
