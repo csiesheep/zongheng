@@ -59,7 +59,15 @@ export function cardSide(id) {
 export function cardHeader(sh, id, lang) {
   const m = id === E.JIUDING ? null : E.CARD[id];
   const info = m ? `${t(lang, "eras." + m.era)}${m.num ? ` · No. ${m.num}` : ""}${m.year ? ` · ${lang === "en" ? m.year + " BC" : "前" + m.year + "年"}` : ""}` : "";
-  const sideLabel = id === E.JIUDING || (m && m.scoring) ? t(lang, "sides.scoring")
+  // #92 round 3 (orchestrator): 九鼎 used to fall into the `m && m.scoring`
+  // branch's `id === E.JIUDING ||` guard and got labelled 「記分卡」/"Scoring
+  // card" — it isn't one (`opsLabel()` above already special-cases it as a
+  // plain "4", never "S"/"計", for the same reason). It has no `side` either
+  // (E.JIUDING has no E.CARD entry at all, `m` is null for it), so
+  // "sides.neutral" is exactly what a side-less, non-scoring card already
+  // gets below — 九鼎 now falls straight into that same case instead of a
+  // dedicated one.
+  const sideLabel = m && m.scoring ? t(lang, "sides.scoring")
     : !m || m.side == null ? t(lang, "sides.neutral")
     : m.side === 0 ? t(lang, "sides.qin") : t(lang, "sides.chu");
   const removeLabel = id === E.JIUDING ? "" : (m.remove ? t(lang, "sheet.removeYes") : t(lang, "sheet.removeNo"));
@@ -143,13 +151,38 @@ export function historyBox(parent, id, lang, state) {
     `</button>` +
     `<div class="sheet-history-body" id="${bodyId}"><div class="sheet-history-body-inner">${bodyHtml}</div></div>`;
   const toggleBtn = box.querySelector(".sheet-history-toggle");
+  const bodyEl = box.querySelector(".sheet-history-body");
+  const innerEl = bodyEl.querySelector(".sheet-history-body-inner");
+  parent.appendChild(box); // must be attached before scrollHeight means anything
+  // Orchestrator (#92, table walk on the full CARD page, an own card):
+  // `.sheet-history-body` is a flex item inside `.sheet-history` (itself
+  // `display: flex` via `.sheet-textbox`), which sits inside `.sheet-mid` —
+  // a flex column with `overflow-y: auto`. A pure-CSS `grid-template-rows:
+  // 0fr -> 1fr` animation (this function's first attempt) resolves that
+  // single `fr` track to 0px in that nested, auto-height, overflow:auto
+  // context every time, on the full card page specifically — the peek
+  // sheet isn't inside that same constrained column, which is why it looked
+  // fine there. `max-height` set to a real measured pixel value sidesteps
+  // the whole auto-sizing negotiation: `innerEl.scrollHeight` is the
+  // content's true height regardless of how the outer box is currently
+  // clipped (overflow: hidden never affects scrollHeight), so it works
+  // identically expanded, collapsed, or mid-toggle, in every one of the
+  // three homes (card page / 看牌 peek / log peek) and at every viewport.
+  const setBodyHeight = (o) => { bodyEl.style.maxHeight = o ? innerEl.scrollHeight + "px" : "0px"; };
+  // First paint (or a re-render that must land already-expanded per #92
+  // point 2) must NOT animate — only an actual click should. Suppress the
+  // stylesheet's transition for this one synchronous style write, then let
+  // it apply again from the next frame on, ahead of any real click.
+  bodyEl.style.transition = "none";
+  setBodyHeight(open);
+  requestAnimationFrame(() => { bodyEl.style.transition = ""; });
   toggleBtn.onclick = () => {
     open = !open;
     box.classList.toggle("sheet-history-open", open);
     toggleBtn.setAttribute("aria-expanded", String(open));
+    setBodyHeight(open);
     if (state.onToggle) state.onToggle(open);
   };
-  parent.appendChild(box);
   return box;
 }
 

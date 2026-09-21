@@ -1154,15 +1154,20 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .sheet-history-open .sheet-history-preview { display: none; }
 /* The story/source pair collapses via a 0fr/1fr grid track (animates real
    intrinsic height without JS measuring scrollHeight) rather than
-   max-height, which would need an arbitrary cap; `-body-inner`'s own
-   `overflow: hidden` is what actually clips it at 0fr. ~150ms per #92 point
-   4, opacity riding along so the text doesn't just get chopped. */
-.sheet-history-body {
-  display: grid; grid-template-rows: 0fr; opacity: 0;
-  transition: grid-template-rows 150ms ease, opacity 150ms ease;
-}
-.sheet-history-open .sheet-history-body { grid-template-rows: 1fr; opacity: 1; }
-.sheet-history-body-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+   max-height, set to a real measured pixel value in JS (card-view.js's
+   historyBox(), not a CSS-only trick): a `grid-template-rows: 0fr -> 1fr`
+   auto-height animation was tried first and works fine on the peek, but on
+   the full CARD page `.sheet-history-body` sits inside `.sheet-history`
+   (itself `display: flex` via `.sheet-textbox`) inside `.sheet-mid` — a
+   flex column with `overflow-y: auto` — and that nesting resolved the
+   single `fr` track to 0px every time (orchestrator, table walk, #92
+   round 2). `max-height` in real pixels doesn't depend on that auto-sizing
+   negotiation at all, so it animates identically in all three homes (card
+   page / 看牌 peek / log peek). ~150ms per #92 point 4, opacity riding
+   along so the text doesn't just get chopped. */
+.sheet-history-body { overflow: hidden; max-height: 0; opacity: 0; transition: max-height 150ms ease, opacity 150ms ease; }
+.sheet-history-open .sheet-history-body { opacity: 1; }
+.sheet-history-body-inner { display: flex; flex-direction: column; gap: 6px; }
 @media (prefers-reduced-motion: reduce) {
   .sheet-history-body { transition: none; }
 }
