@@ -83,7 +83,44 @@ $("joinCode").addEventListener("keydown", (ev) => { if (ev.key === "Enter") $("b
 // opening.js decides WHETHER to play (no DOM there, so the orchestrator's
 // test can import it into Node); everything below -- the layer, the
 // <video>, the crossfade -- is the DOM half, owned here.
-function buildOpeningLayer() {
+//
+// #78 (owner, real iPhone, 2026-09-21): the opening failed silently on a
+// phone nobody could see the console of. end(reason) now records why it
+// ended into localStorage (and console.warn's anything that isn't a normal
+// ended/skip/tap/escape), and ?opening&diag shows an on-screen event log so
+// a failure can be screenshotted instead of just dropping to the landing.
+const OPENING_LAST_KEY = "zh.opening.last";
+const QUIET_REASONS = ["ended", "skip", "tap", "escape"];
+const FAILURE_REASONS = ["error", "play-rejected", "timeout"];
+const OPENING_CODECS = 'video/mp4; codecs="avc1.640028, mp4a.40.2"';
+const DIAG_EVENTS = ["loadstart", "loadedmetadata", "loadeddata", "canplay", "canplaythrough", "play", "playing", "waiting", "stalled", "suspend"];
+
+// buildDiagPanel(layer, video): the ?diag on-screen log. Two header lines
+// (canPlayType, and the PREVIOUS run's stored outcome -- read here, before
+// this run's own end() can overwrite it) followed by a timestamped event
+// log, newest line always scrolled into view.
+function buildDiagPanel(layer, video) {
+  const panel = document.createElement("div");
+  panel.className = "opening-diag";
+  const head1 = document.createElement("div");
+  head1.className = "opening-diag-head";
+  head1.textContent = `canPlayType: ${video.canPlayType(OPENING_CODECS) || "(empty)"}`;
+  const head2 = document.createElement("div");
+  head2.className = "opening-diag-head";
+  head2.textContent = `last: ${store.get(OPENING_LAST_KEY, "(none)")}`;
+  panel.append(head1, head2);
+  layer.appendChild(panel);
+  const t0 = performance.now();
+  function log(line) {
+    const row = document.createElement("div");
+    row.textContent = `+${((performance.now() - t0) / 1000).toFixed(2)}s ${line}`;
+    panel.appendChild(row);
+    panel.scrollTop = panel.scrollHeight;
+  }
+  return { log };
+}
+
+function buildOpeningLayer(diagMode) {
   const heroEl = document.querySelector(".hero");
   const controlsEl = document.querySelector(".controls");
   const page = document.querySelector(".landing-page");
@@ -107,6 +144,23 @@ function buildOpeningLayer() {
   video.src = "video/opening.mp4";
   video.muted = true; // set to the real switch state right before play() in begin()
   layer.appendChild(video);
+
+  // #78: diag panel and its raw media-event log are wired up as soon as the
+  // <video> exists (preload="auto" means loadstart etc. can fire before the
+  // viewer ever taps to begin()), not just once begin() runs.
+  let diagPanel = null;
+  if (diagMode) {
+    diagPanel = buildDiagPanel(layer, video);
+    DIAG_EVENTS.forEach((evt) => video.addEventListener(evt, () => diagPanel.log(evt)));
+    let lastProgressLog = 0;
+    video.addEventListener("progress", () => {
+      const now = performance.now();
+      if (now - lastProgressLog < 1000) return; // #78: one line a second, per the brief
+      lastProgressLog = now;
+      const bufEnd = video.buffered && video.buffered.length ? video.buffered.end(0).toFixed(2) : "none";
+      diagPanel.log(`progress buffered=${bufEnd}`);
+    });
+  }
 
   const hit = document.createElement("button");
   hit.type = "button";
@@ -135,11 +189,44 @@ function buildOpeningLayer() {
   let startTimeoutId = null;
   let started = false; // the video's own "playing" event actually fired
 
-  function onKeydown(ev) { if (ev.key === "Escape") end(); }
+  function onKeydown(ev) { if (ev.key === "Escape") end("escape"); }
   function onPlaying() { started = true; }
 
-  function end() {
+  // #78: build+store the diagnostic record for why the opening ended (or
+  // tried to). Always wrapped in try/catch -- a broken video is exactly the
+  // moment this must never itself throw.
+  function recordEnd(reason, playErr) {
+    let record = null;
+    try {
+      record = {
+        reason,
+        at: new Date().toISOString(),
+        error: video.error ? { code: video.error.code, message: video.error.message } : null,
+        playError: playErr ? `${playErr.name}: ${playErr.message}` : null,
+        readyState: video.readyState,
+        networkState: video.networkState,
+        currentTime: video.currentTime,
+        buffered: video.buffered && video.buffered.length ? video.buffered.end(0) : null,
+        ua: navigator.userAgent,
+      };
+      store.set(OPENING_LAST_KEY, JSON.stringify(record));
+      if (!QUIET_REASONS.includes(reason)) console.warn(record);
+    } catch {}
+    return record;
+  }
+
+  function end(reason, playErr) {
     if (phase === "ending" || phase === "done") return;
+    const record = recordEnd(reason, playErr);
+    if (diagPanel) {
+      const bits = [`end(${reason})`];
+      if (record && record.error) bits.push(`error=${record.error.code}:${record.error.message}`);
+      if (record && record.playError) bits.push(`playError=${record.playError}`);
+      diagPanel.log(bits.join(" "));
+    }
+    // #78: in diag mode a failure stays on screen instead of ending, so the
+    // owner can screenshot the panel. Skip is deliberate -- it still ends.
+    if (diagMode && FAILURE_REASONS.includes(reason)) return;
     phase = "ending";
     if (startTimeoutId) clearTimeout(startTimeoutId);
     document.removeEventListener("keydown", onKeydown);
@@ -163,14 +250,25 @@ function buildOpeningLayer() {
     line.hidden = true;
     video.muted = !(Audio.getSetting("sfx") || Audio.getSetting("music")); // the engine's own switch, read through audio.js
     video.addEventListener("playing", onPlaying, { once: true });
-    video.addEventListener("ended", end, { once: true });
-    video.addEventListener("error", end, { once: true });
+    video.addEventListener("ended", () => end("ended"), { once: true });
+    video.addEventListener("error", () => end("error"), { once: true });
     document.addEventListener("keydown", onKeydown);
-    video.play().catch(end); // a refused play() ends it at once, same as the 3s guard below
-    startTimeoutId = setTimeout(() => { if (!started) end(); }, 3000); // "must never wait on it"
+    // a refused play() ends it at once, same as the 3s guard below
+    video.play().then(
+      () => { if (diagPanel) diagPanel.log("play(): resolved"); },
+      (err) => {
+        if (diagPanel) diagPanel.log(`play(): rejected ${err && err.name}: ${err && err.message}`);
+        end("play-rejected", err);
+      },
+    );
+    startTimeoutId = setTimeout(() => { // "must never wait on it"
+      if (started) return;
+      if (diagPanel) diagPanel.log("3s guard fired");
+      end("timeout");
+    }, 3000);
   }
-  hit.addEventListener("click", () => { if (phase === "start") begin(); else if (phase === "playing") end(); });
-  skip.addEventListener("click", end);
+  hit.addEventListener("click", () => { if (phase === "start") begin(); else if (phase === "playing") end("tap"); });
+  skip.addEventListener("click", () => end("skip"));
 
   return {
     // hit's aria-label is set via setAttribute (its text content -- the
@@ -180,11 +278,12 @@ function buildOpeningLayer() {
   };
 }
 
+const openingParams = new URLSearchParams(location.search);
 const openingLayer = Opening.shouldPlayOpening({
   seen: store.get(Opening.OPENING_KEY, null) === "1",
   reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
-  params: new URLSearchParams(location.search),
-}) ? buildOpeningLayer() : (startLandingMusic(), null);
+  params: openingParams,
+}) ? buildOpeningLayer(openingParams.has("diag")) : (startLandingMusic(), null); // #78: ?opening&diag
 
 setLang(new URLSearchParams(location.search).get("lang") || store.get("zh.lang", (navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
 
