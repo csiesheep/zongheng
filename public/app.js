@@ -364,6 +364,7 @@ function resetVoicingState() {
   game.lastLegalKind = null;
   placeTapSpace = null; placeTapStreak = 0;
   lastClockS = null;
+  OppUI.reset(); // #79: a new/resumed game, or a room's first view, has nothing "new" to reveal yet
 }
 // Per-tab: the reconnect token, so two tabs in one browser are two players.
 const sess = {
@@ -414,6 +415,7 @@ function resumeSolo() {
 }
 function humanAct(action) {
   if (game.spectator) return;
+  OppUI.onAction(); // #79: a real action ends the reveal/chip at once, before anything else runs
   // The tutorial's gate (#15): refuses anything but the current lesson's own
   // move, legal or not, so a script step is the only thing that can land.
   if (Tut.active() && !Tut.allowsAction(action)) { game.ui.err = t("tutorial.wrong"); render(); return; }
