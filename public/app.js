@@ -1459,6 +1459,21 @@ function btn(parent, label, onClick, cls = "", pressed = null, disabled = false)
 }
 function row(parent, cls = "rowb") { const d = document.createElement("div"); d.className = cls; parent.appendChild(d); return d; }
 function note(parent, text) { const d = document.createElement("div"); d.className = "note"; d.textContent = text; parent.appendChild(d); }
+// #68 round 2 (orchestrator's ruling): the same explanatory line note()
+// puts in the SHEET, but for the compact (map-active/pending) states whose
+// sheet budget is already tight at 390x669/375x667 — a target's own
+// preview ("新鄭: 移除…"), a pending "place" sub-state's placement count.
+// These are read-only detail, not a control, so they cost nothing to move
+// into #promptScroll (already the scrollable, give-way-first area) instead
+// of the sheet's own fixed-cap row. Appended directly to #promptText, so
+// it must run AFTER whichever setPrompt() call is going to stick for this
+// pass — see setPrompt()'s own compactHint parameter for the one case
+// (an enemy card's order/pair summary) that needs to run BEFORE a later
+// setPrompt() overwrites #promptText outright.
+function appendPromptNote(text) {
+  const p = $("promptText");
+  if (p) p.insertAdjacentHTML("beforeend", `<div class="prompt-note">${esc(text)}</div>`);
+}
 // Card names are the one place bilingual text is wanted regardless of the
 // page's language (see TEAM.md's language-mixing exception list).
 const cardZh = (id) => (id === E.JIUDING ? "九鼎" : E.CARD[id].zh);
@@ -1535,6 +1550,11 @@ function cardTextBox(parent, id) {
 // C2_Campaign show a small strip here, not the full art+text sheet, so the
 // map stays the point. "Expand" swaps in the full header without leaving
 // this mode (see wantsCardOverlay/mapActive in renderPromptAndSheet).
+// Returns the chip's own row (`.sheet-chip`) so a caller that needs to put
+// Cancel/Confirm on the SAME row (#68 round 2: the campaign/lobby
+// target-picked state, to close the last few px at 390x669/375x667) can
+// append onto it directly, instead of the row footer() would otherwise
+// build on its own.
 function cardChip(sh, id) {
   const wrap = document.createElement("div"); wrap.className = "sheet-chip";
   const name = lang === "en" ? cardEn(id) : cardZh(id);
@@ -1549,6 +1569,7 @@ function cardChip(sh, id) {
   expand.onclick = () => { game.ui.chipExpanded = true; render(); };
   wrap.appendChild(expand);
   sh.appendChild(wrap);
+  return wrap;
 }
 // The acting seat's own confirm phrase (#29's design: "令尹曰可" for a Chu
 // court, "制曰可" for Qin's — the SEATED player's own turn of phrase, not
@@ -1584,8 +1605,13 @@ function confirmPhrase() {
 // have a more specific sound (蓋下's sfx.card.commit, a map confirm's
 // sfx.map.confirm) pass it; every other footer() confirm (event/reform,
 // the plain "bog" discard) is untouched and keeps the generic tap.
-function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel, richHTML, confirmDataUse, sound) {
-  const r = row(sh, "sheet-footer");
+// #68 round 2: `into`, when given, appends Cancel/Confirm onto THAT row
+// (e.g. the compact chip's own `.sheet-chip`) instead of building a new
+// `.sheet-footer` row of their own — closes the last few px of the
+// campaign/lobby target-picked state at 390x669/375x667 (an entire row +
+// its gap, on top of the target preview's own move into #promptScroll).
+function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel, richHTML, confirmDataUse, sound, into) {
+  const r = into || row(sh, "sheet-footer");
   btn(r, t("buttons.cancel"), onCancel || (() => { game.ui = freshUi(); render(); }));
   let c;
   const confirm = sound ? () => { Audio.play(sound, { isPress: true }); onConfirm(); } : onConfirm; // #66 S5 follow-up
@@ -1655,8 +1681,15 @@ function renderPromptAndSheet(v) {
   // left)" used to leave the sheet with nothing but Confirm/Cancel and no
   // question). Never both visible at once: #prompt showing is the normal
   // case, this is only the fallback layoutTable() reaches for.
+  // #68 round 2: an enemy card's order/pair summary (below) is decided
+  // BEFORE this function knows which branch (place/campaign/lobby/event/
+  // reform) will actually call setPrompt() last — queuing its text here and
+  // having setPrompt() itself append it (once, whichever call turns out to
+  // be the final one) is simpler than threading it through every branch.
+  let compactHint = "";
   const setPrompt = (html) => {
     p.innerHTML = html + err;
+    if (compactHint) p.insertAdjacentHTML("beforeend", `<div class="prompt-note">${esc(compactHint)}</div>`);
     let titleEl = sh.querySelector(".sheet-title");
     if (!titleEl) { titleEl = document.createElement("div"); titleEl.className = "sheet-title"; titleEl.hidden = true; sh.insertBefore(titleEl, sh.firstChild); }
     titleEl.innerHTML = html + err;
@@ -1732,9 +1765,9 @@ function renderPromptAndSheet(v) {
   // matter how long the card's own text or the enemy order row runs. Only
   // set when the full card is actually shown; the compact chip path
   // (mapActive && !chipExpanded) keeps its old flat, unwrapped layout.
-  let mid = null, pinned = null;
+  let mid = null, pinned = null, chipRow = null;
   if (!showFullCard) {
-    cardChip(sh, ui.card);
+    chipRow = cardChip(sh, ui.card);
   } else {
     cardHeader(sh, ui.card);
     mid = sheetMid(sh);
@@ -1791,7 +1824,11 @@ function renderPromptAndSheet(v) {
       // The compact chip only ever shows once the map is active, which now
       // requires an order to already be chosen (see `orderPending` above),
       // so `ui.order` is never null here.
-      note(sh, t(`advisor.suggestOrder.${ui.order}`));
+      // #68 round 2: queued into compactHint, not the sheet — setPrompt()
+      // (called further down by whichever branch actually returns) appends
+      // it to #promptScroll instead, one less row #sheet has to reserve at
+      // 390x669/375x667.
+      compactHint = t(`advisor.suggestOrder.${ui.order}`);
     }
   }
   if (ui.card === "shuoke" && info.uses.pair && info.uses.pair.length) {
@@ -1800,7 +1837,8 @@ function renderPromptAndSheet(v) {
       note(pinned, t("uses.pair"));
       for (const c of info.uses.pair) btn(r, `${cardName(c)} (${E.opsOf(game.st, me, c)})`, () => { ui.pair = ui.pair === c ? null : c; ui.points = []; render(); }, "", ui.pair === c);
     } else if (ui.pair && !targetPreviewComing) {
-      note(sh, `${t("uses.pair")} ${cardName(ui.pair)} (${E.opsOf(game.st, me, ui.pair)})`);
+      const pairHint = `${t("uses.pair")} ${cardName(ui.pair)} (${E.opsOf(game.st, me, ui.pair)})`;
+      compactHint = compactHint ? `${compactHint} ${pairHint}` : pairHint;
     }
   }
   // #29's design: one line naming what KIND of card this is for the player
@@ -1859,19 +1897,38 @@ function renderPromptAndSheet(v) {
     let text;
     if (ui.use === "campaign") { const r = E.campaign(trial, me, ui.target, info.ops); text = t("preview.campaign", { removed: r.removed, placed: r.placed, w: t("weariness." + trial.weariness) }); }
     else { const e = E.edge(v, me, ui.target); text = t("preview.lobby", { edge: e, n: Math.min(info.ops, e) }); }
-    note(sh, `${spaceName(ui.target)}: ${text}`);
-    footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}`, () => humanAct({ ...base, target: ui.target }), false, undefined, false, ui.use, "sfx.map.confirm");
-    // #24 round 3 (owner): the target's own preview note above already
-    // restates what the parked sheet-title would say ("Campaign with N
-    // ops" vs "Xinzheng: removes…") — once a target is picked, keeping
-    // both was the extra few px that pushed 390x669 back into scroll.
-    sh.querySelector(".sheet-title")?.remove();
+    // #68 round 2 (orchestrator's ruling): the target's own preview used to
+    // be a `note(sh, ...)` row — the exact "explanatory note" the ruling
+    // asks to move into #promptScroll instead, so #sheet only has to
+    // reserve the chip + the Cancel/Confirm footer. #24 round 3's own
+    // `.sheet-title` removal (right below, now gone) existed only to avoid
+    // restating the SAME text twice on screen; now that the preview lives
+    // in #promptScroll instead of #sheet, the parked sheet-title is no
+    // longer redundant with it — keeping it is what lets Stage 2's give-way
+    // still show SOMETHING if #promptScroll itself has to hide.
+    appendPromptNote(`${spaceName(ui.target)}: ${text}`);
+    // #68 round 2: the compact chip gets the SHORT Cancel/Confirm labels,
+    // appended onto its own row (`chipRow`) instead of a rich "Confirm ·
+    // Campaign · Xinzheng" button on a second row — the target and use are
+    // already named by the sheet-title above and the preview note just
+    // moved into #promptScroll, so the long label was pure repetition once
+    // those two existed. The full card page (showFullCard) is untouched:
+    // still its own richHTML confirm, still its own row.
+    if (showFullCard) {
+      footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}`, () => humanAct({ ...base, target: ui.target }), false, undefined, false, ui.use, "sfx.map.confirm");
+    } else {
+      footer(sh, t("buttons.confirm"), () => humanAct({ ...base, target: ui.target }), false, undefined, false, ui.use, "sfx.map.confirm", chipRow);
+    }
   } else {
     // #24 round 2, fix #1 (owner): before a target is tapped, this branch
     // used to render nothing at all past the chip — 0 visible buttons, no
     // way back. A lone Cancel (the chip's own "Card"/看牌 is always there
     // too, fix #1) is enough; there's no target yet to Confirm.
-    btn(sh, t("buttons.cancel"), cancelToFresh);
+    // #68 round 2: onto `chipRow` when compact, same reasoning as the
+    // target-picked branch above — a lone Cancel on its OWN row measured
+    // 19px over #lowerBlock's own budget at 375x667 en (longer button
+    // labels than zh) even after every other trim in this state.
+    btn(showFullCard ? sh : chipRow, t("buttons.cancel"), cancelToFresh);
   }
 }
 
@@ -1955,10 +2012,18 @@ function renderPending(v, p, setPrompt, sh) {
     for (const u of p.allowed) { const b = btn(r, t(`uses.${u}`), () => { ui.opsUse = u; ui.points = []; ui.target = null; render(); }, "", ui.opsUse === u); b.dataset.use = u; }
     if (ui.opsUse === "place") {
       const { spent } = placementTrial(v, game.me, ui.points);
-      note(sh, t("prompt.place", { ops: p.ops, left: p.ops - spent }));
-      const r2 = row(sh);
-      btnSound(r2, t("buttons.done"), () => humanAct({ type: "choose", choice: { use: "place", points: ui.points } }), "sfx.map.confirm", "primary", null, ui.points.length === 0);
-      btn(r2, t("buttons.cancel"), () => { ui.points = []; render(); });
+      // #68 round 2 (orchestrator's ruling): the placement count used to be
+      // its own `note(sh, ...)` row, moved into #promptScroll instead (same
+      // reasoning as the campaign/lobby target preview above); Done/Cancel
+      // used to be a second `.rowb` under it -- appended into the SAME row
+      // `r` as the use buttons instead (up to 3 uses + 2 actions, ~70px
+      // each, fits 375px in one flex-wrap row), so this state reserves one
+      // sheet row instead of a title + two. Together these are what close
+      // the 11-38px gap measured at 390x669 zh / 375x667 en for this exact
+      // state (the orchestrator's own 2nd-round numbers).
+      appendPromptNote(t("prompt.place", { ops: p.ops, left: p.ops - spent }));
+      btnSound(r, t("buttons.done"), () => humanAct({ type: "choose", choice: { use: "place", points: ui.points } }), "sfx.map.confirm", "primary", null, ui.points.length === 0);
+      btn(r, t("buttons.cancel"), () => { ui.points = []; render(); });
     } else if (ui.opsUse && ui.target) {
       btnSound(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.opsUse}`)} · ${spaceName(ui.target)}`, () => humanAct({ type: "choose", choice: { use: ui.opsUse, target: ui.target } }), "sfx.map.confirm", "primary");
     }

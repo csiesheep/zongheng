@@ -875,6 +875,14 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    measured the longest card name in the game against it at 390x669/375x667). */
 .prompt-fallback { flex: none; margin-top: 6px; padding-left: 8px; border-left: 2px solid var(--gold); font-size: 12px; line-height: 1.4; font-weight: 600; color: var(--gold); }
 .prompt-fallback[hidden] { display: none; }
+/* #68 round 2 (orchestrator's ruling): a target's own preview, an enemy
+   card's order/pair summary, or a pending "place" sub-state's placement
+   count -- the same "explanatory note" role .sheet .note plays inside a
+   card page, moved here (app.js's appendPromptNote()/compactHint) so a
+   compact mapActive/pending state's #sheet only has to reserve its own
+   buttons, never this detail text too. Same tone as .news (dim, read-only)
+   since it isn't a side-themed sheet colour scope here. */
+.prompt-note { margin-top: 4px; font-size: 12px; line-height: 1.4; color: var(--text-dim); }
 /* #68: the soft fade the brief asks for whenever #promptScroll actually has
    more content than its box -- painted only while there IS overflow (the
    `has-more` class, toggled by layoutTable() after every measurement) so a
@@ -1009,14 +1017,23 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .sheet .note { font-size: 12px; color: var(--text-dim); }
 /* The full card sheet: art, ops badge, the name, era/no./year, its own
    text, the five-use grid, then a Cancel + Confirm footer. */
-.sheet-chip { display: flex; align-items: center; gap: 8px; }
+/* #68 round 2: flex-wrap so the compact chip degrades gracefully to a
+   second line (its own row still fits #lowerBlock's budget better than an
+   extra `.sheet-footer` row would) on the rare draw where Cancel/Confirm
+   (footer()'s own `into` param) plus a long card name genuinely can't
+   share 354px on one line — never a hard overflow sideways. */
+.sheet-chip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .sheet-chip .ops { flex: none; width: 24px; height: 24px; border-radius: 50%; font-family: var(--sans); font-size: 12px; line-height: 24px; text-align: center; font-weight: 700; }
 .sheet-chip .ops.q { background: var(--qin-text); color: var(--bg); }
 .sheet-chip .ops.c { background: var(--chu-gold); color: #6f120d; }
 .sheet-chip .ops.n, .sheet-chip .ops.s { background: var(--gold); color: var(--bg); }
 /* #46: one language only — a single .chip-nm node (was .nm-zh + .nm-en
-   stacked). The kai script is zh-only, same reasoning as .sheet-name. */
-.sheet-chip .chip-nm { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; overflow-wrap: break-word; }
+   stacked). The kai script is zh-only, same reasoning as .sheet-name.
+   #68 round 2: text-overflow ellipsis (with nowrap+min-width) instead of
+   wrapping to a second line now that Cancel/Confirm can share this same
+   row — a card name is never the thing worth losing height over; "看牌"
+   (chip-expand, right there) reaches the full name either way. */
+.sheet-chip .chip-nm { flex: 1 1 60px; min-width: 0; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 :root[lang="zh-Hant"] .sheet-chip .chip-nm { font-family: var(--kai); }
 .chip-expand { flex: none; min-height: 32px; padding: 0 10px; font-size: 12px; border-radius: 16px; }
 .sheet-head { flex: none; display: flex; gap: 14px; padding: 4px 0 0; }
@@ -1150,12 +1167,17 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    fix): the default 8px/6px sheet padding+gap left the deepest give-way
    stage exactly 1px short of the map's floor spec, tripping table-overflow
    on a viewport the ruling says must never scroll. The compact sheet's own
-   three rows (chip + preview note + Cancel/Confirm) don't need the same
-   breathing room as the full card sheet, so this trims a real margin back
-   in rather than live on a 1px knife-edge. */
+   rows (chip + Cancel/Confirm, the preview note having moved to
+   #promptScroll — #68 round 2) don't need the same breathing room as the
+   full card sheet, so this trims a real margin back in rather than live on
+   a knife-edge. #68 round 2 (orchestrator's own numbers, 390x669 zh /
+   375x667 en): 4px/10px still left "campaign target tapped" 7px over
+   #lowerBlock's own fixed budget even after the note moved out and the
+   hand gave way — trimmed once more, to the same 2px vertical breathing
+   room .prompt's own padding already uses. */
 #sheet.sheet-compact {
   gap: 1px;
-  padding: 4px 10px;
+  padding: 2px 10px;
 }
 /* #24 round 2: the sheet-title (fix #2) and the order/pair one-line summary
    (fix #3) can both be showing at once on an enemy card's compact chip (an
