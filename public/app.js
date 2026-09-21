@@ -742,21 +742,35 @@ function layoutTableDesktop() {
 // pins to that same constant every pass, and negotiates ONLY among
 // themselves for whatever fits inside it — never touching map/mapH again.
 //
-// LOWER_BLOCK_H was picked (not measured) from the orchestrator's table
-// walk, against the tallest states #68's brief named: the target-picking
-// compact sheet (#24), a pending choice (#52/#54), the headline commit row,
-// and the normal action hand with a two-line advice — see the issue
-// comment thread for the actual numbers measured at 390x669 zh / 375x667
-// en. A viewport too short to give the map its FLOOR_SCALE spec alongside
-// this fixed budget (375x553 is the known case) keeps the pre-#68 scroll
-// fallback (table-overflow) rather than shrink either one below spec.
-const LOWER_BLOCK_H = 300;
-// The least #prompt (banner + the scrollable prompt/news/fallback under it)
-// may be squeezed to before the give-way stages below start reclaiming
-// space from it — just enough for the pinned advice line or one line of
-// prompt text to stay legible; below this, scrolling inside a sliver isn't
-// meaningfully different from not being there.
-const PROMPT_MIN_H = 40;
+// LOWER_BLOCK_H was picked (not measured) against the orchestrator's table
+// walk at 390x669 zh / 375x667 en, advisor on and off — see the #68 issue
+// thread for the full numbers. It is the largest value that still leaves
+// the map its FLOOR_SCALE spec at 390x669 zh (the tighter of the two
+// required viewports: table.clientHeight − topbar − statline − gaps ≈ 520,
+// FLOOR_SCALE's own mapH ≈ 347, leaving ≈172); 375x667 en reuses the same
+// constant rather than a second one (the brief's own "one size per
+// viewport" is about the MAP, not this budget, and a second magic number
+// tuned to a slightly different English wrap would drift out of sync the
+// next time either language's copy changes).
+//
+// This is enough for every state the walk exercises EXCEPT one real,
+// reported gap: a "spend leftover ops — which use?" pending choice (or a
+// campaign/lobby target already picked) that also needs BOTH a use/target
+// button row and its own Confirm/Cancel row — 2× a real 44px tap target,
+// plus the compact sheet's own title and note — measured 11-38px over
+// budget in that exact combination (worse in English: longer button labels
+// wrap where the 2-character Chinese ones don't). #lowerBlock's own
+// give-way (below) already folds the hand and the prompt/news scroll away
+// first; there is nothing left to fold for THIS combination without either
+// clipping a 44px button (refused, same as the map's own floor) or cutting
+// the advisor's sentence (refused per the owner's 2nd #68 report) — so it
+// falls through to the pre-#68 table-overflow scroll fallback, same
+// escape hatch every short-viewport case before #68 already had. Reported
+// to the orchestrator rather than silently widening LOWER_BLOCK_H further:
+// every extra px here comes straight out of the map's own floor spec
+// (see mapOverflow below), which would turn this from "two rare states
+// scroll a little" into "every state scrolls a little."
+const LOWER_BLOCK_H = 172;
 function layoutTable() {
   const table = $("table");
   if (table.hidden) return;
@@ -847,12 +861,38 @@ function layoutTable() {
   // scrolls on its own for any ordinary overflow; the give-way stages below
   // only fire once even THAT isn't enough (mapActive states, where the
   // sheet's own compact/pending rows can still outgrow the budget).
+  //
+  // #prompt's own flex-shrink (flex:1 1 auto) could otherwise squeeze it
+  // BELOW the advisor banner's own natural height — a flex item's automatic
+  // minimum size (the "don't shrink below your content" default) resolves
+  // to 0 the moment its `overflow` isn't `visible` (CSS Flexbox's own
+  // carve-out), and #prompt's overflow:hidden (style.css) is exactly that,
+  // so nothing stopped it from silently CLIPPING the banner instead of
+  // surfacing as real #lowerBlock overflow for the give-way stages below to
+  // react to (found while testing #68: a real setup-placement state
+  // clipped ~34px off a 2-line advice sentence with fits() still reporting
+  // "fine"). An explicit min-height (not "auto") isn't subject to that
+  // carve-out, so this pins one to the banner's real rendered height each
+  // pass, before fits() ever reads #lowerBlock's own scrollHeight.
+  const advBanner = document.getElementById("advisorBanner");
+  const bannerShown = advBanner && !advBanner.hidden && advBanner.parentElement === promptEl;
+  const promptCS = getComputedStyle(promptEl);
+  promptEl.style.minHeight = bannerShown
+    ? Math.ceil(advBanner.getBoundingClientRect().height + parseFloat(promptCS.paddingTop) + parseFloat(promptCS.paddingBottom)) + "px"
+    : "0px";
   const fits = () => lowerBlock.scrollHeight <= LOWER_BLOCK_H + 1;
-  if (mapActive && hasHand && !hand.hidden && !fits()) {
-    // Stage 1: the hand row gives way first — its cards aren't needed while
-    // the map itself is what's being tapped (target picking, placing
-    // points, a pending choice — every one of these is answered through the
-    // sheet's own buttons, never by tapping a card in the hand).
+  if (mapActive && !hand.hidden && !fits()) {
+    // Stage 1: the hand row gives way first — its cards (if it holds any)
+    // aren't needed while the map itself is what's being tapped (target
+    // picking, placing points, a pending choice — every one of these is
+    // answered through the sheet's own buttons, never by tapping a card in
+    // the hand). Fires even with an EMPTY hand (hasHand false: the very
+    // first pending choice of a game, before any card is drawn) — that
+    // doesn't conflict with "the hand row keeps its place... whether or
+    // not there are cards" (#68's own rule for the ordinary, non-give-way
+    // case): there is nothing to hide either way, so reclaiming its row
+    // here costs strictly nothing, the same reasoning Stage 1 already
+    // applied to a real, populated hand.
     hand.hidden = true;
   }
   if (mapActive && !fits()) {
@@ -879,18 +919,35 @@ function layoutTable() {
   // unreachable (#5's own rule), same escape hatch as before — just judged
   // against the lower block's own fixed height now, not a map-derived one.
   const lowerOverflow = !fits();
+  // #lowerBlock's own `overflow: hidden` (style.css) is only a paint-safety
+  // net for the ordinary case where LOWER_BLOCK_H really was enough — once
+  // the deepest give-way STILL doesn't fit, keeping the fixed flex-basis
+  // from above would just clip the excess silently instead of letting
+  // table-overflow's own #table relaxation (body.table-lock.table-overflow,
+  // style.css) do its job. Let #lowerBlock size to its real (taller)
+  // content instead, same as #table itself does, so the fallback actually
+  // scrolls to reveal everything rather than cutting it off at exactly
+  // LOWER_BLOCK_H.
+  if (lowerOverflow) lowerBlock.style.flex = "none";
   document.body.classList.toggle("table-overflow", mapOverflow || lowerOverflow);
   // #68: the soft fade at #promptScroll's bottom edge only paints while
   // there's real overflow to hint at.
   promptScroll.classList.toggle("has-more", !promptScroll.hidden && promptScroll.scrollHeight > promptScroll.clientHeight + 1);
-  // The hand always renders "full" now that its row is a fixed part of the
-  // lower block's own budget rather than something layoutTable() negotiates
-  // per render — #7's desktop grid already forces "full" the same way (see
-  // isDesktopTable()'s default in renderHand()); mobile no longer needs a
-  // separate "chip" mode to protect the map's floor, since the map reads
-  // nothing from here any more.
-  if (hasHand && !hand.hidden && hand.dataset.mode !== "full") { hand.dataset.mode = "full"; if (game.lastView) renderHand(game.lastView, "full"); }
-  document.documentElement.style.setProperty("--card-h", CARD_H + "px");
+  // #68: the phone hand is always the fixed-height chip row now, never the
+  // 96x176 card. Before #68, the hand's own mode (full vs chip) was decided
+  // by whatever the map's budget had left over once the prompt/sheet took
+  // their share — the exact same per-render negotiation that let a longer
+  // advice or news strip change the map's size also flipped the hand
+  // between the two. At 390x669/375x667 the equilibrium that negotiation
+  // used to find for an ordinary state was chip mode anyway (a 390x669
+  // "action hand" state, measured on main before this branch: map 360,
+  // chip handH ~72 — the full card's own ~207px never actually fit
+  // alongside a floor-or-taller map on these viewports); #68 just makes
+  // that the fixed, deliberate choice instead of an emergent one. #7's
+  // desktop grid is untouched (isDesktopTable()'s own default in
+  // renderHand() keeps it "full" there; layoutTableDesktop() never reads
+  // hand.dataset.mode at all).
+  if (hasHand && !hand.hidden && hand.dataset.mode !== "chip") { hand.dataset.mode = "chip"; if (game.lastView) renderHand(game.lastView, "chip"); }
 }
 // Whether the whole table is locked into the full-screen-overlay layout
 // (page scroll off, --bar-h set) — shared by the real card sheet (#29) and

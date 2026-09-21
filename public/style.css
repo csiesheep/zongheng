@@ -831,7 +831,18 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    #lowerBlock has left once .sheet/.hand (both below) take their own
    share; overflow:hidden is the paint-only backstop, #promptScroll's own
    overflow-y:auto is what actually lets long content scroll in place. */
-.prompt { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 3px 8px; font-size: 13px; line-height: 1.35; overflow: hidden; }
+/* min-height intentionally NOT 0: a flex item's default min-height is
+   "auto" (don't shrink below content), and the only unshrinkable content
+   here is the advisor's banner (flex:none, a real child, not itself
+   collapsible) -- #promptScroll (the OTHER child) already carries its own
+   min-height:0, so IT still shrinks to nothing when empty. Without this,
+   #lowerBlock's fixed height (app.js's layoutTable()) could squeeze
+   #prompt smaller than the banner's own natural size, silently CLIPPING
+   it against this rule's overflow:hidden instead of surfacing as real
+   overflow layoutTable()'s own fits() check would catch and give way for
+   (found while testing #68: a real "確認/取消" setup-placement state
+   clipped ~34px off the bottom of a 2-line advice sentence). */
+.prompt { flex: 1 1 auto; display: flex; flex-direction: column; padding: 3px 8px; font-size: 13px; line-height: 1.35; overflow: hidden; }
 /* The advisor's banner (advisor-ui.js's .adv-slot-prompt, #68): a normal
    flow child of .prompt, ahead of #promptScroll in the DOM, so it is never
    part of the scrolling area below -- "the prompt and news scroll under
@@ -1220,12 +1231,15 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 /* Hand: art on top, a circular ops badge and both names (zh + en — the
    exception to the no-mixing rule) below. Qin, Chu, neutral and scoring
    cards all share this shape — only colour, texture and font differ. */
-/* #68: the hand row is a fixed 207px (96x176 card + its own headroom,
-   app.js's CARD_H+HAND_GUTTER) regardless of state — empty, mid-turn, or
-   full — since it's now just one more fixed member of #lowerBlock's own
-   fixed height, never something the map (or anything else) can grow into
-   or shrink for (the owner's literal complaint, #68: "地圖大小應固定"). */
-.hand { flex: none; height: 207px; display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 4px 8px 6px; }
+/* #68: the hand row is a fixed 72px chip row (app.js's CHIP_H+CHIP_GUTTER)
+   regardless of state — empty, mid-turn, or full — since it's now just one
+   more fixed member of #lowerBlock's own fixed height, never something the
+   map (or anything else) can grow into or shrink for (the owner's literal
+   complaint, #68: "地圖大小應固定"). Chip, not the 96x176 full card: at
+   390x669/375x667 a full card never actually fit next to a floor-or-taller
+   map anyway (see app.js's layoutTable(), the hand.dataset.mode comment) —
+   #68 makes that the fixed, deliberate choice instead of an emergent one. */
+.hand { flex: none; height: 72px; display: flex; align-items: center; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 4px 8px 6px; }
 .card { flex: none; width: 96px; height: var(--card-h, 176px); border: 1px solid var(--gold-line); border-radius: 10px; padding: 0; display: flex; flex-direction: column; text-align: left; overflow: hidden; }
 .card[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--gold); }
 .card .cardimg { display: block; width: 100%; flex: 1 1 auto; min-height: 0; object-fit: cover; }
