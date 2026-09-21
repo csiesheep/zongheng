@@ -20,8 +20,9 @@ import {
   DESIGN_W, DESIGN_H, NODE_POS, nodeCenter, regionMembers, isCapital,
   renderRegionBlobs, renderRoads, REGION_LABEL_POS,
   NODE_BREAK_EN, NODE_SMALL_EN, NODE_ANCHOR, nodeLabelHTML, stabilityTagHTML,
-  NODE_STAB_RIGHT, NODE_STAB_HI, NODE_PILL_POS,
+  NODE_STAB_RIGHT, NODE_STAB_HI, NODE_PILL_POS, SEAL_MARK_POS,
 } from "./map-draw.js";
+import { sealProgress } from "./seal-progress.js"; // #89: 相印 progress marks on the capitals
 import { computeLastMoveMarks } from "./lastmove.js";
 import * as OppUI from "./oppmove-ui.js"; // #79: the opponent's-move reveal (card panel/steps/chip/sheet)
 import * as LogView from "./log-view.js"; // #88: the log panel's own rows/chips and its tap-to-flash overlay
@@ -1376,6 +1377,7 @@ function renderMap(v) {
     el.appendChild(lbl);
   }
   const mode = currentMode(v);
+  const seals = sealProgress(v); // #89: { capital, chuControls, have, need, sealed } per state, read once per render
   for (const sp of E.SPACES) {
     const [x, y] = NODE_POS[sp.id], [q, c] = E.infOf(v, sp.id), ctl = E.controller(v, sp.id);
     const cap = isCapital(sp.id);
@@ -1402,12 +1404,26 @@ function renderMap(v) {
     // this used to draw (.node.ctlq/.ctlc .disc, style.css), so control now
     // only shows as the disc's OWN tone (dark = controlled), computed below.
     const parts = discParts(q, c, ctl);
+    // #89: the seal-progress mark, only for a capital (sp.state names the
+    // state a capital belongs to; seal-progress.js keys its output by that
+    // same state id). "Chu controls, not yet sealed" gets the "N/M" pill
+    // (glowing one point short); sealed gets the filled mark with no
+    // numbers; anything else (Qin controls, nobody does, or Chu has
+    // influence without control) draws nothing — sp.state is null for every
+    // non-capital space so this stays undefined there.
+    const seal = cap && sp.state ? seals[sp.state] : null;
+    const sealMarkHTML = seal && seal.sealed
+      ? `<span class="seal-mark sm-sealed" aria-hidden="true">${esc(t("map.sealed"))}</span>`
+      : seal && seal.chuControls
+      ? `<span class="seal-mark sm-progress${seal.have === seal.need - 1 ? " sm-glow sm-pulse" : ""}" aria-hidden="true">${esc(t("map.sealProgress", { have: seal.have, need: seal.need }))}</span>`
+      : "";
     const vis = document.createElement("div");
     vis.className = "node" + (big ? " big" : "") + (empty ? " empty" : "") + (anchor ? ` anchor-${anchor}` : "") +
       (NODE_STAB_RIGHT.has(sp.id) ? " stab-r" : "") + (NODE_STAB_HI.has(sp.id) ? " stab-hi" : "") +
       (lit ? " lit" : "") + (picked ? " picked" : "") + pickSide +
       (mv ? " lastmove" : "") + (mv && game.lastMoveFresh ? " lastmove-pulse" : "") +
-      " pill-" + (NODE_PILL_POS[sp.id] || "tr");
+      " pill-" + (NODE_PILL_POS[sp.id] || "tr") +
+      (sealMarkHTML ? " smp-" + (SEAL_MARK_POS[sp.id] || "tr") : "");
     vis.style.cssText = `left:${x}px;top:${y}px`;
     vis.dataset.space = sp.id; // #79: oppmove-ui.js finds a space's real on-screen rect by this, never by re-deriving fitMap()'s own transform
     // #41 round 1 review (item 1): the mark reads as two viewfinder-style
@@ -1423,6 +1439,7 @@ function renderMap(v) {
       (picked ? `<span class="badge">+${picked}</span>` : "") +
       (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
       (mvTag ? `<span class="lastmove-tag${lastMoveTagClass(mv)}" aria-hidden="true">${esc(mvTag)}</span>` : "") +
+      sealMarkHTML +
       nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc);
     el.appendChild(vis);
     const hb = document.createElement("button");
@@ -1443,6 +1460,16 @@ function renderMap(v) {
   // layoutTable() (the caller's caller) sizes and scales the map once every
   // sibling has its final height — see fitMap().
 }
+// #89: tapping the statline's 相印/Seals value shows a one-line explanation
+// of the rule in the prompt area (the map marks show the per-state progress
+// already; this is the one line for "why does it read 2/4"). One delegated
+// listener (renderStatLine() rebuilds the column's innerHTML every render,
+// so a per-element handler would be lost) targeting data-stat="seals" — the
+// same hook oppmove-ui.js reads for its own, unrelated purpose (a gold glow
+// rect), so this only adds a click, never touches that.
+$("statline").addEventListener("click", (e) => {
+  if (e.target.closest('[data-stat="seals"]')) $("promptText").textContent = t("map.sealHelp");
+});
 // The design canvas (DESIGN_W x DESIGN_H) is the C2_Game mockup's own
 // dimensions, scaled by the viewport WIDTH ratio only — never shrunk further
 // for a lack of height, so a real phone always renders the map at (at

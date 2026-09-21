@@ -171,6 +171,18 @@ export const NODE_PILL_POS = {
   ying: "r", wuyue: "r",
   ji: "trl", zhongshan: "r", dai: "r",
 };
+// #89: the seal-progress mark's own position table — only the five capitals
+// ever carry this mark, so it is a separate small table from NODE_PILL_POS
+// (whose "tr"/"tl"/... classes it does NOT reuse: app.js puts a distinct
+// "smp-<x>" class on the mark itself, styled in style.css, so this pill can
+// sit at a DIFFERENT corner than that node's own NODE_PILL_POS spot even
+// when both are on screen together — the mark is always up while sealed/
+// close, the badge/last-move tag are transient). Same positions as pill-
+// ("tl"/"tr"/"t"/"b"/"l"/"r"), same "clears the name/stab/pill/neighbour at
+// every required size" bar, checked at 390x669 zh, 375x667 en and 1280x800.
+export const SEAL_MARK_POS = {
+  xinzheng: "tl", handan: "l", daliang: "t", linzi: "t", ji: "b",
+};
 // `name` is the already-resolved display name (the caller's own spaceName()
 // — app.js and rules.js each have their own, reading the same E.SPACE[id]
 // but keyed to their own current language); `esc` is the caller's own HTML

@@ -45,7 +45,15 @@ export default {
   // legible without colour vision alone -- the hit button's title spells out
   // both counts and the controller (hitInf, controls) so it doesn't rely on
   // the tone.
-  map: { hitTitle: "{space} · stability {stability}", hitInf: "Qin {qin} Chu {chu}", controls: "{side} controls" },
+  map: {
+    hitTitle: "{space} · stability {stability}", hitInf: "Qin {qin} Chu {chu}", controls: "{side} controls",
+    // #89: seal-progress marks -- the small "Seal 3/4" pill while Chu controls
+    // a capital but hasn't filled the stack, and the filled "Seal" once it
+    // has. sealHelp is the one-line explanation shown in the prompt area
+    // when the status line's Seals value is tapped.
+    sealProgress: "Seal {have}/{need}", sealed: "Seal",
+    sealHelp: "A seal needs Chu's control of the capital AND a full stack there (stability + 2)",
+  },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },
   setup: { defaultName: "Player" },
   sys: { joined: "{name} joined.", left: "{name} left.", leftGame: "{name} left; the bot plays the seat.", dealt: "The cards are dealt.", timeout: "{name} ran out of time; the table decided.", over: "{side} ({name}) wins: {reason}.", fallback: "The opponent's move failed; a fallback was played instead: {action}.", stuck: "The opponent cannot move; this game cannot continue." },
