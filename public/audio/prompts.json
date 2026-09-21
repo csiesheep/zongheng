@@ -103,6 +103,24 @@
     "seed": 8110,
     "prompt": "A bundle of bamboo slips slapped flat onto a heavy wooden table: one firm dry thud with a very short woody rattle, close microphone, no reverb, isolated one-shot. Length: 1 seconds"
   },
+  "sfx.card.deal": {
+    "source": "sfx_card_deal_s8622",
+    "model": "stable-audio-3-medium",
+    "seed": 8622,
+    "prompt": "Five bamboo slips dealt one after another onto a wooden table: five quick light clacks in a row, even, dry, close microphone, isolated, nothing else. Length: 2 seconds"
+  },
+  "sfx.card.enemyEvent.chu": {
+    "source": "sfx_card_enemyEvent_chu_s8652",
+    "model": "stable-audio-3-medium",
+    "seed": 8652,
+    "prompt": "A single bronze chime bell struck and its pitch bending downward as it rings, a dark shimmering tail, quiet hall, isolated one-shot, no other instruments. Length: 2 seconds"
+  },
+  "sfx.card.enemyEvent.qin": {
+    "source": "sfx_card_enemyEvent_qin_s8640",
+    "model": "stable-audio-3-medium",
+    "seed": 8640,
+    "prompt": "A single strike on a large clay pot drum whose tone sinks in pitch, followed at once by one dull low drum thud: ominous, dry, close, isolated, no melody. Length: 2 seconds"
+  },
   "sfx.card.event.chu": {
     "source": "sfx_event_chu_s7201",
     "model": "stable-audio-3-medium",
@@ -120,6 +138,18 @@
     "model": "stable-audio-3-medium",
     "seed": 8130,
     "prompt": "A single heavy strike on a large clay pot drum together with one deep war drum hit: a dry earthy thump with a low boom and a short decay, no melody, isolated one-shot. Length: 2 seconds"
+  },
+  "sfx.card.jiuding": {
+    "source": "sfx_card_jiuding_s8660",
+    "model": "stable-audio-3-medium",
+    "seed": 8660,
+    "prompt": "A massive bronze cauldron set down on a stone floor: one deep heavy metallic boom with a long low ring that fills a great hall, isolated one-shot. Length: 3 seconds"
+  },
+  "sfx.card.ops": {
+    "source": "sfx_card_ops_s8630",
+    "model": "stable-audio-3-medium",
+    "seed": 8630,
+    "prompt": "A single bamboo slip laid flat on a wooden table: one light dry click, gentle, much softer than a slap, close microphone, no reverb, isolated one-shot. Length: 1 seconds"
   },
   "sfx.card.pick": {
     "source": "sfx_card_pick_s8100",
@@ -163,6 +193,12 @@
     "seed": 8181,
     "prompt": "One deep war drum strike followed at once by the clash of two bronze blades with a short metallic ring: fierce, short, dry, close, isolated. Length: 2 seconds"
   },
+  "sfx.map.campaign.key": {
+    "source": "sfx_map_campaign_key_s8682",
+    "model": "stable-audio-3-medium",
+    "seed": 8682,
+    "prompt": "A single short blast on a ram's horn war trumpet, low, rough and distant, outdoors, isolated one-shot, nothing else. Length: 2 seconds"
+  },
   "sfx.map.confirm": {
     "source": "sfx_map_confirm_s8150",
     "model": "stable-audio-3-medium",
@@ -181,6 +217,12 @@
     "seed": 8522,
     "prompt": "A single heavy hit on a large slack drum whose pitch bends downward like a falling timpani glissando, deep, dull, dying quickly, dry, isolated one-shot. Length: 2 seconds"
   },
+  "sfx.map.lobby": {
+    "source": "sfx_map_lobby_s8691",
+    "model": "stable-audio-3-medium",
+    "seed": 8691,
+    "prompt": "Two men whispering secretively, hushed and unintelligible, with the soft rustle of a silk scroll being passed across a table: close, dry, no drums, no music. Length: 2 seconds"
+  },
   "sfx.map.opponent": {
     "source": "sfx_map_opponent_s8190",
     "model": "stable-audio-3-medium",
@@ -193,11 +235,53 @@
     "seed": 7102,
     "prompt": "A single go stone placed firmly on a thick wooden board: one short dry click with a small woody knock, close microphone, completely dry, no reverb, no background noise, isolated one-shot. Length: 1 seconds"
   },
+  "sfx.map.unplace": {
+    "source": "sfx_map_unplace_s8671",
+    "model": "stable-audio-3-medium",
+    "seed": 8671,
+    "prompt": "A small stone game piece lifted off a wooden board: one light dry click, low and soft, close microphone, completely dry, isolated one-shot. Length: 1 seconds"
+  },
   "sfx.mie": {
     "source": "sfx_mie_s8342",
     "model": "stable-audio-3-medium",
     "seed": 8342,
     "prompt": "A rammed-earth city wall collapsing: a deep rumble, heavy blocks of earth and stone crashing down, dust and rubble settling, no music, no bells, no gong. Length: 4 seconds"
+  },
+  "sfx.restore": {
+    "source": "sfx_restore_s8721",
+    "model": "stable-audio-3-medium",
+    "seed": 8721,
+    "prompt": "Three slow rising notes on warm mid-register bronze bells, hopeful, the last note held and left to ring in a quiet hall, isolated, no other instruments. Length: 3 seconds"
+  },
+  "sfx.room.chat": {
+    "source": "sfx_room_chat_s8780",
+    "model": "stable-audio-3-medium",
+    "seed": 8780,
+    "prompt": "One very soft tap on a small bamboo tube: light, high, short, unobtrusive, completely dry, close microphone, isolated one-shot. Length: 1 seconds"
+  },
+  "sfx.room.join": {
+    "source": "sfx_room_join_s8761",
+    "model": "stable-audio-3-medium",
+    "seed": 8761,
+    "prompt": "A heavy wooden door swinging open on its pivot: one short low creak and a soft knock as it stops, indoors, dry, isolated one-shot. Length: 2 seconds"
+  },
+  "sfx.room.leave": {
+    "source": "sfx_room_leave_s8770",
+    "model": "stable-audio-3-medium",
+    "seed": 8770,
+    "prompt": "Three footsteps in cloth shoes walking away across a wooden floor, each softer than the last, fading, dry, isolated. Length: 2 seconds"
+  },
+  "sfx.room.start": {
+    "source": "sfx_room_start_s8790",
+    "model": "stable-audio-3-medium",
+    "seed": 8790,
+    "prompt": "A fast crescendo roll on a large war drum ending in one strong single strike, bold, dry, close, isolated, nothing else. Length: 3 seconds"
+  },
+  "sfx.score.count": {
+    "source": "sfx_score_count_s8752",
+    "model": "stable-audio-3-medium",
+    "seed": 8752,
+    "prompt": "Small bamboo counting rods laid down on a wooden table one at a time: four crisp light clicks, evenly spaced, dry, close microphone, isolated. Length: 2 seconds"
   },
   "sfx.seal.gain": {
     "source": "sfx_seal_gain_s8220",
@@ -223,6 +307,18 @@
     "seed": 8311,
     "prompt": "Two slow heavy strikes on a large war drum, deep and dry, the second lower than the first, close, isolated, no other instruments. Length: 2 seconds"
   },
+  "sfx.track.reform": {
+    "source": "sfx_track_reform_s8710",
+    "model": "stable-audio-3-medium",
+    "seed": 8710,
+    "prompt": "A bronze knife carving characters into a bamboo slip: three short dry scraping strokes, close microphone, no reverb, isolated, nothing else. Length: 2 seconds"
+  },
+  "sfx.track.weariness": {
+    "source": "sfx_track_weariness_s8701",
+    "model": "stable-audio-3-medium",
+    "seed": 8701,
+    "prompt": "A heavy wooden beam groaning under a load and settling: one deep slow creak and a dull thud, weary, dry, close, isolated one-shot. Length: 2 seconds"
+  },
   "sfx.turn.clock.last": {
     "source": "sfx_turn_clock_last_s8371",
     "model": "stable-audio-3-medium",
@@ -241,11 +337,23 @@
     "seed": 8350,
     "prompt": "A short solemn phrase of four slow notes played on medium-sized bronze bells, warm mid register, each note ringing into the next, a quiet hall, no drums, no other instruments. Length: 4 seconds"
   },
+  "sfx.turn.headline": {
+    "source": "sfx_turn_headline_s8730",
+    "model": "stable-audio-3-medium",
+    "seed": 8730,
+    "prompt": "A short formal call on a bronze signal horn: two clear notes, the second higher, outdoors over a courtyard, isolated one-shot. Length: 2 seconds"
+  },
   "sfx.turn.new": {
     "source": "sfx_turn_new_s8260",
     "model": "stable-audio-3-medium",
     "seed": 8260,
     "prompt": "One calm strike on a medium bronze bell, clear pitch, a long even decay in a quiet hall, isolated one-shot. Length: 3 seconds"
+  },
+  "sfx.turn.timeout": {
+    "source": "sfx_turn_timeout_s8740",
+    "model": "stable-audio-3-medium",
+    "seed": 8740,
+    "prompt": "Two slow knocks on a hollow wooden block, the second lower than the first, final and flat, dry, close, isolated. Length: 1 seconds"
   },
   "sfx.turn.yours": {
     "source": "sfx_turn_yours_s8282",
@@ -253,11 +361,29 @@
     "seed": 8282,
     "prompt": "A gentle double tap on a small bamboo woodblock: two soft clear knocks, friendly, dry, isolated. Length: 1 seconds"
   },
+  "sfx.tut.step": {
+    "source": "sfx_tut_step_s8800",
+    "model": "stable-audio-3-medium",
+    "seed": 8800,
+    "prompt": "One soft strike on a small bronze hand bell: gentle, warm, a short clear ring, quiet room, isolated one-shot. Length: 2 seconds"
+  },
+  "sfx.ui.close": {
+    "source": "sfx_ui_close_s8610",
+    "model": "stable-audio-3-medium",
+    "seed": 8610,
+    "prompt": "A bundle of bamboo slips rolled up and set down: a short soft rattle ending in one light knock, close microphone, dry, isolated one-shot. Length: 1 seconds"
+  },
   "sfx.ui.error": {
     "source": "sfx_ui_error_s8410",
     "model": "stable-audio-3-medium",
     "seed": 8410,
     "prompt": "A single dull muffled knock on thick wood with a cloth over it: low, soft, short, not harsh, dry, isolated one-shot. Length: 1 seconds"
+  },
+  "sfx.ui.open": {
+    "source": "sfx_ui_open_s8600",
+    "model": "stable-audio-3-medium",
+    "seed": 8600,
+    "prompt": "A bundle of bamboo slips unrolled on a wooden table: a short soft rattling clatter, close microphone, dry, isolated one-shot. Length: 1 seconds"
   },
   "sfx.ui.tap": {
     "source": "sfx_ui_tap_s8400",
