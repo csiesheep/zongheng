@@ -1596,8 +1596,14 @@ function cardTextBox(parent, id) {
 // The mini chip used instead of the full card header while the map is in
 // play (placing points, picking a campaign/lobby target) — C2_Place and
 // C2_Campaign show a small strip here, not the full art+text sheet, so the
-// map stays the point. "Expand" swaps in the full header without leaving
-// this mode (see wantsCardOverlay/mapActive in renderPromptAndSheet).
+// map stays the point. #94: "Card"/看牌 used to swap in the full header in
+// place (chipExpanded), with its own "收起"/Collapse button to swap back --
+// replaced by the read-only peek overlay (openPeek(), #34/#35), the same
+// page the log's card links open, so this chip no longer has an expanded
+// state of its own at all (see wantsCardOverlay/mapActive in
+// renderPromptAndSheet). `game.peek` is its own top-level state, untouched
+// by `game.ui`, so opening/closing it never disturbs the use/order/pair/
+// points already chosen underneath.
 // Returns the chip's own row (`.sheet-chip`) so a caller that needs to put
 // Cancel/Confirm on the SAME row (#68 round 2: the campaign/lobby
 // target-picked state, to close the last few px at 390x669/375x667) can
@@ -1614,7 +1620,10 @@ function cardChip(sh, id) {
   wrap.setAttribute("aria-label", `${cardZh(id)} / ${cardEn(id)}`);
   const expand = document.createElement("button");
   expand.type = "button"; expand.className = "chip-expand"; expand.textContent = t("buttons.expand");
-  expand.onclick = () => { game.ui.chipExpanded = true; render(); };
+  // #94: no `side` — this card is still in the acting player's own hand,
+  // not "played" yet, so the peek shows no "{side} played this" note (that
+  // note is openPeek()'s own opt-in, only built when a side is given).
+  expand.onclick = (ev) => { ev.stopPropagation(); openPeek(id); };
   wrap.appendChild(expand);
   sh.appendChild(wrap);
   return wrap;
@@ -1791,7 +1800,10 @@ function renderPromptAndSheet(v) {
   if (!info) { setPrompt(t("prompt.yourAction")); return; }
   // While the map is in play (placing points, picking a campaign/lobby
   // target) the sheet shrinks to a mini chip so the map stays visible and
-  // tappable (C2_Place/C2_Campaign) — "Expand" swaps in the full card.
+  // tappable (C2_Place/C2_Campaign). #94: "Card"/看牌 used to swap the full
+  // card in in place (chipExpanded); it now opens the read-only peek overlay
+  // instead (cardChip(), below), so the chip itself has no expanded state to
+  // track any more.
   // #71: an opponent's card with no order chosen yet never counts as
   // map-active -- Confirm stays disabled and the map stays untappable until
   // the player picks 先行動點/先事件 (choosing the use and the order may
@@ -1799,27 +1811,27 @@ function renderPromptAndSheet(v) {
   const orderPending = info.enemy && !ui.pair && ui.order == null;
   const mapActive = !orderPending && (ui.use === "campaign" || ui.use === "lobby" || (ui.use === "place" && !(info.enemy && ui.order === "eventFirst" && !ui.pair)));
   game.givesWay = mapActive;
-  // #24 round 2, fix #3: whenever the CHIP is shown (map active, not
-  // expanded) the order/pair choice is already made — the interactive rows
-  // move to whenever the FULL card is on screen instead (browsing it before
-  // any use is picked, the place pre-order step, or "Card"/看牌 pressed
-  // while map-active), so they're always reachable rather than landing
-  // exactly in the state that gets compacted away.
-  const showFullCard = !mapActive || ui.chipExpanded;
+  // #24 round 2, fix #3: whenever the CHIP is shown (map active) the
+  // order/pair choice is already made — the interactive rows move to
+  // whenever the FULL card is on screen instead (browsing it before any use
+  // is picked, or the place pre-order step), so they're always reachable
+  // rather than landing exactly in the state that gets compacted away.
+  // #94: "Card"/看牌 no longer swaps the full card in (it opens the peek
+  // overlay instead), so `showFullCard` is simply "map isn't active".
+  const showFullCard = !mapActive;
   // #29: the full card page's own scrollable middle — everything from the
   // text box down to the hint line goes in here (`mid`), never `sh`
   // directly, so [Cancel]/[Confirm] (appended to `sh` after this, see the
   // footer() calls below) stay pinned at the bottom of the overlay no
   // matter how long the card's own text or the enemy order row runs. Only
   // set when the full card is actually shown; the compact chip path
-  // (mapActive && !chipExpanded) keeps its old flat, unwrapped layout.
+  // (mapActive) keeps its old flat, unwrapped layout.
   let mid = null, pinned = null, chipRow = null;
   if (!showFullCard) {
     chipRow = cardChip(sh, ui.card);
   } else {
     cardHeader(sh, ui.card);
     mid = sheetMid(sh);
-    if (mapActive) btn(mid, t("buttons.collapse"), () => { ui.chipExpanded = false; render(); }, "small");
     cardTextBox(mid, ui.card);
   }
   const target = showFullCard ? mid : sh;
@@ -1935,7 +1947,16 @@ function renderPromptAndSheet(v) {
     }
     const { spent } = placementTrial(v, me, ui.points);
     setPrompt(t("prompt.place", { ops: info.ops, left: info.ops - spent }));
-    footer(sh, t("buttons.done"), () => humanAct({ ...base, points: ui.points }), ui.points.length === 0, () => { ui.points = []; render(); }, false, "place", "sfx.map.confirm");
+    // #94: this used to pass its own onCancel (`() => { ui.points = []; render(); }`),
+    // which only dropped any points placed so far and re-rendered the SAME
+    // placing state -- with 0 points placed (the common case, since this is
+    // the very first render of a fresh "place" pick) that was a dead no-op:
+    // same sheet, same prompt, the card still picked. Every other Cancel on
+    // this sheet (event/reform, the pre-order state, campaign/lobby) already
+    // falls through to footer()'s own default (`cancelToFresh`, i.e.
+    // `game.ui = freshUi()`) by passing `undefined` here -- this is the one
+    // spot that didn't, for every card's "place" use, not just the Cauldrons.
+    footer(sh, t("buttons.done"), () => humanAct({ ...base, points: ui.points }), ui.points.length === 0, cancelToFresh, false, "place", "sfx.map.confirm");
     return;
   }
   // campaign or lobby
@@ -2333,7 +2354,11 @@ function cardLinkButton(id, side, pill) {
 // both marked .no-tap-sound so the generic sfx.ui.tap listener never doubles
 // up with this) and this module's own Close button (card-view.js's own
 // button, marked .no-tap-sound there for the same reason -- see that file).
-function openPeek(cardId, side) {
+// #94: `side` is optional — the log/news links always pass one (who played
+// the card, for the "{side} played this" note below); the compact chip's
+// "Card"/看牌 button opens the SAME peek for a card still in the acting
+// player's own hand, with no side and so no such note.
+function openPeek(cardId, side = null) {
   game.peek = { card: cardId, side };
   Audio.play("sfx.ui.open");
   renderPeek();
@@ -2350,7 +2375,8 @@ function renderPeek() {
   refreshSheetLock();
   if (!open) { el.innerHTML = ""; el.className = "sheet overlay peek-sheet"; return; }
   const { card, side } = game.peek;
-  renderCardView(el, card, lang, { note: t("sheet.hint.played", { side: sideName(side) }), onClose: closePeek });
+  const note = side != null ? t("sheet.hint.played", { side: sideName(side) }) : undefined;
+  renderCardView(el, card, lang, { note, onClose: closePeek });
 }
 // #peekSheet itself is built here rather than added to play.html (owned by
 // no single file in this issue's own list) — #29's existing `.sheet`/
