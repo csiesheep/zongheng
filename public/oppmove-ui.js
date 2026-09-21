@@ -30,6 +30,20 @@ const stateName = (id, lang) => (id && E.STATES[id] ? (lang === "en" ? E.STATES[
 const regionName = (r, lang) => (r && E.REGIONS[r] ? (lang === "en" ? E.REGIONS[r].en : E.REGIONS[r].zh) : "");
 const sideName = (s, lang) => t(lang, `sides.${E.SIDES[s]}`);
 const opsOf = (id) => (id === E.JIUDING ? 4 : E.CARD[id].ops);
+// #82: the printed ops (opsOf, above) are what the CARD says -- not what the
+// move actually spent. The Nine Cauldrons is 4, or 5 when every point lands
+// in the Three Jin or Zhou; 商鞅變法's +1 (or any other ops modifier) can
+// change any card's own spend the same way. The move's own log steps carry
+// the true number: a `campaign`/`lobby` step's `ops`, or a `place` step's
+// `spent`. Fall back to the printed ops only when the move has no ops step
+// at all (a play for event, or a headline).
+function actualOpsOf(mv) {
+  for (const st of mv.steps) {
+    if ((st.type === "campaign" || st.type === "lobby") && typeof st.ops === "number") return st.ops;
+    if (st.type === "place" && typeof st.spent === "number") return st.spent;
+  }
+  return opsOf(mv.card);
+}
 const cardSideOf = (id) => (id === E.JIUDING ? null : E.CARD[id].side);
 const cardScoring = (id) => id !== E.JIUDING && !!E.CARD[id].scoring;
 // The mandate's own resulting total (v.mandate's own sign convention: +Qin).
@@ -158,7 +172,7 @@ function flattenBeats(mv, view, c) {
 // worth stating at all ("0 點" would be actively wrong).
 function useLineFor(mv, lang) {
   if (mv.use === "event") return cardScoring(mv.card) ? t(lang, "oppmove.useScoringEvent") : t(lang, "oppmove.useEvent");
-  return t(lang, "oppmove.useOps", { use: t(lang, `useNames.${mv.use}`), ops: opsOf(mv.card) });
+  return t(lang, "oppmove.useOps", { use: t(lang, `useNames.${mv.use}`), ops: actualOpsOf(mv) });
 }
 // ---------- ① the card panel ----------
 // The Nine Cauldrons (its `play` entry names card "jiuding", #81) is action
@@ -269,7 +283,7 @@ function chipHTML(mv) {
   const autoEvent = card !== "jiuding" && owner !== side;
   const line2 = use === "headline" ? t(lang, "oppmove.chipHeadline")
     : use === "event" ? t(lang, "oppmove.chipEvent")
-    : t(lang, autoEvent ? "oppmove.chipOpsEvent" : "oppmove.chipOps", { use: t(lang, `useNames.${use}`), ops: opsOf(card) });
+    : t(lang, autoEvent ? "oppmove.chipOpsEvent" : "oppmove.chipOps", { use: t(lang, `useNames.${use}`), ops: actualOpsOf(mv) });
   return `<img class="opp-chip-art" src="art/cards/${card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
     `<span class="opp-chip-text">` +
       `<span class="opp-chip-line1"${lang === "en" ? "" : ' lang="zh-Hant"'}><b class="side-${sideCls}">${esc(sideName(side, lang))}</b> · ${esc(cardName(card, lang))}</span>` +
