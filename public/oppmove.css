@@ -61,3 +61,47 @@
 .opp-chip-line1 { font: 900 13px/1 var(--serif); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .opp-chip-line1 b.side-q { color: var(--qin-text); } .opp-chip-line1 b.side-c { color: var(--chu-gold); }
 .opp-chip-line2 { font: 400 11px/1 var(--sans); color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ④ the sheet: same fixed bottom-sheet + scrim pattern as #logBody/#logScrim
+   (style.css), its own ids so neither can collide with the log panel's. */
+.opp-scrim { position: fixed; inset: 0; z-index: 44; background: rgba(0, 0, 0, 0.45); }
+.opp-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; max-height: 78svh; overflow-y: auto;
+  box-sizing: border-box; padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  background: #120f0b; border-top: 2px solid var(--chu-btn); border-radius: 14px 14px 0 0;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; gap: 8px;
+}
+.opp-sheet-head { display: flex; gap: 12px; }
+.opp-sheet-art { width: 72px; height: 96px; object-fit: cover; border-radius: 5px; flex: none; }
+.opp-sheet-meta { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.opp-sheet-name { font: 900 18px/1.15 var(--serif); color: var(--text); }
+.opp-sheet-name b.side-q { color: var(--qin-text); } .opp-sheet-name b.side-c { color: var(--chu-gold); }
+.opp-sheet-sub { font: 600 12.5px/1.2 var(--sans); color: var(--text-dim); }
+.opp-sheet-text { font: 400 12.5px/1.45 var(--serif); color: var(--gold); }
+.opp-sheet-subhead { font: 700 12px/1 var(--sans); color: var(--text-dim); letter-spacing: 1px; margin-top: 2px; }
+.opp-sheet-rows { display: flex; flex-direction: column; gap: 2px; }
+.opp-sheet-row {
+  display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border-radius: 6px;
+  background: none; border: none; text-align: left; color: var(--text); cursor: pointer; width: 100%;
+}
+.opp-sheet-row:hover, .opp-sheet-row:active { background: rgba(163, 28, 21, 0.18); }
+.opp-sheet-n {
+  width: 20px; height: 20px; border-radius: 50%; background: var(--chu-btn); color: #fff; flex: none;
+  font: 900 11px/20px var(--sans); text-align: center;
+}
+.opp-sheet-foot { display: flex; gap: 8px; margin-top: auto; padding-top: 4px; }
+.opp-sheet-foot button {
+  min-height: 44px; box-sizing: border-box; border-radius: 10px; font: 700 14px/1 var(--sans); cursor: pointer;
+  border: 1.5px solid var(--gold); background: none; color: var(--gold);
+}
+.opp-sheet-prev { flex: none; padding: 0 16px; }
+.opp-sheet-close { flex: 1; }
+.opp-sheet-close.primary { background: var(--gold); border-color: var(--gold); color: var(--bg); font-weight: 900; }
+.opp-sheet-prev:disabled { opacity: 0.4; cursor: default; }
+
+/* A row's or chip's tap flashing the space/status it names (④'s own spec). */
+.node.opp-flash .disc, [data-stat].opp-flash { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .opp-card, .opp-chip { transition: none; }
+}
