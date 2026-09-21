@@ -1,9 +1,11 @@
-/* #79: the opponent's-move reveal. Every element here is `position: fixed`,
-   appended straight to <body> by oppmove-ui.js -- none of it is a child of
-   #map or #table, so nothing here can ever change #map's own box (#68's
-   rule stays the engine's/app.js's alone to keep). z-index sits below the
-   card sheet's own overlay (40) and the log panel (44/45), above the map's
-   ordinary content (2-6), so a real card page or the log always wins. */
+/* #79/#87: the opponent's-move reveal -- the card panel (①) and the map
+   playback (②) only; #85's corner thumbnail/preview and its ④ sheet are
+   gone (#87). Every element here is `position: fixed`, appended straight to
+   <body> by oppmove-ui.js -- none of it is a child of #map or #table, so
+   nothing here can ever change #map's own box (#68's rule stays the
+   engine's/app.js's alone to keep). z-index sits below the card sheet's own
+   overlay (40) and the log panel (44/45), above the map's ordinary content
+   (2-6), so a real card page or the log always wins. */
 #oppReveal { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
 .opp-dim { position: fixed; background: rgba(8, 6, 4, 0.32); border-radius: 14px; pointer-events: auto; cursor: pointer; }
 /* ②: the same element, full map height, invisible -- still catches a tap
@@ -52,102 +54,6 @@
   font: 600 13px/28px var(--sans); text-align: center; white-space: nowrap; overflow: hidden;
   text-overflow: ellipsis; pointer-events: auto; cursor: pointer;
 }
-/* ③ the corner thumbnail (#85: replaces #84's pill -- art only, fixed at
-   the map's own top-left corner, positioned by oppmove-ui.js's
-   positionCorner() off the map's own rect; never a child of #map, so #68's
-   map rect stays untouched. map-draw.js keeps that corner free of any
-   city/disc/badge (map-corner.test.js). The thumb stays in the DOM (and
-   focusable) at all times -- the preview is an absolutely-positioned
-   sibling stacked on the same top-left point, shown/hidden with its own
-   `.open` class rather than `hidden`, so showing it on focus never yanks
-   focus away by removing the focused element. */
-.opp-corner { position: fixed; z-index: 21; }
-.opp-thumb {
-  position: relative; display: block; padding: 4px 4px 0; margin: 0; border: none; background: none; cursor: pointer;
-  border-radius: 6px; /* >=44x48 hit area: 36x48 art + 4px on top/left/right, 0 on bottom (#85 round 2: the bottom
-     padding used to push the hit box a few px into Yiqu's own hit target at 390x669 -- trimmed instead of
-     padding the touch target further than the brief's own ">=44x48" floor requires). */
-}
-.opp-thumb-art { display: block; width: 36px; height: 48px; object-fit: cover; border-radius: 4px; border: 2px solid var(--chu-btn); }
-.opp-thumb.side-q .opp-thumb-art { border-color: var(--qin-text); }
-.opp-thumb:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-/* The enlarged preview (about 120x160 art + two lines). #85 round 2: a
-   `transform: scale()`-based resting/open toggle measured the art at
-   66x88 (120x160 * 0.55) -- and, tried next, so did a `display: none ->
-   flex` + `@starting-style` transition (the fix ui-states.css's own long
-   comment documents for the exact same shape elsewhere in this file):
-   in this pane specifically, BOTH read back the transition's FROM value
-   even on the very first synchronous read right after opening, not just
-   under a stalled/never-ticking timeline. Motion here uses `clip-path`
-   instead -- it only ever hides PAINT outside the shape, never touches
-   any element's own box -- so `.opp-preview-art`'s geometry (what a
-   checker measures) is the full 120x160 in every animation frame,
-   including frame zero, on every browser regardless of whether its
-   rendering timeline ticks at all. */
-.opp-preview {
-  position: absolute; left: 0; top: 0; z-index: 1; display: none; flex-direction: column; align-items: center; gap: 5px;
-  width: 136px; box-sizing: border-box; padding: 8px; border-radius: 10px;
-  background: rgba(22, 19, 14, 0.96); border: 1.5px solid var(--chu-btn); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
-  cursor: pointer; pointer-events: none; clip-path: inset(0 round 10px);
-}
-.opp-preview.open { display: flex; pointer-events: auto; }
-.opp-preview.side-q { border-color: var(--qin-text); }
-.opp-preview-art { width: 120px; height: 160px; object-fit: cover; border-radius: 6px; }
-.opp-preview-line1 { font: 700 12.5px/1.3 var(--sans); color: var(--text); text-align: center; }
-.opp-preview-line2 { font: 600 12px/1.3 var(--sans); color: var(--text-dim); text-align: center; }
-@media (min-width: 1024px) {
-  .opp-thumb-art { width: 40px; height: 54px; }
-  .opp-preview-art { width: 120px; height: 160px; }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .opp-preview.open {
-    transition: clip-path 150ms ease-out, opacity 150ms ease-out;
-  }
-  @starting-style {
-    .opp-preview.open { opacity: 0; clip-path: inset(0 46% 46% 0 round 10px); }
-  }
-}
-
-/* ④ the sheet: same fixed bottom-sheet + scrim pattern as #logBody/#logScrim
-   (style.css), its own ids so neither can collide with the log panel's. */
-.opp-scrim { position: fixed; inset: 0; z-index: 44; background: rgba(0, 0, 0, 0.45); }
-.opp-sheet {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; max-height: 78svh; overflow-y: auto;
-  box-sizing: border-box; padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
-  background: #120f0b; border-top: 2px solid var(--chu-btn); border-radius: 14px 14px 0 0;
-  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; gap: 8px;
-}
-.opp-sheet-head { display: flex; gap: 12px; }
-.opp-sheet-art { width: 72px; height: 96px; object-fit: cover; border-radius: 5px; flex: none; }
-.opp-sheet-meta { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.opp-sheet-name { font: 900 18px/1.15 var(--serif); color: var(--text); }
-.opp-sheet-name b.side-q { color: var(--qin-text); } .opp-sheet-name b.side-c { color: var(--chu-fill); }
-.opp-sheet-sub { font: 600 12.5px/1.2 var(--sans); color: var(--text-dim); }
-.opp-sheet-text { font: 400 12.5px/1.45 var(--serif); color: var(--gold); }
-.opp-sheet-subhead { font: 700 12px/1 var(--sans); color: var(--text-dim); letter-spacing: 1px; margin-top: 2px; }
-.opp-sheet-rows { display: flex; flex-direction: column; gap: 2px; }
-.opp-sheet-row {
-  display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border-radius: 6px;
-  background: none; border: none; text-align: left; color: var(--text); cursor: pointer; width: 100%;
-}
-.opp-sheet-row:hover, .opp-sheet-row:active { background: rgba(163, 28, 21, 0.18); }
-.opp-sheet-n {
-  width: 20px; height: 20px; border-radius: 50%; background: var(--chu-btn); color: #fff; flex: none;
-  font: 900 11px/20px var(--sans); text-align: center;
-}
-.opp-sheet-foot { display: flex; gap: 8px; margin-top: auto; padding-top: 4px; }
-.opp-sheet-foot button {
-  min-height: 44px; box-sizing: border-box; border-radius: 10px; font: 700 14px/1 var(--sans); cursor: pointer;
-  border: 1.5px solid var(--gold); background: none; color: var(--gold);
-}
-.opp-sheet-prev { flex: none; padding: 0 16px; }
-.opp-sheet-close { flex: 1; }
-.opp-sheet-close.primary { background: var(--gold); border-color: var(--gold); color: var(--bg); font-weight: 900; }
-.opp-sheet-prev:disabled { opacity: 0.4; cursor: default; }
-
-/* A row's or chip's tap flashing the space/status it names (④'s own spec). */
-.node.opp-flash .disc, [data-stat].opp-flash { outline: 3px solid var(--gold); outline-offset: 2px; }
-
 @media (prefers-reduced-motion: reduce) {
-  .opp-card, .opp-chip { transition: none; }
+  .opp-card { transition: none; }
 }
