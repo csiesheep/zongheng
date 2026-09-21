@@ -1,0 +1,162 @@
+{
+  "bgm.landing": {
+    "take": "bgm_landing_liangting_s5411",
+    "loop": true
+  },
+  "bgm.lose.chu": {
+    "take": "bgm_lose_chu_chuge_low_s5471",
+    "loop": false
+  },
+  "bgm.lose.qin": {
+    "take": "bgm_lose_qin_jin_low_s5461",
+    "loop": false
+  },
+  "bgm.table.alliance.chu": {
+    "take": "bgm_table_alliance_chu_yingdu_s5331",
+    "loop": true
+  },
+  "bgm.table.alliance.qin": {
+    "take": "bgm_table_alliance_qin_lianheng_s5321",
+    "loop": true
+  },
+  "bgm.table.conquest.chu": {
+    "take": "bgm_table_conquest_chu_guoshang_s5351",
+    "loop": true
+  },
+  "bgm.table.conquest.qin": {
+    "take": "bgm_table_conquest_qin_hulang_s5341",
+    "loop": true
+  },
+  "bgm.table.reform.chu": {
+    "take": "bgm_table_reform_chu_C_yunmeng_long_s5361",
+    "loop": true
+  },
+  "bgm.table.reform.qin": {
+    "take": "bgm_table_reform_qin_D_weishui_s5311",
+    "loop": true
+  },
+  "bgm.win.chu": {
+    "take": "bgm_win_chu_fengming_s5431",
+    "loop": false
+  },
+  "bgm.win.qin": {
+    "take": "bgm_win_qin_yitong_s5421",
+    "loop": false
+  },
+  "sfx.card.commit": {
+    "take": "sfx_card_commit_s8110",
+    "loop": false
+  },
+  "sfx.card.event.chu": {
+    "take": "sfx_event_chu_s7201",
+    "loop": false
+  },
+  "sfx.card.event.neutral": {
+    "take": "sfx_card_event_neutral_s8140",
+    "loop": false
+  },
+  "sfx.card.event.qin": {
+    "take": "sfx_card_event_qin_s8130",
+    "loop": false
+  },
+  "sfx.card.pick": {
+    "take": "sfx_card_pick_s8100",
+    "loop": false
+  },
+  "sfx.card.reveal": {
+    "take": "sfx_card_reveal_s8120",
+    "loop": false
+  },
+  "sfx.end.lose.chu": {
+    "take": "sfx_end_lose_chu_s8452",
+    "loop": false
+  },
+  "sfx.end.lose.qin": {
+    "take": "sfx_end_lose_qin_s8441",
+    "loop": false
+  },
+  "sfx.end.win.chu": {
+    "take": "sfx_end_win_chu_s8432",
+    "loop": false
+  },
+  "sfx.end.win.qin": {
+    "take": "sfx_end_win_qin_s8422",
+    "loop": false
+  },
+  "sfx.map.campaign": {
+    "take": "sfx_map_campaign_s8181",
+    "loop": false
+  },
+  "sfx.map.confirm": {
+    "take": "sfx_map_confirm_s8150",
+    "loop": false
+  },
+  "sfx.map.control.gain": {
+    "take": "sfx_map_control_gain_s8162",
+    "loop": false
+  },
+  "sfx.map.control.lose": {
+    "take": "sfx_map_control_lose_drum_s8522",
+    "loop": false
+  },
+  "sfx.map.opponent": {
+    "take": "sfx_map_opponent_s8190",
+    "loop": false
+  },
+  "sfx.map.place": {
+    "take": "sfx_map_place_s7102",
+    "loop": false
+  },
+  "sfx.mie": {
+    "take": "sfx_mie_s8342",
+    "loop": false
+  },
+  "sfx.seal.gain": {
+    "take": "sfx_seal_gain_s8220",
+    "loop": false
+  },
+  "sfx.seal.lose": {
+    "take": "sfx_seal_lose_s8231",
+    "loop": false
+  },
+  "sfx.track.mandate.chu": {
+    "take": "sfx_track_mandate_chu_paixiao_s8330",
+    "loop": false
+  },
+  "sfx.track.mandate.qin": {
+    "take": "sfx_track_mandate_qin_s8311",
+    "loop": false
+  },
+  "sfx.turn.clock.last": {
+    "take": "sfx_turn_clock_last_s8371",
+    "loop": false
+  },
+  "sfx.turn.clock.tick": {
+    "take": "sfx_turn_clock_tick_s8360",
+    "loop": false
+  },
+  "sfx.turn.era": {
+    "take": "sfx_turn_era_s8350",
+    "loop": false
+  },
+  "sfx.turn.new": {
+    "take": "sfx_turn_new_s8260",
+    "loop": false
+  },
+  "sfx.turn.yours": {
+    "take": "sfx_turn_yours_s8282",
+    "loop": false
+  },
+  "sfx.ui.error": {
+    "take": "sfx_ui_error_s8410",
+    "loop": false
+  },
+  "sfx.ui.tap": {
+    "take": "sfx_ui_tap_s8400",
+    "loop": false
+  },
+  "sfx.warn": {
+    "take": "sfx_warn_s8250",
+    "loop": false
+  }
+}
