@@ -388,8 +388,15 @@ export function createGame(seed, options = {}) {
 
 // ---------- the plan runner ----------
 export function run(st) {
-  for (let guard = 0; !st.pending && st.winner == null && st.plan.length; guard++) {
+  for (let guard = 0; !st.pending && st.winner == null; guard++) {
     if (guard > 10000) fail("run: plan did not settle");
+    if (!st.plan.length) {
+      // Nothing planned and nobody owes a headline: with an empty hand on both
+      // sides (#57) there is no action left that could end the phase, so the
+      // headlines resolve themselves rather than the table waiting for ever.
+      if (st.phase !== "headline" || mustAct(st).length) break;
+      st.plan.push({ do: "headline" });
+    }
     const step = st.plan[0];
     if (exec(st, step)) st.plan.shift();
   }
@@ -512,12 +519,24 @@ function startTurn(st) {
   st.phase = "headline";
   log(st, { type: "turn", turn: st.turn, era: st.era });
 }
+// Who still owes a headline. The deal in `startTurn` stops when `drawOne` runs
+// out of cards (draw and discard both empty), so a side can reach the headline
+// phase holding nothing: it commits no headline -- orchestrator's ruling
+// (#57), flagged to the owner. Before this the phase simply never ended, for
+// anyone: `legal()` answered `{ kind: "headline", cards: [] }` for ever and
+// `mustAct` kept naming a side that could do nothing.
+function needsHeadline(st, side) { return st.headline[side] == null && st.hands[side].length > 0; }
 
 function resolveHeadlines(st) {
-  const [q, c] = st.headline;
-  const first = CARD[c].ops > CARD[q].ops ? CHU : QIN; // ties go to Qin
-  const order = first === QIN ? [QIN, CHU] : [CHU, QIN];
-  log(st, { type: "headline", cards: st.headline, first });
+  const played = [QIN, CHU].filter((s) => st.headline[s] != null);
+  // Ties go to Qin. With only one headline it goes alone; with none (both
+  // hands empty) the phase is over before it began. A side that committed
+  // nothing is logged the way `beginAction` logs an action-round skip.
+  const order = played.length === 2
+    ? (CARD[st.headline[CHU]].ops > CARD[st.headline[QIN]].ops ? [CHU, QIN] : [QIN, CHU])
+    : played;
+  for (const side of [QIN, CHU]) if (st.headline[side] == null) log(st, { type: "skip", side });
+  log(st, { type: "headline", cards: st.headline, first: order[0] ?? null });
   const steps = [];
   for (const side of order) {
     const card = st.headline[side];
@@ -612,7 +631,7 @@ function doOps(st, side, card, ops, choice) {
 export function mustAct(st) {
   if (st.winner != null) return [];
   if (st.pending) return [st.pending.who];
-  if (st.phase === "headline") return [QIN, CHU].filter((s) => st.headline[s] == null);
+  if (st.phase === "headline") return [QIN, CHU].filter((s) => needsHeadline(st, s));
   if (st.phase === "action") return [st.actor];
   return [];
 }
@@ -686,7 +705,8 @@ function headline(st, action) {
   if (i < 0) fail("card not in hand");
   h.splice(i, 1);
   st.headline[side] = c;
-  if (st.headline[QIN] != null && st.headline[CHU] != null) st.plan.unshift({ do: "headline" });
+  // Everyone who owed a headline has one now (a side with no card owes none, #57).
+  if (![QIN, CHU].some((s) => needsHeadline(st, s))) st.plan.unshift({ do: "headline" });
   return run(st);
 }
 
@@ -708,14 +728,28 @@ function play(st, action) {
   }
   const h = st.hands[side];
   if (!h.includes(c)) fail("card not in hand");
-  const forced = forcedCard(st, side);
-  if (forced && forced !== c) fail("you must play the named card");
   const card = CARD[c];
   const bog = st.effects.find((e) => e.kind === "bog" && e.who === side);
   const bogCards = bog ? h.filter((x) => CARD[x].ops >= 2) : [];
+  // 頓兵堅城 (dunbing, 69) and 細作 (xizuo, 67) both claim this action round.
+  // orchestrator's ruling (#57), flagged to the owner: the bog comes first and
+  // 細作 carries. While a discard is owed AND possible, the round IS the
+  // discard -- any card of 2+ ops, named or not, the player's choice -- so the
+  // named-card check does not apply to it. With no card the bog can take, the
+  // card's own text says the round is a normal one and the bog waits: then the
+  // named card must be played, as before. Until this the two refusals crossed
+  // and a named card under 2 ops left the side with nothing at all to do
+  // (seed 1332 on fallbacks, turn 7, Chu forced to play 記分 score_east).
+  const bogRound = bogCards.length > 0 && use === "bog";
+  const forced = forcedCard(st, side);
+  if (forced && forced !== c && !bogRound) fail("you must play the named card");
   if (bogCards.length && use !== "bog") fail("頓兵堅城: discard a card of 2+ ops first");
   h.splice(h.indexOf(c), 1);
-  st.forced[side] = null;
+  // The obligation is not used up by a bog discard of another card (#57): it
+  // waits for the side's next action round. Discarding the named card itself
+  // ends it, like playing it -- and `forcedCard` would say so anyway, since
+  // the card has left the hand.
+  if (!bogRound || c === forced) st.forced[side] = null;
   const ops = opsOf(st, side, c);
   if (use === "bog") {
     if (!bogCards.includes(c)) fail("bog: that card cannot be discarded");
@@ -781,7 +815,7 @@ export function legal(st, side) {
   if (st.winner != null) return { kind: "over" };
   if (st.pending) return st.pending.who === side ? { kind: "pending", pending: st.pending } : { kind: "wait" };
   if (st.phase === "headline") {
-    return st.headline[side] == null ? { kind: "headline", cards: st.hands[side].slice() } : { kind: "wait" };
+    return needsHeadline(st, side) ? { kind: "headline", cards: st.hands[side].slice() } : { kind: "wait" };
   }
   if (st.phase !== "action" || st.actor !== side) return { kind: "wait" };
   const h = st.hands[side];
