@@ -161,7 +161,13 @@ function useLineFor(mv, lang) {
   return t(lang, "oppmove.useOps", { use: t(lang, `useNames.${mv.use}`), ops: opsOf(mv.card) });
 }
 // ---------- ① the card panel ----------
+// The Nine Cauldrons (oppmove.js's own "jiuding" sentinel, round 2's fix 7:
+// it never logs a `play` entry, so opponentMoves() opens its move at its
+// first place/campaign/lobby step instead) is action points only -- it has
+// no event, unlike a genuine neutral/enemy card played for ops, so it gets
+// no event line at all, never the "its event also happens" wording.
 function eventLineFor(mv, lang) {
+  if (mv.card === "jiuding") return "";
   const owner = cardSideOf(mv.card);
   const text = cardText(mv.card, lang);
   if (mv.use === "headline") return t(lang, "oppmove.eventHeadline", { text });
@@ -259,9 +265,12 @@ function renderStepsStatic() {
 function chipHTML(mv) {
   const lang = ctx.lang, side = mv.side, card = mv.card, use = mv.use, sideCls = side === E.QIN ? "q" : "c";
   const owner = cardSideOf(card);
+  // The Cauldrons never carries an event (see eventLineFor's own note) --
+  // `owner !== side` alone would say "event also happens" here, wrongly.
+  const autoEvent = card !== "jiuding" && owner !== side;
   const line2 = use === "headline" ? t(lang, "oppmove.chipHeadline")
     : use === "event" ? t(lang, "oppmove.chipEvent")
-    : t(lang, owner !== side ? "oppmove.chipOpsEvent" : "oppmove.chipOps", { use: t(lang, `useNames.${use}`), ops: opsOf(card) });
+    : t(lang, autoEvent ? "oppmove.chipOpsEvent" : "oppmove.chipOps", { use: t(lang, `useNames.${use}`), ops: opsOf(card) });
   return `<img class="opp-chip-art" src="art/cards/${card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
     `<span class="opp-chip-text">` +
       `<span class="opp-chip-line1"${lang === "en" ? "" : ' lang="zh-Hant"'}><b class="side-${sideCls}">${esc(sideName(side, lang))}</b> · ${esc(cardName(card, lang))}</span>` +
