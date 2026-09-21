@@ -34,8 +34,9 @@ test("the ending: the winner and a spectator hear the winner's piece, the loser 
   assert.equal(A.sceneFor({ page: "over", me: null, winner: 1 }), "bgm.win.chu");
 });
 
-test("every cue the map can ask for is in the manifest, except the two pieces that are not made yet", () => {
-  assert.deepEqual([...A.missingCues(manifest)].sort(), ["bgm.setup", "bgm.tutorial"]);
+test("every cue the map can ask for is in the manifest", () => {
+  // until #63 the setup and tutorial pieces were not made yet and this list held those two
+  assert.deepEqual([...A.missingCues(manifest)].sort(), []);
   // and the manifest is not lying about itself
   for (const [cue, m] of Object.entries(manifest.cues)) {
     assert.ok(fs.existsSync(new URL("../public/audio/" + m.file, import.meta.url)), `${cue}: ${m.file} is not in public/audio`);
