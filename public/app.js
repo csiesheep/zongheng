@@ -327,6 +327,26 @@ game.lastMoveFresh = false;
 // never on every render while it's already your decision).
 game.lastDangerFlags = [];
 game.lastLegalKind = null;
+// #62 part 2 fix 3: every place voicing keeps state ACROSS renders has to be
+// cleared wherever a game genuinely starts or resumes (startSolo/resumeSolo,
+// and connect()'s first "view" for a room), not left to the log index
+// happening to go backwards -- a fresh solo game replacing one that ended
+// at, say, log index 5 starts its own index back near 0, so that still
+// resets correctly on its own; but a RESUMED game or a room's own log can
+// start well above 0, and without this, entries already in it (or a
+// mid-sequence rate/last-second) would be treated as "new" or "still
+// ticking" the moment the first render/interval tick runs. A function
+// declaration (hoisted) so it can be called from startSolo() etc., which
+// are defined earlier in this file than placeTapSpace/placeTapStreak/
+// lastClockS themselves (all still fine: this body only runs once called,
+// long after the whole module's top-level `let`s have initialized).
+function resetVoicingState() {
+  game.lastView = null;
+  game.lastDangerFlags = [];
+  game.lastLegalKind = null;
+  placeTapSpace = null; placeTapStreak = 0;
+  lastClockS = null;
+}
 // Per-tab: the reconnect token, so two tabs in one browser are two players.
 const sess = {
   get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
@@ -345,6 +365,7 @@ function startSolo() {
   game.fallbackNote = ""; game.stuck = false;
   game.botName = S.names[E.SIDES[1 - game.me]][0];
   game.auto = new URLSearchParams(location.search).has("auto");
+  resetVoicingState(); // #62 part 2 fix 3
   setLogOpen(false);
   show("table"); render(); botLoop();
 }
@@ -365,6 +386,7 @@ function resumeSolo() {
   Object.assign(game, { room: false, spectator: false, st: s.st, me: s.me, level: s.level, rng: E.makeRng(0), ui: freshUi(), botLine: "", fallbackNote: "", stuck: false, seenLog: s.seenLog, auto: false });
   game.rng.setState(s.rng);
   game.botName = S.names[E.SIDES[1 - game.me]][0];
+  resetVoicingState(); // #62 part 2 fix 3: nothing from the resumed log/state is "new" this render
   show("table"); render(); botLoop();
 }
 function humanAct(action) {
@@ -533,7 +555,22 @@ function render() {
   const v = game.room ? game.st : E.view(game.st, game.me);
   game.lastView = v; // layoutTable() re-renders the hand off this if it flips full<->chip
   updateLastMoveMarks(prevView, v); // #41 — renderMap()/decorateAdvisor() below read game.lastMoveMarks off this
-  voiceBoardAudio(prevView, v, game.spectator ? null : game.me); // #62 part 2, item A
+  // #62 part 2, item A + fix 1: one combined decision, one combined
+  // playBatch() call, covering both the spectator and the player branches
+  // below (a spectator never gets `yours` -- game.spectator gates it here,
+  // not by omission further down). `yours` is a pure function of `v`/seat,
+  // so it's safe to decide before the branch split even though the ORIGINAL
+  // prompt text it corresponds to isn't drawn until renderPromptAndSheet()
+  // runs, later, in the non-spectator branch only.
+  const audioMe = game.spectator ? null : game.me;
+  const boardCues = voiceBoardAudio(prevView, v, audioMe);
+  const yours = !game.spectator && v.winner == null && yoursFires(v, game.me);
+  const voiced = boardCues.cues.slice();
+  if (yours && !boardCues.hasOver) {
+    if (voiced.length) voiced.push("sfx.turn.yours"); // end of the batch, same 180ms spacing
+    else Audio.play("sfx.turn.yours"); // no batch this render: plays at once, as before
+  }
+  if (voiced.length) Audio.playBatch(voiced);
   // #30 (owner, iPhone repro): "Turn N · Side" duplicated the topbar's own
   // "Turn N · Era · Action X/Y" line right below it — dropped from ordinary
   // play; the tutorial's "Lesson n/10" is #barMid's only remaining content
@@ -1148,13 +1185,22 @@ function updateLastMoveMarks(prevView, v) {
 // own bookkeeping, not organic play (the issue: "nothing at all during the
 // tutorial's scripted steps unless it is the player's own tap" -- taps get
 // their own sounds at the tap site, not through this log diff).
+// Returns { cues, hasOver } instead of playing directly -- render() (below)
+// still owns the one actual playBatch() call, so it can append sfx.turn.yours
+// to the END of this same batch (the orchestrator's ruling: the reminder
+// must not land ahead of or in the middle of the cues a bot's move just
+// produced) rather than firing it as its own separate, earlier sound.
+// `hasOver` is read straight off the fresh log entries (not the cue string):
+// a game-ending batch never gets the reminder appended, win or lose.
 function voiceBoardAudio(prevView, v, me) {
-  if (Tut.active()) return;
+  if (Tut.active()) return { cues: [], hasOver: false };
   const prevI = lastLogI(prevView), curI = lastLogI(v);
   const reset = !prevView || curI < prevI;
   const cues = [];
+  let hasOver = false;
   if (!reset && curI > prevI) {
     const fresh = v.log.filter((l) => l.i > prevI);
+    hasOver = fresh.some((l) => l.type === "over");
     cues.push(...Cues.cuesForLog(fresh, { me }), ...Cues.controlCues(prevView, v, me));
   }
   // dangerFlags reads the state directly (not a diff of the log), so it's
@@ -1165,7 +1211,25 @@ function voiceBoardAudio(prevView, v, me) {
   const flags = Cues.dangerFlags(v);
   if (!reset && flags.some((f) => !game.lastDangerFlags.includes(f))) cues.push("sfx.warn");
   game.lastDangerFlags = flags;
-  if (cues.length) Audio.playBatch(cues);
+  return { cues, hasOver };
+}
+// #62 part 2 fix 1 (orchestrator, from a played turn's own cue list: a
+// bot's move produced sfx.map.campaign 4ms after sfx.turn.yours had already
+// fired on its own): the wait -> your-decision reminder used to play
+// immediately from inside renderPromptAndSheet(), landing ahead of (or
+// inside) the very batch the SAME render's log diff just queued. Detected
+// here instead (same game.lastLegalKind bookkeeping, moved out of
+// renderPromptAndSheet so there is exactly one place that updates it), and
+// combined with `cues` by the caller (render(), below) per the rule: append
+// to the end of a non-empty batch (same 180ms spacing as every other cue in
+// it), play alone at once when the batch is empty, never play at all when
+// the batch ends the game.
+function yoursFires(v, me) {
+  if (Tut.active()) return false; // scripted; game.lastLegalKind is left untouched for whenever the tutorial ends
+  const kind = E.legal(v, me).kind;
+  const fires = game.lastLegalKind === "wait" && kind !== "wait";
+  game.lastLegalKind = kind;
+  return fires;
 }
 // Removes the last-move mark from the map WITHOUT a render(): the owner's
 // iPhone lost taps to nodes rebuilt under the finger once before (see the
@@ -1547,19 +1611,10 @@ function renderPromptAndSheet(v) {
     return;
   }
   const L = E.legal(v, me);
-  // #62 part 2, item A: sfx.turn.yours on the wait -> your-decision edge
-  // ONLY (game.lastLegalKind tracks what the LAST render found, same
-  // one-render-apart convention as updateLastMoveMarks()'s prevView/v) --
-  // never on every render while it's already your decision (a card pick,
-  // a language toggle, anything else that re-renders this same state).
-  // Deliberately fires "also while the document is hidden" (the issue's own
-  // words): Audio.play() itself doesn't check document.hidden, only the
-  // MUSIC layer does, so this needs nothing extra here. Excluded during the
-  // tutorial (its own prompt flips constantly as a scripted device, not a
-  // real turn handoff) and for a spectator (renderPromptAndSheet is only
-  // ever called from render()'s non-spectator branch, so that's automatic).
-  if (!Tut.active() && game.lastLegalKind === "wait" && L.kind !== "wait") Audio.play("sfx.turn.yours");
-  game.lastLegalKind = L.kind;
+  // #62 part 2 fix 1: sfx.turn.yours itself now decided and played from
+  // render() (yoursFires(), combined with voiceBoardAudio()'s own batch) --
+  // this used to play it right here, immediately, which could land ahead of
+  // or inside the very batch the same render's log diff was about to queue.
   // #53 round 2: a genuinely stuck game (no accepted move, not even the
   // fallback's) said so only in the closed log panel -- the prompt itself,
   // where "Waiting for..." lives, kept telling the player to keep waiting
@@ -2309,6 +2364,7 @@ function connect(params) {
   const ws = new WebSocket(wsUrl({ ...params, name, lang }));
   Object.assign(room, { ws, code: params.room || null, me: null, seats: [], settings: null, phase: null, fatal: false, chat: [] });
   game.room = true; game.spectator = false; game.st = null; game.ui = freshUi();
+  resetVoicingState(); // #62 part 2 fix 3: this connection's first "view" must not voice whatever it already contains
   $("lobbyGate").hidden = true; $("lobbyRoom").hidden = false;
   $("lobbyErr").hidden = true; $("lobbyHint").textContent = t("lobby.connecting"); $("lobbyCode").textContent = room.code || ""; $("lobbySeats").innerHTML = ""; $("lobbyActions").innerHTML = ""; $("lobbyChat").innerHTML = "";
   show("lobby");
@@ -2515,19 +2571,27 @@ function renderLobby() {
   if (showLevel) seg($("lobbyLevel"), [["easy", t("setup.easy")], ["normal", t("setup.normal")], ["hard", t("setup.hard")]], room.settings?.level || "normal", (v) => { if (room.isHost) send({ type: "settings", level: v }); });
   renderLobbyActions();
 }
-// #62 part 2, item A: the room clock's own tick/last-second sounds --
-// `lastClockS` (not just "did the interval fire") so a fresh deadline
-// starting at s=10 always plays even if the PREVIOUS deadline also
-// happened to end at s=10, and so this fires once per distinct second even
-// if the 1000ms interval drifts a little. Reset to null whenever there's no
-// active deadline to count down (the guard clause below), so the next real
-// deadline starts clean.
+// #62 part 2, item A + fix 2: the room clock's own tick/last-second sounds.
+// The visible countdown text (unchanged, below) is for every seat and a
+// spectator alike, but the SOUND is only for a seated player whose OWN
+// decision the clock is actually running against -- a spectator has no
+// clock to feel pressured by, and a seated player hears nothing during the
+// OPPONENT's turn (the orchestrator's own checker read the guard and caught
+// both: originally only `!room.deadline` etc., nothing about the seat or
+// whose turn it is). `lastClockS` (not just "did the interval fire") so a
+// fresh deadline starting at s=10 always plays even if the PREVIOUS
+// deadline also happened to end at s=10, and so this fires once per
+// distinct second even if the 1000ms interval drifts a little. Reset to
+// null whenever there's no active deadline OR the sound-gate above doesn't
+// hold, so the next real "my own clock" deadline starts clean.
 let lastClockS = null;
 setInterval(() => {
   if (!game.room || !game.st || game.st.winner != null || !room.deadline) { lastClockS = null; return; }
   const s = Math.max(0, Math.ceil((room.deadline - Date.now()) / 1000));
   $("barMid").textContent = `${t("tracks.turn")} ${game.st.turn} · ${game.spectator ? "" : sideName(game.me)} · ${t("lobby.clock", { s })}`;
   layoutBar();
+  const myClock = !game.spectator && E.mustAct(game.st).includes(game.me);
+  if (!myClock) { lastClockS = null; return; }
   if (s !== lastClockS) {
     if (s >= 4 && s <= 10) Audio.play("sfx.turn.clock.tick");
     else if (s >= 1 && s <= 3) Audio.play("sfx.turn.clock.last");
