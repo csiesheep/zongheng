@@ -292,7 +292,7 @@
     "sfx.turn.yours": {
       "file": "sfx.turn.yours.mp3",
       "kind": "sfx",
-      "seconds": 1.72,
+      "seconds": 1.31,
       "gain": 1,
       "loop": false,
       "source": "sfx_turn_yours_s8282"
