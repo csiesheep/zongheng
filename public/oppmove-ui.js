@@ -27,10 +27,13 @@ const cardName = (id, lang) => (lang === "en" ? cardEn(id) : cardZh(id));
 const cardText = (id, lang) => (lang === "en" ? cardTextEn(id) : cardTextZh(id));
 const spaceName = (id, lang) => (id && E.SPACE[id] ? (lang === "en" ? E.SPACE[id].en : E.SPACE[id].zh) : "");
 const stateName = (id, lang) => (id && E.STATES[id] ? (lang === "en" ? E.STATES[id].en : E.STATES[id].zh) : "");
+const regionName = (r, lang) => (r && E.REGIONS[r] ? (lang === "en" ? E.REGIONS[r].en : E.REGIONS[r].zh) : "");
 const sideName = (s, lang) => t(lang, `sides.${E.SIDES[s]}`);
 const opsOf = (id) => (id === E.JIUDING ? 4 : E.CARD[id].ops);
 const cardSideOf = (id) => (id === E.JIUDING ? null : E.CARD[id].side);
-const mandateTxt = (m, lang) => (m > 0 ? `${t(lang, "sides.qin")} +${m}` : m < 0 ? `${t(lang, "sides.chu")} +${-m}` : "0");
+const cardScoring = (id) => id !== E.JIUDING && !!E.CARD[id].scoring;
+// The mandate's own resulting total (v.mandate's own sign convention: +Qin).
+const mandateTotalTxt = (m, lang) => (m > 0 ? `${t(lang, "sides.qin")} +${m}` : m < 0 ? `${t(lang, "sides.chu")} +${-m}` : "0");
 
 const CARD_MS = 1500, STEP_MS = 600;
 const reduceMotion = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } };
@@ -109,7 +112,19 @@ function flattenBeats(mv, view, c) {
     } else if (st.type === "reform") {
       out.push({ kind: "stat", stat: "reform", text: t(lang, "oppmove.tickerReform", { side: sideName(st.side, lang), box: st.box }) });
     } else if (st.type === "vp") {
-      out.push({ kind: "stat", stat: "mandate", text: t(lang, "oppmove.tickerMandate", { value: mandateTxt(st.mandate, lang) }) });
+      // engine.js's vp(st, side, n): `side` is who the CALL credits the swing
+      // to, but `n` can be negative (scoreRegion() always calls vp(st, QIN,
+      // qin.total - chu.total)) -- the side that actually GAINED mandate is
+      // `side` only when n>=0, the other side when n<0. Showing `side` and a
+      // bare "+{n}" for a negative n read as the wrong side gaining (round 2
+      // fix 3, the checker's own report).
+      const gainer = st.n >= 0 ? st.side : 1 - st.side;
+      let text = t(lang, "oppmove.tickerMandate", { side: sideName(gainer, lang), n: Math.abs(st.n) });
+      if (st.mandate != null) text += t(lang, "oppmove.tickerMandateArrow", { to: mandateTotalTxt(st.mandate, lang) });
+      out.push({ kind: "stat", stat: "mandate", text });
+    } else if (st.type === "score") {
+      const q = st.qin && st.qin.total, c = st.chu && st.chu.total;
+      out.push({ kind: "stat", stat: "mandate", text: t(lang, "oppmove.tickerScore", { region: regionName(st.region, lang), q, c }) });
     } else if (st.type === "tire") {
       out.push({ kind: "stat", stat: "weariness", text: t(lang, "oppmove.tickerTire", { to: t(lang, "weariness." + st.to) }) });
     } else if (st.type === "seal") {
