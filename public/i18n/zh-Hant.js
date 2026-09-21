@@ -17,7 +17,8 @@ export default {
     jiuding: "九鼎", jiudingText: "4 點行動點,全部用在三晉或周視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。",
     // #40:規則頁的區塊導覽(sticky chip 列)短標,對應 rules.js render() 裡
     // 每個 h2 的順序;top 是列尾固定的「回頂端」那顆。
-    nav: { ends: "結局", board: "棋盤", control: "控制", uses: "用法", tracks: "軌道", special: "特殊", turn: "回合", scoring: "記分", cards: "牌表", top: "回到頂端 ↑" },
+    // #91:「特殊」改名為「九鼎與洛邑」(滅國/相印移到自己的新分節「滅國與相印」)。
+    nav: { ends: "結局", board: "棋盤", control: "控制", uses: "用法", tracks: "軌道", special: "九鼎與洛邑", mie: "滅國與相印", turn: "回合", scoring: "記分", cards: "牌表", top: "回到頂端 ↑" },
     search: "搜尋牌名…",
     eraFilter: { all: "全部", reform: "變法期", alliance: "縱橫期", conquest: "兼併期" },
     sideFilter: { all: "全部", qin: "秦", chu: "楚", neutral: "中立", scoring: "記分" },

@@ -21,7 +21,9 @@ export default {
     jiuding: "The Nine Cauldrons", jiudingText: "4 ops, 5 if all of it lands in the Three Jin or Zhou; place, campaign or lobby only; then it passes face down and the other side may use it from the next turn; Chu holds it at the start.",
     // #40: the rules page's sticky section-nav chip labels, in the same
     // order as rules.js render()'s h2s; "top" is the fixed last chip.
-    nav: { ends: "Endings", board: "Map", control: "Control", uses: "Uses", tracks: "Tracks", special: "Special", turn: "Turn", scoring: "Scoring", cards: "Cards", top: "Top ↑" },
+    // #91: "special" renamed from "Special" to name what it now only covers
+    // (destruction/seals moved out to their own "mie" section below).
+    nav: { ends: "Endings", board: "Map", control: "Control", uses: "Uses", tracks: "Tracks", special: "Cauldrons & Luoyi", mie: "Destruction & Seals", turn: "Turn", scoring: "Scoring", cards: "Cards", top: "Top ↑" },
     search: "Search card name…",
     eraFilter: { all: "All", reform: "Reform", alliance: "Alliance", conquest: "Conquest" },
     sideFilter: { all: "All", qin: "Qin", chu: "Chu", neutral: "Neutral", scoring: "Scoring" },
