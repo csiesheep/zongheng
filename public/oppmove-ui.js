@@ -150,6 +150,16 @@ function flattenBeats(mv, view, c) {
   return out;
 }
 
+// Shared by ① (renderCard) and ④ (renderSheet): what a move's own use line
+// says. An event (or a headline, which renderCard skips outright since it
+// has nothing but the event line) never shows ops -- round 2 fix 4, the
+// checker's own report that "用來事件 · 2 點" reads like a place/campaign use
+// that happens to be called "event", and a scoring card has no numeric ops
+// worth stating at all ("0 點" would be actively wrong).
+function useLineFor(mv, lang) {
+  if (mv.use === "event") return cardScoring(mv.card) ? t(lang, "oppmove.useScoringEvent") : t(lang, "oppmove.useEvent");
+  return t(lang, "oppmove.useOps", { use: t(lang, `useNames.${mv.use}`), ops: opsOf(mv.card) });
+}
 // ---------- ① the card panel ----------
 function eventLineFor(mv, lang) {
   const owner = cardSideOf(mv.card);
@@ -164,8 +174,7 @@ function renderCard() {
   const d = ensureDom(), lang = ctx.lang;
   const side = move.side, card = move.card, use = move.use;
   const sideCls = side === E.QIN ? "q" : "c";
-  const useLine = use === "headline" ? "" :
-    `<div class="opp-useops">${esc(t(lang, "oppmove.useOps", { use: t(lang, `useNames.${use}`), ops: opsOf(card) }))}</div>`;
+  const useLine = use === "headline" ? "" : `<div class="opp-useops">${esc(useLineFor(move, lang))}</div>`;
   const eventLine = eventLineFor(move, lang);
   d.dim.className = "opp-dim"; // full dim, not ②'s invisible full-map catcher
   const mr = rectOf(mapEl());
@@ -317,7 +326,7 @@ function renderSheet() {
   const rows = rowBeats.map((b, i) =>
     `<div class="opp-sheet-row" data-i="${i}"><span class="opp-sheet-n">${i + 1}</span><span${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(b.text)}</span></div>`
   ).join("");
-  const useLine = mv.use === "headline" ? t(lang, "oppmove.chipHeadline") : t(lang, "oppmove.useOps", { use: t(lang, `useNames.${mv.use}`), ops: opsOf(mv.card) });
+  const useLine = mv.use === "headline" ? t(lang, "oppmove.chipHeadline") : useLineFor(mv, lang);
   d.sheet.innerHTML =
     `<div class="opp-sheet-head">` +
       `<img class="opp-sheet-art" src="art/cards/${mv.card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
