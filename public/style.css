@@ -809,8 +809,8 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    so the advisor's own prompt-takeover slot (advisor-ui.js) cannot hide it
    along with the prompt. Gold, not the dim `.news` tone -- this is something
    the player should read, not skim -- and wraps freely: two lines is fine,
-   a clipped sentence is not (the review that asked for this measured the
-   longest card name in the game against it at 390x669/375x667). */
+   a clipped sentence is not (the orchestrator's review that asked for this
+   measured the longest card name in the game against it at 390x669/375x667). */
 .prompt-fallback { flex: 0 0 100%; margin-top: 6px; padding-left: 8px; border-left: 2px solid var(--gold); font-size: 12px; line-height: 1.4; font-weight: 600; color: var(--gold); }
 .prompt-fallback[hidden] { display: none; }
 /* #34 round 2 (orchestrator's ruling): a line naming exactly one card is

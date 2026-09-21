@@ -233,7 +233,7 @@ $("btnStart").onclick = startSolo;
 // every one of those resets untouched, since it doesn't represent anything
 // about the player's own turn.
 const game = { st: null, me: 0, level: "normal", rng: null, ui: null, botLine: "", botName: "", room: false, spectator: false, peek: null };
-// #53 round 2 (owner's own review): `botLine` alone never reached the table
+// #53 round 2 (orchestrator's review): `botLine` alone never reached the table
 // itself, only the closed log panel / a desktop-only sidebar strip -- so on
 // the phone neither a replaced move nor a genuinely stuck game said anything
 // where the player was actually looking. Two more fields, both client-side,
@@ -345,7 +345,7 @@ function botLoop() {
     // reaches the table: renderLog() below shows it as the newest line of
     // the news strip under the prompt, on the phone, without opening 記錄 --
     // `botLine` alone only ever reached the closed log panel / desktop
-    // sidebar (owner's own measurement, round 2).
+    // sidebar (the orchestrator's own measurement, round 2).
     const fb = fallbackFor(game.st, bot);
     if (fb) {
       game.st = fb.state;
