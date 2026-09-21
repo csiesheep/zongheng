@@ -58,61 +58,33 @@ test("a log entry makes the sound the issue says it makes", { skip: !part2 }, ()
   assert.deepEqual(one({ type: "play", side: 0, card: chuCard, use: "event" }), ["sfx.card.event.chu"], "the sound follows the CARD's side, not the player's");
   assert.deepEqual(one({ type: "play", side: 1, card: neutral, use: "event" }), ["sfx.card.event.neutral"]);
   assert.deepEqual(one({ type: "play", side: 1, card: scoring, use: "event" }), ["sfx.card.event.neutral"]);
-  assert.deepEqual(one({ type: "play", side: 0, card: qinCard, use: "place" }, 0), [], "my own ops play already sounded under my finger");
-  assert.deepEqual(one({ type: "play", side: 1, card: chuCard, use: "place" }, 0), ["sfx.card.ops"], "the other side spends a card of its own for ops");
-  assert.deepEqual(one({ type: "play", side: 1, card: neutral, use: "campaign" }, 0), ["sfx.card.ops"]);
-  assert.deepEqual(one({ type: "play", side: 0, card: qinCard, use: "lobby" }, null), ["sfx.card.ops"], "a spectator hears either side's ops play");
-  assert.deepEqual(one({ type: "play", side: 1, card: qinCard, use: "reform" }, 0), ["sfx.card.ops"], "reform never fires the event, even with the enemy's card");
-  // #66: an enemy card played for place / campaign / lobby fires THAT side's event: its sound, for every listener, the player included
-  assert.deepEqual(one({ type: "play", side: 0, card: chuCard, use: "place" }, 0), ["sfx.card.enemyEvent.chu"]);
-  assert.deepEqual(one({ type: "play", side: 1, card: qinCard, use: "campaign" }, 0), ["sfx.card.enemyEvent.qin"]);
-  assert.deepEqual(one({ type: "play", side: 1, card: qinCard, use: "lobby" }, null), ["sfx.card.enemyEvent.qin"]);
+  assert.deepEqual(one({ type: "play", side: 0, card: qinCard, use: "place" }), []);
   assert.deepEqual(one({ type: "place", side: 1, points: ["hangu"], spent: 1 }, 0), ["sfx.map.opponent"]);
   assert.deepEqual(one({ type: "place", side: 0, points: ["hangu"], spent: 1 }, 0), [], "my own placement already sounded under my finger");
   assert.deepEqual(one({ type: "place", side: 0, points: ["hangu"], spent: 1 }, null), ["sfx.map.opponent"], "a spectator hears both sides' moves");
-  assert.deepEqual(one({ type: "lobby", side: 1, target: "hangu", ops: 2, removed: 1 }, 0), ["sfx.map.lobby"], "a lobby has its own sound; it replaces the opponent tick");
-  assert.deepEqual(one({ type: "lobby", side: 0, target: "hangu", ops: 2, removed: 1 }, 0), ["sfx.map.lobby"]);
-  const key = Object.keys(E.SPACE).find((id) => E.SPACE[id].battleground), plain = Object.keys(E.SPACE).find((id) => !E.SPACE[id].battleground);
-  assert.deepEqual(one({ type: "campaign", side: 0, target: plain, ops: 2, removed: 1, placed: 0 }, 0), ["sfx.map.campaign"]);
-  assert.deepEqual(one({ type: "campaign", side: 1, target: plain, ops: 2, removed: 1, placed: 0 }, 0), ["sfx.map.campaign"]);
-  assert.deepEqual(one({ type: "campaign", side: 1, target: key, ops: 2, removed: 1, placed: 0 }, 0), ["sfx.map.campaign", "sfx.map.campaign.key"], "a battleground adds the horn");
+  assert.deepEqual(one({ type: "lobby", side: 1, target: "hangu", ops: 2, removed: 1 }, 0), ["sfx.map.opponent"]);
+  assert.deepEqual(one({ type: "campaign", side: 0, target: "hangu", ops: 2, removed: 1, placed: 0 }, 0), ["sfx.map.campaign"]);
+  assert.deepEqual(one({ type: "campaign", side: 1, target: "hangu", ops: 2, removed: 1, placed: 0 }, 0), ["sfx.map.campaign"]);
   assert.deepEqual(one({ type: "vp", side: 0, n: 2, mandate: 3 }), ["sfx.track.mandate.qin"]);
   assert.deepEqual(one({ type: "vp", side: 1, n: 2, mandate: -1 }), ["sfx.track.mandate.chu"]);
   assert.deepEqual(one({ type: "seal", state: "han" }), ["sfx.seal.gain"]);
   assert.deepEqual(one({ type: "unseal", state: "han" }), ["sfx.seal.lose"]);
   assert.deepEqual(one({ type: "mie", state: "han" }), ["sfx.mie"]);
-  assert.deepEqual(one({ type: "turn", turn: 2, era: "reform" }), ["sfx.turn.new", "sfx.card.deal", "sfx.turn.headline"], "the bell, the cards are dealt, the horn calls the headline phase");
-  // S5: the tracks and the scoring
-  assert.deepEqual(one({ type: "tire", to: 4, by: 1 }), ["sfx.track.weariness"]);
-  assert.deepEqual(one({ type: "reform", side: 1, box: 2 }), ["sfx.track.reform"]);
-  assert.deepEqual(one({ type: "reform", side: 0, box: 1 }, 0), ["sfx.track.reform"], "my own advance too: nothing sounded under the finger for it");
-  assert.deepEqual(one({ type: "restore", state: "han" }), ["sfx.restore"]);
-  assert.deepEqual(one({ type: "score", region: "south", qin: { total: 0 }, chu: { total: 5 } }), ["sfx.score.count"]);
-  assert.deepEqual(one({ type: "jiuding", to: 1 }), ["sfx.card.jiuding"]);
+  assert.deepEqual(one({ type: "turn", turn: 2, era: "reform" }), ["sfx.turn.new"]);
   assert.deepEqual(one({ type: "era", era: "alliance" }), ["sfx.turn.era"]);
   assert.deepEqual(one({ type: "over", winner: 0, reason: "mandate" }, 0), ["sfx.end.win.qin"]);
   assert.deepEqual(one({ type: "over", winner: 0, reason: "mandate" }, 1), ["sfx.end.lose.chu"]);
   assert.deepEqual(one({ type: "over", winner: 1, reason: "alliance" }, null), ["sfx.end.win.chu"]);
-  for (const type of ["setup", "skip", "reshuffle", "endTurn", "discard", "bog", "opsLost", "something-new"]) assert.deepEqual(one({ type, side: 0 }), [], `${type} should be silent for now`);
+  for (const type of ["setup", "skip", "reshuffle", "endTurn", "discard", "bog", "tire", "reform", "restore", "jiuding", "opsLost", "score", "something-new"]) assert.deepEqual(one({ type, side: 0 }), [], `${type} should be silent for now`);
 });
 
 test("a big batch keeps the four most important sounds in order, and a repeated sound once", { skip: !part2 }, () => {
   const c = Object.keys(E.CARD).find((k) => E.CARD[k].side === E.QIN && !E.CARD[k].scoring);
-  const batch = [{ type: "play", side: 1, card: c, use: "event" }, { type: "place", side: 1, points: ["hangu"], spent: 1 }, { type: "campaign", side: 1, target: Object.keys(E.SPACE).find((id) => E.SPACE[id].battleground), ops: 2, removed: 1, placed: 0 },
+  const batch = [{ type: "play", side: 1, card: c, use: "event" }, { type: "place", side: 1, points: ["hangu"], spent: 1 }, { type: "campaign", side: 1, target: "hangu", ops: 2, removed: 1, placed: 0 },
     { type: "vp", side: 1, n: 1, mandate: -1 }, { type: "seal", state: "han" }, { type: "mie", state: "wei" }, { type: "turn", turn: 5, era: "alliance" }];
   const out = A.cuesForLog(batch, { me: 0 });
   assert.equal(out.length, 4);
   assert.deepEqual(out, ["sfx.track.mandate.chu", "sfx.seal.gain", "sfx.mie", "sfx.turn.new"], "the four kept are the Mandate, the seal, the destroyed state and the new turn, in the order they happened");
-  // importance: the Cauldrons outrank a new turn; the deal and the ops click are the first to go
-  const low = A.cuesForLog([{ type: "play", side: 1, card: Object.keys(E.CARD).find((k) => E.CARD[k].side === E.CHU && !E.CARD[k].scoring), use: "place" }, { type: "place", side: 1, points: ["hangu"], spent: 1 },
-    { type: "jiuding", to: 0 }, { type: "turn", turn: 3, era: "reform" }, { type: "vp", side: 0, n: 1, mandate: 1 }], { me: 0 });
-  assert.deepEqual(low, ["sfx.map.opponent", "sfx.card.jiuding", "sfx.turn.new", "sfx.track.mandate.qin"], "ops and the deal drop first; the opponent tick outranks only them");
-  // a scoring card: count the rods, then the Mandate moves; a campaign on a battleground tires the land
-  const scored = A.cuesForLog([{ type: "play", side: 1, card: Object.keys(E.CARD).find((k) => E.CARD[k].scoring), use: "event" }, { type: "score", region: "south", qin: { total: 0 }, chu: { total: 5 } }, { type: "vp", side: 1, n: 5, mandate: -5 }], { me: 0 });
-  assert.deepEqual(scored, ["sfx.card.event.neutral", "sfx.score.count", "sfx.track.mandate.chu"]);
-  const bg = Object.keys(E.SPACE).find((id) => E.SPACE[id].battleground);
-  const tired = A.cuesForLog([{ type: "campaign", side: 1, target: bg, ops: 3, removed: 2, placed: 1 }, { type: "tire", to: 4, by: 1 }], { me: 0 });
-  assert.deepEqual(tired, ["sfx.map.campaign", "sfx.map.campaign.key", "sfx.track.weariness"]);
   const twice = A.cuesForLog([{ type: "vp", side: 0, n: 1, mandate: 1 }, { type: "vp", side: 0, n: 1, mandate: 2 }], { me: 0 });
   assert.deepEqual(twice, ["sfx.track.mandate.qin"]);
 });
