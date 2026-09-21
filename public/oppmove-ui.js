@@ -235,7 +235,7 @@ function chipHTML(mv) {
   return `<img class="opp-chip-art" src="art/cards/${card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
     `<span class="opp-chip-text">` +
       `<span class="opp-chip-line1"${lang === "en" ? "" : ' lang="zh-Hant"'}><b class="side-${sideCls}">${esc(sideName(side, lang))}</b> · ${esc(cardName(card, lang))}</span>` +
-      `<span class="opp-chip-line2"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(line2)} ›</span>` +
+      `<span class="opp-chip-line2"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(line2)}</span>` +
     `</span>`;
 }
 // ---------- overall visibility ----------
@@ -415,6 +415,8 @@ export function reset() {
 // A spectator view, or the tutorial running: hide everything, touch nothing
 // else (so returning to the real game afterwards can pick up cleanly).
 export function disable() {
+  clearTimeout(timer);
+  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1;
   if (!dom) return;
   dom.dim.hidden = true; dom.card.hidden = true; dom.rings.hidden = true; dom.ticker.hidden = true; dom.chip.hidden = true;
 }
