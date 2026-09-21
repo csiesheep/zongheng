@@ -130,6 +130,8 @@ export default {
       play: "與電腦對弈 · 簡單", replay: "重玩", rules: "規則", home: "回首頁",
     },
   },
+  // #62: 同 advisor.* 的形狀(標籤 + 開/關的 aria-label)。
+  audio: { sfx: "音效", music: "音樂", sfxOn: "音效:開", sfxOff: "音效:關", musicOn: "音樂:開", musicOff: "音樂:關" },
   advisor: {
     name: "軍師",
     on: "軍師:開", off: "軍師:關",
