@@ -117,10 +117,14 @@ function flattenBeats(mv, view, c) {
     } else if (st.type === "unseal") {
       out.push({ kind: "stat", stat: "seals", text: t(lang, "oppmove.tickerUnseal", { state: stateName(st.state, lang) }) });
     } else if (st.type === "mie" || st.type === "restore") {
+      // The brief groups mie with the other gold-glow status effects (a glow
+      // on the 滅/mie column, not a map ring) -- the capital's own disc still
+      // visibly changes underneath, but that's #41's mark, folded in here so
+      // the trailing "event changed this too" beat below doesn't repeat it.
       const cap = st.state && E.STATES[st.state] ? E.STATES[st.state].capital : null;
       if (cap) named.add(cap);
       const key = st.type === "mie" ? "oppmove.tickerMie" : "oppmove.tickerRestore";
-      out.push({ kind: "ring", spaceId: cap, side: st.type === "mie" ? E.QIN : E.CHU, text: t(lang, key, { state: stateName(st.state, lang) }) });
+      out.push({ kind: "stat", stat: "mie", text: t(lang, key, { state: stateName(st.state, lang) }) });
     } else if (st.type === "jiuding") {
       out.push({ kind: "stat", stat: "jiuding", text: t(lang, "oppmove.tickerJiuding", { side: sideName(st.to, lang) }) });
     }

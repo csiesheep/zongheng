@@ -1030,7 +1030,7 @@ function renderTopBar(v) {
   $("topbar").innerHTML =
     `<div class="tb-turn"><b>${t("tracks.turn")} ${v.turn}</b>${v.era ? " · " + t("eras." + v.era) : ""}${phase} · ` +
       `<span class="tb-mandate-label">${esc(t("tracks.mandate"))}</span> <b class="tb-mandate-val" style="color:${leadColor}">${esc(mandateText(m))}</b></div>` +
-    `<div class="mandate" role="img" aria-label="${esc(spoken)}">` +
+    `<div class="mandate" role="img" aria-label="${esc(spoken)}" data-stat="mandate">` +
       `<span class="m-end m-end-qin" aria-hidden="true">${overGlyphChar(E.QIN)}</span>` +
       `<span class="m-track">` +
         `<span class="m-fill${fillClass}" style="left:${fillLeft}%;width:${fillWidth}%"></span>` +
@@ -1045,13 +1045,15 @@ function renderTopBar(v) {
 // hand counts stay in the log instead of taking permanent screen space.
 function renderStatLine(v) {
   const seals = Object.keys(v.seals).length, mie = Object.keys(v.mie).length;
-  const col = (label, val) => `<div><span class="sl-label">${esc(label)}</span><span class="sl-val">${val}</span></div>`;
+  // `stat` (#79): a data-stat hook so oppmove-ui.js can find this column's
+  // real on-screen rect for a gold glow -- no other reader of this markup.
+  const col = (label, val, stat) => `<div data-stat="${stat}"><span class="sl-label">${esc(label)}</span><span class="sl-val">${val}</span></div>`;
   $("statline").innerHTML =
-    col(t("tracks.weariness"), esc(t("weariness." + v.weariness))) +
-    col(t("tracks.reform"), `${v.reform[0]} · ${v.reform[1]}`) +
-    col(t("tracks.seals"), `${seals} / 4`) +
-    col(t("tracks.mie"), `${mie} / 3`) +
-    col(t("tracks.jiuding"), esc(sideName(v.jiuding.holder)) + (v.jiuding.faceDown ? ` (${esc(t("tracks.faceDown"))})` : ""));
+    col(t("tracks.weariness"), esc(t("weariness." + v.weariness)), "weariness") +
+    col(t("tracks.reform"), `${v.reform[0]} · ${v.reform[1]}`, "reform") +
+    col(t("tracks.seals"), `${seals} / 4`, "seals") +
+    col(t("tracks.mie"), `${mie} / 3`, "mie") +
+    col(t("tracks.jiuding"), esc(sideName(v.jiuding.holder)) + (v.jiuding.faceDown ? ` (${esc(t("tracks.faceDown"))})` : ""), "jiuding");
 }
 
 // DESIGN_W/H, NODE_POS/nodeCenter, regionMembers(), isCapital(),
