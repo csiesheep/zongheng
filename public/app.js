@@ -24,6 +24,7 @@ import {
 } from "./map-draw.js";
 import { computeLastMoveMarks } from "./lastmove.js";
 import * as OppUI from "./oppmove-ui.js"; // #79: the opponent's-move reveal (card panel/steps/chip/sheet)
+import * as LogView from "./log-view.js"; // #88: the log panel's own rows/chips and its tap-to-flash overlay
 import { discParts } from "./disc-view.js";
 import * as Audio from "./audio.js";
 import * as Cues from "./audio-cues.js";
@@ -2349,17 +2350,12 @@ function renderLog(v) {
   // for the map/hand, so this stays in sync with that gate rather than
   // keeping a second one.
   const clickable = !Tut.active();
-  // Newest first, entries whose own template actually produced text — same
-  // filter fmtLog()/logLineNodes() apply, kept here so `panelEntries[0]` is
-  // the same "latest" entry #sideFootText already fell back to.
-  const panelEntries = v.log.slice(-60).filter((l) => !!fmtLog(l)).reverse();
   $("chatForm").hidden = !game.room || game.spectator;
-  const said = game.room ? room.chat.slice(-8).reverse().map((s) => `<div class="say">${esc(s)}</div>`).join("") : "";
-  $("logLines").innerHTML = said + (game.botLine ? `<div class="bot">${esc(game.botLine)}</div>` : "");
-  for (const l of panelEntries) {
-    const node = logLineNodes(l, clickable);
-    if (node) $("logLines").appendChild(node);
-  }
+  // #88: design A 逐手卷軸 -- one row per move (with its result chips),
+  // chronological, plus the room's chat and the bot's remarks. See
+  // renderLogPanel() below for the scroll-position/filter/tap-to-flash work
+  // that has to happen around this innerHTML swap.
+  renderLogPanel(v);
   // #53 round 2: on screen without opening 紀錄 -- a sibling of #promptText
   // (see play.html), so the advisor taking over the prompt slot cannot hide
   // it. Cleared by botLoop() (a real bot line replaces it) or humanAct()
@@ -2411,6 +2407,76 @@ function renderLog(v) {
   // this render actually ended up with, not the one before renderLog() ran.
   layoutTable();
 }
+// ---------- #88: the log panel's own content, filter and tap-to-flash ----------
+// `logRows` is whatever renderLogPanel() last drew, keyed by seq so the
+// click delegate below can turn a tapped row's data-seq back into the
+// groupLog() row log-view.js already built it from (never recomputed on
+// every tap). `logJustOpened` makes the very next render scroll to the
+// newest entry regardless of where the panel happened to be scrolled
+// before it opened; after that, renderLogPanel() only follows the bottom
+// if the player was already there (the brief's own rule).
+let logRows = [];
+let logFilter = LogView.loadFilter();
+let logJustOpened = false;
+let activeLogSeq = null;
+function isLogAtBottom() {
+  const el = $("logBody");
+  return el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+}
+function syncLogFilters(chatAvailable) {
+  if (logFilter === "chat" && !chatAvailable) { logFilter = "all"; LogView.saveFilter(logFilter); }
+  $("logFilters").querySelectorAll(".logf").forEach((b) => {
+    const f = b.dataset.filter;
+    if (f === "chat") b.hidden = !chatAvailable;
+    b.classList.toggle("active", f === logFilter);
+    b.setAttribute("aria-pressed", String(f === logFilter));
+  });
+}
+function renderLogPanel(v) {
+  const chat = game.room ? room.chat.slice(-8) : [];
+  const botLine = game.botLine || "";
+  syncLogFilters(LogView.hasChat(chat, botLine));
+  const wasAtBottom = logJustOpened || isLogAtBottom();
+  const { html, rows } = LogView.renderRows(v.log, { lang, filter: logFilter, chat, botLine });
+  $("logLines").innerHTML = html;
+  logRows = rows;
+  if (activeLogSeq != null) {
+    const el = $("logLines").querySelector(`.logrow[data-seq="${activeLogSeq}"]`);
+    if (el) el.classList.add("active");
+  }
+  if (wasAtBottom) $("logBody").scrollTop = $("logBody").scrollHeight;
+  logJustOpened = false;
+}
+$("logFilters").querySelectorAll(".logf").forEach((b) => {
+  b.onclick = () => {
+    logFilter = b.dataset.filter;
+    LogView.saveFilter(logFilter);
+    Audio.play("sfx.ui.tap");
+    if (game.st) renderLog(E.view(game.st, game.me));
+  };
+});
+const desktopLayout = () => { try { return matchMedia("(min-width: 1024px)").matches; } catch { return false; } };
+// A tap on a move/headline row (log-view.js's own .logrow[data-seq]): flash
+// its spaces (or stat column) on the map, and on the phone shrink the panel
+// to its lower third so the map stays visible above it (the design's own
+// frame ②) -- desktop already shows the map beside the sidebar, so it just
+// flashes. The card thumbnail is its own nested button (never the row's own
+// click, so tapping it can't also trigger a flash) and opens the existing
+// read-only peek sheet (#34), same as a card name in the old flat log.
+$("logLines").addEventListener("click", (ev) => {
+  const thumb = ev.target.closest(".logrow-thumb");
+  if (thumb) { ev.stopPropagation(); openPeek(thumb.dataset.card, Number(thumb.dataset.side)); return; }
+  const rowEl = ev.target.closest(".logrow[data-seq]");
+  if (!rowEl) return;
+  const seq = Number(rowEl.dataset.seq);
+  const row = logRows.find((r) => r.seq === seq);
+  if (!row) return;
+  activeLogSeq = seq;
+  $("logLines").querySelectorAll(".logrow.active").forEach((n) => n.classList.remove("active"));
+  rowEl.classList.add("active");
+  LogView.flashRow(row);
+  if (!desktopLayout()) $("logBody").classList.add("logbody-shrunk");
+});
 $("chatForm").onsubmit = (ev) => {
   ev.preventDefault();
   const text = $("chatIn").value.trim();
@@ -2446,6 +2512,11 @@ function setLogOpen(open) {
   $("logBody").hidden = !open;
   $("logScrim").hidden = !open;
   syncLogToggleLabel();
+  // #88: opening always jumps to the newest entry (the brief's own rule);
+  // closing drops the shrink-to-lower-third state and clears whatever the
+  // last tapped row was flashing on the map, so the next open starts clean.
+  if (open) { logJustOpened = true; }
+  else { $("logBody").classList.remove("logbody-shrunk"); activeLogSeq = null; LogView.clearFlash(); }
 }
 // #66: sfx.ui.open/close on the log panel's own user-driven opens/closes
 // only -- NOT setLogOpen(false)'s other caller (a fresh game's initial

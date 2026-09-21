@@ -1359,10 +1359,67 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
   background: #15130f; border-top: 1px solid var(--gold-line); border-radius: 14px 14px 0 0; box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.5); font-size: 12px; color: var(--text-dim); line-height: 1.6; }
 .logbody-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 12px; background: #15130f; border-bottom: 1px solid var(--gold-line); border-radius: 14px 14px 0 0; }
 .logbody-title { flex: 1 1 auto; min-width: 0; font-family: var(--serif); font-weight: 700; font-size: 13px; color: var(--gold); }
-.logbody-content { padding: 10px 12px; }
-.logbody .say { color: var(--text); }
-.logbody .bot { color: var(--gold); }
+.logbody-content { padding: 0 0 10px; }
 .logscrim { position: fixed; inset: 0; z-index: 44; background: rgba(0, 0, 0, 0.45); }
+/* #88 (design A 逐手卷軸): 全部/秦/楚/對話 -- the 對話 tab is hidden by
+   app.js's syncLogFilters() whenever there is no chat/bot line yet. */
+.logbody-filters { display: flex; gap: 5px; flex: none; }
+.logf { height: 26px; min-height: 0; min-width: 0; padding: 0 10px; border-radius: 13px; border: 1px solid #4a3f30; background: none; color: var(--text-dim); font: 600 12px/24px var(--sans); }
+.logf.active { border-color: var(--gold); background: var(--gold); color: #16130e; }
+/* #88's own phone-only lower-third shrink (app.js's setLogOpen()/row-tap
+   handler toggle .logbody-shrunk): the map stays visible above it (#68's
+   own rule -- #map's box itself never changes; this only shrinks the
+   panel sitting on top of it). Desktop's .logbody is already a fixed 390px
+   sidebar (desktop.css), so this never needs to touch it. */
+@media (max-width: 1023.98px) {
+  .logbody-shrunk { max-height: 34svh; }
+}
+/* #88: section headers -- a sticky "Turn N · era" per turn (top offset is
+   .logbody-head's own height: 44px button + 8px top/bottom padding = 60),
+   a quiet "佈局"/Setup label over the two starting rows, and a small
+   "Move N" wherever the round changes within a turn. */
+.logsec-turn { position: sticky; top: 60px; z-index: 1; padding: 5px 14px; background: #1b1712; color: var(--text-dim); font: 700 11.5px/1 var(--sans); letter-spacing: 1px; border-bottom: 1px solid #2c261d; }
+.logsec-head, .logsec-round { padding: 6px 14px 2px; color: #8d8474; font: 600 11px/1 var(--sans); }
+/* One row per move: a 4px side-colour bar, the ~30x40 thumbnail (its own
+   nested <button> so tapping it opens the peek instead of flashing the
+   map -- app.js's #logLines click delegate checks .logrow-thumb first),
+   the "{side} plays {card} · {use} {ops}" head line, and the chips. >=44px
+   tall for a comfortable phone tap target (#88 brief); name >=13.5px,
+   chips >=11.5px, per the brief's own phone-size floor. */
+.logrow { display: flex; gap: 9px; align-items: flex-start; padding: 8px 12px 8px 0; min-height: 44px; border-left: 4px solid transparent; cursor: pointer; }
+.logrow.side-q { border-left-color: var(--qin-inf, #8a8070); }
+.logrow.side-c { border-left-color: var(--chu-btn); }
+.logrow.active { background: rgba(216, 181, 106, 0.12); }
+.logrow-thumb { flex: none; width: 30px; height: 40px; margin-left: 9px; padding: 0; min-height: 0; min-width: 0; border: none; border-radius: 3px; overflow: hidden; background: none; }
+.logrow-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.logrow-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.logrow-head { font: 700 13.5px/1.2 var(--serif); color: var(--text); }
+.logrow-side.side-q { color: var(--qin-text); }
+.logrow-side.side-c { color: var(--chu-gold); }
+.logrow-card { }
+.logrow-use { font: 600 11.5px/1 var(--sans); color: var(--text-dim); }
+.logrow-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.logchip { padding: 2px 7px; border-radius: 10px; background: #26211a; border: 1px solid #4a3f30; color: var(--text); font: 600 11.5px/16px var(--sans); }
+.logchip.gold { background: rgba(216, 181, 106, 0.16); border-color: rgba(216, 181, 106, 0.5); color: var(--gold); }
+.logrow-setup { display: block; padding: 6px 14px; font: 400 13px/1.5 var(--serif); }
+.logrow-headline .logrow-body { padding-left: 14px; }
+.logrow-other { padding: 5px 14px; font: 400 12.5px/1.5 var(--serif); color: var(--text-dim); }
+/* Chat/bot lines, styled as speech (the brief's own words: name in gold,
+   text in italics) -- app.js hands these over as ready-made "{name}: {text}"
+   strings, same as the old flat log already did. */
+.logrow-say { padding: 6px 14px 2px; display: flex; gap: 8px; align-items: baseline; }
+.logrow-sayname { font: 700 12px/1 var(--sans); color: var(--gold); }
+.logrow-saytext { font: 400 12.5px/1.4 var(--serif); color: var(--text-dim); font-style: italic; }
+/* Tap-a-row flash: its own fixed layer (never a child of #map, #68's rule),
+   matching #79's ring/glow look (oppmove.css's .opp-ring/.opp-glow) without
+   importing anything from it -- #87 owns that file. */
+.log-rings { position: fixed; inset: 0; pointer-events: none; z-index: 42; }
+.log-ring { position: fixed; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; border: 4px solid var(--chu-btn); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55), 0 0 18px 6px rgba(163, 28, 21, 0.55); }
+.log-ring.side-q { border-color: var(--qin-text); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55), 0 0 18px 6px rgba(233, 223, 196, 0.4); }
+.log-ring-gold { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5), 0 0 18px 6px rgba(216, 181, 106, 0.5); }
+.log-ring-badge { position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; padding: 0 4px; border-radius: 50%; background: var(--chu-btn); color: #fff; font: 900 12px/22px var(--sans); text-align: center; box-shadow: 0 0 0 2px #fff; }
+.log-ring.side-q .log-ring-badge { background: var(--qin-text); color: var(--bg); }
+.logstat-flash { outline: 3px solid var(--gold); outline-offset: 2px; }
 
 /* ---------- desktop (>=1024px) hook points, default OFF ----------
    The actual desktop rules live in desktop.css (all wrapped in its own
