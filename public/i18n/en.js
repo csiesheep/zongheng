@@ -214,6 +214,10 @@ export default {
   // tally (renderPromptAndSheet still shows the fuller scoring tally
   // separately, via scoringPanel).
   sheet: {
+    // #71 (owner, iPhone screenshot): replaces sheet.hint.enemy below while
+    // no order is chosen yet on an opponent's card (place/campaign/lobby);
+    // sheet.hint.enemy itself stays put further down once an order is picked.
+    chooseOrder: "Choose the order first: ops first, or event first.",
     hint: {
       own: "Your own event: it happens when you play it.",
       neutral: "A neutral card: the event or the ops, never both.",
