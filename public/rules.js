@@ -9,7 +9,8 @@ import {
   renderRegionBlobs, renderRoads, REGION_LABEL_POS, NODE_ANCHOR, nodeLabelHTML,
   stabilityTagHTML, NODE_STAB_RIGHT, NODE_STAB_HI,
 } from "./map-draw.js";
-import { renderCardView } from "./card-view.js";
+import { renderCardView, cardHeader } from "./card-view.js";
+import { discParts } from "./disc-view.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -109,11 +110,109 @@ const T = {
   },
 };
 
+// #91: illustrated figures for "a card's five uses" and the new 滅國/相印
+// section, plus the owner's follow-up on 九鼎/洛邑. Every number is computed
+// HERE, at page load, by calling the real engine (public/shared/engine.js) —
+// never typed by hand — so the page can't drift from the rules. `discHTML`
+// below is a faithful copy of app.js's own function of the same name (app.js
+// has import-time side effects that wire up the whole play page, so rules.js
+// can never import it directly — see this file's own top note on why
+// map-draw.js is shared but app.js is not); everything else here is new.
+const { QIN, CHU } = E;
+function discHTML(parts, cap) {
+  const base = "disc" + (cap ? " sq" : "");
+  if (parts.kind === "empty") return `<span class="${base}"></span>`;
+  if (parts.kind === "lone") {
+    const side = parts.side === QIN ? "q" : "c";
+    const cls = `${base} lone-${side}${parts.controlled ? " ctl" : ""}`;
+    return `<span class="${cls}"><i>${parts.n}</i></span>`;
+  }
+  const cls = `${base} split${parts.qin.controlled ? " ctl-q" : ""}${parts.chu.controlled ? " ctl-c" : ""}`;
+  return `<span class="${cls}"><i class="q">${parts.qin.n}</i><i class="c">${parts.chu.n}</i></span>`;
+}
+// #90's seal chop (sealdesign.py's Seal_A_Chop, chop()): a 15px vermilion
+// square, rotated -9deg, sitting on the capital disc's own lower-right
+// corner. #90 (style.css/app.js) had not landed on origin/main while this
+// branch was built, so this is a copy of that same design, scaled to this
+// page's own crop figures (which are drawn bigger than the 30/34px table
+// discs, see FIG_SCALE below) rather than a shared class — flagged at
+// handover so it can be pointed at #90's real CSS class once that lands.
+function sealChopHTML(sealed) {
+  return sealed ? `<span class="fig-seal-chop" aria-hidden="true">印</span>` : "";
+}
+// A cropped slice of the real map: only `ids`, their own roads (both ends in
+// `ids`) and region tint (region blobs, restricted to the members that are
+// also in `ids`) — same geometry/scale/markup the full map and the game
+// table use (map-draw.js, discHTML above), just windowed to a bounding box
+// around `ids` (in DESIGN_W/DESIGN_H design px) instead of the whole board.
+// `st` is the already-computed engine state for this half of the pair (the
+// "before" or "after" clone); `capNote`, when given, is the id of a state
+// whose destroyed/sealed plate this crop should carry (滅國/相印 figures).
+function figCropBBox(ids, pad = 34) {
+  const xs = ids.map((id) => NODE_POS[id][0]), ys = ids.map((id) => NODE_POS[id][1]);
+  const x0 = Math.max(0, Math.min(...xs) - pad), y0 = Math.max(0, Math.min(...ys) - pad);
+  const x1 = Math.min(DESIGN_W, Math.max(...xs) + pad), y1 = Math.min(DESIGN_H, Math.max(...ys) + pad);
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+function figRoadsHTML(ids) {
+  const set = new Set(ids), seen = new Set();
+  let svg = `<svg class="roads" viewBox="0 0 ${DESIGN_W} ${DESIGN_H}">`;
+  for (const sp of E.SPACES) {
+    if (!set.has(sp.id)) continue;
+    for (const nb of sp.adj) {
+      if (!set.has(nb)) continue;
+      const key = [sp.id, nb].sort().join("|");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const [x1, y1] = NODE_POS[sp.id], [x2, y2] = NODE_POS[nb];
+      svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`;
+    }
+  }
+  return svg + `</svg>`;
+}
+function figCropHTML(st, ids, lang0 = lang) {
+  const box = figCropBBox(ids);
+  const members = {};
+  for (const [r, list] of Object.entries(regionMembers())) { const f = list.filter((id) => ids.includes(id)); if (f.length) members[r] = f; }
+  const nodes = ids.map((id) => {
+    const sp = E.SPACE[id];
+    const [x, y] = NODE_POS[id];
+    const cap = isCapital(id);
+    const [q, c] = E.infOf(st, id), ctl = E.controller(st, id);
+    const seal = cap && sp.state && st.seals[sp.state];
+    const mie = sp.state && st.mie[sp.state];
+    const cls = "node" + (sp.battleground || cap ? " big" : "");
+    const name = lang0 === "en" ? sp.en : sp.zh;
+    return `<div class="${cls}" style="left:${x}px;top:${y}px">` +
+      discHTML(discParts(q, c, ctl), cap) + sealChopHTML(seal) +
+      stabilityTagHTML(sp) + nodeLabelHTML(id, name, lang0, esc) +
+      (mie ? `<span class="fig-mie-plate">${esc(lang0 === "en" ? "Destroyed" : "滅")}</span>` : "") +
+      `</div>`;
+  }).join("");
+  return `<div class="fig-crop" data-x="${box.x}" data-y="${box.y}" data-w="${box.w}" data-h="${box.h}">` +
+    `<div class="fig-crop-inner" style="width:${DESIGN_W}px;height:${DESIGN_H}px">${figRoadsHTML(ids)}${renderRegionBlobs(members)}${nodes}</div></div>`;
+}
+// Same scale rule as fitRulesMap() (main map), applied to every `.fig-crop`
+// on the page: scale = box.clientWidth / its own cropped width (data-w), so
+// a crop this wide always renders true-size discs/text regardless of how
+// many design px its own bounding box happens to cover.
+function fitFigureCrops() {
+  document.querySelectorAll(".fig-crop").forEach((box) => {
+    const inner = box.querySelector(".fig-crop-inner");
+    if (!inner) return;
+    const x = +box.dataset.x, y = +box.dataset.y, w = +box.dataset.w, h = +box.dataset.h;
+    const scale = box.clientWidth / w;
+    box.style.aspectRatio = `${w} / ${h}`;
+    inner.style.transform = `translate(${-x * scale}px, ${-y * scale}px) scale(${scale})`;
+  });
+}
+window.addEventListener("resize", fitFigureCrops);
+
 // #40: section chips (sticky nav) — one entry per h2 rendered by
 // textSectionsHTML(), in the exact order they appear there. "top" isn't a
 // section; it's the fixed last chip that scrolls back to the very top of
 // the page (mobile-only — #44's desktop rail has no such chip).
-const NAV_SECTIONS = ["ends", "board", "control", "uses", "tracks", "special", "turn", "scoring", "cards"];
+const NAV_SECTIONS = ["ends", "board", "control", "uses", "tracks", "special", "mie", "turn", "scoring", "cards"];
 // #44 review item 2: the desktop rail lists the 規則 tab's own sections only
 // — "cards" isn't one of them there (the 72 cards are the OTHER tab, not a
 // heading inside this column at all: textSectionsHTML()'s own withCards:
@@ -124,6 +223,110 @@ const NAV_SECTIONS = ["ends", "board", "control", "uses", "tracks", "special", "
 // on the second-to-last section, because the loop's threshold could never
 // be satisfied for a heading (#sec-cards) that was never rendered.
 const RAIL_SECTIONS = NAV_SECTIONS.filter((key) => key !== "cards");
+
+// #91: every before/after pair for "a card's five uses" and the new 滅國/
+//相印 (+ 九鼎/洛邑) sections, computed once at module load by calling the
+// real engine — `E.createGame` for the board, then the same pure functions
+// the table itself plays through (`E.campaign`, `E.lobby`, `E.placePoints`,
+// `E.reformAdvance`, `E.checkMarkers`, a card's own `effect`) on a state
+// whose `inf`/`weariness`/`reform` fields are set directly first, exactly as
+// the brief's own bullet allows ("set inf, seals, mie, weariness and reform
+// as needed"). No number below is typed twice: `before` and `after` are both
+// read back off the real state after the call, in the report and in the
+// page.
+const base = () => E.createGame(1);
+const EX = {};
+// 2. 放置: 秦 controls 函谷關 (hangu, ctl via 3>=0+3); 洛邑 (luoyi) is
+// 楚-controlled (3>=0+3) and adjacent to hangu, so placing there costs 2/pt
+// (E.placeCost). 3 ops: 宜陽 (adjacent to hangu, empty, cost 1) + 洛邑 (cost 2).
+{
+  const b = base(); b.inf.hangu = [3, 0]; b.inf.luoyi = [0, 3];
+  const a = E.clone(b); const spent = E.placePoints(a, QIN, ["yiyang", "luoyi"], 3);
+  EX.place = { ids: ["hangu", "yiyang", "luoyi"], before: b, after: a, spent };
+}
+// 3. 征伐: 秦 campaigns 大梁 (★battleground, wei) with 3 ops; 楚 has 2 there.
+{
+  const b = base(); b.inf.daliang = [0, 2];
+  const a = E.clone(b); const res = E.campaign(a, QIN, "daliang", 3);
+  EX.campaign = { ids: ["handan", "daliang", "song"], before: b, after: a, res };
+}
+// 4. 遊說: 秦 controls 河東/大梁 (2 neighbours of 邯鄲), 楚 controls 上黨 (1
+// neighbour); edge = E.edge(st, QIN, "handan") = 2 - 1 = 1. 2 ops.
+{
+  const b = base(); b.inf.hedong = [2, 0]; b.inf.daliang = [2, 0]; b.inf.shangdang = [0, 2]; b.inf.handan = [0, 1];
+  const e = E.edge(b, QIN, "handan");
+  const a = E.clone(b); const removed = E.lobby(a, QIN, "handan", 2);
+  EX.lobby = { ids: ["hedong", "shangdang", "daliang", "handan", "zhongshan"], before: b, after: a, edge: e, removed };
+}
+// 1. 事件: 商鞅變法 (shangyang)'s own effect(st) — reformAdvance(Qin,1) plus
+// a +1-ops-all-Qin-cards effect for the turn (E.CARD.shangyang.effect).
+{
+  const b = base(); const a = E.clone(b); E.CARD.shangyang.effect(a);
+  EX.event = { before: b, after: a };
+}
+// 5. 變法: 收復河西 (hexi, ops 2) meets REFORM[0].ops (2) — discard, advance.
+{
+  const b = base(); b.hands[QIN].push("hexi");
+  const threshold = E.reformThreshold(b, QIN);
+  const a = E.clone(b); E.discardCard(a, QIN, "hexi", { noEvent: true }); E.reformAdvance(a, QIN, 1);
+  EX.reform = { before: b, after: a, threshold };
+}
+// 6. 滅韓: 秦 already controls 宜陽; campaigns 新鄭 with 4 ops (楚 has 2) —
+// both 韓 spaces (E.STATES.han via E.spacesOfState) end Qin-controlled, so
+// E.campaign's own E.checkMarkers() call marks 滅 and scores E.STATES.han.vp.
+{
+  const b = base(); b.inf.yiyang = [2, 0]; b.inf.xinzheng = [0, 2];
+  const a = E.clone(b); const res = E.campaign(a, QIN, "xinzheng", 4);
+  EX.mieHan = { ids: ["yiyang", "xinzheng"], before: b, after: a, res };
+}
+// 7. 趙 still missing 代: 上黨/邯鄲/中山 Qin-controlled, 代 Chu-controlled —
+// one static crop, no action; E.checkMarkers confirms st.mie.zhao stays unset.
+{
+  const st = base(); st.inf.shangdang = [2, 0]; st.inf.handan = [2, 0]; st.inf.zhongshan = [2, 0]; st.inf.dai = [0, 3];
+  E.checkMarkers(st);
+  EX.zhaoMissing = { ids: ["shangdang", "handan", "zhongshan", "dai"], st };
+}
+// 8. 相印 three capitals: 新鄭 (cap 4, 楚 4 → sealed), 大梁 (cap 4, 楚 3 →
+// 差 1), 臨淄 (cap 5, 楚 4 → 差 1). E.capOf/E.checkMarkers, nothing hand-typed.
+{
+  EX.seals = ["xinzheng", "daliang", "linzi"].map((id, i) => {
+    const st = base(); st.inf[id] = [0, [4, 3, 4][i]];
+    E.checkMarkers(st);
+    return { id, st, cap: E.capOf(st, id), inf: st.inf[id][CHU] };
+  });
+}
+// 9. 失印/復國: 新鄭 already sealed (楚 4, at cap); 秦 campaigns it back
+// with 6 ops — E.checkMarkers removes the seal once Qin controls the capital.
+{
+  const b = base(); b.inf.xinzheng = [0, 4]; E.checkMarkers(b);
+  const a = E.clone(b); const res = E.campaign(a, QIN, "xinzheng", 6);
+  EX.unseal = { ids: ["xinzheng"], before: b, after: a, res };
+}
+// 10. 九鼎: engine.js's own condition (doOps, the JIUDING branches) —
+// "if (card === JIUDING && choice.points.every(inZhou)) ops += 1" for
+// place (campaign/lobby check inZhou(choice.target) the same way) — 4 base
+// ops, +1 (=5) only when every point lands in 三晉 or 周. (a) 4 points, all
+// in 三晉/周: 5 ops spent. (b) one point (函谷關/hangu) outside: stays 4.
+{
+  const idsA = ["yiyang", "hedong", "shangdang", "luoyi"];
+  const b = base(); for (const id of idsA) b.inf[id] = [0, 1];
+  const a = E.clone(b); const spentA = E.placePoints(a, CHU, [...idsA, "luoyi"], 5);
+  EX.jiudingA = { ids: idsA, before: b, after: a, spent: spentA };
+  const idsB = ["yiyang", "hedong", "shangdang", "hangu"];
+  const b2 = base(); for (const id of idsB) b2.inf[id] = [0, 1];
+  const a2 = E.clone(b2); const spentB = E.placePoints(a2, CHU, idsB, 4);
+  EX.jiudingB = { ids: idsB, before: b2, after: a2, spent: spentB };
+}
+// 11. 洛邑: controller (E.controller) gains E.options.luoyi Mandate at
+// turn-end (the same read `endTurnChecks` makes); 秦滅周 (E.CARD.miezhou)
+// ends it (st.luoyiYields = false) and hands Qin the Nine Cauldrons.
+{
+  const b = base(); b.inf.luoyi = [3, 0];
+  const a = E.clone(b); const ctl = E.controller(a, "luoyi"); if (ctl != null) E.vp(a, ctl, a.options.luoyi);
+  EX.luoyi = { ids: ["luoyi", "hangu", "yiyang", "xinzheng"], before: b, after: a };
+  const c = E.clone(b); E.CARD.miezhou.effect(c);
+  EX.miezhou = { luoyiYields: c.luoyiYields, jiudingHolder: c.jiuding.holder, mandate: c.mandate };
+}
 
 // #40: card search + era/side filters. Plain module state (not DOM, not
 // reset by render()) so a language switch or reopening a card from the
