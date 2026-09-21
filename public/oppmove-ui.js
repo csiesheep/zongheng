@@ -86,6 +86,51 @@ function spaceEl(id) { return id ? document.querySelector(`.node[data-space="${i
 function statEl(name) { return document.querySelector(`[data-stat="${name}"]`); }
 function rectOf(el) { return el ? el.getBoundingClientRect() : null; }
 
+// ---------- turning one move's logged steps into playback beats ----------
+// One beat per space for a `place` step (the design plays each space its own
+// 0.6s beat), one beat per other step type. `named` collects every space a
+// beat already accounts for, so the trailing "event changed this too" beat
+// (#41's own marks, never logged as a placement) doesn't repeat them.
+function flattenBeats(mv, view, c) {
+  const lang = c.lang, out = [];
+  const named = new Set();
+  for (const st of mv.steps) {
+    if (st.type === "place" && Array.isArray(st.spaces)) {
+      for (const [id, n] of st.spaces) {
+        named.add(id);
+        out.push({ kind: "ring", spaceId: id, n, side: mv.side, text: t(lang, "oppmove.tickerPlace", { side: sideName(mv.side, lang), space: spaceName(id, lang), n }) });
+      }
+    } else if (st.type === "campaign") {
+      if (st.target) named.add(st.target);
+      out.push({ kind: "ring", spaceId: st.target, n: st.placed || null, side: mv.side, text: t(lang, "oppmove.tickerCampaign", { side: sideName(mv.side, lang), target: spaceName(st.target, lang), removed: st.removed, placed: st.placed }) });
+    } else if (st.type === "lobby") {
+      if (st.target) named.add(st.target);
+      out.push({ kind: "ring", spaceId: st.target, n: null, side: mv.side, text: t(lang, "oppmove.tickerLobby", { side: sideName(mv.side, lang), target: spaceName(st.target, lang), removed: st.removed }) });
+    } else if (st.type === "reform") {
+      out.push({ kind: "stat", stat: "reform", text: t(lang, "oppmove.tickerReform", { side: sideName(st.side, lang), box: st.box }) });
+    } else if (st.type === "vp") {
+      out.push({ kind: "stat", stat: "mandate", text: t(lang, "oppmove.tickerMandate", { value: mandateTxt(st.mandate, lang) }) });
+    } else if (st.type === "tire") {
+      out.push({ kind: "stat", stat: "weariness", text: t(lang, "oppmove.tickerTire", { to: t(lang, "weariness." + st.to) }) });
+    } else if (st.type === "seal") {
+      out.push({ kind: "stat", stat: "seals", text: t(lang, "oppmove.tickerSeal", { state: stateName(st.state, lang) }) });
+    } else if (st.type === "unseal") {
+      out.push({ kind: "stat", stat: "seals", text: t(lang, "oppmove.tickerUnseal", { state: stateName(st.state, lang) }) });
+    } else if (st.type === "mie" || st.type === "restore") {
+      const cap = st.state && E.STATES[st.state] ? E.STATES[st.state].capital : null;
+      if (cap) named.add(cap);
+      const key = st.type === "mie" ? "oppmove.tickerMie" : "oppmove.tickerRestore";
+      out.push({ kind: "ring", spaceId: cap, side: st.type === "mie" ? E.QIN : E.CHU, text: t(lang, key, { state: stateName(st.state, lang) }) });
+    } else if (st.type === "jiuding") {
+      out.push({ kind: "stat", stat: "jiuding", text: t(lang, "oppmove.tickerJiuding", { side: sideName(st.to, lang) }) });
+    }
+  }
+  const marks = c.lastMoveMarks || {};
+  const extra = Object.keys(marks).filter((id) => !named.has(id));
+  if (extra.length) out.push({ kind: "final", spaces: extra, text: t(lang, "oppmove.tickerFinal") });
+  return out;
+}
+
 // ---------- public API (filled in by later edits) ----------
 export function sync(view, info) {}
 export function onAction() {}
