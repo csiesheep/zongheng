@@ -1398,6 +1398,7 @@ function renderMap(v) {
       (mv ? " lastmove" : "") + (mv && game.lastMoveFresh ? " lastmove-pulse" : "") +
       " pill-" + (NODE_PILL_POS[sp.id] || "tr");
     vis.style.cssText = `left:${x}px;top:${y}px`;
+    vis.dataset.space = sp.id; // #79: oppmove-ui.js finds a space's real on-screen rect by this, never by re-deriving fitMap()'s own transform
     // #41 round 1 review (item 1): the mark reads as two viewfinder-style
     // corner brackets (.lastmove-frame/-frame2, each contributing two
     // opposite corners via its own ::before/::after — see style.css)
