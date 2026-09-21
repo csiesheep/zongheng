@@ -618,6 +618,7 @@ function render() {
     decorateAdvisor(v, { solo: false, side: game.me });
     updateSceneMusic(); // a spectator's era/winner can still change the scene
     updateUnderlay(v); // #64: a spectator hears the tension layer too
+    OppUI.disable(); // #79: never for a spectator
     return;
   }
   // Computed before renderMap so a scoring card selected this same render
