@@ -109,8 +109,8 @@ export function groupLog(log) {
         continue;
       }
       if (e.type === "headline") {
-        current = null;
-        rows.push({ kind: "headline", seq, cards: e.cards, first: e.first, turn: turnOf(e), steps: [] });
+        current = { kind: "headline", seq, cards: e.cards, first: e.first, turn: turnOf(e), steps: [] };
+        rows.push(current);
         continue;
       }
       if (e.type === "play") {
