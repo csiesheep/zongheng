@@ -1,0 +1,325 @@
+{
+  "version": 1,
+  "cues": {
+    "bgm.landing": {
+      "file": "bgm.landing.mp3",
+      "kind": "bgm",
+      "seconds": 84.11,
+      "gain": 1,
+      "loop": true,
+      "source": "bgm_landing_liangting_s5411"
+    },
+    "bgm.lose.chu": {
+      "file": "bgm.lose.chu.mp3",
+      "kind": "bgm",
+      "seconds": 55.07,
+      "gain": 1,
+      "loop": false,
+      "source": "bgm_lose_chu_chuge_low_s5471"
+    },
+    "bgm.lose.qin": {
+      "file": "bgm.lose.qin.mp3",
+      "kind": "bgm",
+      "seconds": 60.03,
+      "gain": 1,
+      "loop": false,
+      "source": "bgm_lose_qin_jin_low_s5461"
+    },
+    "bgm.table.alliance.chu": {
+      "file": "bgm.table.alliance.chu.mp3",
+      "kind": "bgm",
+      "seconds": 120.03,
+      "gain": 1,
+      "loop": true,
+      "source": "bgm_table_alliance_chu_yingdu_s5331"
+    },
+    "bgm.table.alliance.qin": {
+      "file": "bgm.table.alliance.qin.mp3",
+      "kind": "bgm",
+      "seconds": 77.32,
+      "gain": 1,
+      "loop": true,
+      "source": "bgm_table_alliance_qin_lianheng_s5321"
+    },
+    "bgm.table.conquest.chu": {
+      "file": "bgm.table.conquest.chu.mp3",
+      "kind": "bgm",
+      "seconds": 71.11,
+      "gain": 1,
+      "loop": true,
+      "source": "bgm_table_conquest_chu_guoshang_s5351"
+    },
+    "bgm.table.conquest.qin": {
+      "file": "bgm.table.conquest.qin.mp3",
+      "kind": "bgm",
+      "seconds": 105.95,
+      "gain": 1,
+      "loop": true,
+      "source": "bgm_table_conquest_qin_hulang_s5341"
+    },
+    "bgm.table.reform.chu": {
+      "file": "bgm.table.reform.chu.mp3",
+      "kind": "bgm",
+      "seconds": 120.03,
+      "gain": 1,
+      "loop": true,
+      "source": "bgm_table_reform_chu_C_yunmeng_long_s5361"
+    },
+    "bgm.table.reform.qin": {
+      "file": "bgm.table.reform.qin.mp3",
+      "kind": "bgm",
+      "seconds": 107.62,
+      "gain": 1,
+      "loop": true,
+      "source": "bgm_table_reform_qin_D_weishui_s5311"
+    },
+    "bgm.win.chu": {
+      "file": "bgm.win.chu.mp3",
+      "kind": "bgm",
+      "seconds": 30.01,
+      "gain": 1,
+      "loop": false,
+      "source": "bgm_win_chu_fengming_s5431"
+    },
+    "bgm.win.qin": {
+      "file": "bgm.win.qin.mp3",
+      "kind": "bgm",
+      "seconds": 30.01,
+      "gain": 1,
+      "loop": false,
+      "source": "bgm_win_qin_yitong_s5421"
+    },
+    "sfx.card.commit": {
+      "file": "sfx.card.commit.mp3",
+      "kind": "sfx",
+      "seconds": 1.2,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_card_commit_s8110"
+    },
+    "sfx.card.event.chu": {
+      "file": "sfx.card.event.chu.mp3",
+      "kind": "sfx",
+      "seconds": 2.51,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_event_chu_s7201"
+    },
+    "sfx.card.event.neutral": {
+      "file": "sfx.card.event.neutral.mp3",
+      "kind": "sfx",
+      "seconds": 1.44,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_card_event_neutral_s8140"
+    },
+    "sfx.card.event.qin": {
+      "file": "sfx.card.event.qin.mp3",
+      "kind": "sfx",
+      "seconds": 1.7,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_card_event_qin_s8130"
+    },
+    "sfx.card.pick": {
+      "file": "sfx.card.pick.mp3",
+      "kind": "sfx",
+      "seconds": 1.02,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_card_pick_s8100"
+    },
+    "sfx.card.reveal": {
+      "file": "sfx.card.reveal.mp3",
+      "kind": "sfx",
+      "seconds": 0.73,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_card_reveal_s8120"
+    },
+    "sfx.end.lose.chu": {
+      "file": "sfx.end.lose.chu.mp3",
+      "kind": "sfx",
+      "seconds": 2.85,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_end_lose_chu_s8452"
+    },
+    "sfx.end.lose.qin": {
+      "file": "sfx.end.lose.qin.mp3",
+      "kind": "sfx",
+      "seconds": 3.03,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_end_lose_qin_s8441"
+    },
+    "sfx.end.win.chu": {
+      "file": "sfx.end.win.chu.mp3",
+      "kind": "sfx",
+      "seconds": 2.53,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_end_win_chu_s8432"
+    },
+    "sfx.end.win.qin": {
+      "file": "sfx.end.win.qin.mp3",
+      "kind": "sfx",
+      "seconds": 4.7,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_end_win_qin_s8422"
+    },
+    "sfx.map.campaign": {
+      "file": "sfx.map.campaign.mp3",
+      "kind": "sfx",
+      "seconds": 0.81,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_map_campaign_s8181"
+    },
+    "sfx.map.confirm": {
+      "file": "sfx.map.confirm.mp3",
+      "kind": "sfx",
+      "seconds": 1.25,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_map_confirm_s8150"
+    },
+    "sfx.map.control.gain": {
+      "file": "sfx.map.control.gain.mp3",
+      "kind": "sfx",
+      "seconds": 1.07,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_map_control_gain_s8162"
+    },
+    "sfx.map.control.lose": {
+      "file": "sfx.map.control.lose.mp3",
+      "kind": "sfx",
+      "seconds": 1.62,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_map_control_lose_drum_s8522"
+    },
+    "sfx.map.opponent": {
+      "file": "sfx.map.opponent.mp3",
+      "kind": "sfx",
+      "seconds": 0.21,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_map_opponent_s8190"
+    },
+    "sfx.map.place": {
+      "file": "sfx.map.place.mp3",
+      "kind": "sfx",
+      "seconds": 0.39,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_map_place_s7102"
+    },
+    "sfx.mie": {
+      "file": "sfx.mie.mp3",
+      "kind": "sfx",
+      "seconds": 4.23,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_mie_s8342"
+    },
+    "sfx.seal.gain": {
+      "file": "sfx.seal.gain.mp3",
+      "kind": "sfx",
+      "seconds": 1.15,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_seal_gain_s8220"
+    },
+    "sfx.seal.lose": {
+      "file": "sfx.seal.lose.mp3",
+      "kind": "sfx",
+      "seconds": 1.02,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_seal_lose_s8231"
+    },
+    "sfx.track.mandate.chu": {
+      "file": "sfx.track.mandate.chu.mp3",
+      "kind": "sfx",
+      "seconds": 1.88,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_track_mandate_chu_paixiao_s8330"
+    },
+    "sfx.track.mandate.qin": {
+      "file": "sfx.track.mandate.qin.mp3",
+      "kind": "sfx",
+      "seconds": 1.54,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_track_mandate_qin_s8311"
+    },
+    "sfx.turn.clock.last": {
+      "file": "sfx.turn.clock.last.mp3",
+      "kind": "sfx",
+      "seconds": 0.97,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_turn_clock_last_s8371"
+    },
+    "sfx.turn.clock.tick": {
+      "file": "sfx.turn.clock.tick.mp3",
+      "kind": "sfx",
+      "seconds": 1.1,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_turn_clock_tick_s8360"
+    },
+    "sfx.turn.era": {
+      "file": "sfx.turn.era.mp3",
+      "kind": "sfx",
+      "seconds": 2.19,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_turn_era_s8350"
+    },
+    "sfx.turn.new": {
+      "file": "sfx.turn.new.mp3",
+      "kind": "sfx",
+      "seconds": 2.87,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_turn_new_s8260"
+    },
+    "sfx.turn.yours": {
+      "file": "sfx.turn.yours.mp3",
+      "kind": "sfx",
+      "seconds": 1.72,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_turn_yours_s8282"
+    },
+    "sfx.ui.error": {
+      "file": "sfx.ui.error.mp3",
+      "kind": "sfx",
+      "seconds": 0.34,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_ui_error_s8410"
+    },
+    "sfx.ui.tap": {
+      "file": "sfx.ui.tap.mp3",
+      "kind": "sfx",
+      "seconds": 0.29,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_ui_tap_s8400"
+    },
+    "sfx.warn": {
+      "file": "sfx.warn.mp3",
+      "kind": "sfx",
+      "seconds": 1.44,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_warn_s8250"
+    }
+  }
+}
