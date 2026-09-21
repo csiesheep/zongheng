@@ -1050,6 +1050,21 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
   object-fit: cover; border-radius: 12px; border: 1.5px solid var(--sheet-line, var(--gold-line));
   box-shadow: 0 0 0 3px var(--sheet-ring, var(--bg)), 0 0 0 4px var(--sheet-line, var(--gold-line));
 }
+/* #74 round 2 (orchestrator: the rules text, not just the banner, must stay
+   fully visible -- only the history may scroll): pinning the banner into
+   .sheet-pinned (advisor-ui.js) is what shrinks .sheet-mid down in the
+   first place, so the room to give the text box back has to come from
+   somewhere else in the same fixed column -- the picture, down to a floor
+   of ~120px tall (90px wide at this same 186:248 ratio; .sheet-meta beside
+   it is already shorter than that, so the row shrinks to match). Pure
+   :has() (no JS hook needed -- the existing `.sheet:has(.sheet-head)` rule
+   above already relies on it): true exactly when advisor-ui.js has actually
+   parked a real, visible banner as .sheet-pinned's own first child, i.e.
+   the advisor is on AND a suggestion exists AND this is the full card page
+   -- advisor off or no suggestion leaves the head exactly as it is today. */
+.sheet:has(> .sheet-pinned > .advisor-banner:not([hidden])) .sheet-img {
+  width: 90px;
+}
 .sheet-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .sheet-badge { flex: none; width: 36px; height: 36px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 18px; line-height: 36px; text-align: center; }
 /* #46 (owner: 卡牌只顯示一語言): a single name node in the interface

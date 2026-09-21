@@ -122,11 +122,23 @@
 .advisor-banner.adv-slot-prompt .advisor-banner-why {
   font-size: 12px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
 }
-/* Slot: appended as #sheet's own last flow child (the full-screen card
-   header + use buttons, the mini chip + target preview, or a pending
-   choice's Confirm/Cancel row) -- #sheet is already one of layoutTable()'s
-   own counted ids, so this needs no separate budget entry. */
+/* Slot: appended as #sheet's own last flow child (the mini chip + target
+   preview, or a pending choice's Confirm/Cancel row -- the full card page
+   itself now uses .adv-slot-pinned below, #74) -- #sheet is already one of
+   layoutTable()'s own counted ids, so this needs no separate budget entry. */
 .advisor-banner.adv-slot-sheet { margin-top: 8px; }
+/* Slot (#74, owner: iPhone screenshot, carried over from #71 point 5): the
+   banner as .sheet-pinned's own FIRST child (style.css's fixed, never-
+   scrolling sibling of .sheet-mid, directly above the five-use grid / order
+   row / hint and the pinned Cancel/Confirm footer) -- always fully on
+   screen, .sheet-mid shrinks around it instead (see style.css's .sheet-mid/
+   .sheet-pinned flex rules). No clamp on either line: the owner's #71 own
+   ruling ("放不下就只留標題那一句,不要用省略號切句子") no longer needs
+   enforcing here at all, since nothing above this banner can push it off
+   screen the way .sheet-mid's own scroll used to. Relies on .sheet-pinned's
+   own `gap: 10px` (style.css) for the space below it, same as every other
+   row there. */
+.advisor-banner.adv-slot-pinned { margin: 0; }
 /* Slot: #7's desktop sidebar (>=1024px) -- the hand's own CSS grid's first
    row, spanning every column, so the actual cards flow into the rows
    below it instead of this covering them. */
@@ -148,6 +160,37 @@
 body:not(.table-lock) #advisorSlot .adv-toggle,
 body:not(.table-lock) .advisor-banner {
   display: none !important;
+}
+
+/* ---------- .sheet-mid's own bottom fade (#74) ---------------------------
+   Not advisor-specific -- .sheet-mid (style.css) is the full card page's
+   own scrollable middle, unrelated to whether the advisor switch is on,
+   and this fade shows whenever it has more content below the fold either
+   way. It lives here rather than next to .sheet-mid in style.css because
+   #68 (a sibling FE peer) is mid-rewrite of that file's lower block; #74's
+   own brief says to put a fade here "if at all possible" for exactly that
+   reason -- flagged to the orchestrator in the handover, not a judgement
+   call made silently.
+
+   The classic background-attachment: local/scroll pair (Lea Verou's
+   scroll-shadow technique): the "cover" layer (local) scrolls WITH the
+   content and is pinned to the true bottom of .sheet-mid's full scrollable
+   area, so it only ever lands over the "shadow" layer (scroll, fixed to
+   the box's own visible bottom edge) once the box is scrolled all the way
+   down -- short content that never scrolls in the first place already has
+   the cover sitting exactly on top of the shadow, so nothing ever shows.
+   --sheet-ring already holds each side's own solid sheet colour (style.
+   css's .sheet-q/.sheet-c/.sheet-n/.sheet-s -- the same colour .sheet-mid
+   is sitting on), so the cover blends into whichever theme is showing
+   without a fixed colour of its own here. */
+.sheet-mid {
+  background-image:
+    linear-gradient(to top, var(--sheet-ring, transparent), transparent),
+    linear-gradient(to top, rgba(0, 0, 0, 0.22), transparent);
+  background-repeat: no-repeat;
+  background-position: bottom, bottom;
+  background-size: 100% 28px, 100% 14px;
+  background-attachment: local, scroll;
 }
 
 /* ---------- gold decoration: hand card / sheet use-button / order-button ---------- */
