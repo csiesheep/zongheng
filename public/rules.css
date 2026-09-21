@@ -143,3 +143,53 @@
    on side-q/side-c's dark backgrounds, but side-n/side-s's parchment needs
    the same dark ink the rest of that row's text already switches to. */
 .cardrow.side-n .cr-chevron, .cardrow.side-s .cr-chevron { color: var(--neutral-ink); }
+
+/* #91: illustrated figures (rulesFigure()'s output — figPairHTML/
+   figSingleHTML/figRowHTML in rules.js). Mobile default: stacked (before
+   above after); rules-desktop.css switches .fig-pair to a row from 1024px.
+   No fixed width anywhere — every figure fits the column, phone or desktop,
+   the same way the full map already does. */
+.fig { margin: 14px 0 22px; }
+.fig-pair { display: flex; flex-direction: column; gap: 8px; }
+.fig-row { display: flex; gap: 8px; align-items: flex-start; }
+.fig-half { flex: 1 1 0; min-width: 0; }
+.fig-solo { max-width: 300px; }
+.fig-arrow { display: flex; align-items: center; justify-content: center; padding: 2px 0; }
+.fig-arrow span { font: 700 13px/1.3 var(--sans); color: var(--gold); text-align: center; }
+/* Same crop-and-scale idea as .rules-map/#rulesMapInner (fitRulesMap()) —
+   fitFigureCrops() sets the aspect-ratio and the inner transform per crop,
+   using each figure's own data-w/data-h/data-x/data-y instead of the whole
+   board's fixed DESIGN_W/DESIGN_H, so a tight crop (one capital) zooms in
+   rather than shrinking to fit the same box as a wide one. */
+.fig-crop { position: relative; overflow: hidden; border-radius: 8px; width: 100%; background: url(art/ui/map_light.jpg) center/cover, var(--neutral-bg); }
+.fig-crop-inner { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.fig-cap { margin: 6px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-soft); }
+.fig-note { margin: 6px 0 0; font-size: 12px; color: var(--text-dim); }
+.fig-edge { margin: 4px 0 0; font-size: 12px; color: var(--text-dim); }
+/* The 事件/變法/九鼎 hand-off figures: a card face (card-view.js's own
+   cardHeader(), untouched markup) in a small bordered box instead of a map
+   crop — its full-size .sheet-head/.sheet-img/.sheet-name (style.css, sized
+   for the play page's card sheet) are scaled down here to fit beside a
+   figure crop rather than filling a whole sheet. */
+.fig-card { padding: 8px; border: 1px solid var(--gold-line); border-radius: 10px; background: var(--field-bg); }
+.fig-card .sheet-head { gap: 8px; padding: 0; }
+.fig-card .sheet-img { width: 46px; height: 62px; }
+.fig-card .sheet-badge { width: 22px; height: 22px; font-size: 12px; line-height: 22px; }
+.fig-card .sheet-name { font-size: 14px; line-height: 1.2; letter-spacing: 0; margin: 0; }
+.fig-card .sheet-info { font-size: 11px; padding-top: 4px; margin-top: 4px; }
+/* Weariness/reform mini strips (wearinessStripHTML/reformStripHTML): a row
+   of small boxes, the current one gold-filled — the same "which box is lit"
+   idea as the full reform table, just compact enough to sit under a crop. */
+.fig-strip { display: flex; gap: 4px; margin-top: 6px; }
+.fig-strip-box { flex: 1; text-align: center; font-size: 10px; line-height: 1.3; padding: 3px 2px; border: 1px solid var(--gold-line); border-radius: 4px; color: var(--text-dim); box-sizing: border-box; }
+.fig-strip-box.on { background: var(--gold); color: var(--bg); border-color: var(--gold); font-weight: 700; }
+/* A plain +N/−N tick — the lobby edge's own "2 − 1 = 1" line reads as prose
+   (esc()'d text), so this is only used where a caption needs a coloured
+   mark rather than a full sentence; kept for future figures that want one. */
+.fig-tick { display: inline-block; font: 700 12px/1 var(--sans); padding: 1px 6px; border-radius: 8px; }
+.fig-tick.up { background: rgba(159, 201, 184, .18); color: #9fc9b8; }
+.fig-tick.dn { background: rgba(163, 28, 21, .18); color: #d97a72; }
+/* 滅國與相印's state-space list (stateSpacesHTML()) — a plain list, not a
+   table (five short lines, a table's own borders/head would be overkill). */
+.mie-states { margin: 6px 0 14px; padding-left: 18px; font-size: 13px; color: var(--text-soft); }
+.mie-states li { margin: 2px 0; }

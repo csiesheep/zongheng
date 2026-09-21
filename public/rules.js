@@ -48,8 +48,11 @@ const T = {
     reformText: "變法軌 6 格,先到者得分,解鎖是重點:",
     reformRows: E.REFORM.map((r) => [String(r.box), r.zh, String(r.ops), `${r.first} / ${r.second}`, { null: "無", twice: "每回合可推進變法 2 次", campaign: "每回合一次,一次征伐 +1", peek: "標題階段對手先亮牌", discard: "回合結算時可棄 1 張牌而不觸發事件", emperor: "到達時疲敝軌後退 1" }[r.perk]]),
     reformHead: ["格", "名稱", "門檻", "先到 / 後到", "解鎖"],
-    special: "九鼎、洛邑、滅與相印",
-    specialText: "九鼎:4 點行動點,全部用在三晉或周視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。洛邑:每回合結算時控制者天命 +1,直到「秦滅周」。滅:秦控制某國全部據點時放滅國標記,得天命(韓魏燕 2、趙齊 3,每國一次),楚控制該國國都時解除。相印:楚控制某國國都、且在該處的影響力達到上限(安定值 + 2)時放相印標記,天命 +1(每國一次),秦控制該國都時解除。",
+    special: "九鼎與洛邑",
+    // #91: 滅/相印 的完整規則與例子移到新分節「滅國與相印」(mieSectionHTML);
+    // 這裡只留九鼎與洛邑本身的一句話摘要,例子見下方 specialExtrasHTML()。
+    specialText: "九鼎:4 點行動點,全部用在三晉或周視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。洛邑:每回合結算時控制者天命 +1,直到「秦滅周」。",
+    mie: "滅國與相印",
     turn: "回合",
     turnEras: "8 回合:變法期 1 到 3(手牌 8,行動 6 次)、縱橫期 4 到 6、兼併期 7 到 8(手牌 9,行動 7 次)。每回合依下列四步進行:",
     turnSteps: [
@@ -87,8 +90,13 @@ const T = {
     reformText: "The reform track has six boxes; the first to arrive scores, and the unlocks are the point:",
     reformRows: E.REFORM.map((r) => [String(r.box), r.zh, String(r.ops), `${r.first} / ${r.second}`, { null: "none", twice: "two reform advances a turn", campaign: "once a turn, one campaign gets +1 op", peek: "the other side reveals its headline first", discard: "at the turn's end, discard one card without its event", emperor: "weariness recovers one box on arrival" }[r.perk]]),
     reformHead: ["Box", "Name", "Ops needed", "First / second", "Unlock"],
-    special: "The Nine Cauldrons, Luoyi, destruction and seals",
-    specialText: "The Nine Cauldrons: 4 ops, 5 if all of it lands in the Three Jin or Zhou; place, campaign or lobby only; then it passes face down and the other side may use it from the next turn; Chu holds it at the start. Luoyi: its controller gains 1 Mandate at the end of each turn, until Qin Ends the Zhou. Destruction: when Qin controls every space of a state it is marked destroyed and Qin scores (2 for Han, Wei, Yan; 3 for Zhao, Qi; once per state); Chu controlling the capital restores it. Seals: when Chu controls a capital with its influence there at the cap (stability + 2) it holds that state's seal and scores 1 (once per state); Qin controlling the capital removes it.",
+    special: "The Nine Cauldrons and Luoyi",
+    // #91: destruction/seals' full rules and examples moved to the new
+    // "Destruction & Seals" section (mieSectionHTML); this stays a one-line
+    // summary of the Cauldrons and Luoyi themselves — examples in
+    // specialExtrasHTML() below.
+    specialText: "The Nine Cauldrons: 4 ops, 5 if all of it lands in the Three Jin or Zhou; place, campaign or lobby only; then it passes face down and the other side may use it from the next turn; Chu holds it at the start. Luoyi: its controller gains 1 Mandate at the end of each turn, until Qin Ends the Zhou.",
+    mie: "Destruction & Seals",
     turn: "The turn",
     turnEras: "8 turns: the Reform era, turns 1 to 3 (hand 8, 6 actions), the Alliance era, 4 to 6, and the Conquest era, 7 and 8 (hand 9, 7 actions). Every turn runs through four steps:",
     turnSteps: [
@@ -130,15 +138,11 @@ function discHTML(parts, cap) {
   const cls = `${base} split${parts.qin.controlled ? " ctl-q" : ""}${parts.chu.controlled ? " ctl-c" : ""}`;
   return `<span class="${cls}"><i class="q">${parts.qin.n}</i><i class="c">${parts.chu.n}</i></span>`;
 }
-// #90's seal chop (sealdesign.py's Seal_A_Chop, chop()): a 15px vermilion
-// square, rotated -9deg, sitting on the capital disc's own lower-right
-// corner. #90 (style.css/app.js) had not landed on origin/main while this
-// branch was built, so this is a copy of that same design, scaled to this
-// page's own crop figures (which are drawn bigger than the 30/34px table
-// discs, see FIG_SCALE below) rather than a shared class — flagged at
-// handover so it can be pointed at #90's real CSS class once that lands.
+// #90 landed on origin/main while this branch was in progress (style.css's
+// `.node .seal-chop`, app.js's own markup): the exact same class and inner
+// span, reused byte for byte — no separate figure-only copy needed.
 function sealChopHTML(sealed) {
-  return sealed ? `<span class="fig-seal-chop" aria-hidden="true">印</span>` : "";
+  return sealed ? `<span class="seal-chop" aria-hidden="true"><span lang="zh-Hant">印</span></span>` : "";
 }
 // A cropped slice of the real map: only `ids`, their own roads (both ends in
 // `ids`) and region tint (region blobs, restricted to the members that are
@@ -326,6 +330,174 @@ const EX = {};
   EX.luoyi = { ids: ["luoyi", "hangu", "yiyang", "xinzheng"], before: b, after: a };
   const c = E.clone(b); E.CARD.miezhou.effect(c);
   EX.miezhou = { luoyiYields: c.luoyiYields, jiudingHolder: c.jiuding.holder, mandate: c.mandate };
+}
+// The hand-off itself: exec()'s own "jiudingPass" case (engine.js) sets
+// `st.jiuding = { holder: other(step.side), faceDown: true }` once a side
+// finishes using it — mirrored here with E.other rather than a hard-coded
+// side, off `E.createGame`'s own starting holder (Chu).
+EX.jiudingPass = { before: { holder: CHU, faceDown: false }, after: { holder: E.other(CHU), faceDown: true } };
+
+// #91: small building blocks the figures below share. `spName` mirrors this
+// file's own spaceName() but takes an explicit language (the figures are
+// built for whichever language render() is currently drawing, same `lang`
+// module var either way).
+const spName = (id, l) => (l === "en" ? E.SPACE[id].en : E.SPACE[id].zh);
+const stName = (id, l) => (l === "en" ? E.STATES[id].en : E.STATES[id].zh);
+// A before/after pair of crops with an arrow label between them (stacked on
+// the phone, side by side from 1024px — rules-desktop.css), optionally
+// carrying a small strip (weariness/reform/mandate) under the after crop.
+function figPairHTML(ids, before, after, beforeCap, afterCap, arrow, afterExtra = "") {
+  return `<div class="fig"><div class="fig-pair">` +
+    `<div class="fig-half">${figCropHTML(before, ids)}<p class="fig-cap">${beforeCap}</p></div>` +
+    `<div class="fig-arrow" aria-hidden="true"><span>${esc(arrow)}</span></div>` +
+    `<div class="fig-half">${figCropHTML(after, ids)}<p class="fig-cap">${afterCap}</p>${afterExtra}</div>` +
+    `</div></div>`;
+}
+function figSingleHTML(ids, st, cap) {
+  return `<div class="fig"><div class="fig-half fig-solo">${figCropHTML(st, ids)}<p class="fig-cap">${cap}</p></div></div>`;
+}
+function figRowHTML(items) {
+  return `<div class="fig"><div class="fig-row">${items.map(({ ids, st, cap }) =>
+    `<div class="fig-half">${figCropHTML(st, ids)}<p class="fig-cap">${cap}</p></div>`).join("")}</div></div>`;
+}
+// A card face (cardHeader() from card-view.js, the same art/badge/name
+// markup used everywhere else a card is shown) in a detached container, for
+// the 事件/變法/九鼎 figures that need a card rather than a map crop.
+function cardFigureHTML(id, l) {
+  const div = document.createElement("div"); div.className = "fig-card";
+  cardHeader(div, id, l);
+  return div.outerHTML;
+}
+// Weariness: five boxes, 承平(5) down to 土崩(1), the current one lit.
+function wearinessStripHTML(w, l) {
+  const boxes = [5, 4, 3, 2, 1].map((n) => `<span class="fig-strip-box${n === w ? " on" : ""}">${esc(E.WEARINESS_NAMES[n])}</span>`).join("");
+  return `<div class="fig-strip fig-weariness">${boxes}</div>`;
+}
+// Reform: six boxes, the side's own current box (0..6) lit.
+function reformStripHTML(box, l) {
+  const boxes = E.REFORM.map((r) => `<span class="fig-strip-box${r.box === box ? " on" : ""}">${r.box}</span>`).join("");
+  return `<div class="fig-strip fig-reform">${boxes}</div>`;
+}
+// A plain "+N"/"−N" tick, used for both the mandate move and the lobby
+// edge's per-neighbour ticks.
+const tick = (n) => `<span class="fig-tick ${n >= 0 ? "up" : "dn"}">${n >= 0 ? "+" : ""}${n}</span>`;
+const infPair = (st, id) => `${st.inf[id] ? st.inf[id][0] : 0}/${st.inf[id] ? st.inf[id][1] : 0}`;
+
+// #91: one worked example per use, right under the summary table (uses table
+// keeps every number from the summary text unchanged — these are additions,
+// not replacements). `l` is the current language; every string here is
+// picked per-language, no mixed-language line.
+function usesExamplesHTML(l) {
+  const zh = l !== "en";
+  const T5 = zh
+    ? { arrowE: "商鞅變法", capE1: `變法軌:秦 0`, capE2: `變法軌:秦 1(本回合秦所有牌 +1 行動點)`,
+        noteE: "沒有事件先/事件後的差別要考慮:標題牌的事件一定發生,就算是對手陣營的牌,見上表「事件」列。",
+        arrowP: "秦 放置 3", capP1: `宜陽 ${infPair(EX.place.before, "yiyang")} · 洛邑 ${infPair(EX.place.before, "luoyi")}`,
+        capP2: `宜陽 +1(1 點,鄰函谷關)· 洛邑 +1(2 點,楚控制)`,
+        arrowC: "秦 征伐 3", capC1: `大梁:秦 0 楚 2`, capC2: `大梁:秦 1 楚 0(移除 min(3,2)=2,剩 1 點落地)`,
+        arrowL: "楚 遊說 2", capL1: `邯鄲:楚 0 秦 1`, capL2: `邯鄲:楚 0 秦 0`,
+        edgeCap: `局勢 = 2 − 1 = 1,移除 min(2, 1) = 1`,
+        arrowR: "秦 變法", capR1: `變法軌:秦 0`, capR2: `變法軌:秦 1(門檻 ${EX.reform.threshold} 點,棄牌 收復河西 2 點)`,
+        noteR: "沒有事件觸發。" }
+    : { arrowE: "Shang Yang's Reforms", capE1: `Reform track: Qin 0`, capE2: `Reform track: Qin 1 (+1 op on every Qin card this turn)`,
+        noteE: "No event-first/ops-first choice to make here: a headline's event always happens, even for the other side's card — see the Event row above.",
+        arrowP: "Qin places, 3 ops", capP1: `Yiyang ${infPair(EX.place.before, "yiyang")} · Luoyi ${infPair(EX.place.before, "luoyi")}`,
+        capP2: `Yiyang +1 (1 op, next to Hangu Pass) · Luoyi +1 (2 ops, Chu-controlled)`,
+        arrowC: "Qin campaigns, 3 ops", capC1: `Daliang: Qin 0 Chu 2`, capC2: `Daliang: Qin 1 Chu 0 (removes min(3,2)=2, 1 left to place)`,
+        arrowL: "Chu lobbies, 2 ops", capL1: `Handan: Chu 0 Qin 1`, capL2: `Handan: Chu 0 Qin 0`,
+        edgeCap: `Edge = 2 − 1 = 1, removes min(2, 1) = 1`,
+        arrowR: "Qin reforms", capR1: `Reform track: Qin 0`, capR2: `Reform track: Qin 1 (needs ${EX.reform.threshold} ops, discards Retaking Hexi's 2)`,
+        noteR: "No event happens." };
+  const eventFig = `<div class="fig"><div class="fig-pair">` +
+    `<div class="fig-half">${cardFigureHTML("shangyang", l)}<p class="fig-cap">${esc(T5.capE1)}</p></div>` +
+    `<div class="fig-arrow" aria-hidden="true"><span>${esc(T5.arrowE)}</span></div>` +
+    `<div class="fig-half">${cardFigureHTML("shangyang", l)}<p class="fig-cap">${esc(T5.capE2)}</p>${reformStripHTML(1, l)}</div>` +
+    `</div><p class="fig-note">${esc(T5.noteE)}</p></div>`;
+  const placeFig = figPairHTML(EX.place.ids, EX.place.before, EX.place.after, esc(T5.capP1), esc(T5.capP2), T5.arrowP);
+  const campaignFig = figPairHTML(EX.campaign.ids, EX.campaign.before, EX.campaign.after, esc(T5.capC1), esc(T5.capC2), T5.arrowC,
+    wearinessStripHTML(EX.campaign.after.weariness, l));
+  const edgeTicks = `<p class="fig-edge">${esc(T5.edgeCap)}</p>`;
+  const lobbyFig = figPairHTML(EX.lobby.ids, EX.lobby.before, EX.lobby.after, esc(T5.capL1), esc(T5.capL2), T5.arrowL, edgeTicks);
+  const reformFig = `<div class="fig"><div class="fig-pair">` +
+    `<div class="fig-half">${cardFigureHTML("hexi", l)}<p class="fig-cap">${esc(T5.capR1)}</p></div>` +
+    `<div class="fig-arrow" aria-hidden="true"><span>${esc(T5.arrowR)}</span></div>` +
+    `<div class="fig-half">${cardFigureHTML("hexi", l)}<p class="fig-cap">${esc(T5.capR2)}</p>${reformStripHTML(1, l)}</div>` +
+    `</div><p class="fig-note">${esc(T5.noteR)}</p></div>`;
+  return eventFig + placeFig + campaignFig + lobbyFig + reformFig;
+}
+
+// #91 (owner, #91 issue): the state-space list under 滅國與相印's plain
+// rules — read straight off E.STATES/E.spacesOfState, never a hand-copied
+// list, so it can't drift from the board data the figures themselves use.
+function stateSpacesHTML(l) {
+  const zh = l !== "en";
+  const rows = Object.entries(E.STATES).map(([id, s]) => {
+    const spaces = E.spacesOfState(id).map((sp) => spName(sp, l) + (sp === s.capital ? (zh ? "（國都）" : " (capital)") : "")).join(zh ? "、" : ", ");
+    return `<li><b>${esc(stName(id, l))}</b> ${spaces}</li>`;
+  });
+  return `<ul class="mie-states">${rows.join("")}</ul>`;
+}
+// #91: the new 滅國與相印 section — plain rules, the state list, four
+// examples (6-9) and the comparison table (orchestrator's own #89 table).
+function mieSectionHTML(l) {
+  const zh = l !== "en";
+  const rulesP = zh
+    ? [`<b>滅國(秦):</b> 控制某國<b>全部</b>據點,不只國都。秦得該國天命一次(韓、魏、燕 2,趙、齊 3)。`,
+       `<b>復國:</b> 楚拿回國都時解除滅國,可再滅一次,但第二次不再得分。秦同時滅三國即勝。`,
+       `<b>相印(楚):</b> 控制某國<b>國都</b>且影響力達到上限(安定值 + 2)。每國一次,天命 +1。秦拿下該國都即解除。楚同時持四國相印即勝。`]
+    : [`<b>Destruction (Qin):</b> control <b>every</b> space of a state, not just its capital. Qin scores that state's value once (2 for Han, Wei, Yan; 3 for Zhao, Qi).`,
+       `<b>Restoration:</b> Chu retaking the capital lifts the destroyed mark; it can be destroyed again, but scores nothing the second time. Qin wins on three destroyed at once.`,
+       `<b>Seals (Chu):</b> control a state's <b>capital</b> with influence there at the cap (stability + 2). Once per state, +1 Mandate. Qin taking that capital removes it. Chu wins on four seals at once.`];
+  const p = rulesP.map((t) => `<p>${t}</p>`).join("");
+  const han = "han", zhao = "zhao";
+  const mieHanCap1 = zh ? `宜陽 ${infPair(EX.mieHan.before, "yiyang")} · 新鄭 ${infPair(EX.mieHan.before, "xinzheng")}` : `Yiyang ${infPair(EX.mieHan.before, "yiyang")} · Xinzheng ${infPair(EX.mieHan.before, "xinzheng")}`;
+  const mieHanCap2 = zh ? `${stName(han, l)} · 滅,天命 秦 +${E.STATES.han.vp}（${EX.mieHan.before.mandate} → ${EX.mieHan.after.mandate}）` : `${stName(han, l)} · Destroyed, Mandate Qin +${E.STATES.han.vp} (${EX.mieHan.before.mandate} → ${EX.mieHan.after.mandate})`;
+  const ex6 = figPairHTML(EX.mieHan.ids, EX.mieHan.before, EX.mieHan.after, esc(mieHanCap1), esc(mieHanCap2), zh ? "秦 征伐 新鄭,4 點" : "Qin campaigns Xinzheng, 4 ops");
+  const zhaoCap = zh ? `${stName(zhao, l)}還差${spName("dai", l)}` : `${stName(zhao, l)} still needs ${spName("dai", l)}`;
+  const ex7 = figSingleHTML(EX.zhaoMissing.ids, EX.zhaoMissing.st, esc(zhaoCap));
+  const ex8 = figRowHTML(EX.seals.map((s) => ({
+    ids: [s.id], st: s.st,
+    cap: esc(`${spName(s.id, l)}: ${zh ? "楚" : "Chu"} ${s.inf}, ${zh ? "上限" : "cap"} ${s.cap}` + (s.inf < s.cap ? (zh ? `,差 ${s.cap - s.inf}` : `, short ${s.cap - s.inf}`) : (zh ? "（已得相印）" : " (sealed)"))),
+  })));
+  const unsealCap1 = zh ? `新鄭:楚 ${EX.unseal.before.inf.xinzheng[1]}（已得相印）` : `Xinzheng: Chu ${EX.unseal.before.inf.xinzheng[1]} (sealed)`;
+  const unsealCap2 = zh ? `新鄭:秦 ${EX.unseal.after.inf.xinzheng[0]},相印解除` : `Xinzheng: Qin ${EX.unseal.after.inf.xinzheng[0]}, seal removed`;
+  const ex9 = figPairHTML(EX.unseal.ids, EX.unseal.before, EX.unseal.after, esc(unsealCap1), esc(unsealCap2), zh ? "秦 征伐 新鄭,6 點" : "Qin campaigns Xinzheng, 6 ops");
+  const cmpHead = zh ? ["", "秦 滅國", "楚 相印"] : ["", "Qin destruction", "Chu seals"];
+  const cmpRows = zh
+    ? [["要佔", "全國每個據點", "國都一處"], ["要多少", "控制即可", "影響力堆到上限（安定值 +2）"], ["得分", "天命 +2 或 +3，每國一次", "天命 +1，每國一次"], ["被奪回", "楚拿回國都", "秦拿下國都"], ["勝利", "三國同滅", "四國同時相印"]]
+    : [["Must hold", "every space of the state", "just the capital"], ["How much", "control is enough", "influence stacked to the cap (stability + 2)"], ["Score", "+2 or +3 Mandate, once per state", "+1 Mandate, once per state"], ["Lost when", "Chu retakes the capital", "Qin takes the capital"], ["Win", "three destroyed at once", "four seals at once"]];
+  return p + stateSpacesHTML(l) + ex6 + ex7 + ex8 + ex9 + table(cmpHead, cmpRows.map((r) => [`<b>${esc(r[0])}</b>`, esc(r[1]), esc(r[2])]));
+}
+
+// #91 (owner's follow-up on #91): 九鼎 and 洛邑 get the same figure treatment
+// inside the renamed "special" section (10: the 4-vs-5-ops rule and the
+// face-down hand-off; 11: Luoyi's turn-end Mandate and the note on 秦滅周
+// ending it).
+function specialExtrasHTML(l) {
+  const zh = l !== "en";
+  const capA1 = zh ? EX.jiudingA.ids.map((id) => `${spName(id, l)} ${infPair(EX.jiudingA.before, id)}`).join(" · ") : EX.jiudingA.ids.map((id) => `${spName(id, l)} ${infPair(EX.jiudingA.before, id)}`).join(" · ");
+  const capA2 = zh ? `全部落在三晉／周,5 點：${EX.jiudingA.ids.map((id) => `${spName(id, l)} +${EX.jiudingA.after.inf[id][1] - EX.jiudingA.before.inf[id][1]}`).join("、")}` : `all in the Three Jin/Zhou, 5 ops: ${EX.jiudingA.ids.map((id) => `${spName(id, l)} +${EX.jiudingA.after.inf[id][1] - EX.jiudingA.before.inf[id][1]}`).join(", ")}`;
+  const exA = figPairHTML(EX.jiudingA.ids, EX.jiudingA.before, EX.jiudingA.after, esc(capA1), esc(capA2), zh ? "楚 九鼎（4→5）" : "Chu, the Cauldrons (4→5)");
+  const capB1 = EX.jiudingB.ids.map((id) => `${spName(id, l)} ${infPair(EX.jiudingB.before, id)}`).join(" · ");
+  const capB2 = zh ? `${spName("hangu", l)}在三晉／周之外,仍是 4 點：${EX.jiudingB.ids.map((id) => `${spName(id, l)} +1`).join("、")}` : `${spName("hangu", l)} is outside the Three Jin/Zhou, still 4 ops: ${EX.jiudingB.ids.map((id) => `${spName(id, l)} +1`).join(", ")}`;
+  const exB = figPairHTML(EX.jiudingB.ids, EX.jiudingB.before, EX.jiudingB.after, esc(capB1), esc(capB2), zh ? "楚 九鼎（仍 4）" : "Chu, the Cauldrons (still 4)");
+  const condNote = zh
+    ? `<p class="fig-note">引擎的判定(engine.js doOps):放置要「全部」落點在三晉或周才 +1 點;征伐、遊說只看目標本身是否在三晉或周(<code>choice.points.every(inZhou)</code> / <code>inZhou(choice.target)</code>)。</p>`
+    : `<p class="fig-note">The engine's own condition (engine.js's doOps): placing needs EVERY point in the Three Jin or Zhou for the +1; a campaign or lobby only checks the target itself (<code>choice.points.every(inZhou)</code> / <code>inZhou(choice.target)</code>).</p>`;
+  const passCap1 = zh ? "楚持有,可用" : "Chu holds it, usable";
+  const passCap2 = zh ? "蓋著交給秦,下回合起可用" : "passes face down to Qin, usable from next turn";
+  const passFig = `<div class="fig"><div class="fig-pair">` +
+    `<div class="fig-half">${cardFigureHTML("jiuding", l)}<p class="fig-cap">${esc(passCap1)}</p></div>` +
+    `<div class="fig-arrow" aria-hidden="true"><span>${zh ? "用畢" : "after use"}</span></div>` +
+    `<div class="fig-half">${cardFigureHTML("jiuding", l)}<p class="fig-cap">${esc(passCap2)}</p></div>` +
+    `</div></div>`;
+  const luoyiCap1 = zh ? `洛邑:秦控制,天命 ${EX.luoyi.before.mandate}` : `Luoyi: Qin controls, Mandate ${EX.luoyi.before.mandate}`;
+  const luoyiCap2 = zh ? `回合結束,天命 秦 +1 → ${EX.luoyi.after.mandate}` : `end of turn, Mandate Qin +1 → ${EX.luoyi.after.mandate}`;
+  const luoyiFig = figPairHTML(EX.luoyi.ids, EX.luoyi.before, EX.luoyi.after, esc(luoyiCap1), esc(luoyiCap2), zh ? "結算" : "end of turn");
+  const miezhouNote = zh
+    ? `<p class="fig-note">秦滅周(<code>miezhou</code>)打出後,洛邑不再給天命(<code>st.luoyiYields=false</code>);若當時秦控制洛邑,另得天命 +3,並立刻取得九鼎(不蓋著)。</p>`
+    : `<p class="fig-note">Once Qin Ends the Zhou (<code>miezhou</code>) is played, Luoyi stops yielding Mandate (<code>st.luoyiYields=false</code>); if Qin controlled Luoyi at that moment it also scores +3, and takes the Nine Cauldrons at once (not face down).</p>`;
+  return exA + exB + condNote + passFig + luoyiFig + miezhouNote;
 }
 
 // #40: card search + era/side filters. Plain module state (not DOM, not
@@ -782,9 +954,10 @@ function textSectionsHTML(S, opts = {}) {
     `<h2 id="sec-ends">${esc(S.ends)}</h2>${table([], S.endsRows.map(([a, b]) => [`<b>${esc(a)}</b>`, esc(b)]))}` +
     `<h2 id="sec-board">${esc(S.board)}</h2><p>${esc(S.boardText)}</p>${opts.inlineMap ? mapSectionHTML(S) : ""}` +
     `<h2 id="sec-control">${esc(S.control)}</h2><p>${esc(S.controlText)}</p>` +
-    `<h2 id="sec-uses">${esc(S.uses)}</h2>${table([], S.usesRows.map(([a, b]) => [`<b>${esc(a)}</b>`, esc(b)]))}` +
+    `<h2 id="sec-uses">${esc(S.uses)}</h2>${table([], S.usesRows.map(([a, b]) => [`<b>${esc(a)}</b>`, esc(b)]))}${usesExamplesHTML(lang)}` +
     `<h2 id="sec-tracks">${esc(S.tracks)}</h2><p>${esc(S.weariness)}</p><p>${esc(S.reformText)}</p>${table(S.reformHead, S.reformRows.map((r) => r.map(esc)))}` +
-    `<h2 id="sec-special">${esc(S.special)}</h2><p>${esc(S.specialText)}</p>` +
+    `<h2 id="sec-special">${esc(S.special)}</h2><p>${esc(S.specialText)}</p>${specialExtrasHTML(lang)}` +
+    `<h2 id="sec-mie">${esc(S.mie)}</h2>${mieSectionHTML(lang)}` +
     `<h2 id="sec-turn">${esc(S.turn)}</h2><p>${esc(S.turnEras)}</p><ol class="turn-steps">${S.turnSteps.map(([t, b]) => `<li><b>${esc(t)}:</b> ${esc(b)}</li>`).join("")}</ol>` +
     `<h2 id="sec-scoring">${esc(S.scoring)}</h2><p>${esc(S.scoringText)}</p>${table(S.scoringHead, regionRows)}` +
     (opts.withCards ? `<h2 id="sec-cards">${esc(S.cards)}</h2><p>${esc(S.remove)}</p>${cardList(S, NAV[lang], CARD_EN)}` : "");
@@ -848,6 +1021,7 @@ function render() {
     $("rulesBody").innerHTML = rulesNavHTML(S) + textSectionsHTML(S, { inlineMap: true, withCards: true });
   }
   fitRulesMap();
+  fitFigureCrops();
   applyCardFilters(); // #40: reapply the reader's search/era/side filters onto the freshly-drawn rows
   if (isDesktopScroller()) updateActiveRail();
   else updateActiveNavChip(); // #40: re-highlight the section chip for wherever the reader already was
