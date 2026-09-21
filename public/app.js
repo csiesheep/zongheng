@@ -151,12 +151,17 @@ function show(view) {
 // #62: the one scene cue playing right now, recomputed on every view
 // transition (show(), above) AND on every table render (era/winner can
 // change mid-table without a view transition -- see render()'s own call at
-// its tail). sceneFor() itself has no idea about missing cues; the only
-// case this wiring layer special-cases is the tutorial, since bgm.tutorial
-// has no recording yet and (unlike setup/lobby, which are content keeping
-// bgm.landing playing under them) the tutorial wants its OWN substitute
-// (the reform era's table piece, quieter) rather than whatever was already
-// playing when it started.
+// its tail). sceneFor() itself has no idea about missing cues -- that
+// decision is entirely audio.js's setScene() now (item B's static table for
+// bgm.setup, plus the `fallbackCue` given here for the tutorial, since its
+// own substitute needs the seat, which setScene()'s static table can't
+// carry). #62 part 2, item E: this used to peek at Audio.getManifest()
+// itself and decide "missing" from a snapshot that could still be null
+// before the very first fetch resolved -- if that first guess landed on the
+// fallback, nothing ever re-asked once the real file arrived. Always ask
+// for what sceneFor() actually says (`bgm.tutorial` while touring) and let
+// setScene() resolve missing-vs-not AFTER it has genuinely awaited the
+// manifest, every single call.
 function updateSceneMusic() {
   const view = document.body.dataset.view;
   const tutorial = Tut.active();
@@ -169,14 +174,8 @@ function updateSceneMusic() {
   const winner = game.st ? game.st.winner : null;
   const me = game.spectator ? null : game.me;
   const cue = Cues.sceneFor({ page: view, era, me, winner, tutorial });
-  if (tutorial) {
-    const m = Audio.getManifest();
-    // Manifest not loaded yet -> assume missing (true today regardless):
-    // safer than guessing a cue exists before we've actually checked.
-    const missing = !m || Cues.missingCues(m).includes(cue);
-    if (missing) { Audio.setScene(`bgm.table.reform.${E.SIDES[game.me]}`, { gainMul: 0.6 }); return; }
-  }
-  Audio.setScene(cue);
+  if (tutorial) Audio.setScene(cue, { fallbackCue: `bgm.table.reform.${E.SIDES[game.me]}`, fallbackGainMul: 0.6 });
+  else Audio.setScene(cue);
 }
 // The landing is its own page. Going back never loses anything: the solo game
 // is saved on every move, and a room keeps this tab's seat (the bot covers it

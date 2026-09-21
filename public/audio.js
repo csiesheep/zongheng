@@ -169,25 +169,37 @@ function fadeOutActive(ms) {
 // landing straight to bgm.setup left `scene: null` on a fresh document,
 // since "leave whatever's playing" has nothing to leave when nothing has
 // played yet). Chained so a fallback that's ALSO missing keeps trying.
-// The tutorial's own substitute (the reform era's table piece, at 0.6 gain)
-// stays in app.js's updateSceneMusic() -- it needs the seat, which this
-// module doesn't have.
+// bgm.setup has now landed (#63) so this table is likely to end up empty in
+// practice, but it costs nothing to keep as the general rule.
 const SCENE_FALLBACK = { "bgm.setup": "bgm.landing" };
 
-// setScene(cue, { gainMul }): the ONE scene playing at a time. `gainMul`
-// scales the music level for this scene only (the tutorial's own 0.6, per
-// the issue) -- app.js/landing.js decide the cue and the multiplier;
-// this module never reasons about pages/eras/tutorial itself (that's
-// audio-cues.js's sceneFor()).
-export async function setScene(cue, { gainMul = 1 } = {}) {
+// setScene(cue, { gainMul, fallbackCue, fallbackGainMul }): the ONE scene
+// playing at a time. `gainMul` scales the music level for this scene only.
+// `fallbackCue`/`fallbackGainMul` (#62 part 2, item E) are for a caller that
+// has its OWN seat-or-context-dependent substitute in mind (the tutorial's
+// reform-era piece at 0.6, while bgm.tutorial had no recording) -- tried
+// only after `cue` itself and the static table above both come up empty,
+// and resolved AFTER awaiting the manifest, never from a synchronous
+// snapshot the caller might take before the first fetch has even landed
+// (that race was the actual bug: bgm.tutorial existing or not was decided
+// from a possibly-null cached manifest, so once it fell back once it could
+// stay on the fallback even after the real file arrived). This function
+// never reasons about pages/eras/tutorial itself (that's audio-cues.js's
+// sceneFor()) -- it only ever chooses among cues it's actually been given.
+export async function setScene(cue, { gainMul = 1, fallbackCue = null, fallbackGainMul = 1 } = {}) {
   requestedScene = cue;
   sceneGainMul = gainMul;
   if (!musicOn) return; // remembered in requestedScene; setSetting("music", true) starts it
   if (!cue) { fadeOutActive(CROSSFADE_MS); return; }
   const m = await ensureManifest();
-  let resolved = cue, entry = m.cues[resolved];
+  let resolved = cue, entry = m.cues[resolved], mul = gainMul;
   while ((!entry || entry.kind !== "bgm") && SCENE_FALLBACK[resolved]) { resolved = SCENE_FALLBACK[resolved]; entry = m.cues[resolved]; }
+  if ((!entry || entry.kind !== "bgm") && fallbackCue) {
+    const fe = m.cues[fallbackCue];
+    if (fe && fe.kind === "bgm") { resolved = fallbackCue; entry = fe; mul = fallbackGainMul; }
+  }
   if (!entry || entry.kind !== "bgm") { warnOnce(`scene:${cue}`, `[audio] missing bgm cue: ${cue} (no fallback either)`); return; } // truly nothing: leave whatever is already playing
+  sceneGainMul = mul; // so a later same-cue refresh (below, or setSetting("music", true)) uses the multiplier that actually matches what's resolved
   if (resolved === activeScene && layers[activeLayerIdx]) { rampGain(layers[activeLayerIdx].gainNode, targetGainFor(entry), 150); return; }
   if (!unlocked) return; // onUnlocked() will call setScene(requestedScene) again
   await startLayer(resolved, entry, CROSSFADE_MS);
