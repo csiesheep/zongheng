@@ -111,7 +111,7 @@ function ensureBanner() {
   banner = { root, title, why };
 }
 function setSlot(cls) {
-  banner.root.classList.remove("adv-slot-hand", "adv-slot-prompt", "adv-slot-text", "adv-slot-sheet", "adv-slot-desktop");
+  banner.root.classList.remove("adv-slot-hand", "adv-slot-prompt", "adv-slot-text", "adv-slot-sheet", "adv-slot-desktop", "adv-slot-pinned");
   banner.root.classList.add(cls);
 }
 // Moves the SAME banner node into whichever real slot app.js's own layout
@@ -194,6 +194,20 @@ function placeBanner(meta) {
   // it exists; only the compact chip (no .sheet-mid) still gets #sheet
   // itself, same as before.
   const sheetContentTarget = sheet ? sheet.querySelector(":scope > .sheet-mid") || sheet : sheet;
+  // #74 (owner, iPhone screenshot, carried over from #71 point 5): parking
+  // the banner inside .sheet-mid meant it scrolled away with the rest of
+  // the card's own content -- the owner's own third line (a real
+  // suggestion, not decoration) got cut flush by the scroll edge, with
+  // nothing telling the player the area even scrolled. The banner must be
+  // ALWAYS fully visible on the full card page now, so it moves to
+  // .sheet-pinned (sheetPinned() in app.js: the fixed, non-scrolling
+  // sibling of .sheet-mid, already holding the five-use grid / order row /
+  // hint, directly above the Cancel/Confirm footer) as ITS first child,
+  // whenever that element exists. .sheet-pinned only exists on the full
+  // card page (never for the compact chip, a pending choice's own sheet, or
+  // the headline phase, none of which build one) -- those states fall
+  // through to the pre-#74 .sheet-mid/#sheet routing below, unchanged.
+  const sheetPinnedEl = sheet ? sheet.querySelector(":scope > .sheet-pinned") : null;
   // #46: when the open card has a history block, the owner's own order
   // (picture/names, rules text, the advice strip, THEN the history) puts
   // the banner right before it rather than after — insertBefore instead of
@@ -201,18 +215,26 @@ function placeBanner(meta) {
   // first (app.js always builds the history synchronously; this file's own
   // real-answer text can arrive later, via the setTimeout in
   // applyDecorations, and re-run this same placement) or how many times
-  // the banner moves between slots.
+  // the banner moves between slots. Only reached now when .sheet-pinned
+  // doesn't exist (see #74's comment above) -- a history block never
+  // shares a parent with .sheet-pinned's own use grid.
+  // Returns which slot class was actually used, so the caller can apply the
+  // matching CSS (advisor.css) without re-deriving the same check.
   const appendToSheetContent = () => {
+    if (sheetPinnedEl) {
+      sheetPinnedEl.insertBefore(banner.root, sheetPinnedEl.firstChild);
+      return "adv-slot-pinned";
+    }
     const history = sheetContentTarget.querySelector(":scope > .sheet-history");
     if (history) sheetContentTarget.insertBefore(banner.root, history);
     else sheetContentTarget.appendChild(banner.root);
+    return "adv-slot-sheet";
   };
   const desktop = window.innerWidth >= 1024;
   if (desktop) {
     if (sheetHasContent) {
       if (promptText) promptText.hidden = false;
-      appendToSheetContent();
-      setSlot("adv-slot-sheet");
+      setSlot(appendToSheetContent());
       return;
     }
     if (hand) {
@@ -248,10 +270,18 @@ function placeBanner(meta) {
   // there is no more "no room" fallback to route around: #promptScroll
   // scrolls, #lowerBlock's own give-way (app.js's layoutTable()) handles
   // the rest, and the banner is never part of either negotiation.
+  // #68 dropped the old table-overflow fallback here on its own incoming
+  // side: a genuine `.sheet.overlay` is `position: fixed`, detached from
+  // #table's box entirely, and #lowerBlock's own fixed height (#68) means
+  // nothing above ever needs to fall back out of it any more either. #74's
+  // own routing (appendToSheetContent(), just below) still decides WHERE
+  // inside the overlay the banner lands -- .sheet-pinned's first child when
+  // that element exists (the full card page), .sheet-mid/#sheet otherwise
+  // (the compact chip, a pending choice's own sheet) -- but never needs its
+  // own overflow check either way.
   if (sheetHasContent && sheet.classList.contains("overlay")) {
     if (promptText) promptText.hidden = false;
-    appendToSheetContent();
-    setSlot("adv-slot-sheet");
+    setSlot(appendToSheetContent());
     return;
   }
   pinInPrompt();
