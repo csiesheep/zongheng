@@ -51,7 +51,7 @@ export default {
     // a capital but hasn't filled the stack, and the filled "Seal" once it
     // has. sealHelp is the one-line explanation shown in the prompt area
     // when the status line's Seals value is tapped.
-    sealProgress: "Seal {have}/{need}", sealed: "Seal",
+    sealProgress: "Seal {have}/{need}", sealed: "Seal", sealWord: "Seal",
     sealHelp: "A seal needs Chu's control of the capital AND a full stack there (stability + 2)",
   },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },

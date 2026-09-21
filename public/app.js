@@ -1412,18 +1412,44 @@ function renderMap(v) {
     // influence without control) draws nothing — sp.state is null for every
     // non-capital space so this stays undefined there.
     const seal = cap && sp.state ? seals[sp.state] : null;
+    // #89 round 2: SEAL_MARK_POS gives {dx,dy} pixels (the mark's own centre
+    // off the node's centre), applied as an inline transform — a capital's
+    // disc/.hit footprint is too big for the named-corner pill grid (see
+    // map-draw.js's own comment on SEAL_MARK_POS).
+    const sp89 = SEAL_MARK_POS[sp.id];
+    const sealStyle = sp89 ? ` style="transform:translate(calc(-50% + ${sp89.dx}px), calc(-50% + ${sp89.dy}px))"` : "";
+    // #89 round 2: when the nearest collision-free spot is far from the
+    // capital (ji's own corner is boxed in by Zhongshan/Dai/Liaodong and the
+    // map's own top edge — nothing closer than 132 design px is clear of
+    // every disc/.hit/.stab/.nm/region-label), a thin leader line ties the
+    // mark back to its capital (orchestrator's own suggested fix) instead of
+    // leaving it floating with no visible connection.
+    const sealDist = sp89 ? Math.hypot(sp89.dx, sp89.dy) : 0;
+    const LEADER_MIN = 60;
+    let sealLineHTML = "";
+    if (sp89 && sealDist > LEADER_MIN) {
+      const angle = Math.atan2(sp89.dy, sp89.dx) * 180 / Math.PI;
+      const inset = 18, len = Math.max(0, sealDist - inset - 12);
+      sealLineHTML = `<span class="seal-mark-line" aria-hidden="true" style="width:${len}px;transform:translate(${inset * Math.cos(angle * Math.PI / 180)}px, ${inset * Math.sin(angle * Math.PI / 180)}px) rotate(${angle}deg)"></span>`;
+    }
+    // #89 round 2: the progress pill wraps onto two lines (印/Seal, then the
+    // fraction) instead of one long line -- a map this dense has more spare
+    // HEIGHT near a capital than spare WIDTH (orchestrator's "shrink it
+    // slightly" allowance; still >=11px per line, just narrower overall so
+    // it clears neighbours a single "印 3/4"/"Seal 3/4" line could not).
+    // aria-hidden either way (map.sealProgress still carries the full
+    // sentence for anything that reads state off the DOM in one string).
     const sealMarkHTML = seal && seal.sealed
-      ? `<span class="seal-mark sm-sealed" aria-hidden="true">${esc(t("map.sealed"))}</span>`
+      ? `<span class="seal-mark sm-sealed"${sealStyle} aria-hidden="true">${esc(t("map.sealed"))}</span>`
       : seal && seal.chuControls
-      ? `<span class="seal-mark sm-progress${seal.have === seal.need - 1 ? " sm-glow sm-pulse" : ""}" aria-hidden="true">${esc(t("map.sealProgress", { have: seal.have, need: seal.need }))}</span>`
+      ? `<span class="seal-mark sm-progress${seal.have === seal.need - 1 ? " sm-glow sm-pulse" : ""}"${sealStyle} aria-hidden="true" title="${esc(t("map.sealProgress", { have: seal.have, need: seal.need }))}">${esc(t("map.sealWord"))}<br>${seal.have}/${seal.need}</span>`
       : "";
     const vis = document.createElement("div");
     vis.className = "node" + (big ? " big" : "") + (empty ? " empty" : "") + (anchor ? ` anchor-${anchor}` : "") +
       (NODE_STAB_RIGHT.has(sp.id) ? " stab-r" : "") + (NODE_STAB_HI.has(sp.id) ? " stab-hi" : "") +
       (lit ? " lit" : "") + (picked ? " picked" : "") + pickSide +
       (mv ? " lastmove" : "") + (mv && game.lastMoveFresh ? " lastmove-pulse" : "") +
-      " pill-" + (NODE_PILL_POS[sp.id] || "tr") +
-      (sealMarkHTML ? " smp-" + (SEAL_MARK_POS[sp.id] || "tr") : "");
+      " pill-" + (NODE_PILL_POS[sp.id] || "tr");
     vis.style.cssText = `left:${x}px;top:${y}px`;
     vis.dataset.space = sp.id; // #79: oppmove-ui.js finds a space's real on-screen rect by this, never by re-deriving fitMap()'s own transform
     // #41 round 1 review (item 1): the mark reads as two viewfinder-style
@@ -1439,7 +1465,7 @@ function renderMap(v) {
       (picked ? `<span class="badge">+${picked}</span>` : "") +
       (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
       (mvTag ? `<span class="lastmove-tag${lastMoveTagClass(mv)}" aria-hidden="true">${esc(mvTag)}</span>` : "") +
-      sealMarkHTML +
+      (sealMarkHTML ? sealLineHTML : "") + sealMarkHTML +
       nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc);
     el.appendChild(vis);
     const hb = document.createElement("button");
