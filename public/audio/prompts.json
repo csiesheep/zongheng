@@ -1,0 +1,253 @@
+{
+  "bgm.landing": {
+    "source": "bgm_landing_liangting_s5411",
+    "model": "minimax-music-3",
+    "seed": 5411,
+    "prompt": "Global Metadata: Ancient Chinese music of the Warring States period for two rival courts heard side by side: the Qin court on instruments of clay, skin and silk (a plucked zheng zither, a clay pot drum, a xun vessel flute), recorded dry and close, and the Chu court on instruments of bronze, stone and bamboo (a set of chime bells, stone chimes, a se zither), ringing in a large hall. Slow and spacious, about 56 beats per minute. Each court keeps its own pentatonic line, unharmonised; they answer each other phrase by phrase like two envoys. Emotional arc: solemn and expectant, two powers measuring each other; they alternate, then sound together once, then part again. It thins out at the end so the end can meet the beginning as a loop. Listening scenario: the title screen of a strategy board game about the rivalry of Qin and Chu. Production: acoustic recording on replicas of excavated instruments, wide stereo with the zheng and pot drum toward the left and the bells toward the right, wide dynamics, long silences.\n\nVocal Details: The piece is instrumental. The lead melodic role is carried by a plucked zheng zither answered by bronze chime bells.\n\nArrangement: Intro: a single deep stroke on a clay pot drum, silence, then one low bronze bell left to ring out fully. First instrumental section: the zheng plays a stern four-note phrase, dry and close; the chime bells answer with a bright rising phrase that rings in the hall; they alternate, never overlapping. Solo: a xun and a set of stone chimes trade single notes, breath against stone. Second instrumental section: for the only time the zheng and the bells play together, the two lines crossing, a war drum and a low bell marking each phrase. Outro: they part again: one zheng note, one bell, silence.",
+    "lyrics": "[Intro]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Outro]"
+  },
+  "bgm.lose.chu": {
+    "source": "bgm_lose_chu_chuge_low_s5471",
+    "model": "minimax-music-3",
+    "seed": 5471,
+    "prompt": "Global Metadata: Ancient Chinese ritual music of the Chu state in the Warring States period, in the manner of the bronze chime-bell orchestra found in the tomb of Marquis Yi of Zeng, played on replicas of excavated instruments made of bronze, stone and bamboo. Unmeasured, extremely slow free rhythm. Everything stays in the deepest register, deeper and darker than a funeral bell; nothing bright or high is heard. The melody is a single pentatonic line in G (G A B D E); bell tones ring over each other and blur into a shimmer instead of chords. Emotional arc: grieving, abyssal and hollow: a drowned rite, very low tones far apart, it sinks away into darkness. Listening scenario: the defeat screen of a strategy board game, the Chu side has lost; a broken lacquer phoenix among cold embers. Production: acoustic recording in a large resonant hall of stone and timber; long natural decay of bronze, soft air around the flutes, wide stereo.\n\nVocal Details: The piece is essentially instrumental; the lead role is carried by the largest, lowest bronze bell of a chime set, struck softly with a padded mallet. In the solo section only, a few distant bass male voices hum one very low sustained note without words, far away.\n\nArrangement: Intro: a low wind; the great bass bell tolls once, a huge dark tone left to decay completely. First instrumental section: the bass bell tolls very slowly, each stroke softer than the last; under it the lowest strings of a se zither are brushed once, a dark murmur. Solo: distant bass voices hum one very low note, barely audible, and fade. Second instrumental section: the bell again, slower still; a large low drum is struck once with a soft beater, like a heartbeat stopping. Outro: the last bell stroke decays into the low wind.",
+    "lyrics": "[Intro]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Outro]"
+  },
+  "bgm.lose.qin": {
+    "source": "bgm_lose_qin_jin_low_s5461",
+    "model": "minimax-music-3",
+    "seed": 5461,
+    "prompt": "Global Metadata: Ancient Chinese music of the Qin state in the Warring States period, in the manner of early ritual court music (yayue) and army drum music, played on replicas of excavated instruments made of clay, skin and silk. Unmeasured, extremely slow free rhythm. Everything stays in the lowest register; nothing bright or high is heard. The melody is a single unharmonised pentatonic line in D (D F G A C); the instruments shadow each other in loose heterophony, with silences between phrases. Emotional arc: desolate, heavy and dark: the weight of a fallen state, low tones that sink and die, it fades into silence. Listening scenario: the defeat screen of a strategy board game, the Qin side has lost; a fallen bronze tiger among cold embers. Production: raw, dry and close acoustic recording in a bare rammed-earth hall; string noise, breath and drum skin are audible; wide dynamics, nothing polished.\n\nVocal Details: The piece is instrumental. The lead melodic role is carried by a large bass xun, a clay vessel flute in its lowest register, dark and breathy.\n\nArrangement: Intro: a very deep, slack war drum is struck once, a long low rumble dying away in an empty hall; silence. First instrumental section: the bass xun plays a slow falling phrase of three low notes over a dark drone on the lowest open string of a guqin; a long silence; the phrase again, a step lower. Solo: the lowest string of the guqin is plucked alone, each deep note left to die completely; the drum answers once, muffled. Second instrumental section: the bass xun returns, lower and weaker, the phrase sinking a step each time and breaking off before its last note. Outro: one last muffled drum stroke, and the low drone fades into silence.",
+    "lyrics": "[Intro]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Outro]"
+  },
+  "bgm.table.alliance.chu": {
+    "source": "bgm_table_alliance_chu_yingdu_s5331",
+    "model": "minimax-music-3",
+    "seed": 5331,
+    "prompt": "Global Metadata: Ancient Chinese ritual music of the Chu state in the Warring States period, in the manner of the bronze chime-bell orchestra found in the tomb of Marquis Yi of Zeng, played on replicas of excavated instruments made of bronze, stone and bamboo. A swaying moderate pace, about 84 beats per minute, like a banquet for envoys at the court of Ying. The melody is a single pentatonic line in G (G A B D E); bell tones ring over each other and blur into a shimmer instead of chords. Emotional arc: graceful, persuasive and restless, colour added section by section, the middle is the fullest. It thins out at the end so the end can meet the beginning as a loop. Listening scenario: background music under a slow strategy board game, played on a loop for a long time. Production: acoustic recording in a large resonant hall of stone and timber; long natural decay of bronze, soft air around the flutes, wide stereo.\n\nVocal Details: The piece is instrumental. The lead melodic role is carried by a se, a large twenty-five-string ancient zither with movable bridges.\n\nArrangement: Intro: small bronze hand bells and a shaman's hand drum set a light swaying pulse. First instrumental section: the se plays a plucked repeating figure in its low strings and a graceful curling melody above it; a sheng, a bamboo mouth organ, holds soft sustained tones. First solo: a paixiao, bamboo panpipes, takes the melody with breathy swooping phrases; stone chimes (bianqing) add clear high notes at phrase ends. Second instrumental section: se and panpipes together, middle bronze chime bells doubling the melody one struck note at a time, the hand drum more insistent. Second solo: a short bone flute imitates bird calls, high and fluttering, answered by single tolls of one low bronze bell. Third instrumental section: se, sheng, panpipes and bells together, the fullest moment, still swaying. Outro: the pulse falls away; the se alone plays rippling glissandi into the hall.",
+    "lyrics": "[Intro]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Outro]"
+  },
+  "bgm.table.alliance.qin": {
+    "source": "bgm_table_alliance_qin_lianheng_s5321",
+    "model": "minimax-music-3",
+    "seed": 5321,
+    "prompt": "Global Metadata: Ancient Chinese music of the Qin state in the Warring States period, in the manner of early ritual court music (yayue) and army drum music, played on replicas of excavated instruments made of clay, skin and silk. A steady travelling pace, about 84 beats per minute, like envoys' chariots on the road east. The melody is a single unharmonised pentatonic line in D (D F G A C); the instruments shadow each other in loose heterophony, with silences between phrases. Emotional arc: purposeful, cunning and tense, the pulse never stops, the middle is the busiest. It thins out at the end so the end can meet the beginning as a loop. Listening scenario: background music under a slow strategy board game, played on a loop for a long time. Production: raw, dry and close acoustic recording in a bare rammed-earth hall; string noise, breath and drum skin are audible; wide dynamics, nothing polished.\n\nVocal Details: The piece is instrumental. The lead melodic role is carried by a qin zheng zither playing a driving figure of repeated notes with a terse melody on top.\n\nArrangement: Intro: a clay pot drum (fou) sets a plain steady pattern alone, joined by hand slaps on the thigh. First instrumental section: the zheng enters with a repeated-note ostinato on a low string and short clipped pentatonic phrases above it; the pot drum keeps the pattern. First solo: a xun plays a sly winding line over the ostinato, with wide leaps; a small frame drum doubles the pulse. Second instrumental section: two zhengs, one holding the ostinato and one playing the melody with hard nails and slides; a large war drum marks the end of every second phrase. Second solo: the drums drop out; a guqin plays tense low slides against single zheng notes, like two men bargaining. Third instrumental section: everything returns, louder, the frame drum in quick even strokes. Outro: the zheng stops; pot drum and thigh slaps return to the opening pattern.",
+    "lyrics": "[Intro]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Outro]"
+  },
+  "bgm.table.conquest.chu": {
+    "source": "bgm_table_conquest_chu_guoshang_s5351",
+    "model": "minimax-music-3",
+    "seed": 5351,
+    "prompt": "Global Metadata: Ancient Chinese ritual music of the Chu state in the Warring States period, in the manner of the bronze chime-bell orchestra found in the tomb of Marquis Yi of Zeng, played on replicas of excavated instruments made of bronze, stone and bamboo. A driving martial pace, about 100 beats per minute, in the spirit of the Hymn to the Fallen, Chu's song for its war dead. The melody is a single pentatonic line in G (G A B D E); bell tones ring over each other and blur into a shimmer instead of chords. Emotional arc: tragic, defiant and blazing, rising to a great clangour of bronze, then falling back to the tolling bell. It thins out at the end so the end can meet the beginning as a loop. Listening scenario: background music under the final, decisive turns of a strategy board game, played on a loop. Production: acoustic recording in a large resonant hall of stone and timber; long natural decay of bronze, soft air around the flutes, wide stereo.\n\nVocal Details: The piece is instrumental. The lead melodic role is carried by a set of bronze chime bells (bianzhong) struck hard with wooden mallets, low and middle bells.\n\nArrangement: Intro: one huge low bronze bell tolls like an alarm, fast and evenly; a large suspended pole drum answers with heavy strokes. First instrumental section: the pole drum drives a galloping pattern; the middle bells hammer a short defiant motif, their overtones clashing. First solo: a chi, an ancient transverse bamboo flute, plays a shrill keening line over the drum, with panpipes swooping behind it. Second instrumental section: a se zither in fast tremolo and rippling glissandi under the bell motif, stone chimes struck in rapid dry volleys. Second solo: the bells stop; drum and bronze hand bells alone, tense, with single cries of the flute. Third instrumental section: all the bells from lowest to highest, stone chimes, flutes and drum together, a blaze of bronze. Outro: everything stops but the huge low bell, tolling as at the start.",
+    "lyrics": "[Intro]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Outro]"
+  },
+  "bgm.table.conquest.qin": {
+    "source": "bgm_table_conquest_qin_hulang_s5341",
+    "model": "minimax-music-3",
+    "seed": 5341,
+    "prompt": "Global Metadata: Ancient Chinese music of the Qin state in the Warring States period, in the manner of early ritual court music (yayue) and army drum music, played on replicas of excavated instruments made of clay, skin and silk. A relentless marching pace, about 100 beats per minute, the armies of Qin on the move. The melody is a single unharmonised pentatonic line in D (D F G A C); the instruments shadow each other in loose heterophony, with silences between phrases. Emotional arc: grim, massive and unstoppable, growing in weight to the last section, then cut back to the bare drums. It thins out at the end so the end can meet the beginning as a loop. Listening scenario: background music under the final, decisive turns of a strategy board game, played on a loop. Production: raw, dry and close acoustic recording in a bare rammed-earth hall; string noise, breath and drum skin are audible; wide dynamics, nothing polished.\n\nVocal Details: The piece is instrumental. The lead melodic role is carried by a low qin zheng zither struck hard, with fast tremolo on its bass strings.\n\nArrangement: Intro: massed large war drums beat a slow heavy pattern, a clay pot drum (fou) filling the gaps with dry thuds. First instrumental section: the drums settle into a relentless march; the zheng hammers a short stern motif of four notes in its lowest register, repeated like an order. First solo: a xun cries out in its high register, harsh and shrill, over drum rolls. Second instrumental section: two zhengs in fast tremolo an octave apart on the motif, the war drums doubling their strokes, wooden clappers cracking on the off-beats. Second solo: the big drums stop; pot drum and frame drum alone in a tight fast pattern, the zheng striking single low notes. Third instrumental section: all drums, zheng tremolo and the xun above them, the heaviest moment. Outro: the zheng and xun stop at once; the war drums return to the slow opening pattern.",
+    "lyrics": "[Intro]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Outro]"
+  },
+  "bgm.table.reform.chu": {
+    "source": "bgm_table_reform_chu_C_yunmeng_long_s5361",
+    "model": "minimax-music-3",
+    "seed": 5361,
+    "prompt": "Global Metadata: Ancient Chinese ritual music of the Chu state in the Warring States period, in the manner of the bronze chime-bell orchestra found in the tomb of Marquis Yi of Zeng, played on replicas of excavated instruments made of bronze, stone and bamboo. A gentle flowing pace, about 66 beats per minute, like mist over the southern marshes of Yunmeng. The melody is a single pentatonic line in G (G A B D E); bell tones ring over each other and blur into a shimmer instead of chords. Emotional arc: luminous, mysterious and shamanic, rising slowly like incense smoke, then settling. It thins out at the end so the end can meet the beginning as a loop. Listening scenario: background music under a slow strategy board game, played on a loop for a long time. Production: acoustic recording in a large resonant hall of stone and timber; long natural decay of bronze, soft air around the flutes, wide stereo.\n\nVocal Details: The piece is instrumental. The lead melodic role is carried by a se, a large twenty-five-string ancient zither with movable bridges.\n\nArrangement: Intro: the se plays slow rippling glissandi across all its strings, like wind over water. First instrumental section: the se picks out a graceful curling melody with plucked octaves; a sheng, a bamboo mouth organ, holds soft sustained tones underneath. First solo: a short bone flute imitates bird calls, high and fluttering, answered by single tolls of one bronze bell. Second instrumental section: se melody and sheng together, stone chimes adding a few clear high notes at phrase ends. Second solo: the sheng alone holds a slow rising line, the se answering with single plucked harmonics. Third instrumental section: se, sheng and bone flute together on the opening melody, one low bell at the end of each long phrase. Outro: the se returns to the opening glissandi and fades into the hall.",
+    "lyrics": "[Intro]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Outro]"
+  },
+  "bgm.table.reform.qin": {
+    "source": "bgm_table_reform_qin_D_weishui_s5311",
+    "model": "minimax-music-3",
+    "seed": 5311,
+    "prompt": "Global Metadata: Ancient Chinese music of the Qin state in the Warring States period, in the manner of early ritual court music (yayue) and army drum music, played on replicas of excavated instruments made of clay, skin and silk. A flowing but stern pace, about 66 beats per minute, like the Wei River under the loess plateau at dawn. The melody is a single unharmonised pentatonic line in D (D F G A C); the instruments shadow each other in loose heterophony, with silences between phrases. Emotional arc: watchful, patient and earthbound, a little warmer in the middle, never hurried. It thins out at the end so the end can meet the beginning as a loop. Listening scenario: background music under a slow strategy board game, played on a loop for a long time. Production: raw, dry and close acoustic recording in a bare rammed-earth hall; string noise, breath and drum skin are audible; wide dynamics, nothing polished.\n\nVocal Details: The piece is instrumental. The lead melodic role is carried by a qin zheng, an early twelve-string plucked zither, in its middle register.\n\nArrangement: Intro: the zheng plays slow sweeps across its open strings, dry and close, with long gaps. First instrumental section: the zheng picks out a spare curling melody with plucked octaves, each phrase ending on a bent falling note; a xun, a clay vessel flute, holds soft hollow long tones underneath. First solo: the xun alone, low and breathy, answered by single dry strokes on a clay pot drum (fou). Second instrumental section: zheng melody and xun together, slightly out of step; the pot drum keeps a soft slow pulse. Second solo: a guqin, the seven-string silk zither, plays a few deep slides and bell-like harmonics over the pulse. Third instrumental section: zheng, xun and guqin on the opening melody, one war drum stroke closing each long phrase. Outro: the zheng returns to the opening sweeps and stops on a single low note.",
+    "lyrics": "[Intro]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Solo]\n\n[Instrumental]\n\n[Outro]"
+  },
+  "bgm.win.chu": {
+    "source": "bgm_win_chu_fengming_s5431",
+    "model": "minimax-music-3",
+    "seed": 5431,
+    "prompt": "Global Metadata: Ancient Chinese ritual music of the Chu state in the Warring States period, in the manner of the bronze chime-bell orchestra found in the tomb of Marquis Yi of Zeng, played on replicas of excavated instruments made of bronze, stone and bamboo. A radiant ceremonial pace, about 72 beats per minute. The melody is a single pentatonic line in G (G A B D E); bell tones ring over each other and blur into a shimmer instead of chords. Emotional arc: radiant, soaring and jubilant: a short complete fanfare with a ringing ending, not a loop. Listening scenario: the victory screen of a strategy board game, the Chu side has won. Production: acoustic recording in a large resonant hall of stone and timber; long natural decay of bronze, soft air around the flutes, wide stereo.\n\nVocal Details: The piece is instrumental. The lead melodic role is carried by a full set of bronze chime bells struck together, with panpipes soaring above.\n\nArrangement: Intro: the whole set of chime bells is struck from lowest to highest in a bright rising sweep. Instrumental section: the middle bells play a jubilant rising melody, stone chimes sparkling above, a paixiao soaring over them, a suspended drum in broad strokes. Outro: all bells struck together once, a great ringing chord of bronze left to decay into the hall.",
+    "lyrics": "[Intro]\n\n[Instrumental]\n\n[Outro]"
+  },
+  "bgm.win.qin": {
+    "source": "bgm_win_qin_yitong_s5421",
+    "model": "minimax-music-3",
+    "seed": 5421,
+    "prompt": "Global Metadata: Ancient Chinese music of the Qin state in the Warring States period, in the manner of early ritual court music (yayue) and army drum music, played on replicas of excavated instruments made of clay, skin and silk. A broad triumphant pace, about 72 beats per minute. The melody is a single unharmonised pentatonic line in D (D F G A C); the instruments shadow each other in loose heterophony, with silences between phrases. Emotional arc: proud, heavy and final: a short complete fanfare with a firm ending, not a loop. Listening scenario: the victory screen of a strategy board game, the Qin side has won. Production: raw, dry and close acoustic recording in a bare rammed-earth hall; string noise, breath and drum skin are audible; wide dynamics, nothing polished.\n\nVocal Details: The piece is instrumental. The lead melodic role is carried by a qin zheng zither playing strong strummed open fifths and a proud rising phrase.\n\nArrangement: Intro: three huge war drum strokes, each answered by a roll on clay pot drums. Instrumental section: the zheng strums strong open-string chords of stacked fifths and plays a proud rising pentatonic phrase twice, a xun doubling it above, massed drums underneath. Outro: one last phrase slows down and ends on a single firm stroke of drum and zheng together, left to decay.",
+    "lyrics": "[Intro]\n\n[Instrumental]\n\n[Outro]"
+  },
+  "sfx.card.commit": {
+    "source": "sfx_card_commit_s8110",
+    "model": "stable-audio-3-medium",
+    "seed": 8110,
+    "prompt": "A bundle of bamboo slips slapped flat onto a heavy wooden table: one firm dry thud with a very short woody rattle, close microphone, no reverb, isolated one-shot. Length: 1 seconds"
+  },
+  "sfx.card.event.chu": {
+    "source": "sfx_event_chu_s7201",
+    "model": "stable-audio-3-medium",
+    "seed": 7201,
+    "prompt": "A single strike on an ancient Chinese bronze chime bell (bianzhong) with a wooden mallet: clear pitched metallic tone, bright attack, long shimmering decay with slowly beating overtones, quiet stone hall, isolated one-shot, no other instruments, no melody. Length: 5 seconds"
+  },
+  "sfx.card.event.neutral": {
+    "source": "sfx_card_event_neutral_s8140",
+    "model": "stable-audio-3-medium",
+    "seed": 8140,
+    "prompt": "A single strike on an ancient Chinese stone chime (qing): a dry, clear, glassy pitched tone with a short ringing decay in a quiet hall, isolated one-shot, no other instruments. Length: 3 seconds"
+  },
+  "sfx.card.event.qin": {
+    "source": "sfx_card_event_qin_s8130",
+    "model": "stable-audio-3-medium",
+    "seed": 8130,
+    "prompt": "A single heavy strike on a large clay pot drum together with one deep war drum hit: a dry earthy thump with a low boom and a short decay, no melody, isolated one-shot. Length: 2 seconds"
+  },
+  "sfx.card.pick": {
+    "source": "sfx_card_pick_s8100",
+    "model": "stable-audio-3-medium",
+    "seed": 8100,
+    "prompt": "A single thin bamboo slip lifted from a wooden table: one short light scrape and a tick, close microphone, completely dry, no reverb, isolated one-shot. Length: 1 seconds"
+  },
+  "sfx.card.reveal": {
+    "source": "sfx_card_reveal_s8120",
+    "model": "stable-audio-3-medium",
+    "seed": 8120,
+    "prompt": "Two bamboo slips flipped over on a wooden table one after the other, two quick dry clacks, then one soft strike of a small bronze bell that rings out. Length: 3 seconds"
+  },
+  "sfx.end.lose.chu": {
+    "source": "sfx_end_lose_chu_s8452",
+    "model": "stable-audio-3-medium",
+    "seed": 8452,
+    "prompt": "Lacquered wood cracking and splitting apart: one sharp dry crack, small splinters falling, then a few embers crackling in the silence. Length: 4 seconds"
+  },
+  "sfx.end.lose.qin": {
+    "source": "sfx_end_lose_qin_s8441",
+    "model": "stable-audio-3-medium",
+    "seed": 8441,
+    "prompt": "A heavy bronze statue falling onto stone: one deep metallic impact and a dull ring, then a few embers crackling in the silence. Length: 4 seconds"
+  },
+  "sfx.end.win.chu": {
+    "source": "sfx_end_win_chu_s8432",
+    "model": "stable-audio-3-medium",
+    "seed": 8432,
+    "prompt": "A triumphant opening: a full set of bronze chime bells struck together in a bright ringing chord with stone chimes on top, luminous, a great hall, ringing out. Length: 4 seconds"
+  },
+  "sfx.end.win.qin": {
+    "source": "sfx_end_win_qin_s8422",
+    "model": "stable-audio-3-medium",
+    "seed": 8422,
+    "prompt": "A triumphant opening: one huge war drum strike, a clay pot drum roll rising, and a strong strummed chord on a guzheng zither, proud and heavy, ending cleanly. Length: 4 seconds"
+  },
+  "sfx.map.campaign": {
+    "source": "sfx_map_campaign_s8181",
+    "model": "stable-audio-3-medium",
+    "seed": 8181,
+    "prompt": "One deep war drum strike followed at once by the clash of two bronze blades with a short metallic ring: fierce, short, dry, close, isolated. Length: 2 seconds"
+  },
+  "sfx.map.confirm": {
+    "source": "sfx_map_confirm_s8150",
+    "model": "stable-audio-3-medium",
+    "seed": 8150,
+    "prompt": "A carved stone seal stamped firmly onto silk on a wooden desk: one soft heavy press and a low thud, close microphone, completely dry, isolated one-shot. Length: 1 seconds"
+  },
+  "sfx.map.control.gain": {
+    "source": "sfx_map_control_gain_s8162",
+    "model": "stable-audio-3-medium",
+    "seed": 8162,
+    "prompt": "Two quick rising notes struck on stone chimes, the second higher than the first: clear, bright, dry, short decay, isolated, no other instruments. Length: 1 seconds"
+  },
+  "sfx.map.control.lose": {
+    "source": "sfx_map_control_lose_drum_s8522",
+    "model": "stable-audio-3-medium",
+    "seed": 8522,
+    "prompt": "A single heavy hit on a large slack drum whose pitch bends downward like a falling timpani glissando, deep, dull, dying quickly, dry, isolated one-shot. Length: 2 seconds"
+  },
+  "sfx.map.opponent": {
+    "source": "sfx_map_opponent_s8190",
+    "model": "stable-audio-3-medium",
+    "seed": 8190,
+    "prompt": "One very soft tick of a small wooden clapper: quiet, unobtrusive, completely dry, close microphone, isolated one-shot. Length: 1 seconds"
+  },
+  "sfx.map.place": {
+    "source": "sfx_map_place_s7102",
+    "model": "stable-audio-3-medium",
+    "seed": 7102,
+    "prompt": "A single go stone placed firmly on a thick wooden board: one short dry click with a small woody knock, close microphone, completely dry, no reverb, no background noise, isolated one-shot. Length: 1 seconds"
+  },
+  "sfx.mie": {
+    "source": "sfx_mie_s8342",
+    "model": "stable-audio-3-medium",
+    "seed": 8342,
+    "prompt": "A rammed-earth city wall collapsing: a deep rumble, heavy blocks of earth and stone crashing down, dust and rubble settling, no music, no bells, no gong. Length: 4 seconds"
+  },
+  "sfx.seal.gain": {
+    "source": "sfx_seal_gain_s8220",
+    "model": "stable-audio-3-medium",
+    "seed": 8220,
+    "prompt": "A heavy bronze official seal pressed into wet clay: one solid metallic press and a soft squelch, close microphone, dry, isolated one-shot. Length: 1 seconds"
+  },
+  "sfx.seal.lose": {
+    "source": "sfx_seal_lose_s8231",
+    "model": "stable-audio-3-medium",
+    "seed": 8231,
+    "prompt": "A heavy bronze seal lifted off a wooden desk and taken away: a short metallic scrape and a light knock, dry, isolated one-shot. Length: 1 seconds"
+  },
+  "sfx.track.mandate.chu": {
+    "source": "sfx_track_mandate_chu_paixiao_s8330",
+    "model": "stable-audio-3-medium",
+    "seed": 8330,
+    "prompt": "A short rising phrase of three notes on bamboo panpipes (paixiao), breathy and airy, soft attack, a little hall reverb, isolated, no other instruments. Length: 2 seconds"
+  },
+  "sfx.track.mandate.qin": {
+    "source": "sfx_track_mandate_qin_s8311",
+    "model": "stable-audio-3-medium",
+    "seed": 8311,
+    "prompt": "Two slow heavy strikes on a large war drum, deep and dry, the second lower than the first, close, isolated, no other instruments. Length: 2 seconds"
+  },
+  "sfx.turn.clock.last": {
+    "source": "sfx_turn_clock_last_s8371",
+    "model": "stable-audio-3-medium",
+    "seed": 8371,
+    "prompt": "A single low knock on a hollow wooden block, deeper and heavier than a tick, short, dry, close microphone, isolated one-shot, nothing else. Length: 1 seconds"
+  },
+  "sfx.turn.clock.tick": {
+    "source": "sfx_turn_clock_tick_s8360",
+    "model": "stable-audio-3-medium",
+    "seed": 8360,
+    "prompt": "A single dry tick of a small wooden clapper, very short and crisp, close microphone, no reverb, isolated one-shot, nothing else. Length: 1 seconds"
+  },
+  "sfx.turn.era": {
+    "source": "sfx_turn_era_s8350",
+    "model": "stable-audio-3-medium",
+    "seed": 8350,
+    "prompt": "A short solemn phrase of four slow notes played on medium-sized bronze bells, warm mid register, each note ringing into the next, a quiet hall, no drums, no other instruments. Length: 4 seconds"
+  },
+  "sfx.turn.new": {
+    "source": "sfx_turn_new_s8260",
+    "model": "stable-audio-3-medium",
+    "seed": 8260,
+    "prompt": "One calm strike on a medium bronze bell, clear pitch, a long even decay in a quiet hall, isolated one-shot. Length: 3 seconds"
+  },
+  "sfx.turn.yours": {
+    "source": "sfx_turn_yours_s8282",
+    "model": "stable-audio-3-medium",
+    "seed": 8282,
+    "prompt": "A gentle double tap on a small bamboo woodblock: two soft clear knocks, friendly, dry, isolated. Length: 1 seconds"
+  },
+  "sfx.ui.error": {
+    "source": "sfx_ui_error_s8410",
+    "model": "stable-audio-3-medium",
+    "seed": 8410,
+    "prompt": "A single dull muffled knock on thick wood with a cloth over it: low, soft, short, not harsh, dry, isolated one-shot. Length: 1 seconds"
+  },
+  "sfx.ui.tap": {
+    "source": "sfx_ui_tap_s8400",
+    "model": "stable-audio-3-medium",
+    "seed": 8400,
+    "prompt": "A single light tap of a fingertip on a lacquered wooden box: one tiny dry knock, very short, close microphone, isolated one-shot. Length: 1 seconds"
+  },
+  "sfx.warn": {
+    "source": "sfx_warn_s8250",
+    "model": "stable-audio-3-medium",
+    "seed": 8250,
+    "prompt": "Two urgent strikes on a tight war drum in quick succession, dry, tense, close, isolated, nothing else. Length: 2 seconds"
+  }
+}
