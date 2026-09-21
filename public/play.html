@@ -124,6 +124,15 @@
   <div id="logBody" class="logbody" hidden>
     <div class="logbody-head">
       <span class="logbody-title" id="logTitle"></span>
+      <!-- #88: 全部/秦/楚/對話 -- the 對話 tab (data-filter="chat") is
+           hidden by app.js's syncLogFilters() whenever the room/bot have
+           logged no chat line yet (log-view.js's hasChat()). -->
+      <div class="logbody-filters" id="logFilters">
+        <button type="button" class="logf" data-filter="all" data-t="logPanel.filterAll"></button>
+        <button type="button" class="logf" data-filter="0" data-t="logPanel.filterQin"></button>
+        <button type="button" class="logf" data-filter="1" data-t="logPanel.filterChu"></button>
+        <button type="button" class="logf" data-filter="chat" data-t="logPanel.filterChat" hidden></button>
+      </div>
       <button type="button" id="logClose" class="small logbody-close no-tap-sound" data-t="buttons.hide"></button>
     </div>
     <div class="logbody-content" id="logLines"></div>

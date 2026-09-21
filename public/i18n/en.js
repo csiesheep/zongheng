@@ -120,6 +120,19 @@ export default {
     bog: "{side} is bogged down and discards {card}.", skip: "{side} has no card to play.", opsLost: "{side} has nowhere to spend {ops} ops.", reshuffle: "The discards are reshuffled.", era: "The {era} deck is shuffled in.",
     endTurn: "Turn {turn} ends; weariness {weariness}.", over: "Game over: {side}, {reason}.",
   },
+  // #88 (design A, one row per move): the log panel's own short strings --
+  // section headers, one move's own title line, and the chips under it. See
+  // zh-Hant.js's own logPanel comment for which chips reuse the oppmove.*
+  // strings instead of a new key here.
+  logPanel: {
+    filterAll: "All", filterQin: "Qin", filterChu: "Chu", filterChat: "Chat",
+    setupHeader: "Setup", turnHeader: "Turn {turn} · {era}", round: "Move {round}",
+    headlineLine: "Headlines: {qinSide} {qinCard} · {chuSide} {chuCard}", headlineFirst: "{first} resolves first",
+    chipPlace: "{space} +{n}", chipRemove: "{target}: removes {n} {side}",
+    chipReform: "Reform → box {box}", chipTire: "Weariness → {to}",
+    chipDiscard: "{side} discards {card}", chipOpsLost: "{side} has nowhere to spend {ops} ops",
+    close: "Hide",
+  },
   // #79/#87: the opponent's-move reveal -- the card panel (①, which waits
   // for its own tap) and the map playback (②). #85's persistent chip and
   // its bottom sheet are gone (#87). oppmove-ui.js is the only file that

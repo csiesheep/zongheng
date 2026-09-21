@@ -59,3 +59,79 @@ export function opponentMoves(log, sinceSeq, me) {
     return [];
   }
 }
+
+// Collapse a raw per-influence-point list into [spaceId, count] pairs, in
+// the order each space FIRST appears. Shared by opponentMoves' step.spaces
+// (above) and groupLog's setup/place rows (below).
+function collapseSpaces(points) {
+  if (!Array.isArray(points)) return [];
+  const order = [];
+  const counts = new Map();
+  for (const id of points) {
+    if (!counts.has(id)) { counts.set(id, 0); order.push(id); }
+    counts.set(id, counts.get(id) + 1);
+  }
+  return order.map((id) => [id, counts.get(id)]);
+}
+
+// #88 (design A 逐手卷軸): groups the WHOLE log, both sides, in time order,
+// into the rows the log panel draws -- turn headers, headlines, one row per
+// card played (with its own steps), and anything logged outside a move as
+// its own "other" row. DOM-free, like opponentMoves above; see the
+// orchestrator's test (tests/logview.test.js, not committed here) for the
+// exact contract this follows entry by entry.
+//
+// A move starts at a `play` entry and runs up to but not including the
+// next `play`, `headline`, `turn`, `setup` or `endTurn` entry -- everything
+// logged in between becomes one of its steps, in log order, WHOEVER it
+// happened to (unlike opponentMoves, groupLog keeps both sides' entries).
+// `endTurn` closes the current move and is also logged as its own "other"
+// row. A step with no open move (e.g. before the first play, or between
+// `endTurn` and the next `turn`) becomes its own "other" row too.
+const turnOf = (e) => (e && e.turn !== undefined ? e.turn : e && e.t);
+
+export function groupLog(log) {
+  try {
+    if (!Array.isArray(log)) return [];
+    const rows = [];
+    let current = null;
+    for (const e of log) {
+      if (!e || typeof e !== "object") continue;
+      const seq = e.i;
+      if (e.type === "setup") {
+        current = null;
+        rows.push({ kind: "setup", seq, side: e.side, spaces: collapseSpaces(e.points) });
+        continue;
+      }
+      if (e.type === "turn") {
+        current = null;
+        rows.push({ kind: "turn", seq, turn: e.turn, era: e.era });
+        continue;
+      }
+      if (e.type === "headline") {
+        current = { kind: "headline", seq, cards: e.cards, first: e.first, turn: turnOf(e), steps: [] };
+        rows.push(current);
+        continue;
+      }
+      if (e.type === "play") {
+        current = { kind: "move", seq, side: e.side, card: e.card, use: e.use, turn: turnOf(e), round: e.r, steps: [] };
+        rows.push(current);
+        continue;
+      }
+      if (e.type === "endTurn") {
+        current = null;
+        rows.push({ kind: "other", seq, entry: e });
+        continue;
+      }
+      if (current) {
+        const step = e.type === "place" && Array.isArray(e.points) ? { ...e, spaces: collapseSpaces(e.points) } : e;
+        current.steps.push(step);
+      } else {
+        rows.push({ kind: "other", seq, entry: e });
+      }
+    }
+    return rows;
+  } catch {
+    return [];
+  }
+}
