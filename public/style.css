@@ -1011,7 +1011,19 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    — lives here, so it scrolls on its own without ever pushing a button out
    of the viewport. Only present while the full card (not the compact chip)
    is on screen. */
-.sheet-mid { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.sheet-mid { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
+/* #71 (owner, iPhone screenshot): the advisor's own suggestion banner
+   (.advisor-banner.adv-slot-sheet, public/advisor.css) sits in .sheet-mid
+   above, whose own comment already says "it scrolls on its own" -- but the
+   owner's screenshot showed its third line cut flat at the box's own edge
+   with no visible way to reach it (田單復國, advisor on). Chose the "page's
+   middle section scrolls with the box inside it" option (the architecture
+   already above) over growing the box itself, since #sheet.overlay's pinned
+   footer (Cancel/Confirm, sheetPinned() in app.js) must stay put per the
+   issue's own words -- letting the box grow past the viewport would push it
+   off, or need shrinking something else out of scope here. The one
+   ingredient .sheet-mid was missing is -webkit-overflow-scrolling: touch
+   (above), for iOS's momentum scroll inside a nested overflow box. */
 /* #46 (owner: a player must never scroll to reach a button): the use grid,
    an enemy card's order row, 說客's pairing and the one-line hint all live
    here now — a FIXED sibling of .sheet-mid, between it and the pinned

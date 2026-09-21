@@ -369,7 +369,12 @@ const sess = {
   get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { sessionStorage.setItem(k, v); } catch {} },
 };
-const freshUi = (card = null) => ({ card, use: null, order: "opsFirst", pair: null, points: [], target: null, picks: [], opsUse: null, err: "" });
+// #71 (owner, iPhone screenshot): an opponent's card used to open with
+// order already defaulted to "opsFirst" -- pressed before the player ever
+// decided, so Confirm could go through and the advisor's suggestion ring
+// couldn't be told apart from a real press. `order` now starts unchosen;
+// every reader below treats null as "not decided yet", never as opsFirst.
+const freshUi = (card = null) => ({ card, use: null, order: null, pair: null, points: [], target: null, picks: [], opsUse: null, err: "" });
 
 function startSolo() {
   game.room = false; game.spectator = false;
@@ -964,8 +969,12 @@ function wantsCardOverlay(v) {
   if (!ui.card) return false;
   if (!ui.use) return true; // browsing the card, choosing a use
   if (ui.use === "event" || ui.use === "reform") return true; // no map needed
+  const info = cardInfo(L, ui.card);
+  // #71: an opponent's card played for place/campaign/lobby has no order
+  // chosen yet -- keep the full-screen overlay (map stays inactive) until
+  // the player picks 先行動點/先事件, same as before any use is picked.
+  if (info && info.enemy && !ui.pair && ui.order == null) return true;
   if (ui.use === "place") {
-    const info = cardInfo(L, ui.card);
     return !!(info && info.enemy && ui.order === "eventFirst" && !ui.pair); // the pre-order step, before tapping the map
   }
   return false; // campaign/lobby target picking, or place once ops are known: the map is in play
@@ -1111,6 +1120,9 @@ function currentMode(v) {
   if (L.kind !== "action" || !ui.card || !ui.use) return none;
   const info = cardInfo(L, ui.card);
   if (!info) return none;
+  // #71: no order chosen yet on an opponent's card -- no map tap (place,
+  // campaign or lobby) until the player picks one.
+  if (info.enemy && !ui.pair && ui.order == null) return none;
   if (ui.use === "place" && !(info.enemy && ui.order === "eventFirst")) return placing(info.ops, ui.points);
   if (ui.use === "campaign" || ui.use === "lobby") {
     const u = info.uses[ui.use];
@@ -1687,7 +1699,12 @@ function renderPromptAndSheet(v) {
   // While the map is in play (placing points, picking a campaign/lobby
   // target) the sheet shrinks to a mini chip so the map stays visible and
   // tappable (C2_Place/C2_Campaign) — "Expand" swaps in the full card.
-  const mapActive = ui.use === "campaign" || ui.use === "lobby" || (ui.use === "place" && !(info.enemy && ui.order === "eventFirst" && !ui.pair));
+  // #71: an opponent's card with no order chosen yet never counts as
+  // map-active -- Confirm stays disabled and the map stays untappable until
+  // the player picks 先行動點/先事件 (choosing the use and the order may
+  // happen in either order; this only gates the map once a use IS picked).
+  const orderPending = info.enemy && !ui.pair && ui.order == null;
+  const mapActive = !orderPending && (ui.use === "campaign" || ui.use === "lobby" || (ui.use === "place" && !(info.enemy && ui.order === "eventFirst" && !ui.pair)));
   game.givesWay = mapActive;
   // #24 round 2, fix #3: whenever the CHIP is shown (map active, not
   // expanded) the order/pair choice is already made — the interactive rows
@@ -1754,7 +1771,14 @@ function renderPromptAndSheet(v) {
     if (showFullCard) {
       const r = row(pinned, "rowb order");
       for (const o of ["opsFirst", "eventFirst"]) btn(r, t(`uses.${o}`), () => { ui.order = o; ui.points = []; render(); }, "", ui.order === o);
+      // #71: nothing pressed yet -- tell the player to choose, replacing the
+      // static "對手的牌…" hint (sheet.hint.enemy, still rendered further
+      // down) only while no order is picked.
+      if (ui.order == null && !ui.pair) note(pinned, t("sheet.chooseOrder"));
     } else if (!targetPreviewComing) {
+      // The compact chip only ever shows once the map is active, which now
+      // requires an order to already be chosen (see `orderPending` above),
+      // so `ui.order` is never null here.
       note(sh, t(`advisor.suggestOrder.${ui.order}`));
     }
   }
@@ -1795,6 +1819,14 @@ function renderPromptAndSheet(v) {
   if (ui.use === "event" || ui.use === "reform") {
     setPrompt("");
     footer(sh, confirmPhrase(), () => humanAct(base), false, cancelToFresh, true);
+    return;
+  }
+  // #71: place/campaign/lobby on an opponent's card both need an order
+  // before Confirm can fire or the map can be tapped -- same message, same
+  // disabled Confirm, for either use.
+  if (info.enemy && !ui.pair && ui.order == null) {
+    setPrompt(t("sheet.chooseOrder"));
+    footer(sh, confirmPhrase(), () => {}, true, cancelToFresh, true);
     return;
   }
   if (ui.use === "place") {

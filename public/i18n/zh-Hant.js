@@ -191,6 +191,10 @@ export default {
   // 牌、記分卡。固定文案(issue 自己的表),不套即時比分;renderPromptAndSheet
   // 仍另外用 scoringPanel 顯示完整的記分試算。
   sheet: {
+    // #71 (owner, iPhone screenshot): replaces sheet.hint.enemy below while
+    // no order is chosen yet on an opponent's card (place/campaign/lobby);
+    // sheet.hint.enemy itself stays put further down once an order is picked.
+    chooseOrder: "先選順序:先行動點,或先事件",
     hint: {
       own: "你自己的事件:打出就發生。",
       neutral: "中立牌:事件或行動點,二選一。",
