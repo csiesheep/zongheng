@@ -90,6 +90,7 @@ function onUnlocked() {
   if (unlocked) return;
   unlocked = true;
   if (musicOn && requestedScene) setScene(requestedScene, { gainMul: sceneGainMul });
+  if (musicOn && requestedUnderlay) setUnderlay(requestedUnderlay);
   if (sfxOn) scheduleWarm();
 }
 function scheduleWarm() {
@@ -104,9 +105,15 @@ else attemptUnlock(); // "try to start at load as well"
 
 document.addEventListener("visibilitychange", () => {
   const layer = layers[activeLayerIdx];
-  if (!layer) return;
-  if (document.hidden) layer.el.pause();
-  else if (musicOn) layer.el.play().catch(() => {});
+  if (layer) {
+    if (document.hidden) layer.el.pause();
+    else if (musicOn) layer.el.play().catch(() => {});
+  }
+  const uLayer = underlayLayers[activeUnderlayIdx];
+  if (uLayer) {
+    if (document.hidden) uLayer.el.pause();
+    else if (musicOn) uLayer.el.play().catch(() => {});
+  }
 });
 
 // ---------- music ----------
@@ -163,6 +170,94 @@ function fadeOutActive(ms) {
   fadeLayerOut(layer, ms);
   activeScene = null;
   activeLayerIdx = -1;
+}
+
+// ---------- underlay (#64) ----------
+// Independent from the scene entirely: its OWN pair of alternating
+// <audio>+GainNode layers (so its own loop can overlap tail into head the
+// same way the scene does), its own "requested vs actually playing" cue, and
+// its own fade timings -- never reads or writes `layers`/`activeScene`/
+// `activeLayerIdx`/`sceneGainMul` above. Plays at UNDERLAY_MUL of the music
+// level (half as loud as the scene music) times the manifest's own `gain`,
+// through musicMaster like the scene (so it's silent whenever sfx/music's
+// shared destination is, but musicMaster's own gain is never touched by
+// anything, scene or underlay, so this never bleeds into the scene's level).
+// No fallback table: a cue missing from the manifest just stays silent (the
+// caller -- app.js's tensionFor()-driven call -- only ever asks for
+// `bgm.tension` or null).
+const UNDERLAY_MUL = 0.5;       // "0.5 of the music level"
+const UNDERLAY_FADE_IN_MS = 1500;  // "fades in over 1.5s"
+const UNDERLAY_FADE_OUT_MS = 2000; // "fades out over 2.0s"
+const underlayLayers = [null, null];
+let activeUnderlayIdx = -1;
+let activeUnderlay = null;     // the cue actually driving the current underlay layer, or null
+let requestedUnderlay = null;  // the last cue setUnderlay() was asked for, even if it never played
+
+function targetGainForUnderlay(entry) { return MUSIC_BASE * UNDERLAY_MUL * (entry.gain ?? 1); }
+function makeUnderlayLayer(cue, entry) {
+  const el = new Audio();
+  el.src = `./audio/${entry.file}`;
+  el.preload = "auto";
+  let srcNode;
+  try { srcNode = ctx.createMediaElementSource(el); } catch (e) { warnOnce("underlayMediaSrc", `[audio] createMediaElementSource failed: ${e.message}`); return null; }
+  const gainNode = ctx.createGain();
+  gainNode.gain.value = 0;
+  srcNode.connect(gainNode).connect(musicMaster);
+  return { cue, el, gainNode, entry, overlapStarted: false };
+}
+function fadeUnderlayLayerOut(layer, ms) {
+  rampGain(layer.gainNode, 0, ms);
+  setTimeout(() => { try { layer.el.pause(); } catch {} }, ms + 30);
+}
+function armUnderlayLoopOverlap(layer) {
+  if (!layer.entry.loop) return;
+  const dur = layer.entry.seconds || 0;
+  if (!dur) return;
+  const fireAt = Math.max(0, dur - LOOP_OVERLAP_S);
+  const onTick = () => {
+    if (underlayLayers[activeUnderlayIdx] !== layer || layer.overlapStarted) return;
+    if (layer.el.currentTime >= fireAt) { layer.overlapStarted = true; startUnderlayLayer(layer.cue, layer.entry, LOOP_OVERLAP_S * 1000); }
+  };
+  layer.el.addEventListener("timeupdate", onTick);
+}
+async function startUnderlayLayer(cue, entry, ms) {
+  if (!ensureCtx()) return;
+  const incoming = makeUnderlayLayer(cue, entry);
+  if (!incoming) return;
+  const outgoing = activeUnderlayIdx >= 0 ? underlayLayers[activeUnderlayIdx] : null;
+  const newIdx = activeUnderlayIdx === 0 ? 1 : 0;
+  underlayLayers[newIdx] = incoming;
+  activeUnderlayIdx = newIdx;
+  activeUnderlay = cue;
+  try { await incoming.el.play(); } catch (e) { warnOnce(`underlayPlay:${cue}`, `[audio] play() refused for underlay ${cue}: ${e.message}`); }
+  rampGain(incoming.gainNode, targetGainForUnderlay(entry), ms);
+  if (outgoing) fadeUnderlayLayerOut(outgoing, ms);
+  armUnderlayLoopOverlap(incoming);
+}
+function fadeOutUnderlay(ms) {
+  const layer = underlayLayers[activeUnderlayIdx];
+  if (!layer) { activeUnderlay = null; return; }
+  fadeUnderlayLayerOut(layer, ms);
+  activeUnderlay = null;
+  activeUnderlayIdx = -1;
+}
+// setUnderlay(cue | null): the one tension layer playing at a time, wholly
+// separate from the scene. "Calling it again with the same cue does
+// nothing" -- checked against `activeUnderlay` (what's actually driving
+// sound right now), not `requestedUnderlay`, so turning music off and back
+// on with the same requested cue still restarts it (activeUnderlay was
+// cleared by the fade-out below when music went off).
+export async function setUnderlay(cue) {
+  requestedUnderlay = cue;
+  if (!musicOn) return; // remembered in requestedUnderlay; setSetting("music", true) below starts it
+  if (!cue) { fadeOutUnderlay(UNDERLAY_FADE_OUT_MS); return; }
+  const m = await ensureManifest();
+  const entry = m.cues[cue];
+  if (!entry || entry.kind !== "bgm") { warnOnce(`underlay-missing:${cue}`, `[audio] missing bgm cue for underlay: ${cue}`); return; }
+  if (cue !== requestedUnderlay) return; // setUnderlay() was called again while this await was in flight
+  if (cue === activeUnderlay && underlayLayers[activeUnderlayIdx]) return; // already the one playing: no restart, no re-fade
+  if (!unlocked) return; // onUnlocked() will call setUnderlay(requestedUnderlay) again
+  await startUnderlayLayer(cue, entry, UNDERLAY_FADE_IN_MS);
 }
 
 // #62 part 2, item B: a scene the manifest doesn't have falls back to a
@@ -279,8 +374,13 @@ export function setSetting(name, value) {
   } else if (name === "music") {
     musicOn = on;
     store.set("zh.music", on ? "1" : "0");
-    if (on) { if (requestedScene) setScene(requestedScene, { gainMul: sceneGainMul }); }
-    else fadeOutActive(MUSIC_OFF_FADE_MS); // "fades the music out in 0.3 s and stops fetching it"
+    if (on) {
+      if (requestedScene) setScene(requestedScene, { gainMul: sceneGainMul });
+      if (requestedUnderlay) setUnderlay(requestedUnderlay);
+    } else {
+      fadeOutActive(MUSIC_OFF_FADE_MS); // "fades the music out in 0.3 s and stops fetching it"
+      fadeOutUnderlay(MUSIC_OFF_FADE_MS); // same switch, same rule, for the underlay
+    }
   }
   attemptUnlock(); // clicking a switch is itself a user gesture
 }
@@ -291,6 +391,8 @@ if (typeof window !== "undefined") {
     get unlocked() { return unlocked; },
     get scene() { return activeScene; },
     get requestedScene() { return requestedScene; },
+    get underlay() { return activeUnderlay; },
+    get requestedUnderlay() { return requestedUnderlay; },
     get settings() { return { sfx: sfxOn, music: musicOn }; },
     get playing() { return Array.from(playingSfx); },
     get recent() { return recentCues.slice(); },

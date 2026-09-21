@@ -159,6 +159,20 @@ export function dangerFlags(st) {
   return flags.sort();
 }
 
+// ---------- A6: tensionFor ----------
+// #64: whether the table should have the low heartbeat layer under the
+// current music -- "any kind of immediate end one step away". Reuses
+// dangerFlags() itself (never re-derives the same facts): true once the game
+// isn't over AND at least one flag is up. `state` is either the full engine
+// state or any per-seat view of it (view() never strips seals/mie/mandate/
+// weariness/turn/options/winner), so this is safe to call with whichever one
+// the caller already has on hand -- audio.js's setUnderlay() never sees this
+// function at all, it only ever gets told a cue or null.
+export function tensionFor(state) {
+  if (!state || state.winner != null) return false;
+  return dangerFlags(state).length > 0;
+}
+
 // ---------- A5: missingCues ----------
 // Every cue id sceneFor/cuesForLog/controlCues can ever ask for, enumerated
 // once here so missingCues() can answer "which of these does the manifest
