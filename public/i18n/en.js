@@ -8,7 +8,10 @@ export default {
   about: "A two-player card-driven strategy game set in the Warring States. Qin plays the Horizontal, picking the states off one by one; Chu plays the Vertical, holding the alliance together. Eight turns, about an hour. Solo against a bot, or an online room with a four-letter code. English and Traditional Chinese.",
   soon: "Under construction. The rules are written; the engine, the bot and the rooms are next.",
   credit: "A free fan project. Inspired by the card-driven design of Twilight Struggle; not affiliated with GMT Games.",
-  nav: { back: "‹ Zongheng", rules: "Rules", hub: "csiesheep games", lang: "中文" },
+  // #62 part 2: "home" is the back link's aria-label/title ONLY once the bar
+  // is tight enough to drop its own word (app.js's syncBackLabel()) -- the
+  // full "‹ Zongheng" stays the visible text and the spoken name otherwise.
+  nav: { back: "‹ Zongheng", rules: "Rules", hub: "csiesheep games", lang: "中文", home: "Home" },
   // The rules page's 72nd row: the Nine Cauldrons aren't in shared/cards.js
   // (they're the engine's special `st.jiuding` card, not a CARDS entry), so
   // rules.js can't read this name/text off the deck the way it does for the
@@ -147,7 +150,10 @@ export default {
   },
   // #62: the two switches (landing bar, table's 紀錄 panel header, desktop
   // side foot) -- same "label" + "on/off aria-label" shape as advisor.* below.
-  audio: { sfx: "Sound", music: "Music", sfxOn: "Sound on", sfxOff: "Sound off", musicOn: "Music on", musicOff: "Music off" },
+  // #62 part 2 (owner's revision): one switch, one pair of strings -- the
+  // six part-1 keys (sfx/music/sfxOn/sfxOff/musicOn/musicOff) are gone,
+  // nothing references them any more.
+  audio: { on: "Sound on", off: "Sound off" },
   advisor: {
     name: "Advisor",
     on: "Advisor on", off: "Advisor off",

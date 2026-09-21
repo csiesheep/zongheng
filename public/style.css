@@ -119,33 +119,21 @@ body.setup-chu {
    own box height instead, so .bar's height stays the same 44px-plus-padding
    regardless of which of these children are shown or how wide they are. */
 .bar-right { display: inline-flex; align-items: center; gap: 8px; }
-/* #62: the sfx/music pill switches (audio-switch.js mounts these), the same
-   pill + gold-dot look the 軍師 switch already uses (advisor.css's
-   .adv-toggle) -- a shared class here instead of importing advisor.css into
-   the landing page, which has nothing else to do with the advisor. Reused
-   in three places: the landing bar, the table's 紀錄 panel header, and the
-   desktop side foot. */
-.audio-toggles { display: inline-flex; align-items: center; gap: 4px; }
-.audio-toggle {
-  height: 44px; padding: 0 4px; border: none; background: none;
-  display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
-  vertical-align: middle; /* same baseline fix as .adv-toggle, see advisor.css */
-}
-.audio-toggle-label { font-family: var(--kai); font-weight: 900; font-size: 13px; color: var(--text-dim); white-space: nowrap; }
-.audio-toggle.on .audio-toggle-label { color: #e9b92e; }
-.audio-toggle-track { width: 26px; height: 16px; box-sizing: border-box; border-radius: 8px; border: 1.5px solid var(--gold-line); background: none; position: relative; flex: none; }
-.audio-toggle.on .audio-toggle-track { border-color: #e9b92e; background: rgba(233, 185, 46, 0.28); }
-.audio-toggle-dot { position: absolute; top: 1.5px; left: 1.5px; width: 10px; height: 10px; border-radius: 50%; background: var(--gold-line); }
-.audio-toggle.on .audio-toggle-dot { left: 12px; background: #e9b92e; }
-/* Under 380px wide there isn't room for both switches' labels next to 規則
-   and 中文/EN (measured on the landing bar, #62) -- drop the word and keep
-   the 44px track-only target, same fallback advisor.css uses for the 軍師
-   switch at the same width. */
-@media (max-width: 379.98px) {
-  .audio-toggle-label { display: none; }
-  .audio-toggle { min-width: 44px; justify-content: center; padding: 0; gap: 0; }
-}
 .bar button, .small { background: none; border: 1px solid var(--gold-line); color: var(--gold); font-size: 12px; padding: 5px 9px; min-height: 44px; min-width: 44px; border-radius: 8px; }
+/* #62 part 2 (owner's revision): the sound switch, one icon button in the
+   bar's own first row (landing, setup, lobby, table -- audio-switch.js
+   mounts it wherever the page provides a slot). `.bar button` above already
+   gives it the 44x44 target, the gold-on-gold-line resting look, and (via
+   ui-states.css's generic `.bar button` hover/active selectors) its pressed
+   states -- nothing extra needed there. Off dims to --text-dim (same
+   convention part 1's pill labels used) and shows a diagonal slash instead
+   of the sound-wave arcs, on the same speaker glyph -- one SVG, two of its
+   three parts swapped by the `.on` class rather than two separate icons. */
+.audio-btn { display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.audio-btn:not(.on) { color: var(--text-dim); }
+.audio-btn .audio-btn-slash { display: none; }
+.audio-btn:not(.on) .audio-btn-waves { display: none; }
+.audio-btn:not(.on) .audio-btn-slash { display: inline; }
 #barMid { font-size: 12px; color: var(--text-dim); }
 /* #30: the table's own header row (own comment at app.js's layoutBar()) is
    shorter than every other view's -- 48px on a touch device, 44px button +
@@ -315,18 +303,11 @@ body:not(.table-lock) #logToggle { display: none; }
    edge of the viewport — background stays transparent on purpose. */
 .landing-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; padding: 2px 8px 0 14px; display: flex; align-items: center; justify-content: space-between; background: transparent; }
 .landing-bar .hub { min-height: 44px; display: inline-flex; align-items: center; }
-/* #62: the two audio switches sit before 規則/Rules in the markup (so a
-   screen reader/tab order meets them first) — but the row can't actually
-   hold both switches + 規則 + the language button at once at either 375px
-   or 390px wide, in either language (measured: English's "Sound"/"Music"
-   labels alone are ~179px, next to ~98px for 規則+EN together, against a
-   ~237px budget once the hub link's own space is taken). The owner's own
-   fallback: the switches move to a second line, right aligned, while 規則
-   and the language button keep the first line to themselves — `order`
-   (not DOM position) decides visual placement here so that stays true
-   regardless of which line actually wraps. */
-.landing-bar .bar-right { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px 10px; row-gap: 2px; }
-.landing-bar .bar-right .audio-toggles { order: 1; }
+/* #62 part 2: part 1 had the two pill switches wrapping to a second line
+   here (measured too wide to fit beside 規則 + the language button) --
+   superseded by the owner's revision: one 44px icon button, no label, fits
+   on this one row (measured below), so the wrap fallback is gone. */
+.landing-bar .bar-right { display: flex; align-items: center; gap: 10px; }
 /* Rules, to the left of the language button, in the same voice as the
    hub link (gold, no fill) — a full 44px tap target even though the
    short label is small. */
@@ -1252,10 +1233,6 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
   background: #15130f; border-top: 1px solid var(--gold-line); border-radius: 14px 14px 0 0; box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.5); font-size: 12px; color: var(--text-dim); line-height: 1.6; }
 .logbody-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 12px; background: #15130f; border-bottom: 1px solid var(--gold-line); border-radius: 14px 14px 0 0; }
 .logbody-title { flex: 1 1 auto; min-width: 0; font-family: var(--serif); font-weight: 700; font-size: 13px; color: var(--gold); }
-/* #62: the sfx/music switches sit between the title and Hide, same row,
-   same 44px targets -- the panel already has no other header controls, so
-   there's no competing width budget the way the landing bar has. */
-.logbody-head .audio-toggles { flex: none; }
 .logbody-content { padding: 10px 12px; }
 .logbody .say { color: var(--text); }
 .logbody .bot { color: var(--gold); }
