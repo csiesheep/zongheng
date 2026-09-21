@@ -15,17 +15,8 @@
 // open no move at all, so every entry that would otherwise be one of ITS
 // steps has nowhere to land and is silently dropped, per the brief ("the
 // player's own plays, and the steps that follow them, are skipped").
-//
-// The Nine Cauldrons is the one exception found in round-2 verification
-// (#79): engine.js's play() returns before ever logging a `play` entry for
-// it (there is no card in hand to name), so its first `place`/`campaign`/
-// `lobby` entry is the only sign a move started at all. Treated the same
-// way a `play` entry is: opens a move (using `use: "jiuding"`, its own log
-// type as the use, `card` a sentinel string no real card id collides with)
-// when no move is already open and the entry belongs to the other side --
-// and, since it's simultaneously the opener AND the first step, it also
-// becomes `steps[0]` the same as an ordinary card's own first logged step.
-const JIUDING_OPENERS = new Set(["place", "campaign", "lobby"]);
+// The Nine Cauldrons logs its own `play` entry (card "jiuding", #81), so it
+// opens a move like any card.
 export function opponentMoves(log, sinceSeq, me) {
   try {
     if (!Array.isArray(log)) return [];
@@ -46,9 +37,7 @@ export function opponentMoves(log, sinceSeq, me) {
         continue;
       }
       if (e.type === "turn" || e.type === "setup") { closeCurrent(); continue; }
-      if (!current && JIUDING_OPENERS.has(e.type) && e.side !== me) {
-        current = { seq: e.i, side: e.side, card: "jiuding", use: e.type, steps: [] };
-      } else if (!current) continue; // a step with no open opponent move -- the player's own, or before the first play/headline
+      if (!current) continue; // a step with no open opponent move -- the player's own, or before the first play/headline
       const step = { ...e };
       if (e.type === "place" && Array.isArray(e.points)) {
         // Collapse the raw per-influence-point list into [spaceId, count]

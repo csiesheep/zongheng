@@ -61,6 +61,9 @@ function cueForEntry(e, me) {
   switch (e.type) {
     case "headline": return [{ cue: "sfx.card.reveal", rank: RANK.reveal }];
     case "play": {
+      // #81: the Cauldrons' play entry is silent -- its own sfx.card.jiuding
+      // comes from the `jiuding` handoff entry, and E.CARD has no "jiuding".
+      if (e.card === E.JIUDING) return [];
       if (e.use === "event") {
         const side = E.CARD[e.card].side; // null for a scoring card -> neutral
         const who = side === E.QIN ? "qin" : side === E.CHU ? "chu" : "neutral";
