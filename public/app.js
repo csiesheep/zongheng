@@ -9,6 +9,7 @@
 // Plain on purpose: the look is to be redesigned; this is the play flow.
 import * as E from "./shared/engine.js";
 import * as B from "./shared/bots.js";
+import { fallbackFor } from "./shared/fallback.js";
 import en from "./i18n/en.js";
 import zh from "./i18n/zh-Hant.js";
 import CARD_EN from "./i18n/cards.en.js";
@@ -232,6 +233,21 @@ $("btnStart").onclick = startSolo;
 // every one of those resets untouched, since it doesn't represent anything
 // about the player's own turn.
 const game = { st: null, me: 0, level: "normal", rng: null, ui: null, botLine: "", botName: "", room: false, spectator: false, peek: null };
+// #53 round 2 (orchestrator's review): `botLine` alone never reached the table
+// itself, only the closed log panel / a desktop-only sidebar strip -- so on
+// the phone neither a replaced move nor a genuinely stuck game said anything
+// where the player was actually looking. Two more fields, both client-side,
+// both cleared the moment they stop being current:
+// `fallbackNote` -- the sentence for a replaced move, shown as the newest
+//   line of the news strip under the prompt (renderLog() below) until the
+//   player's own next action or the next bot line, whichever first.
+// `stuck` -- true once a bot turn found no accepted move at all, even from
+//   the fallback net; renderPromptAndSheet()'s "wait" branch reads it to
+//   show the stuck sentence instead of "Waiting for {name}..." -- the exact
+//   text `game.botLine` already carries in that case, on the same seat's
+//   screen, not merely logged for later.
+game.fallbackNote = "";
+game.stuck = false;
 // #41: the last-move mark on the map -- { [spaceId]: {delta} | {destroyed} }
 // for every space whose influence/control/destroyed-state changed in the
 // last resolved action, plus a one-shot flag so the pulse plays exactly
@@ -255,6 +271,7 @@ function startSolo() {
   game.rng = E.makeRng(E.randomSeed());
   game.ui = freshUi();
   game.botLine = ""; game.seenLog = 0;
+  game.fallbackNote = ""; game.stuck = false;
   game.botName = S.names[E.SIDES[1 - game.me]][0];
   game.auto = new URLSearchParams(location.search).has("auto");
   setLogOpen(false);
@@ -274,7 +291,7 @@ function loadSolo() {
 function resumeSolo() {
   const s = loadSolo();
   if (!s) return;
-  Object.assign(game, { room: false, spectator: false, st: s.st, me: s.me, level: s.level, rng: E.makeRng(0), ui: freshUi(), botLine: "", seenLog: s.seenLog, auto: false });
+  Object.assign(game, { room: false, spectator: false, st: s.st, me: s.me, level: s.level, rng: E.makeRng(0), ui: freshUi(), botLine: "", fallbackNote: "", stuck: false, seenLog: s.seenLog, auto: false });
   game.rng.setState(s.rng);
   game.botName = S.names[E.SIDES[1 - game.me]][0];
   show("table"); render(); botLoop();
@@ -290,6 +307,7 @@ function humanAct(action) {
   try { game.st = E.apply(game.st, { ...action, side: game.me }); }
   catch (e) { game.ui.err = e.message; render(); return; }
   game.ui = freshUi();
+  game.fallbackNote = ""; // the player just acted: a replaced bot move is no longer news
   saveSolo();
   render();
   if (Tut.active()) Tut.afterAction(); else botLoop();
@@ -307,18 +325,59 @@ function botLoop() {
   if (bot == null) return;
   botTimer = setTimeout(() => {
     const a = B.decide(E.view(game.st, bot), bot, game.level, game.rng);
-    if (!a) return;
-    try { game.st = E.apply(game.st, a); } catch (e) { console.error(e); return; }
-    if (bot !== game.me) game.botLine = describeAction(a);
+    let applied = null;
+    if (a) { try { applied = E.apply(game.st, a); } catch (e) { console.error(e); } }
+    if (applied) {
+      game.st = applied;
+      game.stuck = false;
+      if (bot !== game.me) { game.botLine = describeAction(a); game.fallbackNote = ""; }
+      saveSolo();
+      render();
+      botLoop();
+      return;
+    }
+    // The bot returned nothing, or the engine refused it (logged above when
+    // it threw). Either way the table cannot just sit there: fall back to
+    // the engine's own safety net (#53 part 1) so the game keeps moving, and
+    // say so where the player can see it -- this is a client-side notice,
+    // not the room's own log (that one is #53 part 1's `describe()`, and it
+    // is not ours to write into). `fallbackNote` (round 2) is what actually
+    // reaches the table: renderLog() below shows it as the newest line of
+    // the news strip under the prompt, on the phone, without opening 記錄 --
+    // `botLine` alone only ever reached the closed log panel / desktop
+    // sidebar (the orchestrator's own measurement, round 2).
+    const fb = fallbackFor(game.st, bot);
+    if (fb) {
+      game.st = fb.state;
+      game.stuck = false;
+      if (bot !== game.me) { game.botLine = t("sys.fallback", { action: actionText(fb.action) }); game.fallbackNote = game.botLine; }
+      saveSolo();
+      render();
+      botLoop();
+      return;
+    }
+    // No candidate the engine accepts either: the game is genuinely stuck
+    // (e.g. #55). Show it plainly rather than freezing on nothing, and stop
+    // the loop -- do not touch game.st, so the existing save (bot still to
+    // act) resumes straight back into this same branch and shows the same
+    // line again, instead of silently repeating the dead end. `game.stuck`
+    // (round 2) is what makes it land ON the prompt itself, in place of
+    // "Waiting for {name}..." -- see renderPromptAndSheet()'s "wait" branch.
+    // The player's own way out from here is the header's back link (#backLink,
+    // play.html): always present, never hidden by this state.
+    game.stuck = true;
+    if (bot !== game.me) game.botLine = t("sys.stuck");
     saveSolo();
     render();
-    botLoop();
   }, game.auto ? 120 : 700);
 }
+function actionText(a) {
+  if (a.type === "headline") return t("prompt.headline");
+  if (a.type === "choose") return "…";
+  return `${cardName(a.card)} · ${t(`useNames.${a.use || "event"}`)}${a.pair ? ` + ${cardName(a.pair)}` : ""}`;
+}
 function describeAction(a) {
-  if (a.type === "headline") return `${game.botName}: ${t("prompt.headline")}`;
-  if (a.type === "choose") return `${game.botName}: …`;
-  return `${game.botName}: ${cardName(a.card)} · ${t(`useNames.${a.use || "event"}`)}${a.pair ? ` + ${cardName(a.pair)}` : ""}`;
+  return `${game.botName}: ${actionText(a)}`;
 }
 
 // ---------- rendering ----------
@@ -1333,7 +1392,12 @@ function renderPromptAndSheet(v) {
     return;
   }
   const L = E.legal(v, me);
-  if (L.kind === "wait") { setPrompt(t("prompt.wait", { name: game.botName })); return; }
+  // #53 round 2: a genuinely stuck game (no accepted move, not even the
+  // fallback's) said so only in the closed log panel -- the prompt itself,
+  // where "Waiting for..." lives, kept telling the player to keep waiting
+  // forever. `game.stuck` (set in botLoop() above) overrides it here, on
+  // the phone and on desktop alike, including right after a `?resume`.
+  if (L.kind === "wait") { setPrompt(game.stuck && game.botLine ? esc(game.botLine) : t("prompt.wait", { name: game.botName })); return; }
   if (L.kind === "pending") { renderPending(v, L.pending, setPrompt, sh); return; }
   if (L.kind === "headline") {
     setPrompt(t("prompt.headline"));
@@ -1818,6 +1882,12 @@ function renderLog(v) {
     const node = logLineNodes(l, clickable);
     if (node) $("logLines").appendChild(node);
   }
+  // #53 round 2: on screen without opening 紀錄 -- a sibling of #promptText
+  // (see play.html), so the advisor taking over the prompt slot cannot hide
+  // it. Cleared by botLoop() (a real bot line replaces it) or humanAct()
+  // (the player's own next action), never here.
+  const fbEl = $("fallbackBanner");
+  if (fbEl) { fbEl.hidden = !game.fallbackNote; fbEl.textContent = game.fallbackNote || ""; }
   // Under the prompt: what happened since this seat last acted.
   const NEWS = new Set(["headline", "play", "place", "campaign", "lobby", "score", "tire", "seal", "unseal", "mie", "restore", "reform", "jiuding", "bog", "skip", "era", "turn"]);
   const newsEntries = v.log.filter((l) => l.i > (game.seenLog || 0) && NEWS.has(l.type) && !!fmtLog(l)).slice(-7);
