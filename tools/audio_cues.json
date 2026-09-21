@@ -216,5 +216,55 @@
   "sfx.warn": {
     "take": "sfx_warn_s8250",
     "loop": false
+  },
+  "sfx.track.reform": {
+    "take": "sfx_track_reform_s8710",
+    "loop": false,
+    "closeGaps": true
+  },
+  "sfx.track.weariness": {
+    "take": "sfx_track_weariness_s8701",
+    "loop": false
+  },
+  "sfx.restore": {
+    "take": "sfx_restore_s8721",
+    "loop": false,
+    "closeGaps": true
+  },
+  "sfx.turn.headline": {
+    "take": "sfx_turn_headline_s8730",
+    "loop": false,
+    "closeGaps": true
+  },
+  "sfx.turn.timeout": {
+    "take": "sfx_turn_timeout_s8740",
+    "loop": false,
+    "closeGaps": true
+  },
+  "sfx.score.count": {
+    "take": "sfx_score_count_s8752",
+    "loop": false,
+    "closeGaps": true
+  },
+  "sfx.room.join": {
+    "take": "sfx_room_join_s8761",
+    "loop": false
+  },
+  "sfx.room.leave": {
+    "take": "sfx_room_leave_s8770",
+    "loop": false,
+    "closeGaps": true
+  },
+  "sfx.room.chat": {
+    "take": "sfx_room_chat_s8780",
+    "loop": false
+  },
+  "sfx.room.start": {
+    "take": "sfx_room_start_s8790",
+    "loop": false
+  },
+  "sfx.tut.step": {
+    "take": "sfx_tut_step_s8800",
+    "loop": false
   }
 }
