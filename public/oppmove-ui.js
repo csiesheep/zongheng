@@ -252,6 +252,112 @@ function paint() {
   if (sheetOpen) renderSheet();
 }
 
+// ---------- ④ the sheet ----------
+function openSheet(seq) {
+  if (!ctx.view) return;
+  const moves = opponentMoves(ctx.view.log, 0, ctx.me);
+  if (!moves.length) return;
+  sheetSeq = seq != null && moves.some((m) => m.seq === seq) ? seq : moves[moves.length - 1].seq;
+  sheetOpen = true;
+  renderSheet();
+}
+function closeSheet() {
+  if (!sheetOpen) return;
+  sheetOpen = false;
+  const d = ensureDom();
+  d.scrim.hidden = true; d.sheet.hidden = true; d.sheet.innerHTML = "";
+}
+function flashRow(beat) {
+  if (!beat) return;
+  const el = beat.kind === "stat" ? statEl(beat.stat) : spaceEl(beat.spaceId);
+  if (!el) return;
+  el.classList.add("opp-flash");
+  setTimeout(() => el.classList.remove("opp-flash"), 700);
+}
+function renderSheet() {
+  const d = ensureDom();
+  d.scrim.hidden = false; d.sheet.hidden = false;
+  if (!ctx.view) return;
+  const lang = ctx.lang;
+  const moves = opponentMoves(ctx.view.log, 0, ctx.me);
+  let idx = moves.findIndex((m) => m.seq === sheetSeq);
+  if (idx < 0) idx = moves.length - 1;
+  const mv = moves[idx];
+  if (!mv) { closeSheet(); return; }
+  const rowBeats = flattenBeats(mv, ctx.view, ctx);
+  const rows = rowBeats.map((b, i) =>
+    `<div class="opp-sheet-row" data-i="${i}"><span class="opp-sheet-n">${i + 1}</span><span${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(b.text)}</span></div>`
+  ).join("");
+  const useLine = mv.use === "headline" ? t(lang, "oppmove.chipHeadline") : t(lang, "oppmove.useOps", { use: t(lang, `useNames.${mv.use}`), ops: opsOf(mv.card) });
+  d.sheet.innerHTML =
+    `<div class="opp-sheet-head">` +
+      `<img class="opp-sheet-art" src="art/cards/${mv.card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
+      `<div class="opp-sheet-meta">` +
+        `<div class="opp-sheet-name"${lang === "en" ? "" : ' lang="zh-Hant"'}><b class="side-${mv.side === E.QIN ? "q" : "c"}">${esc(sideName(mv.side, lang))}</b> ${esc(t(lang, "oppmove.playedVerb"))} ${esc(cardName(mv.card, lang))}</div>` +
+        `<div class="opp-sheet-sub">${esc(useLine)}</div>` +
+        `<div class="opp-sheet-text"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(cardText(mv.card, lang))}</div>` +
+      `</div>` +
+    `</div>` +
+    `<div class="opp-sheet-subhead">${esc(t(lang, "oppmove.sheetHeading"))}</div>` +
+    `<div class="opp-sheet-rows">${rows}</div>` +
+    `<div class="opp-sheet-foot">` +
+      `<button type="button" class="opp-sheet-prev"${idx <= 0 ? " disabled" : ""}>${esc(t(lang, "oppmove.prevMove"))}</button>` +
+      `<button type="button" class="opp-sheet-close primary">${esc(t(lang, "buttons.close"))}</button>` +
+    `</div>`;
+  d.sheet.querySelector(".opp-sheet-close").onclick = closeSheet;
+  const prev = d.sheet.querySelector(".opp-sheet-prev");
+  if (prev) prev.onclick = () => { if (idx > 0) { sheetSeq = moves[idx - 1].seq; renderSheet(); } };
+  d.sheet.querySelectorAll(".opp-sheet-row").forEach((row) => { row.onclick = () => flashRow(rowBeats[Number(row.dataset.i)]); });
+}
+
+// ---------- the timer-driven playback ----------
+function startNext() {
+  move = queue.shift();
+  beats = flattenBeats(move, ctx.view, ctx);
+  beatIndex = -1;
+  phase = "card";
+  clearTimeout(timer);
+  paint();
+  timer = setTimeout(advanceFromCard, CARD_MS);
+}
+function advanceFromCard() {
+  if (reduceMotion()) {
+    phase = "steps-static";
+    renderStepsStatic();
+    paint();
+    timer = setTimeout(finishMove, CARD_MS);
+    return;
+  }
+  phase = "steps";
+  nextBeat();
+}
+function nextBeat() {
+  beatIndex++;
+  if (beatIndex >= beats.length) { finishMove(); return; }
+  renderBeat(beats[beatIndex]);
+  paint();
+  timer = setTimeout(nextBeat, STEP_MS);
+}
+function finishMove() {
+  clearTimeout(timer);
+  chip = { move };
+  move = null; beats = []; beatIndex = -1;
+  if (queue.length) { startNext(); return; }
+  phase = "idle";
+  paint();
+}
+// A tap on the map or the card panel (dom.dim/card/ticker's own click
+// listeners, wired in ensureDom()) skips straight to ③.
+function skip() { if (phase !== "idle") endToChip(); }
+function endToChip() {
+  clearTimeout(timer);
+  if (move) chip = { move };
+  else if (queue.length) chip = { move: queue[queue.length - 1] };
+  move = null; queue = []; beats = []; beatIndex = -1;
+  phase = "idle";
+  paint();
+}
+
 // ---------- public API (filled in by later edits) ----------
 export function sync(view, info) {}
 export function onAction() {}
