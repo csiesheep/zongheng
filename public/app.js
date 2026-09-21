@@ -23,6 +23,7 @@ import {
   NODE_STAB_RIGHT, NODE_STAB_HI, NODE_PILL_POS,
 } from "./map-draw.js";
 import { computeLastMoveMarks } from "./lastmove.js";
+import * as OppUI from "./oppmove-ui.js"; // #79: the opponent's-move reveal (card panel/steps/chip/sheet)
 import { discParts } from "./disc-view.js";
 import * as Audio from "./audio.js";
 import * as Cues from "./audio-cues.js";
