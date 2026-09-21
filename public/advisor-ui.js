@@ -314,7 +314,16 @@ function bannerTitle(adv, meta) {
   const use = adv.use || "event";
   const remaining = Object.keys(remainingCounts(adv.targets, meta));
   const space = remaining.length ? joinNames(remaining, meta) : "";
-  let s = t(`advisor.suggestCard.${use}`, { card: cardName(adv.card), space });
+  // #60: an opponent's card played "event first" has no target chosen yet
+  // (the placement follows the event, once it's known what it did) --
+  // `space` is "" then, and suggestCard.place/campaign/lobby all read
+  // "... in {space}.", so the banner said "Place with Hangu Pass in .".
+  // Each of those three (the only ones with a {space} in their own
+  // template) gets a target-less sibling key instead of leaving the
+  // dangling "in ."/"在"; event/reform/score never had a {space} to begin
+  // with, so they're untouched.
+  const noTarget = !space && (use === "place" || use === "campaign" || use === "lobby");
+  let s = t(`advisor.suggestCard.${noTarget ? use + "NoTarget" : use}`, { card: cardName(adv.card), space });
   if (adv.order) s += " " + t(`advisor.suggestOrder.${adv.order}`);
   return s;
 }
@@ -351,8 +360,17 @@ function scrollWithin(container, el) {
 function decorateSheet(adv, meta) {
   const sheet = document.getElementById("sheet");
   if (!sheet) return;
-  sheet.querySelectorAll(".sheet-grid button, .rowb.order button").forEach((b) => b.classList.remove("adv-pick"));
+  // #60: the headline phase's own confirm button (footer(), app.js) has no
+  // ".sheet-grid" -- that grid only exists in the action phase's own
+  // five-use card page -- so it needs its own selector cleared/marked here,
+  // by the stable [data-use="headline"] hook footer() now gives it, same
+  // idea as the [data-use] hooks decoratePending() below already reads.
+  sheet.querySelectorAll(".sheet-grid button, .rowb.order button, [data-use='headline']").forEach((b) => b.classList.remove("adv-pick"));
   if (!adv || !meta || meta.uiCard !== adv.card) return; // the open sheet isn't for the suggested card
+  if (adv.use === "headline") {
+    const b = sheet.querySelector("[data-use='headline']");
+    if (b) b.classList.add("adv-pick");
+  }
   if (adv.use) {
     const grid = sheet.querySelector(".sheet-grid");
     if (grid) {
@@ -399,7 +417,15 @@ function decorateSheet(adv, meta) {
 function decoratePending(adv, view) {
   const sheet = document.getElementById("sheet");
   if (!sheet) return;
-  sheet.querySelectorAll("[data-use].adv-pick, [data-option].adv-pick, [data-card].adv-pick")
+  // #60: `[data-use="headline"]` (footer()'s own confirm button, app.js) is
+  // decorateSheet()'s hook, not this function's -- decoratePending() runs
+  // right after it on every render() (see applyDecorations() above) and
+  // used to blanket-clear every `[data-use].adv-pick` regardless of value,
+  // wiping the headline mark decorateSheet() had just set a moment earlier
+  // even outside a pending choice. Excluded here instead of renaming the
+  // attribute, since "headline" never collides with an actual ops `use`
+  // value (place/campaign/lobby/reform) this function marks below.
+  sheet.querySelectorAll("[data-use]:not([data-use='headline']).adv-pick, [data-option].adv-pick, [data-card].adv-pick")
     .forEach((b) => b.classList.remove("adv-pick"));
   if (!adv || !adv.action || adv.action.type !== "choose") return;
   if (!view || !view.pending) return; // the suggestion is stale the moment the pending choice is gone

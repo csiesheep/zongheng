@@ -72,7 +72,11 @@ export default {
   weariness: { 5: "Peace", 4: "War", 3: "Strife", 2: "Misery", 1: "Collapse" },
   prompt: {
     setup: "Place {n} free influence ({left} left). Tap spaces.", setupBonus: "Place {n} bonus influence where you already are ({left} left).",
-    headline: "Commit one card face down as the headline: both reveal together, higher ops resolves first, and its event always happens.", yourAction: "Your action. Pick a card.", wait: "Waiting for {name}…",
+    headline: "Commit one card face down as the headline: both reveal together, higher ops resolves first, and its event always happens.",
+    // #60: what the log/sidebar says the BOT did, not what the player is
+    // told to do -- see actionText()'s own comment in app.js.
+    headlineDone: "committed a headline",
+    yourAction: "Your action. Pick a card.", wait: "Waiting for {name}…",
     points: "Pick {n} ({left} left).", pointsMin: "Pick up to {n}.", card: "Pick a card.", cardOptional: "Pick a card, or skip.", option: "Choose.", ops: "Spend {ops} ops: how?",
     place: "Placing {ops} ops ({left} left). Tap spaces; 2 per point where the enemy holds control.", campaign: "Campaign with {ops} ops: tap a target.", lobby: "Lobby with {ops} ops: tap a target.",
     over: "Game over.",
@@ -148,8 +152,13 @@ export default {
     suggestCard: {
       event: "Play {card} for its event.",
       place: "Place with {card} in {space}.",
+      // #60: no target chosen yet (an opponent's card, event first --
+      // bannerTitle() in advisor-ui.js picks these when {space} is empty).
+      placeNoTarget: "Place with {card}.",
       campaign: "Campaign in {space} with {card}.",
+      campaignNoTarget: "Campaign with {card}.",
       lobby: "Lobby {space} with {card}.",
+      lobbyNoTarget: "Lobby with {card}.",
       reform: "Reform with {card}.",
       score: "Play {card} now.",
       bog: "Discard {card}.",

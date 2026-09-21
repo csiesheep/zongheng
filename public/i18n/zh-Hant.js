@@ -63,7 +63,11 @@ export default {
   weariness: { 5: "承平", 4: "兵連", 3: "禍結", 2: "民困", 1: "土崩" },
   prompt: {
     setup: "放置 {n} 點起始影響力(剩 {left})。點地圖。", setupBonus: "在已有影響力處放 {n} 點補償(剩 {left})。",
-    headline: "蓋一張牌當標題:雙方同時翻開,行動點高者先結算,事件一定發生。", yourAction: "輪到你,選一張牌。", wait: "等待 {name}…",
+    headline: "蓋一張牌當標題:雙方同時翻開,行動點高者先結算,事件一定發生。",
+    // #60:紀錄/側欄裡說的是「電腦做了什麼」,不是「玩家該做什麼」——見 app.js
+    // actionText() 自己的註解。
+    headlineDone: "蓋下了標題牌",
+    yourAction: "輪到你,選一張牌。", wait: "等待 {name}…",
     points: "選 {n} 個(剩 {left})。", pointsMin: "最多選 {n} 個。", card: "選一張牌。", cardOptional: "選一張牌,或略過。", option: "請選擇。", ops: "使用 {ops} 點行動點:怎麼用?",
     place: "放置 {ops} 點(剩 {left})。點地圖;對手控制處每點 2。", campaign: "征伐,{ops} 點:點目標。", lobby: "遊說,{ops} 點:點目標。",
     over: "遊戲結束。",
@@ -133,8 +137,13 @@ export default {
     suggestCard: {
       event: "打出{card}的事件。",
       place: "用{card}在{space}放置影響力。",
+      // #60:還沒選到目標(對手的牌、先觸發事件——advisor-ui.js 的
+      // bannerTitle() 在 {space} 是空字串時改選這幾個)。
+      placeNoTarget: "用{card}放置影響力。",
       campaign: "用{card}征伐{space}。",
+      campaignNoTarget: "用{card}征伐。",
       lobby: "用{card}遊說{space}。",
+      lobbyNoTarget: "用{card}遊說。",
       reform: "用{card}變法。",
       score: "現在打出{card}。",
       bog: "棄掉{card}。",
