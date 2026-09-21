@@ -667,6 +667,11 @@ function render() {
   Tut.decorate(); // no-op unless a tutorial is running (#15)
   updateSceneMusic(); // era change (turn 4/7) or the game ending can happen mid-table, without a show() transition
   updateUnderlay(v); // #64: same reasoning -- a new danger flag or the game ending can land mid-table too
+  // #79: never during the tutorial (the coach drives the tutorial) -- called
+  // last, after layoutTable()/fitMap(), so the map/statline/mandate rects it
+  // reads (via data-space/data-stat) are this render's real, final ones.
+  if (Tut.active()) OppUI.disable();
+  else OppUI.sync(v, { me: game.me, lang, mapTargeting: game.ui.card != null && !wantsCardOverlay(v), acted: game.ui.card != null, lastMoveMarks: game.lastMoveMarks });
 }
 // The map's scale is the viewport-width ratio (DESIGN_W is the mockup's own
 // canvas width) UNLESS that would leave no room at all for a shown hand, in
