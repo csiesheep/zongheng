@@ -552,6 +552,12 @@ function decorateMap(adv, meta) {
     if (b) b.remove();
   });
   if (!adv || !adv.targets || !adv.targets.length) return;
+  // #93: a card-play suggestion (adv.card set -- a play, the Cauldrons, or a
+  // headline) must not ring the map until the player has that card open --
+  // same gate decorateSheet() already uses above. Advice not tied to a card
+  // (a pending ops/option/card/points choice, the opening placement) has no
+  // adv.card at all and keeps marking immediately, as before.
+  if (adv.card != null && (!meta || meta.uiCard !== adv.card)) return;
   const counts = remainingCounts(adv.targets, meta);
   E.SPACES.forEach((sp, i) => {
     const n = counts[sp.id];
