@@ -20,8 +20,15 @@ import * as E from "./shared/engine.js";
 // NODE_POS is each city's centre, not a corner, so nodeCenter() is trivial.
 // The design canvas is the C2_Game mockup's own size (390x408).
 export const DESIGN_W = 390, DESIGN_H = 408;
+// dai/zhongshan moved right 2026-09-21 (#85, owner on a real phone: 「地圖上
+// 把代,跟中山往右移一點」) -- the map's top-left corner (x 0-56, y 0-60 in
+// these same design units, map-corner.test.js) now hosts the opponent's-move
+// thumbnail (#85/oppmove-ui.js), so no city's disc+badge footprint may reach
+// into it. Kept evenly spaced with 薊/ji at the top row's own unchanged
+// right end: dai/zhongshan/ji sit 74 design units apart each, same spacing
+// dai used to keep from ji's old position, ji itself untouched.
 export const NODE_POS = {
-  dai: [64, 26], zhongshan: [148, 24], ji: [244, 24], liaodong: [307, 34],
+  dai: [96, 26], zhongshan: [170, 24], ji: [244, 24], liaodong: [307, 34],
   yiqu: [36, 86], hedong: [136, 82], handan: [234, 80], linzi: [332, 88],
   hangu: [96, 136], shangdang: [186, 130], jimo: [342, 138],
   guanzhong: [50, 182], yiyang: [140, 176], daliang: [244, 168], ju: [312, 172],

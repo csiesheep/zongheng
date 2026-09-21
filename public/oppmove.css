@@ -52,35 +52,44 @@
   font: 600 13px/28px var(--sans); text-align: center; white-space: nowrap; overflow: hidden;
   text-overflow: ellipsis; pointer-events: auto; cursor: pointer;
 }
-/* ③ the pill (#84): the persistent chip's new home -- the first line of
-   #promptScroll (in-flow there, not fixed, not a child of #map -- #68's
-   map rect is untouched either way), phone AND desktop alike (desktop.css
-   re-anchors #promptScroll's own #prompt parent straight into the
-   sidebar's "prompt" grid area, so this one rule covers both). >=44px
-   tall on phone (the default here); the 1024px rule below drops it to
-   desktop.css's own >=36px floor once the sidebar's tighter rows apply. */
-.opp-pill {
-  display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;
-  /* flex: none (not the flex-item default of 0 1 auto): #promptScroll is
-     itself a flex column inside #lowerBlock's fixed budget (style.css) --
-     without this, its default flex-shrink squeezed the pill down to ~38px
-     whenever the rest of the scroll area's content didn't fit, instead of
-     just scrolling (measured: 390x669, a headline reveal, pillHeight 38).
-     #promptScroll already scrolls (overflow-y: auto) for exactly this. */
-  flex: none;
-  height: 44px; padding: 0 10px 0 4px; margin: 0 0 6px; border-radius: 10px;
-  background: rgba(22, 19, 14, 0.92); border: 1.5px solid var(--chu-btn); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  cursor: pointer; text-align: left; font: inherit; color: inherit;
+/* ③ the corner thumbnail (#85: replaces #84's pill -- art only, fixed at
+   the map's own top-left corner, positioned by oppmove-ui.js's
+   positionCorner() off the map's own rect; never a child of #map, so #68's
+   map rect stays untouched. map-draw.js keeps that corner free of any
+   city/disc/badge (map-corner.test.js). The thumb stays in the DOM (and
+   focusable) at all times -- the preview is an absolutely-positioned
+   sibling stacked on the same top-left point, shown/hidden with its own
+   `.open` class rather than `hidden`, so showing it on focus never yanks
+   focus away by removing the focused element. */
+.opp-corner { position: fixed; z-index: 21; }
+.opp-thumb {
+  position: relative; display: block; padding: 4px; margin: 0; border: none; background: none; cursor: pointer;
+  border-radius: 6px; /* >=44x48 hit area: 36x48 art + 4px padding on every side = 44x56 */
 }
-.opp-pill.side-q { border-color: var(--qin-text); }
-.opp-pill-art { width: 27px; height: 36px; object-fit: cover; border-radius: 3px; flex: none; }
-.opp-pill-text {
-  min-width: 0; flex: 1; font: 700 13px/1 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.opp-thumb-art { display: block; width: 36px; height: 48px; object-fit: cover; border-radius: 4px; border: 2px solid var(--chu-btn); }
+.opp-thumb.side-q .opp-thumb-art { border-color: var(--qin-text); }
+.opp-thumb:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* The enlarged preview (about 120x160 art + two lines): scale-up over ~150ms,
+   none under prefers-reduced-motion (the brief's own rule). Invisible AND
+   non-interactive until `.open` -- so a tap that lands where it will appear,
+   before its transition finishes, still reaches the map/thumb beneath it. */
+.opp-preview {
+  position: absolute; left: 0; top: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  width: 136px; box-sizing: border-box; padding: 8px; border-radius: 10px;
+  background: rgba(22, 19, 14, 0.96); border: 1.5px solid var(--chu-btn); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  cursor: pointer; transform-origin: top left; transform: scale(0.55); opacity: 0; pointer-events: none;
+  transition: transform 150ms ease, opacity 150ms ease;
 }
-.opp-pill-text b.side-q { color: var(--qin-text); } .opp-pill-text b.side-c { color: var(--chu-fill); }
+.opp-preview.open { transform: scale(1); opacity: 1; pointer-events: auto; }
+.opp-preview.side-q { border-color: var(--qin-text); }
+.opp-preview-art { width: 120px; height: 160px; object-fit: cover; border-radius: 6px; }
+.opp-preview-line1 { font: 700 12.5px/1.3 var(--sans); color: var(--text); text-align: center; }
+.opp-preview-line2 { font: 600 12px/1.3 var(--sans); color: var(--text-dim); text-align: center; }
 @media (min-width: 1024px) {
-  .opp-pill { height: 36px; margin-bottom: 4px; }
-  .opp-pill-art { width: 22px; height: 30px; }
+  .opp-thumb-art { width: 40px; height: 54px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .opp-preview { transition: none; transform: none; }
 }
 
 /* ④ the sheet: same fixed bottom-sheet + scrim pattern as #logBody/#logScrim
