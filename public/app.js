@@ -1696,6 +1696,21 @@ function renderHand(v, mode) {
   el.classList.toggle("hand-many", el.children.length > 6);
 }
 
+// #58: a headline can now come in with one or both cards missing (a side
+// whose deal ran dry commits nothing — orchestrator's ruling on #57, found
+// while reviewing it, not yet seen in a browser when #58 was filed). The
+// two-card line stays exactly `log.headline`; a third fewer-cards case each
+// gets its own key so the string tables can hold a naturally-worded line
+// per case instead of a `cardName(null)` throw. `headlineLogKey` is the one
+// place that decides which of the three a given entry is, shared by
+// fmtLog() and logLineNodes() below so they never disagree.
+function headlineLogKey(l) {
+  if (l.type !== "headline") return `log.${l.type}`;
+  const [qin, chu] = l.cards;
+  if (qin != null && chu != null) return "log.headline";
+  if (qin != null || chu != null) return "log.headlineOne";
+  return "log.headlineNone";
+}
 // The i18n substitution table for one log entry — split out of fmtLog()
 // below so logLineNodes() (#34) can build the same line as real DOM nodes
 // (a clickable button in a card-name's own slot) without re-deriving P a
@@ -1709,16 +1724,42 @@ function logParams(l) {
   if (l.region) P.region = regionName(l.region);
   if (l.state) P.state = stateName(l.state);
   if (l.type === "score") { P.q = l.qin.total; P.c = l.chu.total; }
-  if (l.type === "headline") { P.qin = cardName(l.cards[0]); P.chu = cardName(l.cards[1]); P.first = sideName(l.first); }
+  if (l.type === "headline") {
+    const [qin, chu] = l.cards;
+    if (qin != null && chu != null) { P.qin = cardName(qin); P.chu = cardName(chu); P.first = sideName(l.first); }
+    else if (qin != null || chu != null) {
+      // Exactly one side committed: `l.first` is that side already (engine.js
+      // resolveHeadlines() -- `order` is just the one side that played), so
+      // it doubles as both "who committed" and "who goes first" here, same
+      // as the two-card case above.
+      const side = qin != null ? E.QIN : E.CHU;
+      P.side = sideName(side);
+      P.card = cardName(qin != null ? qin : chu);
+      P.other = sideName(side === E.QIN ? E.CHU : E.QIN);
+    }
+    // Both null (l.first is also null): log.headlineNone names no side and
+    // no card, so P needs nothing extra.
+  }
   if (l.type === "jiuding") P.side = sideName(l.to);
   if (l.type === "over") { P.side = sideName(l.winner); P.reason = t("over.reasons." + l.reason); }
   if (l.type === "vp") P.side = sideName(l.side);
   return P;
 }
 function fmtLog(l) {
-  const key = `log.${l.type}`;
-  const s = t(key, logParams(l));
-  return s === key ? "" : s;
+  const key = headlineLogKey(l);
+  // #58: render() calls this for the last 60 log entries on every frame, so
+  // one entry whose shape a future engine change doesn't match (a card id
+  // logParams()/t() can't resolve) must cost this one line, not the table —
+  // same "unknown log shape" already renders as "" (see logCardRefs()'s own
+  // note below), a throw here used to instead kill fmtLog() for every OTHER
+  // entry in the same render because the .filter() call in renderLog() never
+  // got past this one.
+  try {
+    const s = t(key, logParams(l));
+    return s === key ? "" : s;
+  } catch (e) {
+    return "";
+  }
 }
 // Which of logParams()'s placeholder keys are card ids, for a given log
 // entry (#34) — same log types and field names as logParams() above, kept
@@ -1731,7 +1772,16 @@ function fmtLog(l) {
 function logCardRefs(l) {
   const refs = {};
   if ((l.type === "play" || l.type === "discard" || l.type === "bog") && l.card != null) refs.card = { id: l.card, side: l.side };
-  if (l.type === "headline") { refs.qin = { id: l.cards[0], side: E.QIN }; refs.chu = { id: l.cards[1], side: E.CHU }; }
+  if (l.type === "headline") {
+    // #58: a missing card gets no ref at all -- no pill, nothing for
+    // logLineNodes()'s wholeLine case below to open a peek sheet on. The
+    // one-card case's template (log.headlineOne) only ever names {card}
+    // (the side that DID commit is plain text, same as {other}), so the key
+    // here matches that placeholder, not {qin}/{chu} from the two-card case.
+    const [qin, chu] = l.cards;
+    if (qin != null && chu != null) { refs.qin = { id: qin, side: E.QIN }; refs.chu = { id: chu, side: E.CHU }; }
+    else if (qin != null || chu != null) refs.card = { id: qin != null ? qin : chu, side: qin != null ? E.QIN : E.CHU };
+  }
   return refs;
 }
 // Same line as fmtLog(l), but as a real DOM element instead of one string:
@@ -1766,40 +1816,49 @@ function logCardRefs(l) {
 // shape below (round 2's own fix) is untouched either way, so the pill
 // never becomes a second nested button.
 function logLineNodes(l, clickable, pill) {
-  const raw = `log.${l.type}`.split(".").reduce((o, k) => (o ? o[k] : undefined), S);
+  const raw = headlineLogKey(l).split(".").reduce((o, k) => (o ? o[k] : undefined), S);
   if (typeof raw !== "string") return null;
-  const P = logParams(l);
-  const refs = logCardRefs(l);
-  const wholeLine = clickable && Object.keys(refs).length === 1;
-  const root = document.createElement(wholeLine ? "button" : "div");
-  if (wholeLine) {
-    root.type = "button";
-    root.className = "log-line-link";
-    const [ref] = Object.values(refs);
-    root.onclick = (ev) => { ev.stopPropagation(); openPeek(ref.id, ref.side); };
-  }
-  const re = /\{(\w+)\}/g;
-  let last = 0, m;
-  while ((m = re.exec(raw))) {
-    if (m.index > last) root.appendChild(document.createTextNode(raw.slice(last, m.index)));
-    const k = m[1], ref = refs[k];
-    if (ref && wholeLine) {
-      // The card's own name still reads as a link inside the row-button —
-      // a plain <span>, not a nested button (buttons can't nest); the
-      // <button> ancestor is what actually answers the click.
-      const span = document.createElement("span");
-      span.className = "log-card-name" + (pill ? " pill" : "");
-      span.textContent = cardName(ref.id);
-      root.appendChild(span);
-    } else if (ref && clickable) {
-      root.appendChild(cardLinkButton(ref.id, ref.side, pill));
-    } else {
-      root.appendChild(document.createTextNode(k in P ? String(P[k]) : `{${k}}`));
+  // #58: same reasoning as fmtLog()'s own try/catch above -- this builds real
+  // DOM nodes for the news strip and the log panel on every render(), so one
+  // entry a future shape doesn't match must fall out as "no line" (null),
+  // never throw partway through and leave the caller's loop with whatever it
+  // had already appended.
+  try {
+    const P = logParams(l);
+    const refs = logCardRefs(l);
+    const wholeLine = clickable && Object.keys(refs).length === 1;
+    const root = document.createElement(wholeLine ? "button" : "div");
+    if (wholeLine) {
+      root.type = "button";
+      root.className = "log-line-link";
+      const [ref] = Object.values(refs);
+      root.onclick = (ev) => { ev.stopPropagation(); openPeek(ref.id, ref.side); };
     }
-    last = re.lastIndex;
+    const re = /\{(\w+)\}/g;
+    let last = 0, m;
+    while ((m = re.exec(raw))) {
+      if (m.index > last) root.appendChild(document.createTextNode(raw.slice(last, m.index)));
+      const k = m[1], ref = refs[k];
+      if (ref && wholeLine) {
+        // The card's own name still reads as a link inside the row-button —
+        // a plain <span>, not a nested button (buttons can't nest); the
+        // <button> ancestor is what actually answers the click.
+        const span = document.createElement("span");
+        span.className = "log-card-name" + (pill ? " pill" : "");
+        span.textContent = cardName(ref.id);
+        root.appendChild(span);
+      } else if (ref && clickable) {
+        root.appendChild(cardLinkButton(ref.id, ref.side, pill));
+      } else {
+        root.appendChild(document.createTextNode(k in P ? String(P[k]) : `{${k}}`));
+      }
+      last = re.lastIndex;
+    }
+    if (last < raw.length) root.appendChild(document.createTextNode(raw.slice(last)));
+    return root;
+  } catch (e) {
+    return null;
   }
-  if (last < raw.length) root.appendChild(document.createTextNode(raw.slice(last)));
-  return root;
 }
 // A card name inside a two-name log line (only log.headline), as a
 // clickable link-styled button that opens the read-only peek sheet (#34).

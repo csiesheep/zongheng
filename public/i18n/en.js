@@ -98,7 +98,15 @@ export default {
     },
   },
   log: {
-    setup: "{side} sets up: {spaces}.", turn: "Turn {turn}, {era}.", headline: "Headlines: {qin} and {chu}; {first} first.", play: "{side} plays {card} ({use}).",
+    setup: "{side} sets up: {spaces}.", turn: "Turn {turn}, {era}.", headline: "Headlines: {qin} and {chu}; {first} first.",
+    // #58 (found by the orchestrator reviewing #57, not the owner): a side
+    // whose deal ran dry commits no headline. The preceding log.skip line
+    // ("{side} has no card to play.") already says the empty side has no
+    // card, so headlineOne doesn't repeat that -- it only closes the loop
+    // ("commits none"), to keep the pair from reading as a stutter.
+    headlineOne: "{side}'s headline: {card}; {other} commits none.",
+    headlineNone: "Both sides have no card; the headline phase is skipped.",
+    play: "{side} plays {card} ({use}).",
     place: "{side} places in {spaces}.", campaign: "{side} campaigns in {target} with {ops}: removes {removed}, places {placed}.", lobby: "{side} lobbies in {target}: removes {removed}.",
     score: "{region} scores: Qin {q}, Chu {c}.", vp: "Mandate {mandate}.", tire: "Weariness falls to {to}.", seal: "Chu holds the seal of {state}.", unseal: "Chu loses the seal of {state}.",
     mie: "Qin destroys {state}.", restore: "{state} is restored.", reform: "{side} reaches reform box {box}.", jiuding: "The Cauldrons pass to {side}, face down.", discard: "{side} discards {card}.",

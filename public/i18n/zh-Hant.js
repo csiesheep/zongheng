@@ -85,7 +85,13 @@ export default {
     },
   },
   log: {
-    setup: "{side}起始配置:{spaces}。", turn: "第 {turn} 回合,{era}。", headline: "標題:{qin}、{chu};{first}先結算。", play: "{side}打出{card}({use})。",
+    setup: "{side}起始配置:{spaces}。", turn: "第 {turn} 回合,{era}。", headline: "標題:{qin}、{chu};{first}先結算。",
+    // #58(orchestrator 審 #57 時發現,不是 owner 的話):牌沒了的一方不出
+    // 標題。前一行 log.skip(「{side}無牌可出。」)已經說過那一方沒牌,這行
+    // 就不再重複「沒牌」,只補上結果(「不出標題」),避免這一對讀起來像贅述。
+    headlineOne: "{side}的標題:{card};{other}不出標題。",
+    headlineNone: "雙方都沒有手牌,跳過標題階段。",
+    play: "{side}打出{card}({use})。",
     place: "{side}在{spaces}放置。", campaign: "{side}以 {ops} 點征伐{target}:移除 {removed},放置 {placed}。", lobby: "{side}遊說{target}:移除 {removed}。",
     score: "{region}結算:秦 {q},楚 {c}。", vp: "天命 {mandate}。", tire: "疲敝降至{to}。", seal: "楚取得{state}相印。", unseal: "楚失去{state}相印。",
     mie: "秦滅{state}。", restore: "{state}復國。", reform: "{side}變法軌到第 {box} 格。", jiuding: "九鼎蓋著交給{side}。", discard: "{side}棄掉{card}。",
