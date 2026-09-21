@@ -121,6 +121,30 @@
       "loop": false,
       "source": "sfx_card_commit_s8110"
     },
+    "sfx.card.deal": {
+      "file": "sfx.card.deal.mp3",
+      "kind": "sfx",
+      "seconds": 0.94,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_card_deal_s8622"
+    },
+    "sfx.card.enemyEvent.chu": {
+      "file": "sfx.card.enemyEvent.chu.mp3",
+      "kind": "sfx",
+      "seconds": 0.6,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_card_enemyEvent_chu_s8652"
+    },
+    "sfx.card.enemyEvent.qin": {
+      "file": "sfx.card.enemyEvent.qin.mp3",
+      "kind": "sfx",
+      "seconds": 1.28,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_card_enemyEvent_qin_s8640"
+    },
     "sfx.card.event.chu": {
       "file": "sfx.card.event.chu.mp3",
       "kind": "sfx",
@@ -144,6 +168,22 @@
       "gain": 1,
       "loop": false,
       "source": "sfx_card_event_qin_s8130"
+    },
+    "sfx.card.jiuding": {
+      "file": "sfx.card.jiuding.mp3",
+      "kind": "sfx",
+      "seconds": 2.14,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_card_jiuding_s8660"
+    },
+    "sfx.card.ops": {
+      "file": "sfx.card.ops.mp3",
+      "kind": "sfx",
+      "seconds": 0.76,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_card_ops_s8630"
     },
     "sfx.card.pick": {
       "file": "sfx.card.pick.mp3",
@@ -201,6 +241,14 @@
       "loop": false,
       "source": "sfx_map_campaign_s8181"
     },
+    "sfx.map.campaign.key": {
+      "file": "sfx.map.campaign.key.mp3",
+      "kind": "sfx",
+      "seconds": 0.86,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_map_campaign_key_s8682"
+    },
     "sfx.map.confirm": {
       "file": "sfx.map.confirm.mp3",
       "kind": "sfx",
@@ -225,6 +273,14 @@
       "loop": false,
       "source": "sfx_map_control_lose_drum_s8522"
     },
+    "sfx.map.lobby": {
+      "file": "sfx.map.lobby.mp3",
+      "kind": "sfx",
+      "seconds": 1.52,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_map_lobby_s8691"
+    },
     "sfx.map.opponent": {
       "file": "sfx.map.opponent.mp3",
       "kind": "sfx",
@@ -241,6 +297,14 @@
       "loop": false,
       "source": "sfx_map_place_s7102"
     },
+    "sfx.map.unplace": {
+      "file": "sfx.map.unplace.mp3",
+      "kind": "sfx",
+      "seconds": 0.52,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_map_unplace_s8671"
+    },
     "sfx.mie": {
       "file": "sfx.mie.mp3",
       "kind": "sfx",
@@ -248,6 +312,54 @@
       "gain": 1,
       "loop": false,
       "source": "sfx_mie_s8342"
+    },
+    "sfx.restore": {
+      "file": "sfx.restore.mp3",
+      "kind": "sfx",
+      "seconds": 1.28,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_restore_s8721"
+    },
+    "sfx.room.chat": {
+      "file": "sfx.room.chat.mp3",
+      "kind": "sfx",
+      "seconds": 0.26,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_room_chat_s8780"
+    },
+    "sfx.room.join": {
+      "file": "sfx.room.join.mp3",
+      "kind": "sfx",
+      "seconds": 1.02,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_room_join_s8761"
+    },
+    "sfx.room.leave": {
+      "file": "sfx.room.leave.mp3",
+      "kind": "sfx",
+      "seconds": 0.71,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_room_leave_s8770"
+    },
+    "sfx.room.start": {
+      "file": "sfx.room.start.mp3",
+      "kind": "sfx",
+      "seconds": 2.9,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_room_start_s8790"
+    },
+    "sfx.score.count": {
+      "file": "sfx.score.count.mp3",
+      "kind": "sfx",
+      "seconds": 1.07,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_score_count_s8752"
     },
     "sfx.seal.gain": {
       "file": "sfx.seal.gain.mp3",
@@ -281,6 +393,22 @@
       "loop": false,
       "source": "sfx_track_mandate_qin_s8311"
     },
+    "sfx.track.reform": {
+      "file": "sfx.track.reform.mp3",
+      "kind": "sfx",
+      "seconds": 1.15,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_track_reform_s8710"
+    },
+    "sfx.track.weariness": {
+      "file": "sfx.track.weariness.mp3",
+      "kind": "sfx",
+      "seconds": 1.1,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_track_weariness_s8701"
+    },
     "sfx.turn.clock.last": {
       "file": "sfx.turn.clock.last.mp3",
       "kind": "sfx",
@@ -305,6 +433,14 @@
       "loop": false,
       "source": "sfx_turn_era_s8350"
     },
+    "sfx.turn.headline": {
+      "file": "sfx.turn.headline.mp3",
+      "kind": "sfx",
+      "seconds": 1.44,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_turn_headline_s8730"
+    },
     "sfx.turn.new": {
       "file": "sfx.turn.new.mp3",
       "kind": "sfx",
@@ -312,6 +448,14 @@
       "gain": 1,
       "loop": false,
       "source": "sfx_turn_new_s8260"
+    },
+    "sfx.turn.timeout": {
+      "file": "sfx.turn.timeout.mp3",
+      "kind": "sfx",
+      "seconds": 1.18,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_turn_timeout_s8740"
     },
     "sfx.turn.yours": {
       "file": "sfx.turn.yours.mp3",
@@ -321,6 +465,22 @@
       "loop": false,
       "source": "sfx_turn_yours_s8282"
     },
+    "sfx.tut.step": {
+      "file": "sfx.tut.step.mp3",
+      "kind": "sfx",
+      "seconds": 0.65,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_tut_step_s8800"
+    },
+    "sfx.ui.close": {
+      "file": "sfx.ui.close.mp3",
+      "kind": "sfx",
+      "seconds": 1.04,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_ui_close_s8610"
+    },
     "sfx.ui.error": {
       "file": "sfx.ui.error.mp3",
       "kind": "sfx",
@@ -328,6 +488,14 @@
       "gain": 1,
       "loop": false,
       "source": "sfx_ui_error_s8410"
+    },
+    "sfx.ui.open": {
+      "file": "sfx.ui.open.mp3",
+      "kind": "sfx",
+      "seconds": 1.07,
+      "gain": 1,
+      "loop": false,
+      "source": "sfx_ui_open_s8600"
     },
     "sfx.ui.tap": {
       "file": "sfx.ui.tap.mp3",
