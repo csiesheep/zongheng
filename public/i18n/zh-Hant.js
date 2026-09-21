@@ -104,6 +104,20 @@ export default {
     bog: "{side}頓兵堅城,棄掉{card}。", skip: "{side}無牌可出。", opsLost: "{side}的 {ops} 點行動點無處可用。", reshuffle: "棄牌堆重洗。", era: "{era}牌庫洗入。",
     endTurn: "第 {turn} 回合結束;疲敝{weariness}。", over: "遊戲結束:{side},{reason}。",
   },
+  // #88(design A 逐手卷軸):紀錄面板自己的短字串——區段標頭、一列一手的
+  // 標題行、以及牌下那排小標籤(chip)。log 上面那段是引擎原句(整句、有
+  // 標點),這裡的都是面板專用的短版本,能用引擎那句的地方已經直接重用
+  // (見 oppmove 那段的 tickerMandate/tickerScore/tickerSeal/tickerUnseal/
+  // tickerMie/tickerRestore/tickerJiuding,log-view.js 直接讀那幾把)。
+  logPanel: {
+    filterAll: "全部", filterQin: "秦", filterChu: "楚", filterChat: "對話",
+    setupHeader: "佈局", turnHeader: "第 {turn} 回合 · {era}", round: "行動 {round}",
+    headlineLine: "標題:{qinSide} {qinCard} · {chuSide} {chuCard}", headlineFirst: "{first}先結算",
+    chipPlace: "{space} +{n}", chipRemove: "{target}:移除{side} {n}",
+    chipReform: "變法 → 第 {box} 格", chipTire: "疲敝 → {to}",
+    chipDiscard: "{side}棄掉{card}", chipOpsLost: "{side}的 {ops} 點行動點無處可用",
+    close: "收起",
+  },
   // #79/#87:對手的一手亮牌——卡牌面板(①,等待一次點按)與地圖演出(②)。
   // #85 的常駐膠囊/底部清單已移除(#87)。只有 oppmove-ui.js 讀這一段。
   oppmove: {
