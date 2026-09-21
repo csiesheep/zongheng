@@ -1,13 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Audio build script for Zongheng audio assets.
-Implements exact processing spec per issue #61.
+Implements exact processing spec per issue #61 with optional gap-closing per issue #63.
+
+Options:
+  --only <cue> [<cue> ...]    Process only specified cues (e.g. --only sfx.turn.yours)
+                              Useful for rebuilding individual sounds without full rebuild.
+
+Per-cue configuration (tools/audio_cues.json):
+  "closeGaps": true           For SFX: prepend silenceremove filter to close gaps > 0.3s
+                              in the middle of the sound before other processing.
+                              Example: sfx.turn.yours (two knocks with a pause).
 """
 import json
 import os
 import subprocess
 import sys
 import re
+import argparse
 from pathlib import Path
 
 FFMPEG = "C:/Users/sheep/code/ComfyUI/.venv/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe"
@@ -64,15 +74,27 @@ def get_loudness_from_output(stderr):
             pass
     return None
 
-def process_sfx(take_id, cue):
-    """Process sound effect: trim silence, fade, normalize to -3dBFS."""
+def process_sfx(take_id, cue, close_gaps=False):
+    """Process sound effect: trim silence, fade, normalize to -3dBFS.
+
+    Args:
+        take_id: Source FLAC take identifier
+        cue: Output cue name
+        close_gaps: If True, prepend gap-closing filter for mid-sound silences > 0.3s
+    """
     flac = find_flac(take_id)
     if not flac:
         return None
 
     # Step 1: Measure peak
     # Trim head at -50dB, keep 0.15s of tail decay before 40ms fade
-    silence_chain = "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0,areverse,silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.15,afade=t=in:d=0.04,areverse,afade=t=in:d=0.003"
+    base_chain = "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0,areverse,silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.15,afade=t=in:d=0.04,areverse,afade=t=in:d=0.003"
+
+    # Prepend gap-closing filter if needed (closes internal gaps > 0.3s)
+    if close_gaps:
+        silence_chain = "silenceremove=stop_periods=-1:stop_duration=0.3:stop_threshold=-50dB," + base_chain
+    else:
+        silence_chain = base_chain
 
     cmd = [FFMPEG, "-hide_banner", "-i", flac, "-af", f"{silence_chain},volumedetect", "-f", "null", "-"]
     success, stderr = run_ffmpeg(cmd)
@@ -217,10 +239,21 @@ def process_bgm(take_id, cue):
     }
 
 def main():
-    # Load accepted
-    accepted_path = "C:/Users/sheep/AppData/Local/Temp/claude/C--Users-sheep-code-obsidian/1d166e4e-76ed-44ee-930b-f3675bbfddc6/scratchpad/audio/accepted.json"
-    with open(accepted_path, 'r', encoding='utf-8') as f:
-        accepted = json.load(f)
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description="Build audio assets for Zongheng")
+    parser.add_argument("--only", nargs='+', help="Process only specified cues")
+    args = parser.parse_args()
+
+    # Load audio cues configuration (the sole source of truth)
+    with open("tools/audio_cues.json", 'r', encoding='utf-8') as f:
+        cues_config = json.load(f)
+
+    # Build accepted dict from cues_config
+    accepted = {cue: config['take'] for cue, config in cues_config.items()}
+
+    # Filter to requested cues if --only specified
+    if args.only:
+        accepted = {cue: take for cue, take in accepted.items() if cue in args.only}
 
     # Load job files for prompts
     jobs_map = {}
@@ -235,9 +268,8 @@ def main():
 
     manifest = {"version": 1, "cues": {}}
     prompts = {}
-    looped = {"bgm.landing", "bgm.table.alliance.chu", "bgm.table.alliance.qin",
-              "bgm.table.conquest.chu", "bgm.table.conquest.qin",
-              "bgm.table.reform.chu", "bgm.table.reform.qin"}
+    # Build looped set from cues_config
+    looped = {cue for cue, config in cues_config.items() if config.get('loop', False)}
 
     print(f"Processing {len(accepted)} files...")
     results = {}
@@ -245,10 +277,11 @@ def main():
     for cue in sorted(accepted.keys()):
         take_id = accepted[cue]
         is_bgm = cue.startswith("bgm.")
+        close_gaps = cues_config.get(cue, {}).get("closeGaps", False)
 
         print(f"  {cue}... ", end="", flush=True)
 
-        result = process_bgm(take_id, cue) if is_bgm else process_sfx(take_id, cue)
+        result = process_bgm(take_id, cue) if is_bgm else process_sfx(take_id, cue, close_gaps)
 
         if result is None:
             print("FAILED")

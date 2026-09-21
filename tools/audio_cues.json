@@ -11,6 +11,18 @@
     "take": "bgm_lose_qin_jin_low_s5461",
     "loop": false
   },
+  "bgm.setup": {
+    "take": "bgm_setup_jingting_s5511",
+    "loop": true
+  },
+  "bgm.tension": {
+    "take": "bgm_tension_xintiao_s5521",
+    "loop": true
+  },
+  "bgm.tutorial": {
+    "take": "bgm_tutorial_xuetang_s5532",
+    "loop": true
+  },
   "bgm.table.alliance.chu": {
     "take": "bgm_table_alliance_chu_yingdu_s5331",
     "loop": true
@@ -145,7 +157,8 @@
   },
   "sfx.turn.yours": {
     "take": "sfx_turn_yours_s8282",
-    "loop": false
+    "loop": false,
+    "closeGaps": true
   },
   "sfx.ui.error": {
     "take": "sfx_ui_error_s8410",
