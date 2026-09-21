@@ -168,6 +168,51 @@
     "take": "sfx_ui_tap_s8400",
     "loop": false
   },
+  "sfx.ui.close": {
+    "take": "sfx_ui_close_s8610",
+    "loop": false
+  },
+  "sfx.ui.open": {
+    "take": "sfx_ui_open_s8600",
+    "loop": false
+  },
+  "sfx.card.deal": {
+    "take": "sfx_card_deal_s8622",
+    "loop": false,
+    "closeGaps": true
+  },
+  "sfx.card.ops": {
+    "take": "sfx_card_ops_s8630",
+    "loop": false,
+    "closeGaps": true
+  },
+  "sfx.card.enemyEvent.qin": {
+    "take": "sfx_card_enemyEvent_qin_s8640",
+    "loop": false
+  },
+  "sfx.card.enemyEvent.chu": {
+    "take": "sfx_card_enemyEvent_chu_s8652",
+    "loop": false
+  },
+  "sfx.card.jiuding": {
+    "take": "sfx_card_jiuding_s8660",
+    "loop": false
+  },
+  "sfx.map.unplace": {
+    "take": "sfx_map_unplace_s8671",
+    "loop": false,
+    "closeGaps": true
+  },
+  "sfx.map.campaign.key": {
+    "take": "sfx_map_campaign_key_s8682",
+    "loop": false,
+    "closeGaps": true
+  },
+  "sfx.map.lobby": {
+    "take": "sfx_map_lobby_s8691",
+    "loop": false,
+    "closeGaps": true
+  },
   "sfx.warn": {
     "take": "sfx_warn_s8250",
     "loop": false
