@@ -10,6 +10,7 @@
   },
   "music": {
     "take": "bgm_opening_sting_s6101",
-    "model": "MiniMax Music 3"
+    "model": "MiniMax Music 3",
+    "audio": "AAC-LC 48 kHz 128k (re-encoded for iOS, #76)"
   }
 }
