@@ -1,6 +1,7 @@
-// #79: draws the opponent's-move reveal -- the card panel (①), the
-// step-by-step playback on the map (②), the persistent chip (③) and its
-// bottom sheet (④). Self-contained like advisor-ui.js/tutorial-ui.js/
+// #79/#87: draws the opponent's-move reveal -- the card panel (①) and the
+// step-by-step playback on the map (②). #85's corner thumbnail/preview and
+// its ④ sheet are gone (#87: nothing opened the sheet once the thumbnail
+// was removed). Self-contained like advisor-ui.js/tutorial-ui.js/
 // card-view.js: reads the two i18n modules and shared/engine.js itself, and
 // takes only a small context bundle from app.js's own render() -- never a
 // DOM handle back into app.js. app.js calls sync() once per render() (never
@@ -49,21 +50,17 @@ const cardScoring = (id) => id !== E.JIUDING && !!E.CARD[id].scoring;
 // The mandate's own resulting total (v.mandate's own sign convention: +Qin).
 const mandateTotalTxt = (m, lang) => (m > 0 ? `${t(lang, "sides.qin")} +${m}` : m < 0 ? `${t(lang, "sides.chu")} +${-m}` : "0");
 
-const CARD_MS = 1500, STEP_MS = 600;
+const STEP_MS = 600, REDUCED_MS = 1500;
 const reduceMotion = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } };
 
 // ---------- module state ----------
-let revealedSeq = null; // the log seq this module has already turned into a reveal (or a chip); null until (re)initialized
+let revealedSeq = null; // the log seq this module has already turned into a reveal; null until (re)initialized
 let phase = "idle";     // idle | card | steps | steps-static
-let queue = [];         // moves still waiting to play, oldest first
+let queue = [];         // moves still waiting for their own tap, oldest first
 let move = null;        // the move currently on screen (card/steps phases)
 let beats = [];         // flattened per-tick items for the current move's steps phase
 let beatIndex = -1;
 let timer = null;
-let chip = null;        // { move } for the persistent ③ chip, or null
-let previewOpen = false; // true while ③'s corner thumbnail is enlarged into the preview
-let sheetOpen = false;
-let sheetSeq = null;    // which move (by .seq) the open sheet is showing
 let ctx = { view: null, me: 0, lang: "zh-Hant", mapTargeting: false, acted: false };
 
 function lastLogSeq(log) { return Array.isArray(log) && log.length ? log[log.length - 1].i : 0; }
@@ -77,64 +74,22 @@ function ensureDom() {
   root.id = "oppReveal";
   root.innerHTML =
     `<div id="oppDim" class="opp-dim" hidden></div>` +
-    `<div id="oppCard" class="opp-card" hidden></div>` +
+    `<div id="oppCard" class="opp-card" hidden tabindex="0" role="button"></div>` +
     `<div id="oppRings" class="opp-rings" hidden></div>` +
-    `<div id="oppTicker" class="opp-ticker" hidden></div>` +
-    `<div id="oppCorner" class="opp-corner" hidden>` +
-      `<button type="button" id="oppThumb" class="opp-thumb no-tap-sound"></button>` +
-      `<div id="oppPreview" class="opp-preview" aria-hidden="true"></div>` +
-    `</div>`;
+    `<div id="oppTicker" class="opp-ticker" hidden></div>`;
   document.body.appendChild(root);
-  const scrim = document.createElement("div"); scrim.id = "oppScrim"; scrim.className = "opp-scrim"; scrim.hidden = true;
-  const sheet = document.createElement("div"); sheet.id = "oppSheet"; sheet.className = "opp-sheet"; sheet.hidden = true;
-  document.body.appendChild(scrim);
-  document.body.appendChild(sheet);
   dom = {
     dim: root.querySelector("#oppDim"), card: root.querySelector("#oppCard"),
     rings: root.querySelector("#oppRings"), ticker: root.querySelector("#oppTicker"),
-    corner: root.querySelector("#oppCorner"), thumb: root.querySelector("#oppThumb"),
-    preview: root.querySelector("#oppPreview"), scrim, sheet,
   };
-  dom.dim.addEventListener("click", skip);
-  dom.card.addEventListener("click", skip);
-  dom.ticker.addEventListener("click", skip);
-  scrim.addEventListener("click", closeSheet);
-  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && sheetOpen) closeSheet(); });
-  wireCorner(dom);
+  dom.dim.addEventListener("click", onTap);
+  dom.card.addEventListener("click", onTap);
+  dom.ticker.addEventListener("click", onTap);
+  dom.card.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); onTap(); }
+  });
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && phase !== "idle") onEscape(); });
   return dom;
-}
-// ---------- ③ the corner thumbnail (#85: replaces #84's pill -- the
-// persistent card art now sits fixed at the map's own top-left corner
-// (map-draw.js's NODE_POS keeps that corner free of any city/badge, see
-// map-corner.test.js), not in #promptScroll and not a child of #map (#68's
-// rect stays untouched either way). The thumb (always in the DOM, always
-// focusable) and the bigger preview share one anchor -- the preview is
-// `position: absolute` right on top of the thumb (never toggled via
-// `hidden`, which would drop focus when the focused element disappears);
-// oppmove.css animates it in/out with its own `.open` class instead.
-// Phone (no real hover): a tap on the thumb shows the preview; a tap on
-// the preview opens ④; a tap anywhere outside the corner closes it.
-// Desktop (hover: hover + pointer: fine): hovering the corner shows the
-// preview and leaving it closes it; a click on either the thumb or the
-// preview always opens ④ straight away. Keyboard: focusing the thumb
-// shows the preview exactly like hover, and Enter opens ④ regardless of
-// hover support (the brief's own rule).
-const hoverCapable = () => { try { return matchMedia("(hover: hover) and (pointer: fine)").matches; } catch { return false; } };
-function wireCorner(d) {
-  d.thumb.addEventListener("click", () => { if (previewOpen || hoverCapable()) openSheet(null); else showPreview(); });
-  d.thumb.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); openSheet(null); } });
-  d.thumb.addEventListener("focus", showPreview);
-  d.preview.addEventListener("click", () => openSheet(null));
-  d.corner.addEventListener("mouseenter", () => { if (hoverCapable()) showPreview(); });
-  d.corner.addEventListener("mouseleave", () => { if (hoverCapable()) hidePreview(); });
-  d.corner.addEventListener("focusout", (ev) => { if (!d.corner.contains(ev.relatedTarget)) hidePreview(); });
-  document.addEventListener("click", (ev) => { if (previewOpen && !d.corner.contains(ev.target)) hidePreview(); });
-}
-function showPreview() { if (!previewOpen) { previewOpen = true; paint(); } }
-function hidePreview() { if (previewOpen) { previewOpen = false; paint(); } }
-function positionCorner() {
-  const mr = rectOf(mapEl());
-  if (mr && dom) dom.corner.style.cssText = `left:${mr.left + 6}px; top:${mr.top + 6}px`;
 }
 function mapEl() { return document.getElementById("map"); }
 function spaceEl(id) { return id ? document.querySelector(`.node[data-space="${id}"]`) : null; }
@@ -202,12 +157,12 @@ function flattenBeats(mv, view, c) {
   return out;
 }
 
-// Shared by ① (renderCard) and ④ (renderSheet): what a move's own use line
-// says. An event (or a headline, which renderCard skips outright since it
-// has nothing but the event line) never shows ops -- round 2 fix 4, the
-// checker's own report that "用來事件 · 2 點" reads like a place/campaign use
-// that happens to be called "event", and a scoring card has no numeric ops
-// worth stating at all ("0 點" would be actively wrong).
+// Shared by ①'s use line: what a move's own use line says. An event (or a
+// headline, which renderCard skips outright since it has nothing but the
+// event line) never shows ops -- round 2 fix 4, the checker's own report
+// that "用來事件 · 2 點" reads like a place/campaign use that happens to be
+// called "event", and a scoring card has no numeric ops worth stating at
+// all ("0 點" would be actively wrong).
 function useLineFor(mv, lang) {
   if (mv.use === "event") return cardScoring(mv.card) ? t(lang, "oppmove.useScoringEvent") : t(lang, "oppmove.useEvent");
   return t(lang, "oppmove.useOps", { use: t(lang, `useNames.${mv.use}`), ops: actualOpsOf(mv) });
@@ -249,6 +204,7 @@ function renderCard() {
       (eventLine ? `<div class="opp-card-event"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(eventLine)}</div>` : "") +
     `</div>` +
     `<div class="opp-card-hint">${esc(t(lang, "oppmove.tapHint"))}</div>`;
+  d.card.focus();
 }
 
 // ---------- ② the steps ----------
@@ -262,10 +218,8 @@ function positionMapCatcher() {
 }
 // `index` (round 2 fix 2, the checker's own report): the ticker used to
 // carry a literal "②" glyph inside every beat's own text, which read as
-// step "2" for every step including the first, and doubled up with the
-// sheet's own numbered badge ("1 ②天命…"). The ticker now takes the same
-// 1-based number the sheet already shows in its badge -- one counter, two
-// displays -- and the i18n strings themselves carry no digit at all.
+// step "2" for every step including the first. The ticker takes the same
+// 1-based number for a single, unambiguous count.
 function renderBeat(beat, index) {
   const d = ensureDom();
   d.rings.innerHTML = "";
@@ -312,35 +266,11 @@ function renderStepsStatic() {
   d.ticker.textContent = beats.length ? `${beats.length}. ${beats[beats.length - 1].text}` : "";
 }
 
-// tailFor(mv): the same "{use} {ops} ›"/event/headline tail the old pill's
-// one-liner carried (pre-#85) -- now the corner preview's own second line.
-function tailFor(mv) {
-  const lang = ctx.lang, side = mv.side, card = mv.card, use = mv.use;
-  const owner = cardSideOf(card);
-  // The Cauldrons never carries an event (see eventLineFor's own note) --
-  // `owner !== side` alone would say "event also happens" here, wrongly.
-  const autoEvent = card !== "jiuding" && owner !== side;
-  return use === "headline" ? t(lang, "oppmove.chipHeadline")
-    : use === "event" ? t(lang, "oppmove.chipEvent")
-    : t(lang, autoEvent ? "oppmove.chipOpsEvent" : "oppmove.chipOps", { use: t(lang, `useNames.${use}`), ops: actualOpsOf(mv) });
-}
-function renderCorner(mv) {
-  const d = ensureDom(), lang = ctx.lang, sideCls = mv.side === E.QIN ? "q" : "c";
-  d.thumb.className = `opp-thumb no-tap-sound side-${sideCls}`;
-  d.thumb.setAttribute("aria-label", `${sideName(mv.side, lang)} · ${cardName(mv.card, lang)} · ${tailFor(mv)}`);
-  d.thumb.innerHTML = `<img class="opp-thumb-art" src="art/cards/${mv.card}.jpg" alt="" onerror="this.style.visibility='hidden'">`;
-  d.preview.className = `opp-preview side-${sideCls}`;
-  d.preview.innerHTML =
-    `<img class="opp-preview-art" src="art/cards/${mv.card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
-    `<span class="opp-preview-line1"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(sideName(mv.side, lang))} · ${esc(cardName(mv.card, lang))}</span>` +
-    `<span class="opp-preview-line2"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(tailFor(mv))}</span>`;
-}
 // ---------- overall visibility ----------
-// The single place that decides what's on screen: card panel+dim during
-// ①, rings+ticker+chip during ② (the design's frame ② keeps the shrunk
-// chip visible while the map plays out), the bare chip once idle, or
-// nothing at all (winner decided / the player is picking a map target /
-// this render is disabled outright -- tutorial, spectator).
+// The single place that decides what's on screen: card panel+dim during ①,
+// rings+ticker during ② (the map playback), or nothing at all (winner
+// decided / the player is picking a map target / this render is disabled
+// outright -- tutorial, spectator).
 function paint() {
   const d = ensureDom();
   const inCard = phase === "card";
@@ -351,86 +281,11 @@ function paint() {
   d.ticker.hidden = !inSteps;
   if (inCard) renderCard();
   else if (inSteps) positionMapCatcher();
-  const mv = inSteps ? move : phase === "idle" ? (chip && chip.move) : null;
-  const winnerDecided = ctx.view && ctx.view.winner != null;
-  const showCorner = !!mv && !ctx.mapTargeting && !winnerDecided;
-  d.corner.hidden = !showCorner;
-  if (showCorner) { positionCorner(); renderCorner(mv); }
-  else if (previewOpen) previewOpen = false;
-  const previewShown = showCorner && previewOpen;
-  d.preview.classList.toggle("open", previewShown);
-  d.preview.setAttribute("aria-hidden", String(!previewShown));
-  if (sheetOpen) renderSheet();
 }
 
-// ---------- ④ the sheet ----------
-function openSheet(seq) {
-  if (!ctx.view) return;
-  const moves = opponentMoves(ctx.view.log, 0, ctx.me);
-  if (!moves.length) return;
-  sheetSeq = seq != null && moves.some((m) => m.seq === seq) ? seq : moves[moves.length - 1].seq;
-  sheetOpen = true;
-  if (previewOpen) { previewOpen = false; paint(); }
-  renderSheet();
-}
-// #85 round 2: closing the sheet -- 關閉, Escape, or a tap on the scrim,
-// every path routes through here -- must also drop the corner preview.
-// Before this, a mouse user who closed the sheet still had `previewOpen`
-// true underneath it, so the very next click on the thumb (still
-// `previewOpen`, per its own click handler) jumped straight back to
-// reopening the sheet instead of collapsing to the plain thumbnail first.
-function closeSheet() {
-  if (!sheetOpen) return;
-  sheetOpen = false;
-  previewOpen = false;
-  const d = ensureDom();
-  d.scrim.hidden = true; d.sheet.hidden = true; d.sheet.innerHTML = "";
-  paint();
-}
-function flashRow(beat) {
-  if (!beat) return;
-  const el = beat.kind === "stat" ? statEl(beat.stat) : spaceEl(beat.spaceId);
-  if (!el) return;
-  el.classList.add("opp-flash");
-  setTimeout(() => el.classList.remove("opp-flash"), 700);
-}
-function renderSheet() {
-  const d = ensureDom();
-  d.scrim.hidden = false; d.sheet.hidden = false;
-  if (!ctx.view) return;
-  const lang = ctx.lang;
-  const moves = opponentMoves(ctx.view.log, 0, ctx.me);
-  let idx = moves.findIndex((m) => m.seq === sheetSeq);
-  if (idx < 0) idx = moves.length - 1;
-  const mv = moves[idx];
-  if (!mv) { closeSheet(); return; }
-  const rowBeats = flattenBeats(mv, ctx.view, ctx);
-  const rows = rowBeats.map((b, i) =>
-    `<div class="opp-sheet-row" data-i="${i}"><span class="opp-sheet-n">${i + 1}</span><span${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(b.text)}</span></div>`
-  ).join("");
-  const useLine = mv.use === "headline" ? t(lang, "oppmove.chipHeadline") : useLineFor(mv, lang);
-  d.sheet.innerHTML =
-    `<div class="opp-sheet-head">` +
-      `<img class="opp-sheet-art" src="art/cards/${mv.card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
-      `<div class="opp-sheet-meta">` +
-        `<div class="opp-sheet-name"${lang === "en" ? "" : ' lang="zh-Hant"'}><b class="side-${mv.side === E.QIN ? "q" : "c"}">${esc(sideName(mv.side, lang))}</b> ${esc(t(lang, "oppmove.playedVerb"))} ${esc(cardName(mv.card, lang))}</div>` +
-        `<div class="opp-sheet-sub">${esc(useLine)}</div>` +
-        `<div class="opp-sheet-text"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(cardText(mv.card, lang))}</div>` +
-      `</div>` +
-    `</div>` +
-    `<div class="opp-sheet-subhead">${esc(t(lang, "oppmove.sheetHeading"))}</div>` +
-    `<div class="opp-sheet-rows">${rows}</div>` +
-    `<div class="opp-sheet-foot">` +
-      `<button type="button" class="opp-sheet-prev"${idx <= 0 ? " disabled" : ""}>${esc(t(lang, "oppmove.prevMove"))}</button>` +
-      `<button type="button" class="opp-sheet-close primary">${esc(t(lang, "buttons.close"))}</button>` +
-    `</div>`;
-  d.sheet.querySelector(".opp-sheet-close").onclick = closeSheet;
-  const prev = d.sheet.querySelector(".opp-sheet-prev");
-  if (prev) prev.onclick = () => { if (idx > 0) { sheetSeq = moves[idx - 1].seq; renderSheet(); } };
-  d.sheet.querySelectorAll(".opp-sheet-row").forEach((row) => { row.onclick = () => flashRow(rowBeats[Number(row.dataset.i)]); });
-}
-
-// ---------- the timer-driven playback ----------
+// ---------- the tap-driven playback (#87: ① waits for its own tap, no
+// timer; ② still autoplays its 0.6s beats but a tap/Escape skips to the
+// end; each queued move gets its own card wait in turn). ----------
 function startNext() {
   move = queue.shift();
   beats = flattenBeats(move, ctx.view, ctx);
@@ -438,14 +293,14 @@ function startNext() {
   phase = "card";
   clearTimeout(timer);
   paint();
-  timer = setTimeout(advanceFromCard, CARD_MS);
 }
-function advanceFromCard() {
+// A tap (or Enter/Space on the focused panel) while ① is up: start ②.
+function continueFromCard() {
   if (reduceMotion()) {
     phase = "steps-static";
     renderStepsStatic();
     paint();
-    timer = setTimeout(finishMove, CARD_MS);
+    timer = setTimeout(finishMove, REDUCED_MS);
     return;
   }
   phase = "steps";
@@ -460,24 +315,22 @@ function nextBeat() {
 }
 function finishMove() {
   clearTimeout(timer);
-  chip = { move };
-  previewOpen = false;
   move = null; beats = []; beatIndex = -1;
-  if (queue.length) { startNext(); return; }
+  if (queue.length) { startNext(); return; } // the next queued move waits for its own tap
   phase = "idle";
   paint();
 }
-// A tap on the map or the card panel (dom.dim/card/ticker's own click
-// listeners, wired in ensureDom()) skips straight to ③.
-function skip() { if (phase !== "idle") endToChip(); }
-function endToChip() {
-  clearTimeout(timer);
-  if (move) chip = { move };
-  else if (queue.length) chip = { move: queue[queue.length - 1] };
-  previewOpen = false;
-  move = null; queue = []; beats = []; beatIndex = -1;
-  phase = "idle";
-  paint();
+// A tap on the dim/card/ticker (dom's own click listeners, wired in
+// ensureDom()): during ① it continues into ②; during ② it skips straight
+// to the end (finishMove, which then opens the next queued move's own ①).
+function onTap() {
+  if (phase === "card") continueFromCard();
+  else if (phase === "steps" || phase === "steps-static") finishMove();
+}
+// Escape: the stronger "get me out of this step" -- skips the current
+// phase outright (no steps at all from ①, or straight to the end from ②).
+function onEscape() {
+  if (phase === "card" || phase === "steps" || phase === "steps-static") finishMove();
 }
 
 // ---------- public API ----------
@@ -486,15 +339,14 @@ function endToChip() {
 // acted, lastMoveMarks } -- acted is true once the player has picked a card
 // (or anything else has moved game.ui off its fresh/neutral shape), which
 // ends the sequence immediately and never blocks further input (the brief's
-// own rule); mapTargeting is true while the map itself has live hit targets,
-// which hides the chip so it can't sit over one.
+// own rule); mapTargeting is true while the map itself has live hit targets.
 export function sync(view, info) {
   ctx = { view, me: info.me, lang: info.lang, mapTargeting: info.mapTargeting, lastMoveMarks: info.lastMoveMarks };
   if (!view) { disable(); return; }
   const log = Array.isArray(view.log) ? view.log : [];
   const nowSeq = lastLogSeq(log);
   if (revealedSeq == null) { revealedSeq = nowSeq; paint(); return; } // first sync after (re)init: nothing "new" yet
-  if (info.acted && phase !== "idle") { endToChip(); return; }
+  if (info.acted && phase !== "idle") { clearReveal(); paint(); return; }
   if (phase === "idle" && !info.acted) {
     const fresh = opponentMoves(log, revealedSeq, info.me);
     revealedSeq = nowSeq; // a batch is only ever offered once, whether or not it was non-empty
@@ -502,29 +354,30 @@ export function sync(view, info) {
   }
   paint();
 }
-// The player committed a real action (humanAct()): the chip's own move is
-// now history, not "since you last acted" -- clears immediately, same as
-// #41's lastMoveMarks tap-clear, and never through a render() of its own.
-export function onAction() {
+function clearReveal() {
   clearTimeout(timer);
-  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1; chip = null; previewOpen = false;
-  if (sheetOpen) closeSheet();
+  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1;
 }
+// The player committed a real action (humanAct()): the reveal (card wait or
+// steps in progress, plus anything still queued) closes at once -- never
+// blocks the hand or the top bar. No paint() here: onAction() runs at the
+// top of humanAct(), before the actual action lands, and the render() that
+// follows immediately after will call sync() and paint the cleared state.
+export function onAction() { clearReveal(); }
 // A new game started, a solo game resumed, or a room's first view arrived:
 // nothing already in the log is "new" (the brief's own resume note) --
 // re-baseline the watermark instead of replaying a backlog.
 export function reset() {
   clearTimeout(timer);
   revealedSeq = null;
-  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1; chip = null; previewOpen = false;
-  if (sheetOpen) closeSheet();
+  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1;
   if (dom) paint();
 }
 // A spectator view, or the tutorial running: hide everything, touch nothing
 // else (so returning to the real game afterwards can pick up cleanly).
 export function disable() {
   clearTimeout(timer);
-  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1; previewOpen = false;
+  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1;
   if (!dom) return;
-  dom.dim.hidden = true; dom.card.hidden = true; dom.rings.hidden = true; dom.ticker.hidden = true; dom.corner.hidden = true;
+  dom.dim.hidden = true; dom.card.hidden = true; dom.rings.hidden = true; dom.ticker.hidden = true;
 }
