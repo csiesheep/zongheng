@@ -128,7 +128,7 @@ test("pushing the realm to 土崩 loses, even through the other side's event pla
   const st = atAction([[], ["changping"]], { weariness: 2, actor: CHU, phasing: CHU });
   setInf(st, "shangdang", 2, 0); setInf(st, "xinzheng", 3, 0); // some Qin influence in the Three Jin, but 禍結 locks it
   // Chu plays Qin's 長平之戰 for ops; the event needs no target (all locked), and its extra step collapses the realm.
-  const a = E.apply(st, { type: "play", side: CHU, card: "changping", use: "place", points: ["ying"] });
+  const a = E.apply(st, { type: "play", side: CHU, card: "changping", use: "place", order: "opsFirst", points: ["ying"] });
   assert.equal(a.winner, QIN);
   assert.equal(a.reason, "collapse");
 });
