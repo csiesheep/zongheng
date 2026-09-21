@@ -189,22 +189,29 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) 390px;
     /* #33: #prompt and #sheet used to share the "prompt" area (the cell's
-       own height was whichever of the two was taller, prompt pinned to the
-       top and sheet pinned to the bottom via align-self:end) — any state
-       with both non-empty at once stacked the sheet's Confirm/Cancel right
-       on top of the prompt's own text (measured at 1440x900: an event's
-       "pick 2" prompt and the sheet's Confirm/Cancel occupied the identical
-       207-329px rect). #sheet now gets its own row between prompt and hand,
-       same as the rest of the sidebar's stacked rows. */
-    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto;
+       own height was whichever of the two was taller) — #sheet got its own
+       row for #33. #83: giving #prompt/#sheet/#hand EACH their own "auto"
+       grid row went too far the other way — an "auto" track sizes to its
+       content with no upper bound, so #prompt or #sheet growing past what
+       the viewport actually had left just pushed #hand (or the now-removed
+       #foot) out of the grid's own box instead of negotiating for room
+       (the owner's report: the sheet's own internal scrollbar AND the hand
+       underneath it, both symptoms of the same unbounded-track bug). Down
+       to ONE flexible row now: #lowerBlock (unchanged wrapper, play.html)
+       gets the grid's `minmax(0, 1fr)` track — the only one that can
+       shrink — and negotiates #prompt/#sheet/#hand's real heights amongst
+       themselves with flexbox instead, same model #table itself already
+       uses for this exact trio on MOBILE (#prompt's own .prompt-scroll,
+       style.css, is what scrolls/gives first there too). #topbar/#statline/
+       #chatForm keep their own "auto" rows — their heights don't vary
+       render to render (unlike #prompt/#sheet/#hand), so there's nothing
+       for them to overflow into. */
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
     grid-template-areas:
       "map topbar"
       "map statline"
-      "map prompt"
-      "map sheet"
-      "map hand"
-      "map chat"
-      "map foot";
+      "map lower"
+      "map chat";
     padding: 0;
     gap: 0;
     /* Full 390px sidebar width needs the map to no longer share its side
@@ -213,24 +220,24 @@
   }
   body[data-view="table"] #topbar { grid-area: topbar; padding: 8px 14px 4px; }
   body[data-view="table"] #statline { grid-area: statline; padding: 6px 14px; }
-  body[data-view="table"] #prompt { grid-area: prompt; padding: 6px 14px; }
-  body[data-view="table"] #sheet:not(.overlay) { grid-area: sheet; margin: 0 14px; align-self: start; }
-  body[data-view="table"] #hand { grid-area: hand; }
-  /* #80 (owner, desktop screenshot: hand cut to a strip): #68 wrapped
-     #prompt/#sheet/#hand in #lowerBlock (play.html) for the MOBILE fixed
-     hand budget below. On desktop #lowerBlock was never told about that
-     wrapper — it stayed a plain flex column child of #table, so the grid
-     placement above (grid-area: prompt/sheet/hand on the three sections)
-     never took effect: those `grid-area` declarations only apply to a
-     GRID CONTAINER's own direct children, and #lowerBlock, not its
-     children, is the one #table (the grid) actually sees. `display:
-     contents` removes #lowerBlock's own box (and its mobile-only
-     flex/overflow/gap) so #prompt/#sheet/#hand become #table's real grid
-     items again and land in their own named areas above, exactly as
-     before #68. */
-  body[data-view="table"] #lowerBlock { display: contents; }
+  body[data-view="table"] #prompt { padding: 6px 14px; }
+  /* #83: #lowerBlock is a real flex box again (mobile's own rule, style.css)
+     instead of the `display: contents` #80 needed to make #prompt/#sheet/
+     #hand visible to #table's OLD per-row grid — it's the grid item now
+     (grid-area: lower, the flexible track above), so it just needs to fill
+     that track edge-to-edge (mobile's own flex:none plus a magic-number
+     inline height, app.js's LOWER_BLOCK_H, don't apply here: the map
+     doesn't share this column, so there's no fixed budget to protect). */
+  body[data-view="table"] #lowerBlock { grid-area: lower; display: flex; flex-direction: column; min-height: 0; }
+  /* #83: the mobile-only internal scrollbar (style.css's `.sheet{max-height:
+     40svh; overflow-y:auto}`) was never re-scoped away from desktop, so a
+     tall compact/pending sheet scrolled INSIDE its own box instead of the
+     sidebar just giving it the room its content needs (the owner's
+     screenshot: a visible scrollbar inside the sheet at the same time it
+     overlapped the hand below). #sheet is a plain flex:none item in
+     #lowerBlock's column now — sized to content, no cap. */
+  body[data-view="table"] #sheet:not(.overlay) { margin: 0 14px; max-height: none; overflow: visible; }
   body[data-view="table"] #chatForm { grid-area: chat; padding: 4px 14px; }
-  body[data-view="table"] #sideFoot { grid-area: foot; }
   body[data-view="table"] #map {
     grid-area: map;
     flex: none;
@@ -247,75 +254,49 @@
      into the map's flex row. */
   body[data-view="table"] #sheet:not(.overlay):empty { display: none; }
 
-  /* Hand: a fixed grid instead of mobile's horizontal-scroll row. 3 columns
-     up to 6 cards; app.js toggles .hand-many at 7+ (the 9-card hand from
-     turn 7 on, plus the Nine Cauldrons) — 4 columns, each card ~0.8x. */
+  /* Hand (#83, owner: "縮小一點牌的大小,讓一行可以顯示4張牌或5張牌"): a
+     responsive grid instead of the old fixed-3-or-4-column one — the track
+     count now comes from the sidebar's own width divided by a minimum card
+     width, via `repeat(auto-fill, minmax(...))`, instead of a JS-toggled
+     `.hand-many` class switching between two hard-coded sizes. At the
+     sidebar's fixed 390px (desktop.css's own #table column track) this
+     lands on 5 columns; `auto-fill` keeps that column count even with a
+     short hand (unused tracks stay empty rather than stretching the real
+     cards), and `.card`'s own `max-width` below is a hard cap in case a
+     wider sidebar is ever introduced. */
   body[data-view="table"] .hand {
     display: grid;
     /* style.css's mobile `.hand` rule fixes a 72px chip-row height (#68) —
-       this file never reset it, which is the other half of #80's clip
-       (the #lowerBlock display:contents fix above only unwraps the grid
-       placement; the hand box itself was still 72px tall). The hand's real
-       height here is however many rows the 96x176/77x141 cards need. */
+       overridden here to size to content instead: however many rows the
+       cards actually need. */
     height: auto;
-    grid-template-columns: repeat(3, 96px);
-    gap: 14px 18px;
-    justify-content: center;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 6px 8px;
+    justify-content: start;
     align-content: start;
     overflow: visible;
-    padding: 10px 12px 0;
+    padding: 10px 10px 0;
   }
-  body[data-view="table"] .hand .card { width: 96px; height: 176px; }
-  body[data-view="table"] .hand.hand-many {
-    grid-template-columns: repeat(4, 77px);
-    gap: 6px 12px;
-  }
-  body[data-view="table"] .hand.hand-many .card { width: 77px; height: 141px; position: relative; }
-  body[data-view="table"] .hand.hand-many .cardimg { height: 78px; flex: none; }
-  /* #39 part 1: the badge moves onto the picture's own top-left corner (out
-     of the flex flow — .ops is still .ci's first child in the DOM, just no
-     longer laid out inline with it) so .ci's whole width is free for the
-     name, centred, in the card's foot. Nothing here may go under 11px. */
-  body[data-view="table"] .hand.hand-many .ci { flex-direction: column; align-items: center; justify-content: center; padding: 3px 3px 4px; gap: 0; text-align: center; }
-  body[data-view="table"] .hand.hand-many .ops {
+  /* Same compact shape #68/#39 part 1 built for the short-viewport "many
+     cards" case (badge on the art's own corner, name centred below) — now
+     the ONE desktop card shape, not a 7+-card fallback. `position: relative`
+     on the card (art min-height keeps `aspect-ratio` from collapsing to 0
+     before the image loads) lets the badge sit on the art without its own
+     flex row. */
+  body[data-view="table"] .hand .card { width: auto; max-width: 96px; height: auto; aspect-ratio: 96 / 176; position: relative; }
+  body[data-view="table"] .hand .cardimg { height: 62%; flex: none; }
+  body[data-view="table"] .hand .ci { flex-direction: column; align-items: center; justify-content: center; padding: 3px 3px 4px; gap: 0; text-align: center; }
+  body[data-view="table"] .hand .ops {
     position: absolute; top: 4px; left: 4px; z-index: 1;
     width: 22px; height: 22px; font-size: 12px; line-height: 22px;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
   }
-  body[data-view="table"] .hand.hand-many .nm { width: 100%; align-items: center; text-align: center; }
-  /* One language only (#39 part 1's :root[lang] rule in style.css hides the
-     other) -- zh gets a little more room since it reads at up to 2 lines,
-     en up to 3, per the owner's spec. */
-  body[data-view="table"] .hand.hand-many .nm-zh { font-size: 13px; }
-  body[data-view="table"] .hand.hand-many .nm-en { font-size: 11px; }
-
-  /* The record/chat strip: the sidebar's own bottom row, always visible
-     (unlike mobile's #logToggle-in-the-prompt-row), latest line + a button
-     that opens the same #logBody panel. Default OFF state (display:none)
-     lives in style.css; this is the only place that turns it on. */
-  .sidefoot {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: auto 12px 12px;
-    padding: 8px 8px 8px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--gold-line);
-  }
-  .sidefoot-text {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-size: 12px;
-    line-height: 1.4;
-    color: var(--text-soft);
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-  }
-  #sideFootBtn { flex: none; }
-  /* #62 part 2: the switches that lived here in part 1 moved to the top
-     bar (owner's revision) -- #sideFootText is back to its part-1 width. */
+  body[data-view="table"] .hand .nm { width: 100%; align-items: center; text-align: center; }
+  /* #83 spec floor: at least 13px zh / 12px en, up to 2 lines — one size up
+     from the short-viewport chip's own 13/11 (#39 part 1), since the ops
+     badge no longer competes with the name for the footer's own height. */
+  body[data-view="table"] .hand .nm-zh { font-size: 13px; line-height: 1.15; }
+  body[data-view="table"] .hand .nm-en { font-size: 12px; line-height: 1.15; }
 
   /* Card sheet + log panel: confined to the 390px sidebar (owner: "log and
      chat 可以縮小"; issue #7: "地圖保持可見、可點") instead of covering the
@@ -342,6 +323,21 @@
     z-index: 45;
     border-radius: 14px 14px 0 0;
   }
+
+  /* #83 (owner: "縮小一點按鈕..在 desktop"): style.css's own sizes (this
+     same button set) are the 44px/~17px phone floor; a mouse doesn't need
+     a 44px target, so desktop goes smaller again, same ratio #30 already
+     used for the top bar (40px there vs. mobile's 44+). Covers the five use
+     buttons, both Cancel/Confirm rows (compact/pending and the full card
+     page's own), and — since .sheet-grid/.sheet-footer are shared, unscoped
+     classes — the card page overlay's identical buttons for free. */
+  body[data-view="table"] .sheet-grid button { height: 40px; min-height: 40px; font-size: 16px; }
+  :root[lang="en"] body[data-view="table"] .sheet-grid button { font-size: 13px; }
+  body[data-view="table"] .sheet-footer button { height: 40px; min-height: 40px; font-size: 16px; }
+  :root[lang="en"] body[data-view="table"] .sheet-footer button { font-size: 13px; }
+  body[data-view="table"] .sheet:has(.sheet-head) .sheet-footer button { height: 40px; min-height: 40px; }
+  body[data-view="table"] .sheet:has(.sheet-head) .sheet-footer .confirm-zh { font-size: 16px; }
+  body[data-view="table"] .sheet:has(.sheet-head) .sheet-footer .confirm-en { font-size: 13px; }
 
   /* #43: the one shared gold focus ring (ui-states.css) now covers every
      button/link/.hit here too -- this narrower, desktop-only duplicate is

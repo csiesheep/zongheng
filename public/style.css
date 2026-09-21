@@ -1152,10 +1152,17 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    35-58px, not the required >=44, because they were never really a grid
    at all). */
 #sheet .sheet-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
-.sheet-grid button { flex: none; height: 52px; min-height: 52px; padding: 0 4px; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 600 15px/1.1 var(--serif); }
-:root[lang="en"] .sheet-grid button { font: 600 12.5px/1.15 var(--sans); letter-spacing: 0.1px; }
+/* #83 (owner: "縮小一點按鈕"): the five use buttons and the Cancel/Confirm
+   row were 52px with 15px+ text everywhere — Apple's own 44px tap-target
+   floor is the phone's real constraint, and the desktop override below
+   (a mouse, not a finger) goes smaller still. This file's own sizes are the
+   phone (and shared/default) ones; desktop.css overrides them down to 40px
+   under its >=1024px media query. */
+.sheet-grid button { flex: none; height: 44px; min-height: 44px; padding: 0 4px; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 600 17px/1.1 var(--serif); }
+:root[lang="en"] .sheet-grid button { font: 600 14px/1.15 var(--sans); letter-spacing: 0.1px; }
 .sheet-footer { flex: none; display: flex; gap: 8px; margin-top: 2px; }
-.sheet-footer button { flex: 1; border-radius: 22px; }
+.sheet-footer button { flex: 1; height: 44px; min-height: 44px; border-radius: 22px; font-size: 17px; }
+:root[lang="en"] .sheet-footer button { font-size: 14px; }
 .sheet-footer button.primary { flex: 2; }
 /* #29's own footer: always [Cancel] (110px, line border) + [Confirm]
    (flex-grow, solid, the seated court's own confirm phrase + "Confirm" —
@@ -1163,7 +1170,7 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    page — scoped to ":has(.sheet-head)" so the compact chip's own smaller
    Done/Cancel/target-confirm rows (place-in-progress, campaign/lobby with
    a target picked) keep their old, tighter sizing untouched. */
-.sheet:has(.sheet-head) .sheet-footer button { height: 52px; min-height: 52px; border-radius: 26px; }
+.sheet:has(.sheet-head) .sheet-footer button { height: 44px; min-height: 44px; border-radius: 22px; }
 .sheet:has(.sheet-head) .sheet-footer button:first-child { flex: none; width: 110px; }
 .sheet:has(.sheet-head) .sheet-footer button.primary { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; letter-spacing: 1px; }
 .sheet:has(.sheet-head) .sheet-footer .confirm-zh { font-family: var(--accent-font); font-weight: var(--accent-weight); font-size: 17px; letter-spacing: 2px; }
@@ -1359,7 +1366,7 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 
 /* ---------- desktop (>=1024px) hook points, default OFF ----------
    The actual desktop rules live in desktop.css (all wrapped in its own
-   @media (min-width: 1024px)); these three selectors just give the new
+   @media (min-width: 1024px)); these two selectors just give the new
    desktop-only elements a harmless default so nothing leaks onto a phone
    before desktop.css's media query ever matches. .page-card is
    `display: contents` on mobile — literally invisible to layout, so
@@ -1367,4 +1374,3 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    <body> exactly as before this wrapper existed (#7). */
 .d-frame { display: none; }
 .page-card { display: contents; }
-.sidefoot { display: none; }
