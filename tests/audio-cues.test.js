@@ -141,3 +141,23 @@ test("danger flags: each condition alone, and none at the start of a game", { sk
   assert.deepEqual(w({ turn: st.options.turns }), ["lastTurn"]);
   assert.deepEqual(w({ mandate: -16, weariness: 2, turn: st.options.turns }), ["lastTurn", "mandateChu", "weariness"], "sorted");
 });
+
+// ---------- #64: the tension layer ----------
+test("the tension layer: on while any one-step-from-the-end flag holds, off at the start and off once the game is over", { skip: typeof A.tensionFor !== "function" }, () => {
+  const st = E.createGame(3);
+  assert.equal(A.tensionFor(st), false, "a fresh game is calm");
+  const w = (patch) => ({ ...JSON.parse(JSON.stringify(st)), ...patch });
+  assert.equal(A.tensionFor(w({ mandate: 15 })), true);
+  assert.equal(A.tensionFor(w({ mandate: -15 })), true);
+  assert.equal(A.tensionFor(w({ mandate: 14 })), false);
+  assert.equal(A.tensionFor(w({ weariness: 2 })), true);
+  assert.equal(A.tensionFor(w({ turn: st.options.turns })), true);
+  assert.equal(A.tensionFor(w({ mandate: 20, winner: 0 })), false, "the ending's piece plays alone");
+  assert.equal(A.tensionFor(w({ weariness: 2, winner: 1 })), false);
+  assert.equal(A.tensionFor(null), false);
+  // it is exactly "dangerFlags is not empty" for a live game: a whole game on fallbacks
+  let s2 = E.createGame(5), on = 0, off = 0;
+  while (s2.winner == null) { assert.equal(A.tensionFor(s2), A.dangerFlags(s2).length > 0); A.tensionFor(s2) ? on++ : off++; s2 = fallbackFor(s2, E.mustAct(s2)[0]).state; }
+  assert.equal(A.tensionFor(s2), false, "over");
+  assert.ok(on > 0 && off > 0, `a whole game should be calm at times and tense at times (on ${on}, off ${off})`);
+});
