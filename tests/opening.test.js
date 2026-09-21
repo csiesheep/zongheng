@@ -51,3 +51,15 @@ test("the opening's audio track is at most 48 kHz, which iPhones can decode", ()
   assert.equal(rates.length, 1, `expected one sound track, found ${rates.length}`);
   assert.ok(rates[0] <= 48000, `the audio track runs at ${rates[0]} Hz; iPhones need 48000 or less`);
 });
+
+// #77: the H3 clips came out of the encoder flagged H.264 High @ Level 6.2. iPhones' hardware decoder stops at about Level 5.2
+// and refuses the stream; desktop browsers do not care. 768x1344 at 24 fps needs only Level 4.0. The avcC box's third byte after
+// the version byte is the level (40 = 4.0); the profile must be Baseline, Main or High, 8-bit 4:2:0.
+test("the opening's video is H.264 at a level iPhones decode (at most 4.2)", () => {
+  const buf = fs.readFileSync(new URL("../public/video/opening.mp4", import.meta.url));
+  const i = buf.indexOf("avcC");
+  assert.ok(i > 0, "no avcC box: the video is not H.264");
+  const profile = buf[i + 5], level = buf[i + 7];
+  assert.ok([66, 77, 100].includes(profile), `profile_idc ${profile}: must be Baseline (66), Main (77) or High (100)`);
+  assert.ok(level <= 42, `level_idc ${level} (Level ${level / 10}): iPhones need 4.2 or lower`);
+});
