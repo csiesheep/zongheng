@@ -50,6 +50,7 @@ let sceneGainMul = 1;
 const bufferCache = new Map(); // cue -> AudioBuffer | "missing" | Promise<AudioBuffer|null>
 const lastPlayedAt = new Map(); // cue -> performance.now() of its last play()
 const playingSfx = new Set();   // cue ids audibly playing right now (debug only)
+const recentCues = [];          // #62 part 2: last 30 sfx actually started, {cue, t, rate} (debug only)
 const warned = new Set();
 function warnOnce(key, msg) { if (warned.has(key)) return; warned.add(key); console.warn(msg); }
 
@@ -245,6 +246,14 @@ export async function play(cue, { rate = 1 } = {}) {
     playingSfx.add(cue);
     src.onended = () => playingSfx.delete(cue);
     src.start();
+    // #62 part 2: window.__audio.recent -- a rolling log of the sfx that
+    // actually started (past every guard above: on, not within the 40ms
+    // restart window, in the manifest, decoded, ctx available), for the
+    // orchestrator's hidden-pane verification (no speakers there either) --
+    // this is the one place a "press -> sound" claim can be checked against
+    // the engine's own log for the same stretch.
+    recentCues.push({ cue, t: Date.now(), rate });
+    if (recentCues.length > 30) recentCues.shift();
   } catch (e) { warnOnce(`start:${cue}`, `[audio] start() failed for ${cue}: ${e.message}`); }
 }
 // playBatch(cues): cuesForLog's own output, spaced BATCH_GAP_MS apart so a
@@ -284,5 +293,6 @@ if (typeof window !== "undefined") {
     get requestedScene() { return requestedScene; },
     get settings() { return { sfx: sfxOn, music: musicOn }; },
     get playing() { return Array.from(playingSfx); },
+    get recent() { return recentCues.slice(); },
   };
 }

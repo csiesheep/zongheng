@@ -320,6 +320,13 @@ game.stuck = false;
 // (clearLastMoveMarks) without going through a full render() itself.
 game.lastMoveMarks = {};
 game.lastMoveFresh = false;
+// #62 part 2, item A: the danger flags heard as of the last render (so
+// sfx.warn fires only on a flag's FIRST appearance, never every render
+// while it's still true) and the prompt's own legal.kind as of the last
+// render (so sfx.turn.yours fires only on the wait -> your-decision edge,
+// never on every render while it's already your decision).
+game.lastDangerFlags = [];
+game.lastLegalKind = null;
 // Per-tab: the reconnect token, so two tabs in one browser are two players.
 const sess = {
   get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
@@ -526,6 +533,7 @@ function render() {
   const v = game.room ? game.st : E.view(game.st, game.me);
   game.lastView = v; // layoutTable() re-renders the hand off this if it flips full<->chip
   updateLastMoveMarks(prevView, v); // #41 — renderMap()/decorateAdvisor() below read game.lastMoveMarks off this
+  voiceBoardAudio(prevView, v, game.spectator ? null : game.me); // #62 part 2, item A
   // #30 (owner, iPhone repro): "Turn N · Side" duplicated the topbar's own
   // "Turn N · Era · Action X/Y" line right below it — dropped from ordinary
   // play; the tutorial's "Lesson n/10" is #barMid's only remaining content
@@ -996,6 +1004,19 @@ function roomFor(p, v, id, counts) {
   if (p.side != null) r = Math.min(r, E.capOf(v, id) - E.infOf(v, id)[p.side]);
   return r - (counts[id] || 0);
 }
+// #62 part 2, item A: sfx.map.place's rising pitch for repeated taps on the
+// SAME space -- 1, 1.06, 1.12 … reset to 1 on another space (the `id`
+// mismatch below) OR on a new action (an EMPTY points/picks array can only
+// mean a sequence just started, so it always resets regardless of which
+// space -- covers "confirmed one placement, started the next" the same
+// space id happened to repeat into, which the `id`-alone check couldn't
+// tell from a genuine repeat within the same sequence).
+let placeTapSpace = null, placeTapStreak = 0;
+function placeTapSound(arr, id) {
+  if (arr.length === 0 || id !== placeTapSpace) { placeTapSpace = id; placeTapStreak = 0; }
+  Audio.play("sfx.map.place", { rate: 1 + placeTapStreak * 0.06 });
+  placeTapStreak++;
+}
 function currentMode(v) {
   const none = { lit: new Set(), picked: {}, costs: null, side: E.QIN, onTap() {} };
   const me = game.me, ui = game.ui;
@@ -1010,14 +1031,14 @@ function currentMode(v) {
       if (cost <= left && E.canPlaceAt(trial, me, sp.id) && E.infOf(trial, sp.id)[me] < E.capOf(trial, sp.id)) { lit.add(sp.id); costs[sp.id] = cost; }
     }
     const picked = {}; for (const id of points) picked[id] = (picked[id] || 0) + 1;
-    return { lit, picked, costs, side: me, onTap: (id) => { points.push(id); render(); } };
+    return { lit, picked, costs, side: me, onTap: (id) => { placeTapSound(points, id); points.push(id); render(); } };
   };
   if (L.kind === "pending") {
     const p = L.pending;
     if (p.kind === "points") {
       const counts = {}; for (const id of ui.picks) counts[id] = (counts[id] || 0) + 1;
       const lit = new Set(ui.picks.length < p.n ? p.options.filter((id) => roomFor(p, v, id, counts) > 0) : []);
-      return { lit, picked: counts, costs: null, side: me, onTap: (id) => { ui.picks.push(id); render(); } };
+      return { lit, picked: counts, costs: null, side: me, onTap: (id) => { placeTapSound(ui.picks, id); ui.picks.push(id); render(); } };
     }
     if (p.kind === "ops" && ui.opsUse === "place") return placing(p.ops, ui.points);
     if (p.kind === "ops" && (ui.opsUse === "campaign" || ui.opsUse === "lobby")) {
@@ -1112,6 +1133,39 @@ function updateLastMoveMarks(prevView, v) {
     game.lastMoveMarks = {};
     game.lastMoveFresh = false;
   }
+}
+// #62 part 2, item A: cuesForLog/controlCues/dangerFlags, wired the same
+// way updateLastMoveMarks() above already diffs "two views one render
+// apart" -- same prevI/curI reset rule, so it inherits the same three
+// guarantees for free: nothing voiced on the very first render of a page
+// (a `?resume` or a room's first `view` message both land with
+// `game.lastView` still undefined -- "nothing from the existing log on
+// resume or a reconnect", the issue's own rule), nothing voiced when a new
+// game replaces an old one under the same tab (index goes backwards), and
+// a same-state re-render (language toggle, picking a card) voices nothing
+// because curI === prevI skips the "new entries" branch entirely. The
+// tutorial is excluded outright: its log entries are the scripted lesson's
+// own bookkeeping, not organic play (the issue: "nothing at all during the
+// tutorial's scripted steps unless it is the player's own tap" -- taps get
+// their own sounds at the tap site, not through this log diff).
+function voiceBoardAudio(prevView, v, me) {
+  if (Tut.active()) return;
+  const prevI = lastLogI(prevView), curI = lastLogI(v);
+  const reset = !prevView || curI < prevI;
+  const cues = [];
+  if (!reset && curI > prevI) {
+    const fresh = v.log.filter((l) => l.i > prevI);
+    cues.push(...Cues.cuesForLog(fresh, { me }), ...Cues.controlCues(prevView, v, me));
+  }
+  // dangerFlags reads the state directly (not a diff of the log), so it's
+  // computed on every non-reset render regardless of whether a new action
+  // just resolved -- sfx.warn is for a flag's first APPEARANCE, which
+  // dangerFlags(v) alone can't tell from "still true since last render"
+  // without game.lastDangerFlags to compare against.
+  const flags = Cues.dangerFlags(v);
+  if (!reset && flags.some((f) => !game.lastDangerFlags.includes(f))) cues.push("sfx.warn");
+  game.lastDangerFlags = flags;
+  if (cues.length) Audio.playBatch(cues);
 }
 // Removes the last-move mark from the map WITHOUT a render(): the owner's
 // iPhone lost taps to nodes rebuilt under the finger once before (see the
@@ -1403,19 +1457,28 @@ function confirmPhrase() {
 // by every confirm/cancel row (place/campaign/lobby/bog/headline), so the
 // attribute is only ever set when a caller actually passes one (today,
 // only the headline commit button below).
-function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel, richHTML, confirmDataUse) {
+// #62 part 2, item A: `sound`, when given, plays before `onConfirm` runs AND
+// marks the confirm button `no-tap-sound` (the generic sfx.ui.tap listener,
+// below, skips it) -- "one press, one sound", never both the generic tap
+// and this button's own more specific one. Only the callers that actually
+// have a more specific sound (蓋下's sfx.card.commit, a map confirm's
+// sfx.map.confirm) pass it; every other footer() confirm (event/reform,
+// the plain "bog" discard) is untouched and keeps the generic tap.
+function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel, richHTML, confirmDataUse, sound) {
   const r = row(sh, "sheet-footer");
   btn(r, t("buttons.cancel"), onCancel || (() => { game.ui = freshUi(); render(); }));
   let c;
+  const confirm = sound ? () => { Audio.play(sound); onConfirm(); } : onConfirm;
   if (richHTML) {
     c = document.createElement("button");
     c.type = "button"; c.className = "primary"; c.disabled = !!confirmDisabled; c.innerHTML = confirmLabel;
-    c.onclick = onConfirm;
+    c.onclick = confirm;
     r.appendChild(c);
   } else {
-    c = btn(r, confirmLabel, onConfirm, "primary", null, confirmDisabled);
+    c = btn(r, confirmLabel, confirm, "primary", null, confirmDisabled);
   }
   if (confirmDataUse) c.dataset.use = confirmDataUse;
+  if (sound) c.classList.add("no-tap-sound");
   return r;
 }
 // The five-use grid's own button: one label, in the interface language
@@ -1484,6 +1547,19 @@ function renderPromptAndSheet(v) {
     return;
   }
   const L = E.legal(v, me);
+  // #62 part 2, item A: sfx.turn.yours on the wait -> your-decision edge
+  // ONLY (game.lastLegalKind tracks what the LAST render found, same
+  // one-render-apart convention as updateLastMoveMarks()'s prevView/v) --
+  // never on every render while it's already your decision (a card pick,
+  // a language toggle, anything else that re-renders this same state).
+  // Deliberately fires "also while the document is hidden" (the issue's own
+  // words): Audio.play() itself doesn't check document.hidden, only the
+  // MUSIC layer does, so this needs nothing extra here. Excluded during the
+  // tutorial (its own prompt flips constantly as a scripted device, not a
+  // real turn handoff) and for a spectator (renderPromptAndSheet is only
+  // ever called from render()'s non-spectator branch, so that's automatic).
+  if (!Tut.active() && game.lastLegalKind === "wait" && L.kind !== "wait") Audio.play("sfx.turn.yours");
+  game.lastLegalKind = L.kind;
   // #53 round 2: a genuinely stuck game (no accepted move, not even the
   // fallback's) said so only in the closed log panel -- the prompt itself,
   // where "Waiting for..." lives, kept telling the player to keep waiting
@@ -1503,7 +1579,7 @@ function renderPromptAndSheet(v) {
       // whatever the advisor's own banner will be inserted before (see
       // placeBanner()'s insertBefore(.sheet-history) in advisor-ui.js).
       if (!Tut.active()) historyBox(mid, ui.card, lang);
-      footer(sh, t("buttons.headline"), () => humanAct({ type: "headline", card: ui.card }), false, () => { game.ui = freshUi(); render(); }, false, "headline");
+      footer(sh, t("buttons.headline"), () => humanAct({ type: "headline", card: ui.card }), false, () => { game.ui = freshUi(); render(); }, false, "headline", "sfx.card.commit");
     }
     return;
   }
@@ -1642,7 +1718,7 @@ function renderPromptAndSheet(v) {
     }
     const { spent } = placementTrial(v, me, ui.points);
     setPrompt(t("prompt.place", { ops: info.ops, left: info.ops - spent }));
-    footer(sh, t("buttons.done"), () => humanAct({ ...base, points: ui.points }), ui.points.length === 0, () => { ui.points = []; render(); });
+    footer(sh, t("buttons.done"), () => humanAct({ ...base, points: ui.points }), ui.points.length === 0, () => { ui.points = []; render(); }, false, "place", "sfx.map.confirm");
     return;
   }
   // campaign or lobby
@@ -1653,7 +1729,7 @@ function renderPromptAndSheet(v) {
     if (ui.use === "campaign") { const r = E.campaign(trial, me, ui.target, info.ops); text = t("preview.campaign", { removed: r.removed, placed: r.placed, w: t("weariness." + trial.weariness) }); }
     else { const e = E.edge(v, me, ui.target); text = t("preview.lobby", { edge: e, n: Math.min(info.ops, e) }); }
     note(sh, `${spaceName(ui.target)}: ${text}`);
-    footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}`, () => humanAct({ ...base, target: ui.target }), false);
+    footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}`, () => humanAct({ ...base, target: ui.target }), false, undefined, false, ui.use, "sfx.map.confirm");
     // #24 round 3 (owner): the target's own preview note above already
     // restates what the parked sheet-title would say ("Campaign with N
     // ops" vs "Xinzheng: removes…") — once a target is picked, keeping
@@ -1668,6 +1744,17 @@ function renderPromptAndSheet(v) {
   }
 }
 
+// #62 part 2, item A: same "one press, one sound" wrapping footer() does
+// for its own confirm button (above), for the three renderPending() map
+// confirms that use the plain btn() helper instead of footer() (the
+// points/setup confirm and the two "ops" pending confirms) -- plays
+// `sound` before `onClick`, and marks the button so the generic sfx.ui.tap
+// listener (below) skips it.
+function btnSound(parent, label, onClick, sound, cls = "primary", pressed = null, disabled = false) {
+  const b = btn(parent, label, () => { Audio.play(sound); onClick(); }, cls, pressed, disabled);
+  b.classList.add("no-tap-sound");
+  return b;
+}
 function renderPending(v, p, setPrompt, sh) {
   const ui = game.ui;
   // #54: every pending kind (points/card/option/ops) answers entirely
@@ -1688,7 +1775,7 @@ function renderPending(v, p, setPrompt, sh) {
     const key = p.tag === "setup" ? (p.min === v.options.comp && v.turn === 0 && game.me === 1 && !p.options.includes("ying") ? "setupBonus" : "setup") : p.min < p.n ? "pointsMin" : "points";
     setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t(`prompt.${key}`, { n: p.n, left: p.n - ui.picks.length })}`);
     const r = row(sh);
-    btn(r, t("buttons.confirm"), () => humanAct({ type: "choose", choice: ui.picks }), "primary", null, ui.picks.length < p.min);
+    btnSound(r, t("buttons.confirm"), () => humanAct({ type: "choose", choice: ui.picks }), "sfx.map.confirm", "primary", null, ui.picks.length < p.min);
     btn(r, t("buttons.cancel"), () => { ui.picks = []; render(); }, "", null, ui.picks.length === 0);
     return;
   }
@@ -1734,10 +1821,10 @@ function renderPending(v, p, setPrompt, sh) {
       const { spent } = placementTrial(v, game.me, ui.points);
       note(sh, t("prompt.place", { ops: p.ops, left: p.ops - spent }));
       const r2 = row(sh);
-      btn(r2, t("buttons.done"), () => humanAct({ type: "choose", choice: { use: "place", points: ui.points } }), "primary", null, ui.points.length === 0);
+      btnSound(r2, t("buttons.done"), () => humanAct({ type: "choose", choice: { use: "place", points: ui.points } }), "sfx.map.confirm", "primary", null, ui.points.length === 0);
       btn(r2, t("buttons.cancel"), () => { ui.points = []; render(); });
     } else if (ui.opsUse && ui.target) {
-      btn(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.opsUse}`)} · ${spaceName(ui.target)}`, () => humanAct({ type: "choose", choice: { use: ui.opsUse, target: ui.target } }), "primary");
+      btnSound(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.opsUse}`)} · ${spaceName(ui.target)}`, () => humanAct({ type: "choose", choice: { use: ui.opsUse, target: ui.target } }), "sfx.map.confirm", "primary");
     }
   }
 }
@@ -1776,7 +1863,12 @@ function renderHand(v, mode) {
     const ci = `<span class="ci"><span class="ops ${kind}">${esc(opsLabel(id))}</span><span class="nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span></span>`;
     b.innerHTML = chip ? ci : `<img class="cardimg" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` + ci;
     b.disabled = !canPick;
-    b.onclick = () => { game.ui = freshUi(ui.card === id ? null : id); render(); };
+    b.onclick = () => {
+      const opening = ui.card !== id; // #62 part 2: "a hand card opens" -- not closing it back down (tapping the same open card again)
+      game.ui = freshUi(ui.card === id ? null : id);
+      if (opening) Audio.play("sfx.card.pick");
+      render();
+    };
     el.appendChild(b);
   };
   for (const id of hand) tile(id);
@@ -2423,21 +2515,36 @@ function renderLobby() {
   if (showLevel) seg($("lobbyLevel"), [["easy", t("setup.easy")], ["normal", t("setup.normal")], ["hard", t("setup.hard")]], room.settings?.level || "normal", (v) => { if (room.isHost) send({ type: "settings", level: v }); });
   renderLobbyActions();
 }
+// #62 part 2, item A: the room clock's own tick/last-second sounds --
+// `lastClockS` (not just "did the interval fire") so a fresh deadline
+// starting at s=10 always plays even if the PREVIOUS deadline also
+// happened to end at s=10, and so this fires once per distinct second even
+// if the 1000ms interval drifts a little. Reset to null whenever there's no
+// active deadline to count down (the guard clause below), so the next real
+// deadline starts clean.
+let lastClockS = null;
 setInterval(() => {
-  if (!game.room || !game.st || game.st.winner != null || !room.deadline) return;
+  if (!game.room || !game.st || game.st.winner != null || !room.deadline) { lastClockS = null; return; }
   const s = Math.max(0, Math.ceil((room.deadline - Date.now()) / 1000));
   $("barMid").textContent = `${t("tracks.turn")} ${game.st.turn} · ${game.spectator ? "" : sideName(game.me)} · ${t("lobby.clock", { s })}`;
   layoutBar();
+  if (s !== lastClockS) {
+    if (s >= 4 && s <= 10) Audio.play("sfx.turn.clock.tick");
+    else if (s >= 1 && s <= 3) Audio.play("sfx.turn.clock.last");
+    lastClockS = s;
+  }
 }, 1000);
 
 // #62: sfx.ui.tap on every button/link-button press EXCEPT the map's hit
-// buttons (#hitLayer -- placing/campaigning/lobbying already gets its own
-// sfx.map.* cues, part 2) and the hand cards (same reason, sfx.card.pick/
-// commit are part 2's job too). Capture phase so it still fires when a
-// handler underneath calls stopPropagation.
+// buttons (#hitLayer -- placing/campaigning/lobbying get their own sfx.map.*
+// cues), the hand cards (sfx.card.pick/commit), and anything footer()/
+// btnSound() marked `.no-tap-sound` (蓋下 and every map confirm: "one press,
+// one sound", never the generic tap doubled with a more specific one).
+// Capture phase so it still fires when a handler underneath calls
+// stopPropagation.
 document.addEventListener("click", (ev) => {
   const el = ev.target.closest("button, a");
-  if (!el || el.closest("#hitLayer") || el.closest(".hand")) return;
+  if (!el || el.closest("#hitLayer") || el.closest(".hand") || el.closest(".no-tap-sound")) return;
   Audio.play("sfx.ui.tap");
 }, true);
 
