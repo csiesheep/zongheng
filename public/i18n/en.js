@@ -125,15 +125,21 @@ export default {
   // the only file that reads this section.
   oppmove: {
     playedTag: "{side} played", useOps: "For {use} · {ops} ops",
+    useEvent: "Played as event", useScoringEvent: "Scoring card · played as event",
     eventMine: "This is {side}'s card -- its event happens for you too: {text}",
     eventNeutral: "A neutral card -- its event happens for you too: {text}",
     eventTheirs: "Event: {text}", eventHeadline: "Headline: {text}",
     tapHint: "Tap to skip",
-    tickerPlace: "② {side} places {n} at {space}", tickerCampaign: "② {side} campaigns {target}: removes {removed}, places {placed}",
-    tickerLobby: "② {side} lobbies {target}: removes {removed}", tickerReform: "② {side}'s reform reaches box {box}",
-    tickerMandate: "② Mandate {value}", tickerTire: "② Weariness falls to {to}", tickerSeal: "② Chu gains {state}'s seal",
-    tickerUnseal: "② Chu loses {state}'s seal", tickerMie: "② Qin destroys {state}", tickerRestore: "② {state} is restored",
-    tickerJiuding: "② The Cauldrons pass face down to {side}", tickerFinal: "② Changes from the event",
+    tickerPlace: "{side} places {n} at {space}", tickerCampaign: "{side} campaigns {target}: removes {removed}, places {placed}",
+    tickerLobby: "{side} lobbies {target}: removes {removed}", tickerReform: "{side}'s reform reaches box {box}",
+    // The change and who got it, e.g. "Mandate Chu +1" -- never the resulting
+    // total alone (that reads as the OTHER side's number). tickerMandateArrow
+    // is appended only when the total is worth showing alongside the change.
+    tickerMandate: "Mandate {side} +{n}", tickerMandateArrow: " → {to}",
+    tickerScore: "{region} scores: Qin {q}, Chu {c}",
+    tickerTire: "Weariness falls to {to}", tickerSeal: "Chu gains {state}'s seal",
+    tickerUnseal: "Chu loses {state}'s seal", tickerMie: "Qin destroys {state}", tickerRestore: "{state} is restored",
+    tickerJiuding: "The Cauldrons pass face down to {side}", tickerFinal: "Changes from the event",
     chipHeadline: "Headline ›", chipEvent: "Event ›", chipOpsEvent: "{use} {ops} · event also happens ›", chipOps: "{use} {ops} ›",
     playedVerb: "played", sheetHeading: "In order · tap a row to see it on the map", prevMove: "‹ Previous move",
   },
