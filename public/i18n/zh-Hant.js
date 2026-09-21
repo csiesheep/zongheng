@@ -36,7 +36,13 @@ export default {
   // #51:圓盤的控制環拿掉、只留色調之後,「誰控制」只能靠色調的深淺看出來
   // (黑/紅 = 控制,灰/粉紅 = 有影響力但沒控制)——所以每個據點的點擊按鈕
   // title 要把兩邊點數與控制方講清楚(hitInf、controls),不能只靠畫面。
-  map: { hitTitle: "{space} · 安定{stability}", hitInf: "秦{qin} 楚{chu}", controls: "{side}控制" },
+  map: {
+    hitTitle: "{space} · 安定{stability}", hitInf: "秦{qin} 楚{chu}", controls: "{side}控制",
+    // #89: 相印進度標記——楚控制國都但還沒堆滿時的「印 3/4」小牌,以及已相印
+    // 的實心「印」。sealHelp 是點狀態列 相印 數字時顯示在提示區的一句話說明。
+    sealProgress: "印 {have}/{need}", sealed: "印", sealWord: "印",
+    sealHelp: "楚控制國都且影響力堆滿(穩定度 +2)才得相印",
+  },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },
   setup: { defaultName: "玩家" },
   sys: { joined: "{name} 進來了。", left: "{name} 離開了。", leftGame: "{name} 離開了,由電腦代打。", dealt: "發牌了。", timeout: "{name} 逾時,由桌面代為決定。", over: "{side}({name})獲勝:{reason}。", fallback: "對手這一手出了問題,已改用保底動作:{action}。", stuck: "對手無法行動,這一局無法繼續。" },

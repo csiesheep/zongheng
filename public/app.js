@@ -20,8 +20,9 @@ import {
   DESIGN_W, DESIGN_H, NODE_POS, nodeCenter, regionMembers, isCapital,
   renderRegionBlobs, renderRoads, REGION_LABEL_POS,
   NODE_BREAK_EN, NODE_SMALL_EN, NODE_ANCHOR, nodeLabelHTML, stabilityTagHTML,
-  NODE_STAB_RIGHT, NODE_STAB_HI, NODE_PILL_POS,
+  NODE_STAB_RIGHT, NODE_STAB_HI, NODE_PILL_POS, SEAL_MARK_POS,
 } from "./map-draw.js";
+import { sealProgress } from "./seal-progress.js"; // #89: 相印 progress marks on the capitals
 import { computeLastMoveMarks } from "./lastmove.js";
 import * as OppUI from "./oppmove-ui.js"; // #79: the opponent's-move reveal (card panel/steps/chip/sheet)
 import * as LogView from "./log-view.js"; // #88: the log panel's own rows/chips and its tap-to-flash overlay
@@ -1376,6 +1377,7 @@ function renderMap(v) {
     el.appendChild(lbl);
   }
   const mode = currentMode(v);
+  const seals = sealProgress(v); // #89: { capital, chuControls, have, need, sealed } per state, read once per render
   for (const sp of E.SPACES) {
     const [x, y] = NODE_POS[sp.id], [q, c] = E.infOf(v, sp.id), ctl = E.controller(v, sp.id);
     const cap = isCapital(sp.id);
@@ -1402,6 +1404,46 @@ function renderMap(v) {
     // this used to draw (.node.ctlq/.ctlc .disc, style.css), so control now
     // only shows as the disc's OWN tone (dark = controlled), computed below.
     const parts = discParts(q, c, ctl);
+    // #89: the seal-progress mark, only for a capital (sp.state names the
+    // state a capital belongs to; seal-progress.js keys its output by that
+    // same state id). "Chu controls, not yet sealed" gets the "N/M" pill
+    // (glowing one point short); sealed gets the filled mark with no
+    // numbers; anything else (Qin controls, nobody does, or Chu has
+    // influence without control) draws nothing — sp.state is null for every
+    // non-capital space so this stays undefined there.
+    const seal = cap && sp.state ? seals[sp.state] : null;
+    // #89 round 2: SEAL_MARK_POS gives {dx,dy} pixels (the mark's own centre
+    // off the node's centre), applied as an inline transform — a capital's
+    // disc/.hit footprint is too big for the named-corner pill grid (see
+    // map-draw.js's own comment on SEAL_MARK_POS).
+    const sp89 = SEAL_MARK_POS[sp.id];
+    const sealStyle = sp89 ? ` style="transform:translate(calc(-50% + ${sp89.dx}px), calc(-50% + ${sp89.dy}px))"` : "";
+    // #89 round 2: when the nearest collision-free spot is far from the
+    // capital (ji's own corner is boxed in by Zhongshan/Dai/Liaodong and the
+    // map's own top edge — nothing closer than 132 design px is clear of
+    // every disc/.hit/.stab/.nm/region-label), a thin leader line ties the
+    // mark back to its capital (orchestrator's own suggested fix) instead of
+    // leaving it floating with no visible connection.
+    const sealDist = sp89 ? Math.hypot(sp89.dx, sp89.dy) : 0;
+    const LEADER_MIN = 60;
+    let sealLineHTML = "";
+    if (sp89 && sealDist > LEADER_MIN) {
+      const angle = Math.atan2(sp89.dy, sp89.dx) * 180 / Math.PI;
+      const inset = 18, len = Math.max(0, sealDist - inset - 12);
+      sealLineHTML = `<span class="seal-mark-line" aria-hidden="true" style="width:${len}px;transform:translate(${inset * Math.cos(angle * Math.PI / 180)}px, ${inset * Math.sin(angle * Math.PI / 180)}px) rotate(${angle}deg)"></span>`;
+    }
+    // #89 round 2: the progress pill wraps onto two lines (印/Seal, then the
+    // fraction) instead of one long line -- a map this dense has more spare
+    // HEIGHT near a capital than spare WIDTH (orchestrator's "shrink it
+    // slightly" allowance; still >=11px per line, just narrower overall so
+    // it clears neighbours a single "印 3/4"/"Seal 3/4" line could not).
+    // aria-hidden either way (map.sealProgress still carries the full
+    // sentence for anything that reads state off the DOM in one string).
+    const sealMarkHTML = seal && seal.sealed
+      ? `<span class="seal-mark sm-sealed"${sealStyle} aria-hidden="true">${esc(t("map.sealed"))}</span>`
+      : seal && seal.chuControls
+      ? `<span class="seal-mark sm-progress${seal.have === seal.need - 1 ? " sm-glow sm-pulse" : ""}"${sealStyle} aria-hidden="true" title="${esc(t("map.sealProgress", { have: seal.have, need: seal.need }))}">${esc(t("map.sealWord"))}<br>${seal.have}/${seal.need}</span>`
+      : "";
     const vis = document.createElement("div");
     vis.className = "node" + (big ? " big" : "") + (empty ? " empty" : "") + (anchor ? ` anchor-${anchor}` : "") +
       (NODE_STAB_RIGHT.has(sp.id) ? " stab-r" : "") + (NODE_STAB_HI.has(sp.id) ? " stab-hi" : "") +
@@ -1423,6 +1465,7 @@ function renderMap(v) {
       (picked ? `<span class="badge">+${picked}</span>` : "") +
       (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
       (mvTag ? `<span class="lastmove-tag${lastMoveTagClass(mv)}" aria-hidden="true">${esc(mvTag)}</span>` : "") +
+      (sealMarkHTML ? sealLineHTML : "") + sealMarkHTML +
       nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc);
     el.appendChild(vis);
     const hb = document.createElement("button");
@@ -1443,6 +1486,16 @@ function renderMap(v) {
   // layoutTable() (the caller's caller) sizes and scales the map once every
   // sibling has its final height — see fitMap().
 }
+// #89: tapping the statline's 相印/Seals value shows a one-line explanation
+// of the rule in the prompt area (the map marks show the per-state progress
+// already; this is the one line for "why does it read 2/4"). One delegated
+// listener (renderStatLine() rebuilds the column's innerHTML every render,
+// so a per-element handler would be lost) targeting data-stat="seals" — the
+// same hook oppmove-ui.js reads for its own, unrelated purpose (a gold glow
+// rect), so this only adds a click, never touches that.
+$("statline").addEventListener("click", (e) => {
+  if (e.target.closest('[data-stat="seals"]')) $("promptText").textContent = t("map.sealHelp");
+});
 // The design canvas (DESIGN_W x DESIGN_H) is the C2_Game mockup's own
 // dimensions, scaled by the viewport WIDTH ratio only — never shrunk further
 // for a lack of height, so a real phone always renders the map at (at

@@ -171,6 +171,34 @@ export const NODE_PILL_POS = {
   ying: "r", wuyue: "r",
   ji: "trl", zhongshan: "r", dai: "r",
 };
+// #89: the seal-progress mark's own position table — only the five capitals
+// ever carry this mark. Orchestrator's ruling (round 2): NODE_PILL_POS's
+// named-corner offsets (-6/-8 from the node's own edge) are tuned for the
+// tiny 18x18 +N badge/last-move tag on an ordinary disc; a capital's disc is
+// big (34px) AND its own .hit target is a 47x47 box centred on the same
+// point, so those corners still land on the disc/.hit/.stab/region-label.
+// Each entry here is a {dx, dy} PIXEL offset of the mark's own CENTRE from
+// the node's centre (app.js turns it into an inline transform on the mark
+// itself) — free placement, not the 7-slot pill grid, so a capital can be
+// pushed however far out it needs; app.js draws a thin leader line back to
+// the disc past a distance threshold (linzi, ji) so a far mark still reads
+// as belonging to its own capital.
+// Checked with an exhaustive getBoundingClientRect overlap sweep — every
+// .seal-mark against every disc/.hit/.stab/.nm/region-label/badge/
+// lastmove-tag/other .seal-mark under #map (own node's own elements
+// included, not just neighbours) — at 390x669 zh, 375x667 en and 1280x800,
+// zh+en at 1280 too, in three states: all five capitals sealed (narrow
+// "印"/"Seal"), all five Chu-controlled one point short (wide "印 3/4"/
+// "Seal 3/4"), and the owner's own repro (#89 issue comment). Zero hits in
+// all combinations. linzi and ji's positions are a matched pair — each
+// found independently but only valid together (the map's open pockets near
+// the three-jin/north-east clusters are scarce enough that several
+// capitals' "nearest clear spot" collide with each other, not just with
+// discs/names).
+export const SEAL_MARK_POS = {
+  xinzheng: { dx: 40, dy: 0 }, handan: { dx: -46, dy: 0 }, daliang: { dx: -46, dy: 2 },
+  linzi: { dx: 20, dy: 90 }, ji: { dx: 128, dy: 34 },
+};
 // `name` is the already-resolved display name (the caller's own spaceName()
 // — app.js and rules.js each have their own, reading the same E.SPACE[id]
 // but keyed to their own current language); `esc` is the caller's own HTML
