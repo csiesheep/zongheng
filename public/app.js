@@ -583,7 +583,12 @@ function render() {
   const boardCues = voiceBoardAudio(prevView, v, audioMe);
   const yours = !game.spectator && v.winner == null && yoursFires(v, game.me);
   const voiced = boardCues.cues.slice();
-  if (yours && !boardCues.hasOver) {
+  // S5: the horn (sfx.turn.headline, part of a `turn` entry's own three
+  // cues) already IS the call to act -- sfx.turn.yours is only for the
+  // ordinary wait -> your-decision edge that happens WITHOUT a fresh turn
+  // bell (the opponent/bot just finished their action round, and now it's
+  // this seat's turn to answer, mid-turn).
+  if (yours && !boardCues.hasOver && !boardCues.hasTurn) {
     if (voiced.length) voiced.push("sfx.turn.yours"); // end of the batch, same 180ms spacing
     else Audio.play("sfx.turn.yours"); // no batch this render: plays at once, as before
   }
@@ -1070,7 +1075,7 @@ function roomFor(p, v, id, counts) {
 let placeTapSpace = null, placeTapStreak = 0;
 function placeTapSound(arr, id) {
   if (arr.length === 0 || id !== placeTapSpace) { placeTapSpace = id; placeTapStreak = 0; }
-  Audio.play("sfx.map.place", { rate: 1 + placeTapStreak * 0.06 });
+  Audio.play("sfx.map.place", { rate: 1 + placeTapStreak * 0.06, isPress: true }); // #66 S5 follow-up
   placeTapStreak++;
 }
 function currentMode(v) {
@@ -1212,14 +1217,22 @@ function updateLastMoveMarks(prevView, v) {
 // `hasOver` is read straight off the fresh log entries (not the cue string):
 // a game-ending batch never gets the reminder appended, win or lose.
 function voiceBoardAudio(prevView, v, me) {
-  if (Tut.active()) return { cues: [], hasOver: false };
+  if (Tut.active()) return { cues: [], hasOver: false, hasTurn: false };
   const prevI = lastLogI(prevView), curI = lastLogI(v);
   const reset = !prevView || curI < prevI;
   const cues = [];
-  let hasOver = false;
+  let hasOver = false, hasTurn = false;
   if (!reset && curI > prevI) {
     const fresh = v.log.filter((l) => l.i > prevI);
     hasOver = fresh.some((l) => l.type === "over");
+    // S5: a `turn` entry's own cues already include the horn calling the
+    // headline phase (sfx.turn.headline) -- that IS the call to act, so
+    // render() below skips appending sfx.turn.yours to a batch built from
+    // this. Read off the raw entries, not the cue string: a turn's cues
+    // could in principle be trimmed by the four-cue cap in a busy batch,
+    // but the rule is about the ENTRY happening, not about which of its
+    // sounds survived the cut.
+    hasTurn = fresh.some((l) => l.type === "turn");
     cues.push(...Cues.cuesForLog(fresh, { me }), ...Cues.controlCues(prevView, v, me));
   }
   // dangerFlags reads the state directly (not a diff of the log), so it's
@@ -1230,7 +1243,7 @@ function voiceBoardAudio(prevView, v, me) {
   const flags = Cues.dangerFlags(v);
   if (!reset && flags.some((f) => !game.lastDangerFlags.includes(f))) cues.push("sfx.warn");
   game.lastDangerFlags = flags;
-  return { cues, hasOver };
+  return { cues, hasOver, hasTurn };
 }
 // #62 part 2 fix 1 (orchestrator, from a played turn's own cue list: a
 // bot's move produced sfx.map.campaign 4ms after sfx.turn.yours had already
@@ -1551,7 +1564,7 @@ function footer(sh, confirmLabel, onConfirm, confirmDisabled, onCancel, richHTML
   const r = row(sh, "sheet-footer");
   btn(r, t("buttons.cancel"), onCancel || (() => { game.ui = freshUi(); render(); }));
   let c;
-  const confirm = sound ? () => { Audio.play(sound); onConfirm(); } : onConfirm;
+  const confirm = sound ? () => { Audio.play(sound, { isPress: true }); onConfirm(); } : onConfirm; // #66 S5 follow-up
   if (richHTML) {
     c = document.createElement("button");
     c.type = "button"; c.className = "primary"; c.disabled = !!confirmDisabled; c.innerHTML = confirmLabel;
@@ -1825,7 +1838,7 @@ function renderPromptAndSheet(v) {
 // `sound` before `onClick`, and marks the button so the generic sfx.ui.tap
 // listener (below) skips it.
 function btnSound(parent, label, onClick, sound, cls = "primary", pressed = null, disabled = false) {
-  const b = btn(parent, label, () => { Audio.play(sound); onClick(); }, cls, pressed, disabled);
+  const b = btn(parent, label, () => { Audio.play(sound, { isPress: true }); onClick(); }, cls, pressed, disabled); // #66 S5 follow-up
   b.classList.add("no-tap-sound");
   return b;
 }
@@ -1940,7 +1953,7 @@ function renderHand(v, mode) {
     b.onclick = () => {
       const opening = ui.card !== id; // #62 part 2: "a hand card opens" -- not closing it back down (tapping the same open card again)
       game.ui = freshUi(ui.card === id ? null : id);
-      if (opening) Audio.play("sfx.card.pick");
+      if (opening) Audio.play("sfx.card.pick", { isPress: true }); // #66 S5 follow-up
       render();
     };
     el.appendChild(b);
@@ -2093,7 +2106,7 @@ function logLineNodes(l, clickable, pill) {
     const root = document.createElement(wholeLine ? "button" : "div");
     if (wholeLine) {
       root.type = "button";
-      root.className = "log-line-link";
+      root.className = "log-line-link no-tap-sound"; // #66: opens the peek with sfx.ui.open, not the generic tap
       const [ref] = Object.values(refs);
       root.onclick = (ev) => { ev.stopPropagation(); openPeek(ref.id, ref.side); };
     }
@@ -2135,7 +2148,7 @@ function logLineNodes(l, clickable, pill) {
 function cardLinkButton(id, side, pill) {
   const b = document.createElement("button");
   b.type = "button";
-  b.className = "log-card-link" + (pill ? " pill" : "");
+  b.className = "log-card-link" + (pill ? " pill" : "") + " no-tap-sound"; // #66: opens the peek with sfx.ui.open, not the generic tap
   b.textContent = cardName(id);
   b.onclick = (ev) => { ev.stopPropagation(); openPeek(id, side); };
   return b;
@@ -2152,12 +2165,19 @@ function cardLinkButton(id, side, pill) {
 // page (renderPromptAndSheet, below) still draws itself with this file's own
 // cardHeader/cardTextBox/sheetMid: it has no room for history at 669px and
 // the owner never asked for it there.
+// #66: sfx.ui.open/close for the read-only peek -- both the news strip's and
+// the log panel's own card links (logLineNodes()/cardLinkButton() below,
+// both marked .no-tap-sound so the generic sfx.ui.tap listener never doubles
+// up with this) and this module's own Close button (card-view.js's own
+// button, marked .no-tap-sound there for the same reason -- see that file).
 function openPeek(cardId, side) {
   game.peek = { card: cardId, side };
+  Audio.play("sfx.ui.open");
   renderPeek();
 }
 function closePeek() {
   game.peek = null;
+  Audio.play("sfx.ui.close");
   renderPeek();
 }
 function renderPeek() {
@@ -2306,10 +2326,25 @@ function setLogOpen(open) {
   $("logScrim").hidden = !open;
   syncLogToggleLabel();
 }
-$("logClose").onclick = () => setLogOpen(false);
-$("logScrim").onclick = () => setLogOpen(false);
-$("logToggle").onclick = () => { setLogOpen($("logBody").hidden); if (game.st) renderLog(E.view(game.st, game.me)); };
-$("sideFootBtn").onclick = () => { setLogOpen($("logBody").hidden); if (game.st) renderLog(game.room ? game.st : E.view(game.st, game.me)); };
+// #66: sfx.ui.open/close on the log panel's own user-driven opens/closes
+// only -- NOT setLogOpen(false)'s other caller (a fresh game's initial
+// reset, before the panel has ever been shown to anyone). Each of these four
+// controls is marked .no-tap-sound in play.html so the generic sfx.ui.tap
+// listener never doubles up with the more specific sound played here.
+$("logClose").onclick = () => { setLogOpen(false); Audio.play("sfx.ui.close"); };
+$("logScrim").onclick = () => { setLogOpen(false); Audio.play("sfx.ui.close"); };
+$("logToggle").onclick = () => {
+  const opening = $("logBody").hidden;
+  setLogOpen(opening);
+  Audio.play(opening ? "sfx.ui.open" : "sfx.ui.close");
+  if (game.st) renderLog(E.view(game.st, game.me));
+};
+$("sideFootBtn").onclick = () => {
+  const opening = $("logBody").hidden;
+  setLogOpen(opening);
+  Audio.play(opening ? "sfx.ui.open" : "sfx.ui.close");
+  if (game.st) renderLog(game.room ? game.st : E.view(game.st, game.me));
+};
 
 // The result screen's whole colour follows the WINNER, not your own seat
 // (owner, 2026-09-19: "for win page, the background should be the winner's
@@ -2418,6 +2453,24 @@ function leaveRoom() {
   room.ws = null; game.room = false; game.st = null;
   try { sessionStorage.removeItem("zh.lastRoom"); } catch {}
 }
+// #66 (S5): the room's "say" system lines are server-rendered TEXT with no
+// structured key -- src/room.js's this.t(key, {name}) fills in the exact
+// same public/i18n `sys.*` templates this client ships (both files, not
+// src/, which stays untouched), in the room's OWN language (`room.settings.
+// lang`, shared by every seat regardless of each viewer's own display
+// language) -- so matching `m.text` back against those templates (escaped,
+// `{name}` loosened to a wildcard) recovers which system event a line is.
+// Never exercised: rooms need the Worker, absent from this sandbox (see the
+// handover) -- read straight off src/room.js's own this.say() call sites.
+function sysMatches(text, key) {
+  for (const table of [en.sys, zh.sys]) {
+    const tpl = table && table[key];
+    if (!tpl) continue;
+    const pattern = "^" + tpl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace("\\{name\\}", "[\\s\\S]*") + "$";
+    if (new RegExp(pattern).test(text)) return true;
+  }
+  return false;
+}
 function onRoomMsg(m) {
   switch (m.type) {
     case "joined":
@@ -2448,6 +2501,24 @@ function onRoomMsg(m) {
       if (!m.sys) setLogOpen(true);
       if (game.st) renderLog(game.st);
       renderLobbyChat();
+      // #66 (S5): a chat line from someone else -- `m.seat` is an INDEX into
+      // `room.seats` (same as the name lookup two lines up), while
+      // `room.me` is a SIDE (0/1) from the "joined" message, so "my own
+      // line" is `room.seats[m.seat]?.side === room.me`, not `m.seat ===
+      // room.me` (those are different domains and can disagree once seats
+      // reorder). sys.joined can never be OUR OWN join: src/room.js's own
+      // join handler (read, not touched) calls this.say() BEFORE
+      // ctx.acceptWebSocket() registers the new socket, so the joining
+      // client's own connection is never in that broadcast's audience --
+      // every sys.joined a client receives is already "another" seat.
+      if (m.sys) {
+        if (sysMatches(m.text, "joined")) Audio.play("sfx.room.join");
+        else if (sysMatches(m.text, "left") || sysMatches(m.text, "leftGame")) Audio.play("sfx.room.leave");
+        else if (sysMatches(m.text, "timeout")) Audio.play("sfx.turn.timeout");
+        else if (sysMatches(m.text, "dealt")) Audio.play("sfx.room.start"); // the lobby turning into the table
+      } else if (room.seats[m.seat]?.side !== room.me) {
+        Audio.play("sfx.room.chat");
+      }
       break;
     case "log":
       room.chat = m.entries.map((e) => (e.sys ? e.text : `${room.seats[e.seat]?.name ?? ""}: ${e.text}`)).slice(-50);
@@ -2628,7 +2699,7 @@ setInterval(() => {
 document.addEventListener("click", (ev) => {
   const el = ev.target.closest("button, a");
   if (!el || el.closest("#hitLayer") || el.closest(".hand") || el.closest(".no-tap-sound")) return;
-  Audio.play("sfx.ui.tap");
+  Audio.play("sfx.ui.tap", { isPress: true }); // #66 S5 follow-up: a Confirm's own batch waits on this
 }, true);
 
 // ---------- boot ----------

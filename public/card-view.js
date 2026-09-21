@@ -125,7 +125,11 @@ export function renderCardView(container, id, lang, opts = {}) {
   }
   const foot = document.createElement("div"); foot.className = "peek-footer"; container.appendChild(foot);
   const btn = document.createElement("button");
-  btn.type = "button"; btn.className = "primary"; btn.textContent = t(lang, "buttons.close");
+  // #66 (FE, cross-boundary -- flagged at handover): `no-tap-sound` so app.js's
+  // peek (openPeek/closePeek: sfx.ui.open/close) never doubles with the
+  // generic sfx.ui.tap listener there; harmless on the rules page's own
+  // card detail view (rules.js has no such listener at all).
+  btn.type = "button"; btn.className = "primary no-tap-sound"; btn.textContent = t(lang, "buttons.close");
   btn.onclick = () => opts.onClose && opts.onClose();
   foot.appendChild(btn);
   return container;

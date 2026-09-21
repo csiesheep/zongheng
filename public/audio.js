@@ -315,12 +315,24 @@ function getBuffer(cue, entry) {
   bufferCache.set(cue, p);
   return p;
 }
-// play(cue, { rate }): a one-shot sound. Never throws -- a missing file, a
-// failed decode or a refused start all just warn once and go silent for
-// that cue (the issue's own rule).
-export async function play(cue, { rate = 1 } = {}) {
+// #66 (S5 follow-up, orchestrator's finding on ae62c49): a "press" sound and
+// the first cue of a batch the SAME press causes (Confirm on an enemy card,
+// a map confirm, 蓋下, a hand tap) can land close enough together to read as
+// one smeared sound. `isPress` is a flag on the CALL, not a second list of
+// cue names duplicating the one already in app.js's own callers (footer()/
+// btnSound()'s `sound` param, placeTapSound, the generic sfx.ui.tap
+// listener, sfx.card.pick) -- this module only ever learns "a press just
+// happened at time T", never which cue name means "press". `lastPressAt` is
+// stamped at CALL time (before any await), which is when the press logically
+// occurred; playBatch() below reads it to decide the batch's own lead-in.
+let lastPressAt = -Infinity;
+// play(cue, { rate, isPress }): a one-shot sound. Never throws -- a missing
+// file, a failed decode or a refused start all just warn once and go silent
+// for that cue (the issue's own rule).
+export async function play(cue, { rate = 1, isPress = false } = {}) {
   if (!sfxOn) return;
   const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  if (isPress) lastPressAt = now;
   const last = lastPlayedAt.get(cue) || 0;
   if (now - last < RESTART_GUARD_MS) return; // "not restarted within 40 ms"
   lastPlayedAt.set(cue, now);
@@ -351,10 +363,34 @@ export async function play(cue, { rate = 1 } = {}) {
     if (recentCues.length > 30) recentCues.shift();
   } catch (e) { warnOnce(`start:${cue}`, `[audio] start() failed for ${cue}: ${e.message}`); }
 }
-// playBatch(cues): cuesForLog's own output, spaced BATCH_GAP_MS apart so a
-// bot's whole turn doesn't land as one chord.
+// #66 (S5): a new turn is now three cues long (sfx.turn.new, sfx.card.deal,
+// sfx.turn.headline) -- the bell needs more room to land before the next
+// sound than the ordinary 180ms bot-move spacing, so a cue following
+// sfx.turn.new OR sfx.turn.era specifically starts TURN_GAP_MS after it
+// instead. This is a property of THIS queue (where the batch is actually
+// spaced out for playback), not of audio-cues.js's DOM-free map, which only
+// ever orders cues, never times them.
+const TURN_GAP_MS = 600;
+// playBatch(cues): cuesForLog's own output, spaced BATCH_GAP_MS apart (or
+// TURN_GAP_MS right after a turn/era bell) so a bot's whole turn doesn't
+// land as one chord.
+// #66 (S5 follow-up): when this batch is being voiced within PRESS_WINDOW_MS
+// of a press sound (Confirm on an enemy card played event-first, a map
+// confirm, 蓋下, a hand tap...), its first cue is pushed out to land
+// PRESS_LEAD_MS after that press sound instead of at once -- everything
+// after the first cue keeps its ordinary spacing (BATCH_GAP_MS, or
+// TURN_GAP_MS after a turn/era bell), counted from wherever the first cue
+// actually landed.
+const PRESS_WINDOW_MS = 150;
+const PRESS_LEAD_MS = 180;
 export function playBatch(cues, { gap = BATCH_GAP_MS } = {}) {
-  cues.forEach((cue, i) => setTimeout(() => play(cue), i * gap));
+  const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const sincePress = now - lastPressAt;
+  let t = sincePress < PRESS_WINDOW_MS ? Math.max(0, PRESS_LEAD_MS - sincePress) : 0;
+  cues.forEach((cue, i) => {
+    setTimeout(() => play(cue), t);
+    if (i < cues.length - 1) t += (cue === "sfx.turn.new" || cue === "sfx.turn.era") ? TURN_GAP_MS : gap;
+  });
 }
 
 // getManifest(): the manifest once loaded, or null before the first

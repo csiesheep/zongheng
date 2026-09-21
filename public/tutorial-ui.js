@@ -13,6 +13,7 @@ import * as E from "./shared/engine.js";
 import { createTutorial, STEPS, applyStep, factsOf, replayTo, allows } from "./shared/tutorial.js";
 import en from "./i18n/en.js";
 import zh from "./i18n/zh-Hant.js";
+import * as Audio from "./audio.js"; // #66 (S5, FE, cross-boundary -- flagged at handover): sfx.tut.step
 
 const QIN = E.QIN;
 // Issue #31: tutorial.css's own rules that dim/spotlight existing table
@@ -159,8 +160,12 @@ export function afterAction() {
   clearTimeout(advanceTimer);
   advanceTimer = setTimeout(() => {
     for (const action of step.then) ctx.game.st = E.apply(ctx.game.st, action);
+    // #66 (S5): "a tutorial lesson is completed", not on the tutorial's OWN
+    // final ending screen (showDone() below, the completion page) -- so the
+    // sound plays on every advance to a NEXT lesson, never on the branch
+    // that ends the whole tutorial instead.
     if (stepIdx + 1 >= STEPS.length) { on = true; showDone(); }
-    else enterStep(stepIdx + 1);
+    else { Audio.play("sfx.tut.step"); enterStep(stepIdx + 1); }
   }, 650);
 }
 
@@ -173,7 +178,8 @@ function goBack() {
 function skipOut() { document.body.classList.remove(TUT_BODY_CLASS); location.href = "./"; } // intro card's "not now" only — back to landing
 function skipToDone() { showDone(); } // coach panel's "skip the tutorial" (issue #15 review): straight to the completion page, not landing
 function tapAdvance() {
-  if (stepIdx + 1 >= STEPS.length) { showDone(); return; }
+  if (stepIdx + 1 >= STEPS.length) { showDone(); return; } // the tutorial's own ending screen: no sfx.tut.step (#66 S5)
+  Audio.play("sfx.tut.step");
   enterStep(stepIdx + 1);
 }
 
