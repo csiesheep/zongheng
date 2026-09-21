@@ -212,6 +212,46 @@ function renderStepsStatic() {
   d.ticker.textContent = beats.length ? beats[beats.length - 1].text : "";
 }
 
+// ---------- ③ the chip ----------
+function chipHTML(mv) {
+  const lang = ctx.lang, side = mv.side, card = mv.card, use = mv.use, sideCls = side === E.QIN ? "q" : "c";
+  const owner = cardSideOf(card);
+  const line2 = use === "headline" ? t(lang, "oppmove.chipHeadline")
+    : use === "event" ? t(lang, "oppmove.chipEvent")
+    : t(lang, owner !== side ? "oppmove.chipOpsEvent" : "oppmove.chipOps", { use: t(lang, `useNames.${use}`), ops: opsOf(card) });
+  return `<img class="opp-chip-art" src="art/cards/${card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
+    `<span class="opp-chip-text">` +
+      `<span class="opp-chip-line1"${lang === "en" ? "" : ' lang="zh-Hant"'}><b class="side-${sideCls}">${esc(sideName(side, lang))}</b> · ${esc(cardName(card, lang))}</span>` +
+      `<span class="opp-chip-line2"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(line2)} ›</span>` +
+    `</span>`;
+}
+// ---------- overall visibility ----------
+// The single place that decides what's on screen: card panel+dim during
+// ①, rings+ticker+chip during ② (the design's frame ② keeps the shrunk
+// chip visible while the map plays out), the bare chip once idle, or
+// nothing at all (winner decided / the player is picking a map target /
+// this render is disabled outright -- tutorial, spectator).
+function paint() {
+  const d = ensureDom();
+  const inCard = phase === "card";
+  const inSteps = phase === "steps" || phase === "steps-static";
+  d.dim.hidden = !inCard;
+  d.card.hidden = !inCard;
+  d.rings.hidden = !inSteps;
+  d.ticker.hidden = !inSteps;
+  if (inCard) renderCard();
+  const mv = inSteps ? move : phase === "idle" ? (chip && chip.move) : null;
+  const winnerDecided = ctx.view && ctx.view.winner != null;
+  const showChip = !!mv && !ctx.mapTargeting && !winnerDecided;
+  d.chip.hidden = !showChip;
+  if (showChip) {
+    const mr = rectOf(mapEl());
+    if (mr) d.chip.style.cssText = `left:${mr.left + 8}px;top:${mr.top + 8}px`;
+    d.chip.innerHTML = chipHTML(mv);
+  }
+  if (sheetOpen) renderSheet();
+}
+
 // ---------- public API (filled in by later edits) ----------
 export function sync(view, info) {}
 export function onAction() {}
