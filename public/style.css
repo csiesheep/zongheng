@@ -812,6 +812,18 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    enough at that size to fit 375px with all five natural widths intact. */
 .statline .sl-val { display: block; color: var(--text); font-weight: 600; font-size: 13px; line-height: 1.25; white-space: nowrap; }
 :root[lang="en"] .statline .sl-val { font-size: 12px; }
+/* #75: zh's .sl-val at 13px (vs en's 12px override just above) makes
+   .statline ~1.25px taller in zh than en -- enough, combined with the 2px
+   shorter viewport at 375x667 vs the 390x669 zh case LOWER_BLOCK_H (app.js)
+   was calibrated against, to push the map 2px past its own floor spec at
+   375x667 zh specifically (every table state, #75's own repro). Trimming
+   1px off .statline's top+bottom padding in zh ONLY reclaims exactly that
+   2px -- matching the slack the already-passing 390x669 zh case has, without
+   touching en (already fits) or the map's floor scale (this is budget for
+   the row above the map, never read by fitMap/LOWER_BLOCK_H's own inputs
+   beyond the live topbarH/statlineH measurement layoutTable() already does).
+   No tap targets live in .statline, so the 44px floor doesn't apply here. */
+:root[lang="zh-Hant"] .statline { padding: 1px 8px; }
 /* #68: the map's box is now fixed per viewport (see app.js's layoutTable()),
    so #lowerBlock is the one thing left to hold everything that varies --
    the advice, the prompt, the news, a pending/target-picking sheet, the
