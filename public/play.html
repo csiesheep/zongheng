@@ -29,7 +29,7 @@
 <header class="bar">
   <a class="hub back" id="backLink" href="./"><span class="back-chevron" aria-hidden="true">‹</span><span class="back-label"></span></a>
   <span id="barMid"></span>
-  <span class="bar-right"><button id="logToggle" type="button" class="small" aria-expanded="false"></button><span id="advisorSlot"></span><a class="hub" id="rulesLink" href="rules.html" target="_blank" rel="noopener" data-t="nav.rules"></a> <button id="langBtn" type="button" data-t="nav.lang"></button></span>
+  <span class="bar-right"><span id="audioBtnSlot"></span><button id="logToggle" type="button" class="small" aria-expanded="false"></button><span id="advisorSlot"></span><a class="hub" id="rulesLink" href="rules.html" target="_blank" rel="noopener" data-t="nav.rules"></a> <button id="langBtn" type="button" data-t="nav.lang"></button></span>
 </header>
 
 <main id="lobby" class="view" hidden>
@@ -99,14 +99,12 @@
   <form id="chatForm" class="chat" hidden><input id="chatIn" maxlength="200" autocomplete="off"><button type="submit" class="small" data-t="buttons.send"></button></form>
   <section class="sidefoot" id="sideFoot">
     <div class="sidefoot-text" id="sideFootText"></div>
-    <span class="audio-toggles" id="sideFootAudioSlot"></span>
     <button id="sideFootBtn" type="button" class="small"></button>
   </section>
   <div id="logScrim" class="logscrim" hidden></div>
   <div id="logBody" class="logbody" hidden>
     <div class="logbody-head">
       <span class="logbody-title" id="logTitle"></span>
-      <span class="audio-toggles" id="logAudioSlot"></span>
       <button type="button" id="logClose" class="small logbody-close" data-t="buttons.hide"></button>
     </div>
     <div class="logbody-content" id="logLines"></div>

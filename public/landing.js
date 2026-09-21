@@ -4,7 +4,7 @@ import en from "./i18n/en.js";
 import zh from "./i18n/zh-Hant.js";
 import * as Audio from "./audio.js";
 import * as Cues from "./audio-cues.js";
-import { mountAudioSwitches } from "./audio-switch.js";
+import { mountAudioButton } from "./audio-switch.js";
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);
@@ -17,11 +17,18 @@ const sess = { get(k) { try { return sessionStorage.getItem(k); } catch { return
 let lang = "en", S = en;
 const t = (key, p = {}) => String(key.split(".").reduce((o, k) => (o ? o[k] : undefined), S) ?? key).replace(/\{(\w+)\}/g, (_, k) => (p[k] ?? `{${k}}`));
 
-// #62: the landing plays bgm.landing (and only bgm.landing -- there's no
-// era/winner/tutorial state on this page); the two switches live in the
-// bar's own right-hand group, mounted once, before 規則.
-const audioToggles = mountAudioSwitches($("audioToggles"), t);
+// #62 part 2 (owner's revision): the landing plays bgm.landing (and only
+// bgm.landing -- there's no era/winner/tutorial state on this page); one
+// sound icon button in the bar's own right-hand group, before 規則.
+const audioBtn = mountAudioButton($("audioBtnSlot"), t);
 Audio.setScene(Cues.sceneFor({ page: "landing" }));
+// #62 part 2, item D: this page never plays a single table sound -- warm
+// only the one sfx it can actually trigger (the bar's own buttons/links),
+// not the table's twelve. Set before the first gesture can fire onUnlocked()
+// (see audio.js's own comment on setWarmCues()) -- this runs synchronously
+// right after the import, before any promise from audio.js's own
+// attemptUnlock() (called at its module's own top level) can resolve.
+Audio.setWarmCues(["sfx.ui.tap"]);
 
 function savedSolo() {
   try { const s = JSON.parse(store.get("zh.solo", "null")); return !!(s && s.st && s.st.winner == null); } catch { return false; }
@@ -53,7 +60,7 @@ function setLang(l) {
   // zh.solo, only its own key, and disappears for good once the tutorial
   // page has been opened.
   $("tutEntryDot").hidden = store.get("zh.tutorialSeen", "") === "1";
-  audioToggles.sync();
+  audioBtn.sync();
 }
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
 

@@ -295,12 +295,8 @@
     -webkit-box-orient: vertical;
   }
   #sideFootBtn { flex: none; }
-  /* #62: the sfx/music switches, beside the log button in this same row --
-     shrunk to the desktop's own 32px control height (same reasoning as
-     #advisorSlot .adv-toggle just above: a mouse doesn't need the
-     touch-device 44px floor). */
-  #sideFootAudioSlot { flex: none; }
-  #sideFootAudioSlot .audio-toggle { height: 32px; }
+  /* #62 part 2: the switches that lived here in part 1 moved to the top
+     bar (owner's revision) -- #sideFootText is back to its part-1 width. */
 
   /* Card sheet + log panel: confined to the 390px sidebar (owner: "log and
      chat 可以縮小"; issue #7: "地圖保持可見、可點") instead of covering the

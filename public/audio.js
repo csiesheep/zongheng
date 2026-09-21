@@ -21,11 +21,18 @@ const LOOP_OVERLAP_S = 1.5; // "1.5s overlap of tail into head"
 const RESTART_GUARD_MS = 40;
 const BATCH_GAP_MS = 180;
 const MUSIC_OFF_FADE_MS = 300;
-const WARM_CUES = [ // "warm the dozen most frequent ones in idle time" -- the owner's own most-used sfx
+// #62 part 2, item D: "warm the dozen most frequent ones" only makes sense
+// PER PAGE -- the landing never plays a single table sound, so warming the
+// table's twelve there fetched+decoded ~130 KB the visit never used. Each
+// entry page sets its own list right after importing this module (before
+// the first gesture can fire onUnlocked() -- see setWarmCues() below); this
+// default is table.
+let WARM_CUES = [
   "sfx.ui.tap", "sfx.map.place", "sfx.map.confirm", "sfx.card.pick", "sfx.card.commit",
   "sfx.card.reveal", "sfx.card.event.qin", "sfx.card.event.chu", "sfx.card.event.neutral",
   "sfx.map.opponent", "sfx.turn.new", "sfx.ui.error",
 ];
+export function setWarmCues(cues) { WARM_CUES = cues; }
 
 let ctx = null;
 let sfxMaster = null, musicMaster = null;
@@ -157,6 +164,16 @@ function fadeOutActive(ms) {
   activeLayerIdx = -1;
 }
 
+// #62 part 2, item B: a scene the manifest doesn't have falls back to a
+// NAMED substitute, not to silence (the orchestrator's own measurement:
+// landing straight to bgm.setup left `scene: null` on a fresh document,
+// since "leave whatever's playing" has nothing to leave when nothing has
+// played yet). Chained so a fallback that's ALSO missing keeps trying.
+// The tutorial's own substitute (the reform era's table piece, at 0.6 gain)
+// stays in app.js's updateSceneMusic() -- it needs the seat, which this
+// module doesn't have.
+const SCENE_FALLBACK = { "bgm.setup": "bgm.landing" };
+
 // setScene(cue, { gainMul }): the ONE scene playing at a time. `gainMul`
 // scales the music level for this scene only (the tutorial's own 0.6, per
 // the issue) -- app.js/landing.js decide the cue and the multiplier;
@@ -165,14 +182,15 @@ function fadeOutActive(ms) {
 export async function setScene(cue, { gainMul = 1 } = {}) {
   requestedScene = cue;
   sceneGainMul = gainMul;
-  if (cue === activeScene && layers[activeLayerIdx]) { rampGain(layers[activeLayerIdx].gainNode, targetGainFor(layers[activeLayerIdx].entry), 150); return; }
   if (!musicOn) return; // remembered in requestedScene; setSetting("music", true) starts it
   if (!cue) { fadeOutActive(CROSSFADE_MS); return; }
   const m = await ensureManifest();
-  const entry = m.cues[cue];
-  if (!entry || entry.kind !== "bgm") { warnOnce(`scene:${cue}`, `[audio] missing bgm cue: ${cue}`); return; } // leave whatever is already playing (e.g. bgm.landing while bgm.setup is missing)
+  let resolved = cue, entry = m.cues[resolved];
+  while ((!entry || entry.kind !== "bgm") && SCENE_FALLBACK[resolved]) { resolved = SCENE_FALLBACK[resolved]; entry = m.cues[resolved]; }
+  if (!entry || entry.kind !== "bgm") { warnOnce(`scene:${cue}`, `[audio] missing bgm cue: ${cue} (no fallback either)`); return; } // truly nothing: leave whatever is already playing
+  if (resolved === activeScene && layers[activeLayerIdx]) { rampGain(layers[activeLayerIdx].gainNode, targetGainFor(entry), 150); return; }
   if (!unlocked) return; // onUnlocked() will call setScene(requestedScene) again
-  await startLayer(cue, entry, CROSSFADE_MS);
+  await startLayer(resolved, entry, CROSSFADE_MS);
 }
 
 // ---------- sfx ----------

@@ -6,7 +6,9 @@ export default {
   about: "兩人對弈的戰國卡驅動策略遊戲。秦以連橫逐一吞併,楚以合縱把六國綁在一起。八回合,約一小時。可與電腦對弈,或開一個四碼房間與朋友對戰。中英文。",
   soon: "施工中。規則已寫好,接下來是引擎、電腦與房間。",
   credit: "同人、免費。靈感來自《冷戰熱鬥》的卡驅動設計;與 GMT Games 無關。",
-  nav: { back: "‹ 縱橫", rules: "規則", hub: "csiesheep games", lang: "EN" },
+  // #62 part 2:「回首頁」只在 bar 擠到要拿掉 back link 文字時當 aria-label/title
+  // 用(app.js 的 syncBackLabel());其他時候還是原本「‹ 縱橫」那句。
+  nav: { back: "‹ 縱橫", rules: "規則", hub: "csiesheep games", lang: "EN", home: "回首頁" },
   // 規則頁牌表的第 72 列:九鼎不在 shared/cards.js 的 CARDS 裡(它是引擎的
   // 特殊牌 st.jiuding,不是一張 CARDS 紀錄),rules.js 沒辦法像其他 71 張
   // 那樣直接從牌堆讀名字/說明。文字沿用這個檔案裡規則頁本來就有的「九鼎」
@@ -131,7 +133,8 @@ export default {
     },
   },
   // #62: 同 advisor.* 的形狀(標籤 + 開/關的 aria-label)。
-  audio: { sfx: "音效", music: "音樂", sfxOn: "音效:開", sfxOff: "音效:關", musicOn: "音樂:開", musicOff: "音樂:關" },
+  // #62 part 2(owner裁決:音效音樂同一開關):只剩一對字串。
+  audio: { on: "聲音:開", off: "聲音:關" },
   advisor: {
     name: "軍師",
     on: "軍師:開", off: "軍師:關",

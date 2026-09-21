@@ -26,7 +26,18 @@ import { computeLastMoveMarks } from "./lastmove.js";
 import { discParts } from "./disc-view.js";
 import * as Audio from "./audio.js";
 import * as Cues from "./audio-cues.js";
-import { mountAudioSwitches } from "./audio-switch.js";
+import { mountAudioButton } from "./audio-switch.js";
+
+// #62 part 2, item D: explicit (not just relying on audio.js's own default)
+// -- this is the page that actually plays every one of these twelve, unlike
+// the landing (landing.js sets its own single-cue list). Same list as
+// before this issue; see audio.js's own comment on setWarmCues() for the
+// ordering requirement (before the first gesture).
+Audio.setWarmCues([
+  "sfx.ui.tap", "sfx.map.place", "sfx.map.confirm", "sfx.card.pick", "sfx.card.commit",
+  "sfx.card.reveal", "sfx.card.event.qin", "sfx.card.event.chu", "sfx.card.event.neutral",
+  "sfx.map.opponent", "sfx.turn.new", "sfx.ui.error",
+]);
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);
@@ -73,7 +84,21 @@ const list = (ids, f) => ids.map(f).join(sep());
 function renderBackLink() {
   const full = t("nav.back");
   $("backLink").querySelector(".back-label").textContent = full.replace(/^\S+\s*/, "");
-  $("backLink").setAttribute("aria-label", full);
+  syncBackLabel();
+}
+// #62 part 2, item 3 (owner's ruling): once the bar is tight enough to drop
+// the back link's own word (bar-tighter, see layoutBar()), "‹ Zongheng"/
+// "‹ 縱橫" read aloud by itself is a decorative chevron plus a proper noun,
+// not a clear "this goes home" -- nav.home ("Home"/"回首頁") replaces the
+// aria-label/title only in that squeezed state; the full text (visible AND
+// spoken) is unchanged otherwise. Re-run from layoutBar() every time it
+// re-decides bar-tighter, not just from renderBackLink()'s own language
+// switch, since the squeeze can flip on a resize with no language change.
+function syncBackLabel() {
+  const tightened = document.querySelector(".bar")?.classList.contains("bar-tighter");
+  const label = tightened ? t("nav.home") : t("nav.back");
+  $("backLink").setAttribute("aria-label", label);
+  $("backLink").title = label;
 }
 function setLang(l) {
   lang = LANGS[l] ? l : "en";
@@ -83,24 +108,22 @@ function setLang(l) {
   document.title = lang === "en" ? "Zongheng 縱橫" : "縱橫 Zongheng";
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
   renderBackLink();
-  logAudioToggles.sync();
-  sideFootAudioToggles.sync();
+  audioBtn.sync();
   $("chatIn").placeholder = t("lobby.say");
   $("lobbyChatIn").placeholder = t("lobby.say");
   renderSetup();
   if (game.st) { render(); if (game.st.winner != null) renderOver(); }
+  layoutBar(); // #62 part 2: keeps the back link's squeezed-vs-full aria-label/title in sync even on a view with no game.st yet (setup/lobby)
 }
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
 // The advisor's own switch (issue #18): mounted once here; its own
 // visibility (solo table only) and everything it draws live in
 // advisor-ui.js, driven by the decorateAdvisor() call at render()'s tail.
 mountAdvisorToggle($("advisorSlot"));
-// #62: the sfx/music switches, mounted into the 紀錄 panel's header and (on
-// desktop) the side foot -- both always in the DOM (no table-view lock like
-// the advisor switch: #logBody/#sideFoot already only ever show on the
-// table view themselves, so nothing extra is needed here).
-const logAudioToggles = mountAudioSwitches($("logAudioSlot"), t);
-const sideFootAudioToggles = mountAudioSwitches($("sideFootAudioSlot"), t);
+// #62 part 2 (owner's revision): the one sound button, in the bar's first
+// row, before 紀錄 -- present on every view this page has (setup/lobby/
+// table/over all share this one <header>), no table-lock needed.
+const audioBtn = mountAudioButton($("audioBtnSlot"), t);
 
 // ---------- views ----------
 // The page's whole colour follows the side: the setup screen re-skins by
@@ -478,6 +501,7 @@ function layoutBar() {
   if (!tut && mid.textContent && barOverflowing(bar, budget)) mid.hidden = true;
   if (barOverflowing(bar, budget)) bar.classList.add("bar-tight");
   if (barOverflowing(bar, budget)) bar.classList.add("bar-tighter");
+  syncBackLabel(); // #62 part 2: aria-label/title follow whichever squeeze stage this just landed on
 }
 let lastUiErr = ""; // #62: sfx.ui.error fires once per NEW error text, not once per render while it's showing
 function render() {
