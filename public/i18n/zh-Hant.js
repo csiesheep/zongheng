@@ -38,9 +38,9 @@ export default {
   // title 要把兩邊點數與控制方講清楚(hitInf、controls),不能只靠畫面。
   map: {
     hitTitle: "{space} · 安定{stability}", hitInf: "秦{qin} 楚{chu}", controls: "{side}控制",
-    // #89: 相印進度標記——楚控制國都但還沒堆滿時的「印 3/4」小牌,以及已相印
-    // 的實心「印」。sealHelp 是點狀態列 相印 數字時顯示在提示區的一句話說明。
-    sealProgress: "印 {have}/{need}", sealed: "印", sealWord: "印",
+    // #90: 已相印的國都標記是 app.js 直接畫的「印」朱印角章,不走翻譯(是印
+    // 章,不是字,中英文都一樣)。sealHelp 是點狀態列 相印 數字時顯示在提示
+    // 區的一句話說明。
     sealHelp: "楚控制國都且影響力堆滿(穩定度 +2)才得相印",
   },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },

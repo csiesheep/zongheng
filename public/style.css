@@ -764,58 +764,33 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 @media (prefers-reduced-motion: reduce) {
   .node.lastmove-pulse .lastmove-frame, .node.lastmove-pulse .lastmove-frame2 { animation: none; }
 }
-/* #89: the seal-progress mark — only ever on the five capitals (app.js reads
+/* #90 round 2: the sealed 「印」 mark, owner's pick of design A 朱印角章
+   (canvas Seal_A_Chop.dc.html, generator C:/Users/sheep/code/_orch_keep/
+   sealdesign.py's chop()) — only ever on the five capitals (app.js reads
    seal-progress.js's sealProgress(), map-draw.js's SEAL_MARK_POS places it).
-   .sm-progress: "Seal 3/4" while Chu controls the capital but hasn't filled
-   the stack — Chu's red outline on a dark ground, per the brief, so it never
-   reads as the black/red disc tone or the gold .badge. .sm-sealed: a small
-   filled red seal once sealed, no numbers — a stamp, not a counter. Sized
-   like .badge/.lastmove-tag (18px tall) but width auto (min-width drops so
-   "印"/"Seal" alone stays small); z-index above the disc, below nothing else
-   currently drawn on a capital.
-   Orchestrator's ruling (#89 round 2): a corner-class system tuned for the
-   tiny 18x18 +N badge/last-move tag (NODE_PILL_POS's "pill-tl" etc, offsets
-   -6/-8) still lands ON the disc/.hit/.stab/region-label for a capital,
-   because a capital's disc is BIG (34px) and its own .hit target is a 47x47
-   box centred on the same point — those tight corner offsets were measured
-   for a small disc, not this. So SEAL_MARK_POS (map-draw.js) gives each
-   capital its own {dx, dy} PIXEL offset of the mark's CENTRE from the node's
-   own centre, applied here as an inline transform (app.js) instead of a
-   named corner class — free placement, not the 7-slot pill grid, per the
-   orchestrator's "further out / stack above-below / leader line" allowance.
-   Base rule only centres it; every real offset comes from the inline style
-   so it can clear whatever that specific capital's neighbours need. */
-.node .seal-mark {
-  position: absolute; box-sizing: border-box; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  height: 18px; min-width: 18px; padding: 0 4px;
-  border-radius: 9px; font: 700 11px/15px var(--sans); text-align: center; white-space: nowrap;
-  z-index: 4; pointer-events: none; box-shadow: 0 0 0 1.5px #f7f3e8;
+   A small vermilion square stamp, tilted, sitting on the capital disc's own
+   lower-right corner like a chop pressed onto paper — no numbers, no glow,
+   no pulse; the same mark for every language (印, not "Seal" in en — it's a
+   mark, not a word) and for spectators/rooms too, since it's drawn by the
+   same renderMap() every view shares.
+   Sized in DESIGN px (map-draw.js's DESIGN_W=390, the same units NODE_POS
+   and every other inline offset already use) so it scales with the map
+   exactly like the disc does. 15x15, -9deg tilt, 2px corners, a thin light
+   outline (so it reads against a dark or busy tile) plus a small drop
+   shadow so it sits "on top of" the disc, not painted into it.
+   SEAL_MARK_POS (map-draw.js) still gives each capital's mark its {dx, dy}
+   PIXEL offset from the node's own centre, applied here as an inline
+   transform (app.js) — see that table's own comment for the corner math and
+   the one capital (ji) that couldn't use the plain lower-right corner. */
+.node .seal-chop {
+  position: absolute; box-sizing: border-box; top: 50%; left: 50%;
+  width: 15px; height: 15px; transform: translate(-50%, -50%) rotate(-9deg);
+  background: #c8321f; border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 240, 220, 0.9), 0 1px 3px rgba(0, 0, 0, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 4; pointer-events: none;
 }
-/* sm-progress wraps 印/Seal over the fraction on two lines (round 2, above)
-   -- narrower than one line, still 11px/line, height grows to fit both. */
-.node .seal-mark.sm-progress {
-  background: #1b1a17; border: 1.5px solid var(--chu-btn); color: var(--chu-gold);
-  height: auto; width: 30px; min-width: 0; padding: 1px 2px; line-height: 1.15; border-radius: 6px;
-}
-.node .seal-mark.sm-sealed { background: var(--chu-btn); border: 1.5px solid var(--chu-gold); color: #fff; min-width: 15px; padding: 0 3px; }
-.node .seal-mark.sm-glow { box-shadow: 0 0 0 1.5px #f7f3e8, 0 0 7px 2px var(--chu-fill); }
-.node .seal-mark.sm-glow.sm-pulse { animation: seal-glow-pulse 2.2s ease-in-out infinite; }
-@keyframes seal-glow-pulse {
-  0%, 100% { box-shadow: 0 0 0 1.5px #f7f3e8, 0 0 5px 1px var(--chu-fill); }
-  50% { box-shadow: 0 0 0 1.5px #f7f3e8, 0 0 11px 4px var(--chu-fill); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .node .seal-mark.sm-glow.sm-pulse { animation: none; }
-}
-/* #89 round 2: the leader line for a capital whose nearest clear spot is far
-   (app.js only draws this past a distance threshold, ji currently). One
-   pixel-tall bar, rotated to point at the mark, starting a little clear of
-   the disc itself (app.js's own `inset`) so it doesn't run under the disc's
-   paper halo. Decorative only. */
-.node .seal-mark-line {
-  position: absolute; top: 50%; left: 50%; height: 1.5px; background: var(--chu-btn);
-  transform-origin: left center; z-index: 3; pointer-events: none; opacity: 0.85;
-}
+.node .seal-chop span { font: 900 10.5px/1 var(--serif); color: #fff6ea; }
 /* #7/#32: .hit-layer used to sit flush with .map's own box (inset:0) and
    position each button by percentage of THAT box, which drifted away from
    the visual disc (inside .map-inner, a fixed design canvas fitMap()
