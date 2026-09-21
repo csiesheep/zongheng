@@ -47,11 +47,10 @@ export default {
   // the tone.
   map: {
     hitTitle: "{space} · stability {stability}", hitInf: "Qin {qin} Chu {chu}", controls: "{side} controls",
-    // #89: seal-progress marks -- the small "Seal 3/4" pill while Chu controls
-    // a capital but hasn't filled the stack, and the filled "Seal" once it
-    // has. sealHelp is the one-line explanation shown in the prompt area
-    // when the status line's Seals value is tapped.
-    sealProgress: "Seal {have}/{need}", sealed: "Seal", sealWord: "Seal",
+    // #90: the sealed capital mark itself is a fixed 「印」 chop drawn straight
+    // in app.js (not translated -- it's a mark, not a word, same in en). This
+    // key is the one-line explanation shown in the prompt area when the
+    // status line's Seals value is tapped.
     sealHelp: "A seal needs Chu's control of the capital AND a full stack there (stability + 2)",
   },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },

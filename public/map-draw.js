@@ -171,33 +171,38 @@ export const NODE_PILL_POS = {
   ying: "r", wuyue: "r",
   ji: "trl", zhongshan: "r", dai: "r",
 };
-// #89: the seal-progress mark's own position table — only the five capitals
-// ever carry this mark. Orchestrator's ruling (round 2): NODE_PILL_POS's
-// named-corner offsets (-6/-8 from the node's own edge) are tuned for the
-// tiny 18x18 +N badge/last-move tag on an ordinary disc; a capital's disc is
-// big (34px) AND its own .hit target is a 47x47 box centred on the same
-// point, so those corners still land on the disc/.hit/.stab/region-label.
-// Each entry here is a {dx, dy} PIXEL offset of the mark's own CENTRE from
-// the node's centre (app.js turns it into an inline transform on the mark
-// itself) — free placement, not the 7-slot pill grid, so a capital can be
-// pushed however far out it needs; app.js draws a thin leader line back to
-// the disc past a distance threshold (linzi, ji) so a far mark still reads
-// as belonging to its own capital.
+// #90 round 2: the sealed-capital chop's own position table (design A 朱印
+// 角章, owner's pick off the three redesigns on canvas Seal_A_Chop.dc.html;
+// generator C:/Users/sheep/code/_orch_keep/sealdesign.py's chop()) — only
+// the five capitals ever carry this mark. Each entry is a {dx, dy} PIXEL
+// offset of the chop's own CENTRE from the node's centre (app.js turns it
+// into an inline transform on the mark itself, alongside the chop's own
+// -9deg tilt).
+// The default lands the chop's centre at the capital disc's own lower-right
+// corner, overlapping it slightly like a stamp: a capital's disc is 34px
+// (.node.big .disc), so half its width is 17; chop() computes the corner as
+// (half - 2, half - 3) off the disc's own top-left, which is (dx, dy) =
+// (15, 14) off the disc's CENTRE once converted to the centre-relative frame
+// app.js/SEAL_MARK_POS both use (matches the generator's own (13.5, 12.5) on
+// its 31px approximation of the disc, scaled up to this board's real 34px).
+// Never the top edge (+N/cost badges) or the lower-left (the stability box)
+// — the brief's own two exclusions — which leaves the lower-right as the
+// only legal corner. All five capitals (including ji, the tightest spot on
+// the board — boxed in by liaodong/zhongshan and the map's own top edge)
+// check clean at that same plain lower-right offset, so every entry below
+// is identical; this is still a per-capital table (not a single constant)
+// because the brief expects one and a future capital-specific exception
+// stays a one-line change here instead of a new code path.
 // Checked with an exhaustive getBoundingClientRect overlap sweep — every
-// .seal-mark against every disc/.hit/.stab/.nm/region-label/badge/
-// lastmove-tag/other .seal-mark under #map (own node's own elements
-// included, not just neighbours) — at 390x669 zh, 375x667 en and 1280x800,
-// zh+en at 1280 too, in three states: all five capitals sealed (narrow
-// "印"/"Seal"), all five Chu-controlled one point short (wide "印 3/4"/
-// "Seal 3/4"), and the owner's own repro (#89 issue comment). Zero hits in
-// all combinations. linzi and ji's positions are a matched pair — each
-// found independently but only valid together (the map's open pockets near
-// the three-jin/north-east clusters are scarce enough that several
-// capitals' "nearest clear spot" collide with each other, not just with
-// discs/names).
+// .seal-chop against every disc/.hit/.stab/.nm/region-label/badge/
+// lastmove-tag/other .seal-chop under #map (own node's own elements
+// excluded — the chop overlapping its own disc/hit is the point) — at
+// 390x669 zh, 375x667 en and 1280x800 zh+en, in two states: the owner's own
+// repro (seals han/zhao) and all five capitals sealed at once. Zero hits
+// anywhere.
 export const SEAL_MARK_POS = {
-  xinzheng: { dx: 40, dy: 0 }, handan: { dx: -46, dy: 0 }, daliang: { dx: -46, dy: 2 },
-  linzi: { dx: 20, dy: 90 }, ji: { dx: 128, dy: 34 },
+  xinzheng: { dx: 15, dy: 14 }, handan: { dx: 15, dy: 14 }, daliang: { dx: 15, dy: 14 },
+  linzi: { dx: 15, dy: 14 }, ji: { dx: 15, dy: 14 },
 };
 // `name` is the already-resolved display name (the caller's own spaceName()
 // — app.js and rules.js each have their own, reading the same E.SPACE[id]
