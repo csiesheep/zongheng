@@ -1,4 +1,5 @@
 {
+  "video_encode": "libx264 High@4.0 crf18, 24 fps (re-encoded for iOS, #77)",
   "video": {
     "frames": ["F0", "F1", "F2", "F3", "F4"],
     "clips": ["open_c1_beacons", "open_c2_tiger", "open_c3_bird", "open_c4_settle"],
