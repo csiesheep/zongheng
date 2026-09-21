@@ -105,3 +105,34 @@
   .side-text { font-size: 14.5px; }
   .side-cta { font-size: 15px; }
 }
+
+/* #86 round 2 (owner: "desktop 上的所有按鈕都可以考慮縮小"): the landing's own
+   top bar -- style.css's `.landing-bar .hub`/`.rules`/`.langBtn`, all still
+   the 44px touch floor -- shrinks the same way desktop.css does for
+   play.html/rules.html at the same >=1024px breakpoint (this file's own
+   >=768px column layout, just above, is untouched -- a tablet-width phone
+   column still gets real tap targets). index.html never loads desktop.css,
+   so the token is redeclared here rather than shared across files. `.side-
+   cta` (a <span>, not a button -- the whole tap card is the real target) is
+   deliberately left out, same "card-like tile" reasoning as desktop.css's
+   own .tile note. */
+@media (min-width: 1024px) {
+  :root { --d-btn-h: 32px; --d-btn-fs: 14px; }
+  :root[lang="en"] { --d-btn-fs: 13px; }
+  /* `.hub` is the same uppercase, letter-spaced nav trim as the table's own
+     top bar (style.css's `.bar .hub`, 11px) -- left at its own font size,
+     same as desktop.css's own note on that selector; only its height moves,
+     to match the row around it. */
+  .landing-bar .hub,
+  .landing-bar .rules {
+    min-height: var(--d-btn-h); height: var(--d-btn-h);
+  }
+  /* `.landing-bar .langBtn`, not plain `.langBtn` -- style.css's `.bar
+     button, .small` (the header is `class="bar landing-bar"`) is a two-part
+     descendant selector that outranks a single class on specificity alone,
+     so a same-specificity `.langBtn` never actually wins the cascade here
+     even loaded later (found by walking every matching rule in devtools). */
+  .landing-bar .langBtn {
+    height: var(--d-btn-h); min-height: var(--d-btn-h); font-size: var(--d-btn-fs);
+  }
+}
