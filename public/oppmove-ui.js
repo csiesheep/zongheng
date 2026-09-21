@@ -152,6 +152,7 @@ function renderCard() {
   const useLine = use === "headline" ? "" :
     `<div class="opp-useops">${esc(t(lang, "oppmove.useOps", { use: t(lang, `useNames.${use}`), ops: opsOf(card) }))}</div>`;
   const eventLine = eventLineFor(move, lang);
+  d.dim.className = "opp-dim"; // full dim, not ②'s invisible full-map catcher
   const mr = rectOf(mapEl());
   if (mr) {
     d.dim.style.cssText = `left:${mr.left}px;top:${mr.top}px;width:${mr.width}px;height:${Math.round(mr.height * 0.72)}px`;
@@ -170,6 +171,14 @@ function renderCard() {
 }
 
 // ---------- ② the steps ----------
+// The same #oppDim element as ①, now invisible and covering the full map
+// (not just its upper 72%) -- a tap anywhere on the map still skips.
+function positionMapCatcher() {
+  const d = ensureDom();
+  d.dim.className = "opp-dim opp-dim-clear";
+  const mr = rectOf(mapEl());
+  if (mr) d.dim.style.cssText = `left:${mr.left}px;top:${mr.top}px;width:${mr.width}px;height:${mr.height}px`;
+}
 function renderBeat(beat) {
   const d = ensureDom();
   d.rings.innerHTML = "";
@@ -239,11 +248,12 @@ function paint() {
   const d = ensureDom();
   const inCard = phase === "card";
   const inSteps = phase === "steps" || phase === "steps-static";
-  d.dim.hidden = !inCard;
+  d.dim.hidden = !(inCard || inSteps); // ②: still present (invisible) so a tap anywhere on the map skips (the brief's own rule)
   d.card.hidden = !inCard;
   d.rings.hidden = !inSteps;
   d.ticker.hidden = !inSteps;
   if (inCard) renderCard();
+  else if (inSteps) positionMapCatcher();
   const mv = inSteps ? move : phase === "idle" ? (chip && chip.move) : null;
   const winnerDecided = ctx.view && ctx.view.winner != null;
   const showChip = !!mv && !ctx.mapTargeting && !winnerDecided;
