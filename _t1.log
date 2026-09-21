@@ -1,0 +1,73 @@
+✔ every screen has its piece, and the table's piece follows the era and the seat (0.5568ms)
+✔ the ending: the winner and a spectator hear the winner's piece, the loser hears their own defeat (0.0888ms)
+✖ every cue the map can ask for is in the manifest (1.0089ms)
+✔ a log entry makes the sound the issue says it makes (0.5915ms)
+✔ a big batch keeps the four most important sounds in order, and a repeated sound once (0.2177ms)
+✖ every sound the map can return is in the manifest: a whole game on fallbacks, heard from each seat (1.3803ms)
+✔ control: gaining and losing a space, each at most once per change (13.4672ms)
+✔ danger flags: each condition alone, and none at the start of a game (0.3831ms)
+✔ the tension layer: on while any one-step-from-the-end flag holds, off at the start and off once the game is over (15.7478ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 7
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 87.7181
+
+✖ failing tests:
+
+test at tests\audio-cues.test.js:37:1
+✖ every cue the map can ask for is in the manifest (1.0089ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + [
+  +   'sfx.card.deal',
+  +   'sfx.card.enemyEvent.chu',
+  +   'sfx.card.enemyEvent.qin',
+  +   'sfx.card.jiuding',
+  +   'sfx.card.ops',
+  +   'sfx.map.campaign.key',
+  +   'sfx.map.lobby',
+  +   'sfx.restore',
+  +   'sfx.score.count',
+  +   'sfx.track.reform',
+  +   'sfx.track.weariness',
+  +   'sfx.turn.headline'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///C:/Users/sheep/code/zongheng/.claude/worktrees/agent-a403569792f9b3455/tests/audio-cues.test.js:39:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'sfx.card.deal', 'sfx.card.enemyEvent.chu', 'sfx.card.enemyEvent.qin', 'sfx.card.jiuding', 'sfx.card.ops', 'sfx.map.campaign.key', 'sfx.map.lobby', 'sfx.restore', 'sfx.score.count', 'sfx.track.reform', 'sfx.track.weariness', 'sfx.turn.headline' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\audio-cues.test.js:120:1
+✖ every sound the map can return is in the manifest: a whole game on fallbacks, heard from each seat (1.3803ms)
+  AssertionError [ERR_ASSERTION]: sfx.card.deal is not in the manifest
+      at TestContext.<anonymous> (file:///C:/Users/sheep/code/zongheng/.claude/worktrees/agent-a403569792f9b3455/tests/audio-cues.test.js:127:79)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -351,10 +351,23 @@ export async function play(cue, { rate = 1 } = {}) {
     if (recentCues.length > 30) recentCues.shift();
   } catch (e) { warnOnce(`start:${cue}`, `[audio] start() failed for ${cue}: ${e.message}`); }
 }
-// playBatch(cues): cuesForLog's own output, spaced BATCH_GAP_MS apart so a
-// bot's whole turn doesn't land as one chord.
+// #66 (S5): a new turn is now three cues long (sfx.turn.new, sfx.card.deal,
+// sfx.turn.headline) -- the bell needs more room to land before the next
+// sound than the ordinary 180ms bot-move spacing, so a cue following
+// sfx.turn.new OR sfx.turn.era specifically starts TURN_GAP_MS after it
+// instead. This is a property of THIS queue (where the batch is actually
+// spaced out for playback), not of audio-cues.js's DOM-free map, which only
+// ever orders cues, never times them.
+const TURN_GAP_MS = 600;
+// playBatch(cues): cuesForLog's own output, spaced BATCH_GAP_MS apart (or
+// TURN_GAP_MS right after a turn/era bell) so a bot's whole turn doesn't
+// land as one chord.
 export function playBatch(cues, { gap = BATCH_GAP_MS } = {}) {
-  cues.forEach((cue, i) => setTimeout(() => play(cue), i * gap));
+  let t = 0;
+  cues.forEach((cue, i) => {
+    setTimeout(() => play(cue), t);
+    if (i < cues.length - 1) t += (cue === "sfx.turn.new" || cue === "sfx.turn.era") ? TURN_GAP_MS : gap;
+  });
 }
 
 // getManifest(): the manifest once loaded, or null before the first

@@ -43,48 +43,101 @@ export function sceneFor({ page, era, me, winner, tutorial }) {
 }
 
 // ---------- A2: cuesForLog ----------
-// Importance high -> low, exactly the owner's list (#62): used only to trim
-// an oversized batch down to four, never to reorder the batch itself.
-const IMPORTANCE = ["over", "mie", "era", "seal", "turn", "mandate", "campaign", "reveal", "event", "opponent"];
+// Importance high -> low, exactly the owner's list (#62, extended by #66's
+// own table and the S5 addendum on top of it): used only to trim an
+// oversized batch down to four, never to reorder the batch itself.
+const IMPORTANCE = [
+  "over", "mie", "restore", "era", "seal", "jiuding", "turn", "mandate",
+  "campaign", "campaignKey", "lobby", "reveal", "score", "event",
+  "weariness", "reform", "opponent", "ops", "turnHeadline", "deal",
+];
 const RANK = Object.fromEntries(IMPORTANCE.map((k, i) => [k, i]));
 
-// One log entry -> { cue, rank } | null. `me` is 0 (Qin), 1 (Chu) or null
-// (spectator) -- see sceneFor's own header comment for why null-checks read
-// as "!== that side" throughout this file.
+// One log entry -> [{ cue, rank }] (zero, one or several -- `turn` now makes
+// three). `me` is 0 (Qin), 1 (Chu) or null (spectator) -- see sceneFor's own
+// header comment for why null-checks read as "!== that side" throughout
+// this file.
 function cueForEntry(e, me) {
   switch (e.type) {
-    case "headline": return { cue: "sfx.card.reveal", rank: RANK.reveal };
+    case "headline": return [{ cue: "sfx.card.reveal", rank: RANK.reveal }];
     case "play": {
-      if (e.use !== "event") return null; // ops/reform/etc: no cue yet (sfx.card.ops isn't picked)
-      const side = E.CARD[e.card].side; // null for a scoring card -> neutral
-      const who = side === E.QIN ? "qin" : side === E.CHU ? "chu" : "neutral";
-      return { cue: `sfx.card.event.${who}`, rank: RANK.event };
+      if (e.use === "event") {
+        const side = E.CARD[e.card].side; // null for a scoring card -> neutral
+        const who = side === E.QIN ? "qin" : side === E.CHU ? "chu" : "neutral";
+        return [{ cue: `sfx.card.event.${who}`, rank: RANK.event }];
+      }
+      // #66: place/campaign/lobby with a card belonging to the OTHER side
+      // than the one that played it fires THAT side's event -- for every
+      // listener, the player included (this is unconditional on `me`, unlike
+      // the ops/opponent cues below). `reform` is deliberately excluded from
+      // this check (only place/campaign/lobby are in the list): "reform
+      // never fires the event, even with the enemy's card" -- a reform play
+      // with an enemy-side card falls straight through to the ops rule below.
+      if (["place", "campaign", "lobby"].includes(e.use)) {
+        const cardSide = E.CARD[e.card].side;
+        if (cardSide != null && cardSide === 1 - e.side) {
+          return [{ cue: `sfx.card.enemyEvent.${sideStr(cardSide)}`, rank: RANK.event }];
+        }
+      }
+      // Every other non-event use (own or neutral card for place/campaign/
+      // lobby, any card for reform, a bog discard): the player's own press
+      // already sounded under the finger, so only the OTHER side's play (or,
+      // for a spectator, either side's -- `me` is null so `e.side !== me` is
+      // always true) gets the generic ops click here. 說客's paired play
+      // logs `card: "shuoke"` (side: null, neutral) even though the ops it
+      // spends are the paired ENEMY card's -- by this same rule it lands
+      // here too (neutral card, non-event use), never as an enemy event: the
+      // card actually played and finished is 說客 itself, not the pair.
+      return e.side !== me ? [{ cue: "sfx.card.ops", rank: RANK.ops }] : [];
     }
     case "place":
-    case "lobby":
+    case "lobby": {
       // The player's own taps already sounded when they were made; only the
-      // OTHER side's move (or, for a spectator, either side's -- `me` is
-      // null so `e.side !== me` is always true) gets a cue here.
-      return e.side !== me ? { cue: "sfx.map.opponent", rank: RANK.opponent } : null;
-    case "campaign": return { cue: "sfx.map.campaign", rank: RANK.campaign }; // either side
+      // OTHER side's move (or, for a spectator, either side's) gets a cue
+      // here. #66: a lobby gets its OWN sound instead, for every listener,
+      // whoever did it -- it replaces the opponent tick entirely.
+      if (e.type === "lobby") return [{ cue: "sfx.map.lobby", rank: RANK.lobby }];
+      return e.side !== me ? [{ cue: "sfx.map.opponent", rank: RANK.opponent }] : [];
+    }
+    case "campaign": {
+      // either side; #66 adds the horn when the target is a battleground,
+      // always directly after the campaign cue itself.
+      const cues = [{ cue: "sfx.map.campaign", rank: RANK.campaign }];
+      if (E.SPACE[e.target].battleground) cues.push({ cue: "sfx.map.campaign.key", rank: RANK.campaignKey });
+      return cues;
+    }
     case "vp": {
       // engine.js's vp() does `st.mandate += side === QIN ? n : -n` -- so a
       // `vp` entry's own `side` IS the direction: a Qin-side entry always
       // moved the Mandate toward Qin, a Chu-side entry always toward Chu.
       // No need to compare mandate before/after; the entry says it directly.
-      return { cue: e.side === E.QIN ? "sfx.track.mandate.qin" : "sfx.track.mandate.chu", rank: RANK.mandate };
+      return [{ cue: e.side === E.QIN ? "sfx.track.mandate.qin" : "sfx.track.mandate.chu", rank: RANK.mandate }];
     }
-    case "seal": return { cue: "sfx.seal.gain", rank: RANK.seal };
-    case "unseal": return { cue: "sfx.seal.lose", rank: RANK.seal };
-    case "mie": return { cue: "sfx.mie", rank: RANK.mie };
-    case "turn": return { cue: "sfx.turn.new", rank: RANK.turn };
-    case "era": return { cue: "sfx.turn.era", rank: RANK.era };
+    case "seal": return [{ cue: "sfx.seal.gain", rank: RANK.seal }];
+    case "unseal": return [{ cue: "sfx.seal.lose", rank: RANK.seal }];
+    case "mie": return [{ cue: "sfx.mie", rank: RANK.mie }];
+    case "jiuding": return [{ cue: "sfx.card.jiuding", rank: RANK.jiuding }]; // unconditional -- everyone hears the Cauldrons
+    // #66: the bell, then the deal, then the horn calling the headline
+    // phase -- always this order, in that entry's own slot in the batch.
+    case "turn": return [
+      { cue: "sfx.turn.new", rank: RANK.turn },
+      { cue: "sfx.card.deal", rank: RANK.deal },
+      { cue: "sfx.turn.headline", rank: RANK.turnHeadline },
+    ];
+    case "era": return [{ cue: "sfx.turn.era", rank: RANK.era }];
+    // S5: the tracks and the scoring, all unconditional -- every listener,
+    // the acting side's own advance/tire/score included (nothing sounds
+    // under the finger for any of these three).
+    case "tire": return [{ cue: "sfx.track.weariness", rank: RANK.weariness }];
+    case "reform": return [{ cue: "sfx.track.reform", rank: RANK.reform }];
+    case "restore": return [{ cue: "sfx.restore", rank: RANK.restore }];
+    case "score": return [{ cue: "sfx.score.count", rank: RANK.score }]; // the Mandate's own sound follows from the `vp` entry
     case "over": {
       const winSide = e.winner;
-      if (me == null || me === winSide) return { cue: `sfx.end.win.${sideStr(winSide)}`, rank: RANK.over };
-      return { cue: `sfx.end.lose.${sideStr(me)}`, rank: RANK.over };
+      if (me == null || me === winSide) return [{ cue: `sfx.end.win.${sideStr(winSide)}`, rank: RANK.over }];
+      return [{ cue: `sfx.end.lose.${sideStr(me)}`, rank: RANK.over }];
     }
-    default: return null; // restore, score, tire, reform, jiuding, discard, bog, skip, opsLost, reshuffle, endTurn: nothing yet
+    default: return []; // setup, discard, bog, skip, opsLost, reshuffle, endTurn: nothing yet
   }
 }
 
@@ -98,10 +151,7 @@ function cueForEntry(e, me) {
 // survive the cut).
 export function cuesForLog(entries, { me }) {
   const mapped = [];
-  for (const e of entries) {
-    const hit = cueForEntry(e, me);
-    if (hit) mapped.push(hit);
-  }
+  for (const e of entries) mapped.push(...cueForEntry(e, me));
   const deduped = [];
   for (const m of mapped) {
     if (deduped.length && deduped[deduped.length - 1].cue === m.cue) continue;
@@ -187,9 +237,15 @@ const ALL_CUES = [
   ...SIDES.map((s) => `bgm.lose.${s}`),
   "sfx.card.reveal",
   ...["qin", "chu", "neutral"].map((s) => `sfx.card.event.${s}`),
+  // #66: the ten second-priority sounds --
+  "sfx.card.deal", "sfx.card.ops",
+  ...SIDES.map((s) => `sfx.card.enemyEvent.${s}`),
+  "sfx.card.jiuding", "sfx.map.campaign.key", "sfx.map.lobby",
   "sfx.map.opponent", "sfx.map.campaign",
   ...SIDES.map((s) => `sfx.track.mandate.${s}`),
   "sfx.seal.gain", "sfx.seal.lose", "sfx.mie", "sfx.turn.new", "sfx.turn.era",
+  // S5, the eleven more --
+  "sfx.turn.headline", "sfx.track.weariness", "sfx.track.reform", "sfx.restore", "sfx.score.count",
   ...SIDES.map((s) => `sfx.end.win.${s}`),
   ...SIDES.map((s) => `sfx.end.lose.${s}`),
   "sfx.map.control.gain", "sfx.map.control.lose",
