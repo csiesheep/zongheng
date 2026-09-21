@@ -373,11 +373,19 @@ function openSheet(seq) {
   if (previewOpen) { previewOpen = false; paint(); }
   renderSheet();
 }
+// #85 round 2: closing the sheet -- 關閉, Escape, or a tap on the scrim,
+// every path routes through here -- must also drop the corner preview.
+// Before this, a mouse user who closed the sheet still had `previewOpen`
+// true underneath it, so the very next click on the thumb (still
+// `previewOpen`, per its own click handler) jumped straight back to
+// reopening the sheet instead of collapsing to the plain thumbnail first.
 function closeSheet() {
   if (!sheetOpen) return;
   sheetOpen = false;
+  previewOpen = false;
   const d = ensureDom();
   d.scrim.hidden = true; d.sheet.hidden = true; d.sheet.innerHTML = "";
+  paint();
 }
 function flashRow(beat) {
   if (!beat) return;
