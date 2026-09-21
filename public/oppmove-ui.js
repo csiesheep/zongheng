@@ -203,7 +203,13 @@ function positionMapCatcher() {
   const mr = rectOf(mapEl());
   if (mr) d.dim.style.cssText = `left:${mr.left}px;top:${mr.top}px;width:${mr.width}px;height:${mr.height}px`;
 }
-function renderBeat(beat) {
+// `index` (round 2 fix 2, the checker's own report): the ticker used to
+// carry a literal "②" glyph inside every beat's own text, which read as
+// step "2" for every step including the first, and doubled up with the
+// sheet's own numbered badge ("1 ②天命…"). The ticker now takes the same
+// 1-based number the sheet already shows in its badge -- one counter, two
+// displays -- and the i18n strings themselves carry no digit at all.
+function renderBeat(beat, index) {
   const d = ensureDom();
   d.rings.innerHTML = "";
   if (beat.kind === "ring" && beat.spaceId) {
@@ -235,18 +241,18 @@ function renderBeat(beat) {
   }
   const mr = rectOf(mapEl());
   if (mr) d.ticker.style.cssText = `left:${mr.left + 8}px;top:${mr.bottom - 38}px;width:${mr.width - 16}px`;
-  d.ticker.textContent = beat.text;
+  d.ticker.textContent = `${index + 1}. ${beat.text}`;
 }
 function renderStepsStatic() {
   // prefers-reduced-motion: every beat's ring/glow shown at once, no ticker cycling.
   const d = ensureDom();
   d.rings.innerHTML = "";
-  for (const beat of beats) {
+  beats.forEach((beat, i) => {
     const prevInner = d.rings.innerHTML;
-    renderBeat(beat);
+    renderBeat(beat, i);
     d.rings.innerHTML = prevInner + d.rings.innerHTML;
-  }
-  d.ticker.textContent = beats.length ? beats[beats.length - 1].text : "";
+  });
+  d.ticker.textContent = beats.length ? `${beats.length}. ${beats[beats.length - 1].text}` : "";
 }
 
 // ---------- ③ the chip ----------
@@ -372,7 +378,7 @@ function advanceFromCard() {
 function nextBeat() {
   beatIndex++;
   if (beatIndex >= beats.length) { finishMove(); return; }
-  renderBeat(beats[beatIndex]);
+  renderBeat(beats[beatIndex], beatIndex);
   paint();
   timer = setTimeout(nextBeat, STEP_MS);
 }
