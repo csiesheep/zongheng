@@ -181,7 +181,7 @@ export const NODE_PILL_POS = {
 // ("tl"/"tr"/"t"/"b"/"l"/"r"), same "clears the name/stab/pill/neighbour at
 // every required size" bar, checked at 390x669 zh, 375x667 en and 1280x800.
 export const SEAL_MARK_POS = {
-  xinzheng: "tl", handan: "l", daliang: "t", linzi: "t", ji: "b",
+  xinzheng: "tl", handan: "l", daliang: "l", linzi: "tl", ji: "r",
 };
 // `name` is the already-resolved display name (the caller's own spaceName()
 // — app.js and rules.js each have their own, reading the same E.SPACE[id]
