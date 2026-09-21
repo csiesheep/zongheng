@@ -358,8 +358,49 @@ function endToChip() {
   paint();
 }
 
-// ---------- public API (filled in by later edits) ----------
-export function sync(view, info) {}
-export function onAction() {}
-export function reset() {}
-export function disable() {}
+// ---------- public API ----------
+// Called once per render(), never for a spectator view or the tutorial (the
+// coach drives the tutorial, per the brief). `info`: { me, lang, mapTargeting,
+// acted, lastMoveMarks } -- acted is true once the player has picked a card
+// (or anything else has moved game.ui off its fresh/neutral shape), which
+// ends the sequence immediately and never blocks further input (the brief's
+// own rule); mapTargeting is true while the map itself has live hit targets,
+// which hides the chip so it can't sit over one.
+export function sync(view, info) {
+  ctx = { view, me: info.me, lang: info.lang, mapTargeting: info.mapTargeting, lastMoveMarks: info.lastMoveMarks };
+  if (!view) { disable(); return; }
+  const log = Array.isArray(view.log) ? view.log : [];
+  const nowSeq = lastLogSeq(log);
+  if (revealedSeq == null) { revealedSeq = nowSeq; paint(); return; } // first sync after (re)init: nothing "new" yet
+  if (info.acted && phase !== "idle") { endToChip(); return; }
+  if (phase === "idle" && !info.acted) {
+    const fresh = opponentMoves(log, revealedSeq, info.me);
+    revealedSeq = nowSeq; // a batch is only ever offered once, whether or not it was non-empty
+    if (fresh.length && view.winner == null) { queue = fresh; startNext(); return; }
+  }
+  paint();
+}
+// The player committed a real action (humanAct()): the chip's own move is
+// now history, not "since you last acted" -- clears immediately, same as
+// #41's lastMoveMarks tap-clear, and never through a render() of its own.
+export function onAction() {
+  clearTimeout(timer);
+  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1; chip = null;
+  if (sheetOpen) closeSheet();
+}
+// A new game started, a solo game resumed, or a room's first view arrived:
+// nothing already in the log is "new" (the brief's own resume note) --
+// re-baseline the watermark instead of replaying a backlog.
+export function reset() {
+  clearTimeout(timer);
+  revealedSeq = null;
+  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1; chip = null;
+  if (sheetOpen) closeSheet();
+  if (dom) paint();
+}
+// A spectator view, or the tutorial running: hide everything, touch nothing
+// else (so returning to the real game afterwards can pick up cleanly).
+export function disable() {
+  if (!dom) return;
+  dom.dim.hidden = true; dom.card.hidden = true; dom.rings.hidden = true; dom.ticker.hidden = true; dom.chip.hidden = true;
+}
