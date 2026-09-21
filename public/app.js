@@ -711,6 +711,13 @@ function layoutTableDesktop() {
   // body.table-lock rule, so it must be cleared explicitly here rather than
   // relying on desktop.css to out-specify it.
   document.body.classList.remove("table-overflow");
+  // #80: a resize from phone width to desktop width without a reload can
+  // leave #lowerBlock carrying the mobile branch's own inline
+  // `style.flex` (below, this file) — harmless once desktop.css makes
+  // #lowerBlock `display: contents` (box-model properties don't apply to
+  // a contents box), but cleared here too so no stale inline style
+  // survives on the element itself.
+  $("lowerBlock").style.flex = "";
   const map = $("map");
   const availW = map.clientWidth, availH = map.clientHeight;
   if (!availW || !availH) return;

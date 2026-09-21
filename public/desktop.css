@@ -216,6 +216,19 @@
   body[data-view="table"] #prompt { grid-area: prompt; padding: 6px 14px; }
   body[data-view="table"] #sheet:not(.overlay) { grid-area: sheet; margin: 0 14px; align-self: start; }
   body[data-view="table"] #hand { grid-area: hand; }
+  /* #80 (owner, desktop screenshot: hand cut to a strip): #68 wrapped
+     #prompt/#sheet/#hand in #lowerBlock (play.html) for the MOBILE fixed
+     hand budget below. On desktop #lowerBlock was never told about that
+     wrapper — it stayed a plain flex column child of #table, so the grid
+     placement above (grid-area: prompt/sheet/hand on the three sections)
+     never took effect: those `grid-area` declarations only apply to a
+     GRID CONTAINER's own direct children, and #lowerBlock, not its
+     children, is the one #table (the grid) actually sees. `display:
+     contents` removes #lowerBlock's own box (and its mobile-only
+     flex/overflow/gap) so #prompt/#sheet/#hand become #table's real grid
+     items again and land in their own named areas above, exactly as
+     before #68. */
+  body[data-view="table"] #lowerBlock { display: contents; }
   body[data-view="table"] #chatForm { grid-area: chat; padding: 4px 14px; }
   body[data-view="table"] #sideFoot { grid-area: foot; }
   body[data-view="table"] #map {
@@ -239,6 +252,12 @@
      turn 7 on, plus the Nine Cauldrons) — 4 columns, each card ~0.8x. */
   body[data-view="table"] .hand {
     display: grid;
+    /* style.css's mobile `.hand` rule fixes a 72px chip-row height (#68) —
+       this file never reset it, which is the other half of #80's clip
+       (the #lowerBlock display:contents fix above only unwraps the grid
+       placement; the hand box itself was still 72px tall). The hand's real
+       height here is however many rows the 96x176/77x141 cards need. */
+    height: auto;
     grid-template-columns: repeat(3, 96px);
     gap: 14px 18px;
     justify-content: center;
