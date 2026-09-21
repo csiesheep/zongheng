@@ -25,6 +25,14 @@
       "loop": false,
       "source": "bgm_lose_qin_jin_low_s5461"
     },
+    "bgm.setup": {
+      "file": "bgm.setup.mp3",
+      "kind": "bgm",
+      "seconds": 66.12,
+      "gain": 1,
+      "loop": true,
+      "source": "bgm_setup_jingting_s5511"
+    },
     "bgm.table.alliance.chu": {
       "file": "bgm.table.alliance.chu.mp3",
       "kind": "bgm",
@@ -72,6 +80,22 @@
       "gain": 1,
       "loop": true,
       "source": "bgm_table_reform_qin_D_weishui_s5311"
+    },
+    "bgm.tension": {
+      "file": "bgm.tension.mp3",
+      "kind": "bgm",
+      "seconds": 26.38,
+      "gain": 1,
+      "loop": true,
+      "source": "bgm_tension_xintiao_s5521"
+    },
+    "bgm.tutorial": {
+      "file": "bgm.tutorial.mp3",
+      "kind": "bgm",
+      "seconds": 59.95,
+      "gain": 1,
+      "loop": true,
+      "source": "bgm_tutorial_xuetang_s5532"
     },
     "bgm.win.chu": {
       "file": "bgm.win.chu.mp3",

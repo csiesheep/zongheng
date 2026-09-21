@@ -244,23 +244,16 @@ def main():
     parser.add_argument("--only", nargs='+', help="Process only specified cues")
     args = parser.parse_args()
 
-    # Load accepted
-    accepted_path = "C:/Users/sheep/AppData/Local/Temp/claude/C--Users-sheep-code-obsidian/1d166e4e-76ed-44ee-930b-f3675bbfddc6/scratchpad/audio/accepted.json"
-    with open(accepted_path, 'r', encoding='utf-8') as f:
-        accepted = json.load(f)
-
-    # Load audio cues configuration (for closeGaps and loop flags)
+    # Load audio cues configuration (the sole source of truth)
     with open("tools/audio_cues.json", 'r', encoding='utf-8') as f:
         cues_config = json.load(f)
+
+    # Build accepted dict from cues_config
+    accepted = {cue: config['take'] for cue, config in cues_config.items()}
 
     # Filter to requested cues if --only specified
     if args.only:
         accepted = {cue: take for cue, take in accepted.items() if cue in args.only}
-    else:
-        # Exclude files that haven't been integrated yet (bgm.setup, bgm.tension, bgm.tutorial)
-        # These are for future issues; skip them for now
-        not_yet_ready = {"bgm.setup", "bgm.tension", "bgm.tutorial"}
-        accepted = {cue: take for cue, take in accepted.items() if cue not in not_yet_ready}
 
     # Load job files for prompts
     jobs_map = {}
@@ -275,10 +268,8 @@ def main():
 
     manifest = {"version": 1, "cues": {}}
     prompts = {}
-    looped = {"bgm.landing", "bgm.setup", "bgm.tension", "bgm.tutorial",
-              "bgm.table.alliance.chu", "bgm.table.alliance.qin",
-              "bgm.table.conquest.chu", "bgm.table.conquest.qin",
-              "bgm.table.reform.chu", "bgm.table.reform.qin"}
+    # Build looped set from cues_config
+    looped = {cue for cue, config in cues_config.items() if config.get('loop', False)}
 
     print(f"Processing {len(accepted)} files...")
     results = {}
