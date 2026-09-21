@@ -1131,6 +1131,41 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    card-view.js). */
 .sheet-history-title { font: 700 12px/1.3 var(--sans); letter-spacing: 0.5px; opacity: 0.85; }
 .sheet-history-src { margin: 2px 0 0; font-size: 12px; opacity: 0.65; }
+/* #92 (owner: 「牌的史實,可以縮起或展開,預設縮起」) — the collapsible path
+   only (card-view.js's historyBox() with a `state` argument: the game's
+   card page and both peeks, never rules.js's own card detail view, which
+   still gets the plain .sheet-history-title/.sheet-history-src pair above
+   untouched). The toggle is a plain `<button>` so it already inherits
+   `.sheet button`'s 44px-tall base (this file) and the desktop override down
+   to #86's 32px token (desktop.css) for free — no height rule needed here.
+   `.sheet-textbox`'s own flex column + 12px padding wraps both the button
+   and the (collapsed-to-nothing) body below. */
+.sheet-history-toggle { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
+.sheet-history-arrow { flex: none; width: 12px; text-align: center; font-size: 10px; opacity: 0.7; }
+.sheet-history-arrow::before { content: "\25B8"; }
+.sheet-history-open .sheet-history-arrow::before { content: "\25BE"; }
+.sheet-history-toggle .sheet-history-title { flex: none; margin: 0; }
+.sheet-history-preview {
+  flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 400 12px/1.3 var(--serif); opacity: 0.55;
+}
+/* Once expanded the same text is fully visible right below — the one-line
+   preview next to the title would just be a redundant echo of it. */
+.sheet-history-open .sheet-history-preview { display: none; }
+/* The story/source pair collapses via a 0fr/1fr grid track (animates real
+   intrinsic height without JS measuring scrollHeight) rather than
+   max-height, which would need an arbitrary cap; `-body-inner`'s own
+   `overflow: hidden` is what actually clips it at 0fr. ~150ms per #92 point
+   4, opacity riding along so the text doesn't just get chopped. */
+.sheet-history-body {
+  display: grid; grid-template-rows: 0fr; opacity: 0;
+  transition: grid-template-rows 150ms ease, opacity 150ms ease;
+}
+.sheet-history-open .sheet-history-body { grid-template-rows: 1fr; opacity: 1; }
+.sheet-history-body-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .sheet-history-body { transition: none; }
+}
 /* The full card page's own scrollable middle (see sheetMid() in app.js):
    the card's own variable-length content — the text box, a scoring tally,
    the advisor's own suggestion banner when it's on, then the history (#46)

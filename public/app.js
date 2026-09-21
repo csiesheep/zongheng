@@ -378,7 +378,12 @@ const sess = {
 // decided, so Confirm could go through and the advisor's suggestion ring
 // couldn't be told apart from a real press. `order` now starts unchosen;
 // every reader below treats null as "not decided yet", never as opsFirst.
-const freshUi = (card = null) => ({ card, use: null, order: null, pair: null, points: [], target: null, picks: [], opsUse: null, err: "" });
+// #92: `historyOpen` lives here (not a module-level flag) so a brand-new
+// card page (freshUi(id) — see the "Card"/看牌 toggle below) always opens
+// collapsed, while re-renders of the SAME card page (the advisor's text
+// arriving, a language switch) keep whatever the player already chose —
+// nothing here resets it except a genuinely fresh freshUi() call.
+const freshUi = (card = null) => ({ card, use: null, order: null, pair: null, points: [], target: null, picks: [], opsUse: null, err: "", historyOpen: false });
 
 function startSolo() {
   game.room = false; game.spectator = false;
@@ -1731,6 +1736,11 @@ function renderPromptAndSheet(v) {
   sh.className = "sheet" + (game.ui.card != null ? " sheet-" + cardSide(game.ui.card) : "");
   const me = game.me, ui = game.ui;
   const err = ui.err ? `<div class="err">${esc(ui.err)}</div>` : "";
+  // #92: `ui.historyOpen` is the persisted choice for THIS card page (reset
+  // only by freshUi() — see its own comment); this hands historyBox() a
+  // fresh { open, onToggle } each render so a click there writes straight
+  // back to it without this function needing its own re-render.
+  const histState = () => ({ open: ui.historyOpen, onToggle: (v) => { ui.historyOpen = v; } });
   // #24 round 2 (orchestrator's fix #2): every setPrompt() call also parks
   // the same text as a hidden first line inside the sheet — layoutTable()
   // reveals it only when it actually hides #prompt on a short viewport, so
@@ -1779,7 +1789,7 @@ function renderPromptAndSheet(v) {
       // most room here of any state — added straight into `mid`, after
       // whatever the advisor's own banner will be inserted before (see
       // placeBanner()'s insertBefore(.sheet-history) in advisor-ui.js).
-      if (!Tut.active()) historyBox(mid, ui.card, lang);
+      if (!Tut.active()) historyBox(mid, ui.card, lang, histState());
       footer(sh, t("buttons.headline"), () => humanAct({ type: "headline", card: ui.card }), false, () => { game.ui = freshUi(); render(); }, false, "headline", "sfx.card.commit");
     }
     return;
@@ -1792,7 +1802,7 @@ function renderPromptAndSheet(v) {
     cardHeader(sh, ui.card);
     const bogMid = sheetMid(sh);
     cardTextBox(bogMid, ui.card);
-    if (!Tut.active()) historyBox(bogMid, ui.card, lang);
+    if (!Tut.active()) historyBox(bogMid, ui.card, lang, histState());
     footer(sh, t("buttons.confirm"), () => humanAct({ type: "play", card: ui.card, use: "bog" }), false);
     return;
   }
@@ -1841,7 +1851,7 @@ function renderPromptAndSheet(v) {
   // before it instead of after, see advisor-ui.js), never in the tutorial
   // (the coach panel needs the room) and never for the compact chip (no
   // `mid` at all there).
-  if (showFullCard && !Tut.active()) historyBox(mid, ui.card, lang);
+  if (showFullCard && !Tut.active()) historyBox(mid, ui.card, lang, histState());
   // #46 (owner: a player must never scroll to reach a button): the use
   // grid, the enemy order row, 說客's pairing and the hint below all move
   // to `pinned` — a fixed sibling of `mid`, not `mid` itself — so growing
@@ -2358,8 +2368,13 @@ function cardLinkButton(id, side, pill) {
 // the card, for the "{side} played this" note below); the compact chip's
 // "Card"/看牌 button opens the SAME peek for a card still in the acting
 // player's own hand, with no side and so no such note.
+// #92: `historyOpen` starts false on every fresh peek (this object is
+// rebuilt on each openPeek() call, unlike game.ui which a click can mutate
+// in place across many re-renders of the SAME open peek — see renderPeek()
+// below); that covers the log/news peek AND (per #94) 看牌's own peek alike,
+// since they all now go through this one function.
 function openPeek(cardId, side = null) {
-  game.peek = { card: cardId, side };
+  game.peek = { card: cardId, side, historyOpen: false };
   Audio.play("sfx.ui.open");
   renderPeek();
 }
@@ -2374,9 +2389,17 @@ function renderPeek() {
   el.hidden = !open;
   refreshSheetLock();
   if (!open) { el.innerHTML = ""; el.className = "sheet overlay peek-sheet"; return; }
-  const { card, side } = game.peek;
-  const note = side != null ? t("sheet.hint.played", { side: sideName(side) }) : undefined;
-  renderCardView(el, card, lang, { note, onClose: closePeek });
+  const peek = game.peek;
+  const note = peek.side != null ? t("sheet.hint.played", { side: sideName(peek.side) }) : undefined;
+  renderCardView(el, peek.card, lang, {
+    note,
+    onClose: closePeek,
+    // #92: same { open, onToggle } contract as app.js's own histState()
+    // above, backed by game.peek (not game.ui) so a peek's open/closed
+    // choice survives every render() call while it's up without touching
+    // the acting player's own card-page state at all.
+    historyState: { open: peek.historyOpen, onToggle: (v) => { peek.historyOpen = v; } },
+  });
 }
 // #peekSheet itself is built here rather than added to play.html (owned by
 // no single file in this issue's own list) — #29's existing `.sheet`/

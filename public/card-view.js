@@ -93,17 +93,62 @@ export function cardTextBox(parent, id, lang) {
 // is never put in the DOM at all (not CSS-hidden), so a language switch
 // (renderDetail()/renderPeek() both fully rebuild this via renderCardView)
 // removes it outright rather than just hiding it.
-export function historyBox(parent, id, lang) {
+//
+// #92 (owner, iPhone screenshot: 「牌的史實,可以縮起或展開,預設縮起」): a
+// fourth `state` argument turns this into a collapsible <button>+region
+// instead of the old fixed-open title/body. `state` is omitted by every
+// caller that must stay exactly as it was before this issue (rules.js's own
+// card detail view — "the rules page card list is not the game," #92's own
+// words) so that path is untouched below. Callers that ARE the game (the
+// interactive card page's own historyBox() calls in app.js, and
+// renderCardView()'s `opts.historyState` a few lines down, which is how the
+// 看牌 peek and the log's card peek — #88's openPeek — both get it) pass
+// `{ open, onToggle }`: `open` decides the FIRST paint only (never
+// re-derived from anything visual after that) and `onToggle(nextOpen)` is
+// how the caller remembers the choice across the next re-render — this
+// function never re-renders itself. The actual click toggles this box's own
+// classes/attributes in place (not a re-render) so the CSS transition below
+// has a real before/after state to animate between; a re-render elsewhere
+// (advisor text arriving, a language switch) just rebuilds fresh from
+// whatever `state.open` now is, per #92 point 2 ("stays expanded until the
+// page closes").
+let historySeq = 0;
+export function historyBox(parent, id, lang, state) {
   const story = STORIES[id];
   if (!story) return null;
   const text = lang === "en" ? story.en : story.zh;
   const src = lang === "en" ? story.srcEn : story.srcZh;
-  const box = document.createElement("div"); box.className = "sheet-textbox sheet-history";
   const textCls = lang === "en" ? "sheet-text-en" : "sheet-text-zh";
-  box.innerHTML =
-    `<div class="sheet-history-title">${esc(t(lang, "sheet.history"))}</div>` +
+  const box = document.createElement("div"); box.className = "sheet-textbox sheet-history";
+  const bodyHtml =
     `<p class="${textCls}"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(text)}</p>` +
     (src ? `<p class="sheet-history-src">${esc(t(lang, "sheet.source"))}${esc(src)}</p>` : "");
+  if (!state) {
+    box.innerHTML = `<div class="sheet-history-title">${esc(t(lang, "sheet.history"))}</div>` + bodyHtml;
+    parent.appendChild(box);
+    return box;
+  }
+  const bodyId = `sheetHistBody${++historySeq}`;
+  let open = !!state.open;
+  box.classList.toggle("sheet-history-open", open);
+  // One line of the story's start, faded, on the same row as the title when
+  // it fits (#92 point 1, "optional") — plain truncation is enough since the
+  // CSS below clips it with an ellipsis anyway; no word-boundary care needed.
+  const preview = text.length > 36 ? text.slice(0, 36).trim() + "…" : text;
+  box.innerHTML =
+    `<button type="button" class="sheet-history-toggle" aria-expanded="${open}" aria-controls="${bodyId}">` +
+      `<span class="sheet-history-arrow" aria-hidden="true"></span>` +
+      `<span class="sheet-history-title">${esc(t(lang, "sheet.history"))}</span>` +
+      `<span class="sheet-history-preview"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(preview)}</span>` +
+    `</button>` +
+    `<div class="sheet-history-body" id="${bodyId}"><div class="sheet-history-body-inner">${bodyHtml}</div></div>`;
+  const toggleBtn = box.querySelector(".sheet-history-toggle");
+  toggleBtn.onclick = () => {
+    open = !open;
+    box.classList.toggle("sheet-history-open", open);
+    toggleBtn.setAttribute("aria-expanded", String(open));
+    if (state.onToggle) state.onToggle(open);
+  };
   parent.appendChild(box);
   return box;
 }
@@ -118,7 +163,11 @@ export function renderCardView(container, id, lang, opts = {}) {
   cardHeader(container, id, lang);
   const mid = document.createElement("div"); mid.className = "sheet-mid"; container.appendChild(mid);
   cardTextBox(mid, id, lang);
-  historyBox(mid, id, lang);
+  // #92: `opts.historyState` is only ever passed by app.js's peek (both the
+  // 看牌 peek and the log's card peek go through this same renderCardView —
+  // see openPeek() there); rules.js's own card detail view never sets it, so
+  // its history section stays exactly as it was before this issue.
+  historyBox(mid, id, lang, opts.historyState);
   if (opts.note) {
     const n = document.createElement("div"); n.className = "note"; n.textContent = opts.note;
     mid.appendChild(n);
