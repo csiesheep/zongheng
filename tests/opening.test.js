@@ -34,3 +34,20 @@ test("the files are there, small enough for a phone, and the video ends on the l
   const j = JSON.parse(fs.readFileSync(new URL("../public/video/credits.json", import.meta.url), "utf8"));
   assert.ok(j.video && j.music && Array.isArray(j.video.frames) && j.video.frames.length >= 5, "credits.json must record the key frames, the clips and the music take");
 });
+
+// #76: iPhones decode AAC only up to 48 kHz. The first opening.mp4 carried 96 kHz audio: iOS fired "error" on play and the
+// landing's guard dropped straight to the page (the owner, 2026-09-21: tap, then straight to the landing). Every track's own
+// timescale is read from its mdhd box; a sound track (hdlr "soun") must be at or below 48000.
+test("the opening's audio track is at most 48 kHz, which iPhones can decode", () => {
+  const buf = fs.readFileSync(new URL("../public/video/opening.mp4", import.meta.url));
+  const rates = [];
+  for (let i = buf.indexOf("mdhd"); i !== -1; i = buf.indexOf("mdhd", i + 4)) {
+    const version = buf[i + 4];
+    const timescale = version === 1 ? buf.readUInt32BE(i + 24) : buf.readUInt32BE(i + 16);
+    const h = buf.indexOf("hdlr", i);
+    const handler = h === -1 ? "" : buf.toString("latin1", h + 12, h + 16);
+    if (handler === "soun") rates.push(timescale);
+  }
+  assert.equal(rates.length, 1, `expected one sound track, found ${rates.length}`);
+  assert.ok(rates[0] <= 48000, `the audio track runs at ${rates[0]} Hz; iPhones need 48000 or less`);
+});
