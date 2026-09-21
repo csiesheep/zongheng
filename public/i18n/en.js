@@ -154,6 +154,10 @@ export default {
   // six part-1 keys (sfx/music/sfxOn/sfxOff/musicOn/musicOff) are gone,
   // nothing references them any more.
   audio: { on: "Sound on", off: "Sound off" },
+  // #67: the opening video's start layer (played once per browser; ?opening
+  // replays it). "tap" is the accessible name of the whole layer's hit
+  // button; "skip" is the small corner button that ends it without playing.
+  opening: { tap: "Tap to begin", skip: "Skip" },
   advisor: {
     name: "Advisor",
     on: "Advisor on", off: "Advisor off",

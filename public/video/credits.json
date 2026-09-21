@@ -1,0 +1,15 @@
+{
+  "video": {
+    "frames": ["F0", "F1", "F2", "F3", "F4"],
+    "clips": ["open_c1_beacons", "open_c2_tiger", "open_c3_bird", "open_c4_settle"],
+    "models": "Z-Image-Turbo key art, MiniMax H3 FL2VA clips",
+    "seeds": {
+      "clips": { "open_c1_beacons": 90101, "open_c2_tiger": 90102, "open_c3_bird": 90103, "open_c4_settle": 90104 },
+      "keyArt": { "terrain": 9501, "tiger": 9421, "bird": 9411 }
+    }
+  },
+  "music": {
+    "take": "bgm_opening_sting_s6101",
+    "model": "MiniMax Music 3"
+  }
+}

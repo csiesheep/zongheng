@@ -1,0 +1,72 @@
+/* #67: the opening video's start layer. Sits inside .landing-page (the same
+   box the landing itself uses -- full width on mobile, the 430px column on
+   desktop via landing-desktop.css), covering .hero and .controls but NOT
+   .landing-bar (position: relative on .landing-page below makes this an
+   absolute child of that box, not of the viewport). The bar's own audio
+   button is made inert along with the rest of the landing while this layer
+   is up, so a duplicate lives inside the layer itself (top-left, mirroring
+   Skip's top-right corner) -- see landing.js's comment on why. */
+.landing-page { position: relative; }
+
+.opening-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: #000;
+  opacity: 1;
+  transition: opacity 0.8s ease;
+}
+.opening-layer.opening-fade { opacity: 0; pointer-events: none; }
+
+.opening-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  background: #000;
+}
+
+.opening-hit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.opening-line {
+  margin: 0 0 calc(26px + env(safe-area-inset-bottom));
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: rgba(10, 9, 8, 0.6);
+  color: var(--gold);
+  font: 600 15px/1.3 var(--serif);
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+
+.opening-skip, .opening-audio-slot .audio-btn {
+  position: absolute;
+  top: 8px;
+  z-index: 2;
+  background: rgba(10, 9, 8, 0.55);
+}
+.opening-skip {
+  right: 8px;
+  border: 1px solid var(--gold-line);
+  color: var(--gold);
+  border-radius: 8px;
+  font: 600 12px/1 var(--sans);
+  min-height: 44px;
+  min-width: 44px;
+}
+.opening-audio-slot { position: absolute; top: 8px; left: 8px; z-index: 2; }
