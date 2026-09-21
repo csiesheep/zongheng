@@ -1873,7 +1873,12 @@ function renderPending(v, p, setPrompt, sh) {
     // suggested card by id, instead of by position -- the same id `answer()`
     // (shared/bots.js) puts in the "choose" action's own choice array.
     for (const c of p.options) { const b = btn(r, `${cardName(c)} (${E.CARD[c].ops})`, () => humanAct({ type: "choose", choice: [c] })); b.dataset.card = c; }
-    if (p.min === 0) btn(r, t("buttons.skip"), () => humanAct({ type: "choose", choice: [] }));
+    // #69 addendum: same idea as the [data-card] hook just above, for the
+    // one button that names no card -- advise()'s own answer for a skip is
+    // `choice: []` (shared/advisor.js's targetsOf()), which decoratePending()
+    // (advisor-ui.js) couldn't previously mark at all (its own check was
+    // `choice.length === 1`, never true for an empty array).
+    if (p.min === 0) { const b = btn(r, t("buttons.skip"), () => humanAct({ type: "choose", choice: [] })); b.dataset.skip = "1"; }
     return;
   }
   if (p.kind === "option") {

@@ -168,6 +168,20 @@ export default {
     suggestOrder: { opsFirst: "先用行動點,再讓事件發生。", eventFirst: "先觸發事件,再用行動點。" },
     suggestHeadline: "蓋下{card}當標題。",
     suggestSetup: "在{space}放置{n}點影響力。",
+    // #69 追加:一個「card」/「option」的待決選擇(回合結束棄牌,以及
+    // cards.js 的每一張選牌/選項——呂不韋、韓非入秦、春申君、細作都在內)
+    // 都點不到地圖上的任何一格,所以以前 bannerTitle() 一路 fall through
+    // 到什麼都不顯示。discard/retrieve/choose 是「card」選擇來源可能的三種
+    // 動詞(advisor-ui.js 的 cardPickVerb() 三選一);skip 刻意不寫張數
+    // (可選的牌可能不只兩張);option 直接包住 pending 自己 options 陣列
+    // 裡已經有的文字(那是 cards.js 的資料,不是這個檔案的)。
+    suggestPick: {
+      discard: "棄掉{card}。",
+      retrieve: "取回{card}。",
+      choose: "選{card}。",
+      skip: "略過,手牌不動。",
+      option: "選{option}。",
+    },
     anyLegal: "亮著的都能選,金色只是軍師的推薦。",
     reasons: {
       takeControl: "這一手讓你拿下{space}的控制。",

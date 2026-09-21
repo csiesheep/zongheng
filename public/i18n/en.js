@@ -189,6 +189,21 @@ export default {
     suggestOrder: { opsFirst: "Spend the ops first, then let the event happen.", eventFirst: "Trigger the event first, then spend the ops." },
     suggestHeadline: "Commit {card} as the headline.",
     suggestSetup: "Place {n} influence in {space}.",
+    // #69 addendum: a pending "card"/"option" choice (the end-of-round
+    // discard, and every cards.js card/option pick -- 呂不韋/韓非入秦/春申君/
+    // 細作 among them) names no map space, so it fell through bannerTitle()
+    // to nothing at all until this. `discard`/`retrieve`/`choose` are the
+    // three verbs a "card" pick's own source can mean (advisor-ui.js's
+    // cardPickVerb() picks one); `skip` deliberately names no count (any
+    // number of cards can be on offer); `option` wraps whatever label the
+    // pending's own options array already carries (cards.js, not this file).
+    suggestPick: {
+      discard: "Discard {card}.",
+      retrieve: "Retrieve {card}.",
+      choose: "Choose {card}.",
+      skip: "Skip -- the hand stays as is.",
+      option: "Choose {option}.",
+    },
     anyLegal: "Anything lit up is legal. Gold is just the advisor's pick.",
     reasons: {
       takeControl: "This takes control of {space}.",

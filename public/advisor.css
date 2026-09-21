@@ -150,6 +150,10 @@ body:not(.table-lock) .advisor-banner {
    layout change: box-shadow paints outside the button's own box, border-
    color reuses the border width/radius the row's own buttons already have. */
 .rowb button[data-use].adv-pick, .rowb button[data-option].adv-pick, .rowb button[data-card].adv-pick,
+/* #69 addendum: the end-of-round/event card pick's own Skip button --
+   marked exactly like its sibling [data-card] buttons when advise()'s own
+   answer is to skip (an empty choice). */
+.rowb button[data-skip].adv-pick,
 /* #60: the headline phase's own confirm button (footer(), app.js) sits in
    a plain .sheet-footer row, not a .rowb -- same ring, its own selector. */
 .sheet-footer button[data-use].adv-pick {
@@ -158,19 +162,42 @@ body:not(.table-lock) .advisor-banner {
 }
 
 /* ---------- gold decoration: the map target ---------- */
+/* #69 (owner, iPhone screenshot of a lobby's target-picking state): the
+   suggested city's ring "reads almost like the dashed ring every legal
+   target already wears" -- too easy to miss among four or five of those on
+   a real map. Three changes, all on this one mark, the dashed legal-target
+   rings (.node.lit, style.css) left exactly as they are:
+     - the solid ring: 3.5px -> 4.6px (owner's own floor is "at least 4.5px")
+     - the glow: brighter at every stop (was 0.55/0.16, now 0.8/0.32)
+     - a slow pulse of the glow's own brightness (~1.6s, the ring itself
+       never moves) -- gated behind prefers-reduced-motion: no-preference
+       (ui-states.css's own pattern), so a reduced-motion browser parses no
+       @keyframes at all; what's left is this rule block's plain values,
+       already the brighter static glow the brief asks for as the fallback.
+   Both of the owner's earlier rulings on this same mark are unchanged: the
+   conic-gradient mask still leaves the disc's own top clear (the +n
+   placement badge / cost badge live there), and .nm still paints above the
+   glow at z-index 4. */
 .node.adv-target { z-index: 3; }
 .node.adv-target::before {
   content: ""; position: absolute; left: 50%; top: 50%; width: 84px; height: 84px;
   transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: 0;
-  background: radial-gradient(circle, transparent 25px, rgba(233, 185, 46, 0.55) 30px, rgba(233, 185, 46, 0.16) 42px, transparent 42px);
+  background: radial-gradient(circle, transparent 25px, rgba(233, 185, 46, 0.8) 30px, rgba(233, 185, 46, 0.32) 42px, transparent 42px);
   /* The disc's own top (where a +n placement badge or the cost badge sits)
      stays clear of the glow (owner: "圆盤正上方留空不蓋住數字"). */
   -webkit-mask-image: conic-gradient(transparent 0deg 34deg, #000 34deg 326deg, transparent 326deg 360deg);
   mask-image: conic-gradient(transparent 0deg 34deg, #000 34deg 326deg, transparent 326deg 360deg);
 }
+@media (prefers-reduced-motion: no-preference) {
+  .node.adv-target::before { animation: adv-target-pulse 1.6s ease-in-out infinite; }
+  @keyframes adv-target-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.62; }
+  }
+}
 .node.adv-target::after {
   content: ""; position: absolute; left: 50%; top: 50%; width: 38px; height: 38px;
-  transform: translate(-50%, -50%); border-radius: 50%; border: 3.5px solid #e9b92e;
+  transform: translate(-50%, -50%); border-radius: 50%; border: 4.6px solid #e9b92e;
   pointer-events: none; z-index: 1;
 }
 .node.big.adv-target::after { width: 42px; height: 42px; }

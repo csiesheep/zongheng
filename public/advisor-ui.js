@@ -276,11 +276,48 @@ function remainingCounts(ids, meta) {
   for (const id of Object.keys(counts)) if (counts[id] <= 0) delete counts[id];
   return counts;
 }
+// #69 addendum (owner, iPhone screenshot: 「選牌沒有軍師提示」, round 8
+// action 7/7, the end-of-round discard): the four verbs the copy needs for
+// a pending "card" pick, keyed off the SAME signals renderPending() (app.js)
+// already used to build the buttons -- pending.tag ("endDiscard" set
+// straight by engine.js, or "event" for every cards.js card pick, which
+// also carries pending.card, the event driving it) and pending.showHand
+// (true for exactly one of the five, 細作/xizuo #67, which points at the
+// OPPONENT's hand -- the owner's own word for that one is 選 "choose", not
+// 棄 "discard", the other four's verb).
+function cardPickVerb(pending) {
+  if (pending.showHand) return "choose"; // xizuo (#67): a card FROM the opponent's hand
+  if (pending.card === "lvbuwei") return "retrieve"; // #54: FROM the discard pile TO the hand, not out of it
+  return "discard"; // engine.js's own endDiscard, hanfei (#58), chunshenjun (#62): all discard from the player's own hand
+}
+// `choice` is `adv.action.choice` itself -- an array for a "card" pending
+// (`[id]`, or `[]` for a skip; shared/advisor.js's targetsOf() already
+// documents this shape), read directly rather than through `adv.targets`
+// (always [] here: targetsOf() filters a "card" choice down to board-space
+// ids, and a card id is never one).
+function cardPickTitle(pending, choice, meta) {
+  if (!choice.length) return meta.t("advisor.suggestPick.skip");
+  return meta.t(`advisor.suggestPick.${cardPickVerb(pending)}`, { card: meta.cardName(choice[0]) });
+}
+// An "option" pending's own `choice` is the chosen option's id (a plain
+// string -- shared/advisor.js's targetsOf() falls through its `typeof c ===
+// "object"` check for exactly this shape, straight to `return []`, same
+// reason a "card" pick's own targets are always empty). `pending.options`
+// (view.pending, the SAME array renderPending() drew its buttons from)
+// carries each one's own display label -- cards.js builds those directly
+// (e.g. `E.REGIONS[r].zh`), not through this file's `meta`, so a label
+// already shown on the button in the wrong UI language is a pre-existing
+// gap in that data, not introduced here (flagged to the orchestrator, not
+// fixed in this file: cards.js is BE's).
+function optionPickTitle(pending, choice, meta) {
+  const opt = (pending.options || []).find((o) => o.id === choice);
+  return opt ? meta.t("advisor.suggestPick.option", { option: opt.label }) : null;
+}
 // The banner's one title line already says card+use+target together
 // (advisor.suggestCard.<use>, e.g. "Campaign in {space} with {card}") --
 // there is no separate "step 2" text, only a separate VISUAL location (the
 // card sheet's own gold ring) for it.
-function bannerTitle(adv, meta) {
+function bannerTitle(adv, meta, view) {
   const { t, cardName } = meta;
   if (adv.action.type === "headline") return t("advisor.suggestHeadline", { card: cardName(adv.card) });
   if (adv.action.type === "choose") {
@@ -301,7 +338,19 @@ function bannerTitle(adv, meta) {
     const opsUse = choice && typeof choice === "object" && !Array.isArray(choice) ? choice.use : null;
     const counts = remainingCounts(adv.targets, meta);
     const ids = Object.keys(counts);
-    if (!ids.length) return null; // a card/option pending choice names no space, or it's already fully placed
+    if (!ids.length) {
+      // #69 addendum: a "card" or "option" pending choice names no map
+      // space at all (never did, never will -- see targetsOf() in
+      // shared/advisor.js), so this used to always return null here and
+      // fall all the way back to the banner's bare name ("軍師"/"Advisor",
+      // setBannerText() below) -- a title that names nothing. view.pending
+      // (the SAME object renderPending() drew its own buttons from) says
+      // which of the two shapes `choice` is in.
+      const pk = view && view.pending ? view.pending.kind : null;
+      if (pk === "card" && Array.isArray(choice)) return cardPickTitle(view.pending, choice, meta);
+      if (pk === "option") return optionPickTitle(view.pending, choice, meta);
+      return null; // a fully-placed setup pick, or a shape not covered above
+    }
     if (opsUse && opsUse !== "place") {
       return ids.map((id) => t(`advisor.suggestUse.${opsUse}`, { space: meta.spaceName(id) })).join(" ");
     }
@@ -425,7 +474,7 @@ function decoratePending(adv, view) {
   // even outside a pending choice. Excluded here instead of renaming the
   // attribute, since "headline" never collides with an actual ops `use`
   // value (place/campaign/lobby/reform) this function marks below.
-  sheet.querySelectorAll("[data-use]:not([data-use='headline']).adv-pick, [data-option].adv-pick, [data-card].adv-pick")
+  sheet.querySelectorAll("[data-use]:not([data-use='headline']).adv-pick, [data-option].adv-pick, [data-card].adv-pick, [data-skip].adv-pick")
     .forEach((b) => b.classList.remove("adv-pick"));
   if (!adv || !adv.action || adv.action.type !== "choose") return;
   if (!view || !view.pending) return; // the suggestion is stale the moment the pending choice is gone
@@ -439,6 +488,13 @@ function decoratePending(adv, view) {
     if (b) b.classList.add("adv-pick");
   } else if (kind === "card" && Array.isArray(choice) && choice.length === 1) {
     const b = sheet.querySelector(`[data-card="${choice[0]}"]`);
+    if (b) b.classList.add("adv-pick");
+  } else if (kind === "card" && Array.isArray(choice) && !choice.length) {
+    // #69 addendum: advise()'s own answer for a skip (empty choice) used to
+    // mark nothing at all -- app.js's renderPending() now gives the Skip
+    // button the same kind of stable hook the card buttons already had
+    // ([data-skip], next to their own [data-card]).
+    const b = sheet.querySelector("[data-skip]");
     if (b) b.classList.add("adv-pick");
   }
 }
@@ -474,10 +530,10 @@ function decorateMap(adv, meta) {
 // on a cache hit, the real (accurately-sized) text must be in place BEFORE
 // placeBanner() measures anything, so a long multi-target sentence is
 // measured at its true size, not the short placeholder's.
-function setBannerText(adv, meta, real) {
+function setBannerText(adv, meta, real, view) {
   if (!real) { banner.title.textContent = meta.t("advisor.thinking"); banner.why.textContent = ""; return; }
   if (!adv) return; // caller hides the banner itself in this case
-  const title = bannerTitle(adv, meta) ?? meta.t("advisor.name");
+  const title = bannerTitle(adv, meta, view) ?? meta.t("advisor.name");
   const why = meta.t(`advisor.reasons.${adv.reason.key}`, fmtParams(adv.reason.params, meta));
   banner.title.textContent = title;
   banner.why.textContent = why;
@@ -545,7 +601,7 @@ function applyDecorations(view, meta, force, switchVisible) {
     // in the real text BEFORE placing/measuring, so placeBanner()'s own
     // overflow check and app.js's layoutTable() both see the banner's
     // true final size, not a placeholder's.
-    if (cache.adv) setBannerText(cache.adv, meta, true);
+    if (cache.adv) setBannerText(cache.adv, meta, true, view);
     placeBanner(meta);
     if (!cache.adv) { banner.root.hidden = true; decorateHand(null, view, meta); decorateSheet(null, meta); decoratePending(null, view); decorateMap(null, meta); return; }
     banner.root.hidden = false;
@@ -595,7 +651,7 @@ function applyDecorations(view, meta, force, switchVisible) {
       meta.layoutTable && meta.layoutTable();
       return;
     }
-    setBannerText(adv, meta, true);
+    setBannerText(adv, meta, true, view);
     placeBanner(meta); // the real text may be a different length -- re-measure/re-place now that it's known
     banner.root.hidden = false;
     clampPromptWhy();
