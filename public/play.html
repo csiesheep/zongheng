@@ -84,18 +84,34 @@
   <section class="topbar" id="topbar"></section>
   <section class="map" id="map"><div class="map-inner" id="mapInner"></div><div class="hit-layer" id="hitLayer"></div></section>
   <section class="statline" id="statline"></section>
-  <section class="prompt" id="prompt">
-    <div class="prompt-text" id="promptText"></div>
-    <!-- #53 round 2: a replaced bot move's own line (app.js's `game.fallbackNote`).
-         A sibling of #promptText, not a child of it, on purpose -- the advisor
-         (advisor-ui.js) hides #promptText outright in one of its own slots
-         (takeOverPrompt()), and this line has to survive that untouched since
-         it is not the advisor's to hide. Hidden by default; app.js's renderLog()
-         is the only thing that ever shows or fills it. -->
-    <div class="prompt-fallback" id="fallbackBanner" hidden></div>
-  </section>
-  <section class="sheet" id="sheet"></section>
-  <section class="hand" id="hand"></section>
+  <!-- #68: everything whose height varies from render to render (the
+       advice, the prompt, the news, a pending sheet, the hand) lives inside
+       this one fixed-height block instead of feeding layoutTable()'s old
+       per-render "chrome" sum -- see app.js's layoutTable() for how its
+       height is picked and why the map never reads anything from in here. -->
+  <div class="lowerBlock" id="lowerBlock">
+    <section class="prompt" id="prompt">
+      <!-- The advisor's banner (advisor-ui.js's placeBanner(), #68 addition
+           to #69's original slot list) is inserted here, before
+           #promptScroll, whenever it has something to say -- pinned above
+           the scrolling text so a long prompt/news list scrolls under it
+           without ever pushing it out of view (orchestrator's ruling on the
+           owner's follow-up report, #68). -->
+      <div class="prompt-scroll" id="promptScroll">
+        <div class="prompt-text" id="promptText"></div>
+        <!-- #53 round 2: a replaced bot move's own line (app.js's `game.fallbackNote`).
+             A sibling of #promptText, not a child of it, on purpose -- the advisor
+             (advisor-ui.js) used to hide #promptText outright in one of its own
+             slots; #68 stopped that (the advice now sits beside the prompt, not
+             instead of it), but this stays its own sibling regardless, since it
+             is not the advisor's to touch either way. Hidden by default; app.js's
+             renderLog() is the only thing that ever shows or fills it. -->
+        <div class="prompt-fallback" id="fallbackBanner" hidden></div>
+      </div>
+    </section>
+    <section class="sheet" id="sheet"></section>
+    <section class="hand" id="hand"></section>
+  </div>
   <form id="chatForm" class="chat" hidden><input id="chatIn" maxlength="200" autocomplete="off"><button type="submit" class="small" data-t="buttons.send"></button></form>
   <section class="sidefoot" id="sideFoot">
     <div class="sidefoot-text" id="sideFootText"></div>

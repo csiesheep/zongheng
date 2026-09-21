@@ -439,16 +439,21 @@ body:not(.table-lock) #logToggle { display: none; }
 #btnTutorial[data-fit="squeeze"] .tut-btn-dot { position: absolute; top: 4px; right: 4px; }
 
 /* table: a fixed one-screen layout, header -> mandate -> map -> stat line
-   -> prompt -> hand (C2_Game order). body.table-lock (see app.js's show())
-   gives #table the rest of the viewport and forbids scrolling; the map is
-   the one flexible piece, so it shrinks first on a short phone. Below the
-   map's own opaque art still paints in the seated side's court colour. */
+   -> lower block (prompt/sheet/hand, C2_Game order). body.table-lock (see
+   app.js's show()) gives #table the rest of the viewport and forbids
+   scrolling. #68 (owner: "地圖大小應固定"): the map's own box is now a pure
+   function of the viewport (app.js's layoutTable()), never of what's below
+   it — #lowerBlock is the flexible piece instead, at a height layoutTable()
+   ALSO fixes per viewport (LOWER_BLOCK_H), not measured from its own
+   content. Below the map's own opaque art still paints in the seated
+   side's court colour. */
 body.table-lock { height: 100svh; min-height: 0; overflow: hidden; }
 body.table-lock #table { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-/* Round 5's last-resort escape hatch (layoutTable() in app.js): when even a
-   chip-row hand can't fit alongside the map's floor spec (~375x553), it sets
-   this instead of shrinking either one further — the page scrolls like any
-   normal page rather than clip or violate a drawn-size minimum. */
+/* Last-resort escape hatch (layoutTable() in app.js): when a viewport can't
+   give the map its floor spec, or #lowerBlock's own give-way stages still
+   can't fit a state inside LOWER_BLOCK_H (~375x553 is the known case), it
+   sets this instead of shrinking either one further — the page scrolls like
+   any normal page rather than clip or violate a drawn-size minimum. */
 body.table-lock.table-overflow { height: auto; min-height: 100svh; overflow: visible; }
 body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: visible; }
 /* No horizontal padding here: the map needs the phone's full width to hit
@@ -807,20 +812,48 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    enough at that size to fit 375px with all five natural widths intact. */
 .statline .sl-val { display: block; color: var(--text); font-weight: 600; font-size: 13px; line-height: 1.25; white-space: nowrap; }
 :root[lang="en"] .statline .sl-val { font-size: 12px; }
+/* #68: the map's box is now fixed per viewport (see app.js's layoutTable()),
+   so #lowerBlock is the one thing left to hold everything that varies --
+   the advice, the prompt, the news, a pending/target-picking sheet, the
+   hand -- inside a height layoutTable() also fixes per viewport (never
+   measured from what's actually inside it). flex-direction:column with
+   min-height:0 so its own flex:1 child (.prompt, below) can shrink and
+   scroll internally instead of growing the block past its fixed height. */
+.lowerBlock { flex: none; display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden; }
 /* #30: the log toggle moved to the top bar (style.css's own .bar rules,
    next to Advisor/Rules/lang) -- #promptText now uses the row's full
-   width instead of sharing it with that button. */
-.prompt { flex: none; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; padding: 3px 8px; font-size: 13px; line-height: 1.35; }
-.prompt-text { flex: 1; min-width: 0; }
+   width instead of sharing it with that button.
+   #68: .prompt used to be a flex:none row sized by its own content (the
+   very thing that made the map shrink for a two-line advice or a long
+   news strip) -- it's now the flexible member of #lowerBlock's fixed
+   height, a column of [advisor banner, pinned] + [#promptScroll, the part
+   that actually scrolls]. min-height:0 lets it shrink to whatever
+   #lowerBlock has left once .sheet/.hand (both below) take their own
+   share; overflow:hidden is the paint-only backstop, #promptScroll's own
+   overflow-y:auto is what actually lets long content scroll in place. */
+.prompt { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 3px 8px; font-size: 13px; line-height: 1.35; overflow: hidden; }
+/* The advisor's banner (advisor-ui.js's .adv-slot-prompt, #68): a normal
+   flow child of .prompt, ahead of #promptScroll in the DOM, so it is never
+   part of the scrolling area below -- "the prompt and news scroll under
+   it, the advice does not" (orchestrator's ruling on the owner's 2nd
+   report, #68). advisor.css gives it its own flex:none / box styling; this
+   file only has to make sure .prompt's column layout leaves it alone.
+   #promptScroll is the actual scrolling area -- flex:1 1 auto so it takes
+   whatever .prompt has left after the (optional) banner above it, and
+   min-height:0 so a real overflow scrolls instead of growing .prompt (and
+   so #lowerBlock) past its own fixed height. A soft fade at the bottom
+   edge (the ::after below) is the only hint there's more to scroll to --
+   #68 asked for one whenever content doesn't fit. */
+.prompt-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; position: relative; display: flex; flex-direction: column; gap: 8px; }
+.prompt-text { flex: none; min-width: 0; }
 .prompt .err { color: var(--bad); }
-/* #39 round 2 review: which lines actually stay in the DOM is decided in
-   app.js's renderLog() now, against layoutTable()'s own real measurement
-   of the map/hand's real remaining room (round 2's own FLOOR_SCALE cut
-   is what gives that room to give) — the newest line always stays,
-   however tall, and an older one is dropped outright (never partially)
-   the moment the real layout doesn't fit. This max-height is only a
-   paint-safety net (generous, so it's never the thing actually deciding
-   what shows) in case that loop is ever bypassed. */
+/* #39 round 2 review: renderLog() used to prune news lines against
+   layoutTable()'s own overflow answer -- #68 removed that negotiation
+   (there is nothing left to negotiate: #promptScroll has a fixed budget
+   and simply scrolls), so up to 7 newest lines (renderLog()'s own slice)
+   are always in the DOM, newest first; this max-height is only a
+   paint-safety net now, same as before, never the thing deciding what
+   shows. */
 .prompt .news { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--gold-line); font-size: 11px; line-height: 1.4; color: var(--text-dim); max-height: 160px; overflow: hidden; }
 /* #53 round 2: a replaced bot move's own line (app.js's `game.fallbackNote`,
    #fallbackBanner in play.html). A sibling of .prompt-text, not inside it,
@@ -829,8 +862,19 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    the player should read, not skim -- and wraps freely: two lines is fine,
    a clipped sentence is not (the orchestrator's review that asked for this
    measured the longest card name in the game against it at 390x669/375x667). */
-.prompt-fallback { flex: 0 0 100%; margin-top: 6px; padding-left: 8px; border-left: 2px solid var(--gold); font-size: 12px; line-height: 1.4; font-weight: 600; color: var(--gold); }
+.prompt-fallback { flex: none; margin-top: 6px; padding-left: 8px; border-left: 2px solid var(--gold); font-size: 12px; line-height: 1.4; font-weight: 600; color: var(--gold); }
 .prompt-fallback[hidden] { display: none; }
+/* #68: the soft fade the brief asks for whenever #promptScroll actually has
+   more content than its box -- painted only while there IS overflow (the
+   `has-more` class, toggled by layoutTable() after every measurement) so a
+   fully-visible prompt never shows a fade over nothing. Pointer-events:none
+   so it never eats a tap meant for whatever's underneath. */
+.prompt-scroll::after {
+  content: ""; position: sticky; left: 0; right: 0; bottom: 0; height: 18px; margin-top: -18px;
+  background: linear-gradient(to bottom, rgba(28, 26, 23, 0), var(--bg, #1c1a17));
+  pointer-events: none; display: block;
+}
+.prompt-scroll:not(.has-more)::after { display: none; }
 /* #34 round 2 (orchestrator's ruling): a line naming exactly one card is
    the WHOLE row, one <button> — see logLineNodes() in app.js. It resets
    every default button style back to a plain row (a <div> would have had
@@ -1176,12 +1220,12 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 /* Hand: art on top, a circular ops badge and both names (zh + en — the
    exception to the no-mixing rule) below. Qin, Chu, neutral and scoring
    cards all share this shape — only colour, texture and font differ. */
-/* The hand's own height is set from app.js (layoutTable()): ~207px by
-   default (C2_Game), shrinking only when the viewport truly can't fit that
-   plus the map's minimum — and even then only the card's ART shrinks
-   (flex:1 1 auto, min-height:0), never the name (flex:none, wraps instead
-   of an ellipsis). */
-.hand { flex: none; display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 4px 8px 6px; }
+/* #68: the hand row is a fixed 207px (96x176 card + its own headroom,
+   app.js's CARD_H+HAND_GUTTER) regardless of state — empty, mid-turn, or
+   full — since it's now just one more fixed member of #lowerBlock's own
+   fixed height, never something the map (or anything else) can grow into
+   or shrink for (the owner's literal complaint, #68: "地圖大小應固定"). */
+.hand { flex: none; height: 207px; display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 4px 8px 6px; }
 .card { flex: none; width: 96px; height: var(--card-h, 176px); border: 1px solid var(--gold-line); border-radius: 10px; padding: 0; display: flex; flex-direction: column; text-align: left; overflow: hidden; }
 .card[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--gold); }
 .card .cardimg { display: block; width: 100%; flex: 1 1 auto; min-height: 0; object-fit: cover; }

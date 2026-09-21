@@ -111,47 +111,42 @@ function ensureBanner() {
   banner = { root, title, why };
 }
 function setSlot(cls) {
-  banner.root.classList.remove("adv-slot-hand", "adv-slot-prompt", "adv-slot-sheet", "adv-slot-desktop");
+  banner.root.classList.remove("adv-slot-hand", "adv-slot-prompt", "adv-slot-text", "adv-slot-sheet", "adv-slot-desktop");
   banner.root.classList.add(cls);
 }
 // Moves the SAME banner node into whichever real slot app.js's own layout
-// has room for right now, and applies the matching size class -- this must
-// run BEFORE app.js's layoutTable() (see the call site in render()), since
-// layoutTable() measures #prompt/#sheet's rendered height (which now
-// includes the banner, when it's parked inside one of them) and, for the
-// one truly new row this adds, reads a class list that includes
-// "advisorBanner" for exactly that reason.
+// wants it in right now, and applies the matching size class -- this must
+// still run BEFORE app.js's layoutTable() (see the call site in render()),
+// since layoutTable() reads whichever slot is now holding it (the "sheet"
+// slot is inside #sheet's own budget; the "text" slot is pinned ahead of
+// #promptScroll, inside #lowerBlock's own fixed height) when it decides
+// whether #lowerBlock's give-way stages need to fire.
+//
+// #68 (owner: "地圖大小應固定", widened by a 2nd report on the same issue):
+// this used to hide the banner outright, or replace the prompt's own text
+// with it, whenever a short viewport ran out of room -- both were really
+// about protecting the MAP's own budget, which no longer exists once the
+// map stopped reading anything from #prompt/#sheet/#hand. #lowerBlock is a
+// fixed height now regardless, so there is no more "no room, drop the
+// advice" case on the phone column to route around.
 //
 // Slots, in the order this checks them:
-//   - sheet:   #sheet has real content -- the full-screen "browsing a
-//              card" header, the mini chip + preview while a target is
-//              being picked, OR the opening placement / any other pending
-//              choice (renderPending renders its Confirm/Cancel row into
-//              #sheet too) -- the banner becomes the sheet's own last flow
-//              child, below whatever's already there (owner: "sheet 裡...
-//              的 flow").
-//   - desktop: >=1024px, browsing the hand with no sheet open -- becomes
+//   - sheet:   a genuine full-screen card page (`.sheet.overlay`,
+//              style.css) -- #prompt sits behind that overlay, so this is
+//              the only slot that's actually visible; becomes the sheet's
+//              own last flow child, below whatever's already there (owner:
+//              "sheet 裡... 的 flow").
+//   - desktop: >=1024px, browsing the hand with no overlay open -- becomes
 //              the hand's own grid's first row (spanning every column), so
 //              the cards flow into the rows below it, still inside the
-//              sidebar; falls back to the prompt slot if that would push
-//              the hand past the frame's own bottom edge.
-//   - hand:    the phone column, browsing the hand with no sheet open -- a
-//              plain flow row directly above #hand, inside #table, counted
-//              in layoutTable()'s own "chrome" sum.
-//   - prompt:  the fallback for both phone slots above, when there truly
-//              is no room: #5's "chip" mode (the map already at its floor
-//              scale, no headroom above the hand) is the owner's own named
-//              case, but a real bug found while testing this round showed
-//              the SAME squeeze during the opening placement (#sheet's own
-//              Confirm/Cancel row + the banner outgrew #table's fixed box
-//              and were silently clipped by its `overflow: hidden`, with
-//              no scrollbar anywhere to reveal it) -- so rather than
-//              special-case just the hand's chip mode, this measures
-//              #table's own scrollHeight against its clientHeight AFTER
-//              trying the sheet/hand slot and falls back whenever that
-//              doesn't fit, whichever slot triggered it. The banner
-//              replaces the prompt's OWN text in this slot (hidden while
-//              it's active; Log/Rules stay) instead of adding a row.
+//              sidebar; falls back to the prompt-takeover slot if that
+//              would push the hand past the frame's own bottom edge.
+//   - text:    the phone column, EVERY other state (browsing the hand,
+//              target picking, placement, a pending choice) -- pinned as
+//              #prompt's own first flow child, ahead of #promptScroll (see
+//              app.js's play.html/layoutTable()), so it's visible
+//              alongside whatever #promptScroll or the sheet below it is
+//              doing, never hidden or swapped out for it.
 function placeBanner(meta) {
   const table = document.getElementById("table");
   const hand = document.getElementById("hand");
@@ -164,7 +159,23 @@ function placeBanner(meta) {
     prompt.appendChild(banner.root);
     setSlot("adv-slot-prompt");
   };
-  const overflowsTable = () => table.scrollHeight > table.clientHeight + 1;
+  // #68 (cross-boundary edit, orchestrator's ruling on the owner's 2nd #68
+  // report -- FE peer, flagged to this file's own owner at handoff): the
+  // phone column's #prompt is no longer a plain-text row layoutTable()
+  // measures whole -- it's #lowerBlock's own fixed-height text area (see
+  // app.js), a pinned banner slot ahead of the scrollable #promptScroll
+  // (the prompt sentence + news + #fallbackBanner). The banner parks here
+  // in EVERY phone state that has one, including target picking, placement
+  // and a pending choice -- it no longer replaces #promptText the way
+  // takeOverPrompt() (desktop-only now, above) still does; "the prompt and
+  // news scroll under it, the advice does not" is exactly what pinning it
+  // ahead of #promptScroll (a sibling, not a wrapper) gets for free.
+  const pinInPrompt = () => {
+    if (promptText) promptText.hidden = false;
+    const promptScroll = document.getElementById("promptScroll");
+    prompt.insertBefore(banner.root, promptScroll || prompt.firstChild);
+    setSlot("adv-slot-text");
+  };
   // #24 round 4: app.js's setPrompt() (round 2) always parks a hidden
   // .sheet-title as #sheet's first child now, even while just browsing the
   // hand -- sheet.children.length is never really 0 any more, so this used
@@ -227,20 +238,23 @@ function placeBanner(meta) {
     takeOverPrompt();
     return;
   }
-  // Phone column.
-  if (sheetHasContent) {
+  // Phone column. #68: the only state where #prompt truly isn't on screen
+  // is a genuine full-screen card page (`.sheet.overlay`, position:fixed;
+  // inset:0, style.css) -- #prompt sits behind that overlay, so the banner
+  // has to go inside the overlay's own content to be seen at all. Every
+  // other sheetHasContent state (#24's mini target-picking chip, a pending
+  // choice's Confirm/Cancel row) is a normal flow row alongside #prompt,
+  // not a takeover, so it now pins into the prompt like everything else --
+  // there is no more "no room" fallback to route around: #promptScroll
+  // scrolls, #lowerBlock's own give-way (app.js's layoutTable()) handles
+  // the rest, and the banner is never part of either negotiation.
+  if (sheetHasContent && sheet.classList.contains("overlay")) {
     if (promptText) promptText.hidden = false;
     appendToSheetContent();
     setSlot("adv-slot-sheet");
-    if (overflowsTable()) { sheetContentTarget.removeChild(banner.root); takeOverPrompt(); }
     return;
   }
-  if (hand && hand.dataset.mode === "chip") { takeOverPrompt(); return; }
-  if (promptText) promptText.hidden = false;
-  if (hand) table.insertBefore(banner.root, hand);
-  else table.appendChild(banner.root); // defensive fallback; #sheet or #hand cover every real state today
-  setSlot("adv-slot-hand");
-  if (overflowsTable()) { banner.root.remove(); takeOverPrompt(); }
+  pinInPrompt();
 }
 
 function joinNames(ids, meta) {
@@ -545,7 +559,8 @@ function setBannerText(adv, meta, real, view) {
 // fragment; the title alone is still the full suggestion. Must run AFTER
 // placeBanner() -- it reads the slot class placeBanner() just set.
 function clampPromptWhy() {
-  if (banner.root.classList.contains("adv-slot-prompt") && banner.why.scrollHeight > banner.why.clientHeight + 1) {
+  if ((banner.root.classList.contains("adv-slot-prompt") || banner.root.classList.contains("adv-slot-text"))
+    && banner.why.scrollHeight > banner.why.clientHeight + 1) {
     banner.why.textContent = "";
   }
 }
