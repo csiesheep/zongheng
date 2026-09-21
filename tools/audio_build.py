@@ -71,7 +71,8 @@ def process_sfx(take_id, cue):
         return None
 
     # Step 1: Measure peak
-    silence_chain = "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0,areverse,silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0,afade=t=in:d=0.04,areverse,afade=t=in:d=0.003"
+    # Trim head at -50dB, keep 0.15s of tail decay before 40ms fade
+    silence_chain = "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0,areverse,silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.15,afade=t=in:d=0.04,areverse,afade=t=in:d=0.003"
 
     cmd = [FFMPEG, "-hide_banner", "-i", flac, "-af", f"{silence_chain},volumedetect", "-f", "null", "-"]
     success, stderr = run_ffmpeg(cmd)
@@ -187,6 +188,23 @@ def process_bgm(take_id, cue):
 
     verified = get_loudness_from_output(stderr)
 
+    # If true peak exceeds -1.5 dB, re-run pass 2 with TP=-3.5
+    if verified and verified['input_tp'] > -1.5:
+        loudnorm_filter = f"loudnorm=I=-20:TP=-3.5:LRA=11:measured_I={loudness_params['input_i']}:measured_TP={loudness_params['input_tp']}:measured_LRA={loudness_params['input_lra']}:measured_thresh={loudness_params['input_thresh']}:offset={loudness_params['target_offset']}:linear=true,afade=t=in:d=0.02,areverse,afade=t=in:d=0.06,areverse"
+
+        if os.path.exists(mp3_file):
+            os.remove(mp3_file)
+
+        cmd = [FFMPEG, "-y", "-i", flac, "-af", loudnorm_filter, "-ar", "44100", "-c:a", "libmp3lame", "-b:a", "128k", mp3_file]
+        success, stderr = run_ffmpeg(cmd)
+        if not success:
+            return None
+
+        # Verify again with TP=-3.5
+        cmd = [FFMPEG, "-hide_banner", "-i", mp3_file, "-af", "loudnorm=I=-20:TP=-3.5:LRA=11:print_format=json", "-f", "null", "-"]
+        success, stderr = run_ffmpeg(cmd)
+        verified = get_loudness_from_output(stderr)
+
     duration = get_duration_from_mp3(mp3_file)
     size = os.path.getsize(mp3_file)
 
@@ -194,7 +212,8 @@ def process_bgm(take_id, cue):
         "duration": round(duration, 2) if duration else None,
         "loudness": round(verified['input_i'], 2) if verified else None,
         "tp": round(verified['input_tp'], 2) if verified else None,
-        "size": size
+        "size": size,
+        "tp_corrected": verified['input_tp'] <= -1.5 if verified else False
     }
 
 def main():
