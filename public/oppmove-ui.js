@@ -61,6 +61,7 @@ let beats = [];         // flattened per-tick items for the current move's steps
 let beatIndex = -1;
 let timer = null;
 let chip = null;        // { move } for the persistent ③ chip, or null
+let previewOpen = false; // true while ③'s corner thumbnail is enlarged into the preview
 let sheetOpen = false;
 let sheetSeq = null;    // which move (by .seq) the open sheet is showing
 let ctx = { view: null, me: 0, lang: "zh-Hant", mapTargeting: false, acted: false };
@@ -78,7 +79,11 @@ function ensureDom() {
     `<div id="oppDim" class="opp-dim" hidden></div>` +
     `<div id="oppCard" class="opp-card" hidden></div>` +
     `<div id="oppRings" class="opp-rings" hidden></div>` +
-    `<div id="oppTicker" class="opp-ticker" hidden></div>`;
+    `<div id="oppTicker" class="opp-ticker" hidden></div>` +
+    `<div id="oppCorner" class="opp-corner" hidden>` +
+      `<button type="button" id="oppThumb" class="opp-thumb no-tap-sound"></button>` +
+      `<div id="oppPreview" class="opp-preview" aria-hidden="true"></div>` +
+    `</div>`;
   document.body.appendChild(root);
   const scrim = document.createElement("div"); scrim.id = "oppScrim"; scrim.className = "opp-scrim"; scrim.hidden = true;
   const sheet = document.createElement("div"); sheet.id = "oppSheet"; sheet.className = "opp-sheet"; sheet.hidden = true;
@@ -87,40 +92,49 @@ function ensureDom() {
   dom = {
     dim: root.querySelector("#oppDim"), card: root.querySelector("#oppCard"),
     rings: root.querySelector("#oppRings"), ticker: root.querySelector("#oppTicker"),
-    scrim, sheet,
+    corner: root.querySelector("#oppCorner"), thumb: root.querySelector("#oppThumb"),
+    preview: root.querySelector("#oppPreview"), scrim, sheet,
   };
   dom.dim.addEventListener("click", skip);
   dom.card.addEventListener("click", skip);
   dom.ticker.addEventListener("click", skip);
   scrim.addEventListener("click", closeSheet);
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && sheetOpen) closeSheet(); });
+  wireCorner(dom);
   return dom;
 }
-// ---------- the pill (#84): the persistent chip's own new home -- the
-// first line of #promptScroll (app.js/play.html's own scrollable prompt
-// area, phone AND desktop alike -- #lowerBlock's `display: contents` on
-// desktop, desktop.css, re-anchors #prompt/#promptScroll straight into the
-// sidebar's own "prompt" grid area, so this one element already lands in
-// both places for free). Never fixed, never a child of #map -- so, unlike
-// #79's old top-left chip, it can't cover a node (#68's rect stays
-// app.js's alone regardless). app.js rebuilds #promptText/#fallbackBanner
-// in place but never #promptScroll's own child list (grepped: no
-// `promptScroll.innerHTML =`), so re-inserting the pill as the first child
-// on every paint() is enough to survive every render.
-function ensurePill() {
-  const ps = document.getElementById("promptScroll");
-  if (!ps) return null;
-  let pill = document.getElementById("oppPill");
-  if (!pill) {
-    pill = document.createElement("button");
-    pill.type = "button";
-    pill.id = "oppPill";
-    pill.className = "opp-pill no-tap-sound";
-    pill.hidden = true;
-    pill.addEventListener("click", () => openSheet(null));
-  }
-  if (ps.firstChild !== pill) ps.insertBefore(pill, ps.firstChild);
-  return pill;
+// ---------- ③ the corner thumbnail (#85: replaces #84's pill -- the
+// persistent card art now sits fixed at the map's own top-left corner
+// (map-draw.js's NODE_POS keeps that corner free of any city/badge, see
+// map-corner.test.js), not in #promptScroll and not a child of #map (#68's
+// rect stays untouched either way). The thumb (always in the DOM, always
+// focusable) and the bigger preview share one anchor -- the preview is
+// `position: absolute` right on top of the thumb (never toggled via
+// `hidden`, which would drop focus when the focused element disappears);
+// oppmove.css animates it in/out with its own `.open` class instead.
+// Phone (no real hover): a tap on the thumb shows the preview; a tap on
+// the preview opens ④; a tap anywhere outside the corner closes it.
+// Desktop (hover: hover + pointer: fine): hovering the corner shows the
+// preview and leaving it closes it; a click on either the thumb or the
+// preview always opens ④ straight away. Keyboard: focusing the thumb
+// shows the preview exactly like hover, and Enter opens ④ regardless of
+// hover support (the brief's own rule).
+const hoverCapable = () => { try { return matchMedia("(hover: hover) and (pointer: fine)").matches; } catch { return false; } };
+function wireCorner(d) {
+  d.thumb.addEventListener("click", () => { if (previewOpen || hoverCapable()) openSheet(null); else showPreview(); });
+  d.thumb.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); openSheet(null); } });
+  d.thumb.addEventListener("focus", showPreview);
+  d.preview.addEventListener("click", () => openSheet(null));
+  d.corner.addEventListener("mouseenter", () => { if (hoverCapable()) showPreview(); });
+  d.corner.addEventListener("mouseleave", () => { if (hoverCapable()) hidePreview(); });
+  d.corner.addEventListener("focusout", (ev) => { if (!d.corner.contains(ev.relatedTarget)) hidePreview(); });
+  document.addEventListener("click", (ev) => { if (previewOpen && !d.corner.contains(ev.target)) hidePreview(); });
+}
+function showPreview() { if (!previewOpen) { previewOpen = true; paint(); } }
+function hidePreview() { if (previewOpen) { previewOpen = false; paint(); } }
+function positionCorner() {
+  const mr = rectOf(mapEl());
+  if (mr && dom) dom.corner.style.cssText = `left:${mr.left + 6}px; top:${mr.top + 6}px`;
 }
 function mapEl() { return document.getElementById("map"); }
 function spaceEl(id) { return id ? document.querySelector(`.node[data-space="${id}"]`) : null; }
@@ -298,23 +312,28 @@ function renderStepsStatic() {
   d.ticker.textContent = beats.length ? `${beats.length}. ${beats[beats.length - 1].text}` : "";
 }
 
-// ---------- ③ the pill (#84: one line, off the map -- see ensurePill()) ----------
-function pillHTML(mv) {
-  const lang = ctx.lang, side = mv.side, card = mv.card, use = mv.use, sideCls = side === E.QIN ? "q" : "c";
+// tailFor(mv): the same "{use} {ops} ›"/event/headline tail the old pill's
+// one-liner carried (pre-#85) -- now the corner preview's own second line.
+function tailFor(mv) {
+  const lang = ctx.lang, side = mv.side, card = mv.card, use = mv.use;
   const owner = cardSideOf(card);
   // The Cauldrons never carries an event (see eventLineFor's own note) --
   // `owner !== side` alone would say "event also happens" here, wrongly.
   const autoEvent = card !== "jiuding" && owner !== side;
-  // Each of these i18n strings already ends in its own "›" (zh-Hant.js/en.js,
-  // pre-#84) -- the same tap hint the old two-line chip carried on its
-  // second line, now the tail of this one line instead.
-  const tail = use === "headline" ? t(lang, "oppmove.chipHeadline")
+  return use === "headline" ? t(lang, "oppmove.chipHeadline")
     : use === "event" ? t(lang, "oppmove.chipEvent")
     : t(lang, autoEvent ? "oppmove.chipOpsEvent" : "oppmove.chipOps", { use: t(lang, `useNames.${use}`), ops: actualOpsOf(mv) });
-  return `<img class="opp-pill-art" src="art/cards/${card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
-    `<span class="opp-pill-text"${lang === "en" ? "" : ' lang="zh-Hant"'}>` +
-      `<b class="side-${sideCls}">${esc(sideName(side, lang))}</b> · ${esc(cardName(card, lang))} · ${esc(tail)}` +
-    `</span>`;
+}
+function renderCorner(mv) {
+  const d = ensureDom(), lang = ctx.lang, sideCls = mv.side === E.QIN ? "q" : "c";
+  d.thumb.className = `opp-thumb no-tap-sound side-${sideCls}`;
+  d.thumb.setAttribute("aria-label", `${sideName(mv.side, lang)} · ${cardName(mv.card, lang)} · ${tailFor(mv)}`);
+  d.thumb.innerHTML = `<img class="opp-thumb-art" src="art/cards/${mv.card}.jpg" alt="" onerror="this.style.visibility='hidden'">`;
+  d.preview.className = `opp-preview side-${sideCls}`;
+  d.preview.innerHTML =
+    `<img class="opp-preview-art" src="art/cards/${mv.card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
+    `<span class="opp-preview-line1"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(sideName(mv.side, lang))} · ${esc(cardName(mv.card, lang))}</span>` +
+    `<span class="opp-preview-line2"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(tailFor(mv))}</span>`;
 }
 // ---------- overall visibility ----------
 // The single place that decides what's on screen: card panel+dim during
@@ -334,15 +353,13 @@ function paint() {
   else if (inSteps) positionMapCatcher();
   const mv = inSteps ? move : phase === "idle" ? (chip && chip.move) : null;
   const winnerDecided = ctx.view && ctx.view.winner != null;
-  const showPill = !!mv && !ctx.mapTargeting && !winnerDecided;
-  const pill = ensurePill();
-  if (pill) {
-    pill.hidden = !showPill;
-    if (showPill) {
-      pill.className = `opp-pill no-tap-sound side-${mv.side === E.QIN ? "q" : "c"}`;
-      pill.innerHTML = pillHTML(mv);
-    }
-  }
+  const showCorner = !!mv && !ctx.mapTargeting && !winnerDecided;
+  d.corner.hidden = !showCorner;
+  if (showCorner) { positionCorner(); renderCorner(mv); }
+  else if (previewOpen) previewOpen = false;
+  const previewShown = showCorner && previewOpen;
+  d.preview.classList.toggle("open", previewShown);
+  d.preview.setAttribute("aria-hidden", String(!previewShown));
   if (sheetOpen) renderSheet();
 }
 
@@ -353,13 +370,22 @@ function openSheet(seq) {
   if (!moves.length) return;
   sheetSeq = seq != null && moves.some((m) => m.seq === seq) ? seq : moves[moves.length - 1].seq;
   sheetOpen = true;
+  if (previewOpen) { previewOpen = false; paint(); }
   renderSheet();
 }
+// #85 round 2: closing the sheet -- 關閉, Escape, or a tap on the scrim,
+// every path routes through here -- must also drop the corner preview.
+// Before this, a mouse user who closed the sheet still had `previewOpen`
+// true underneath it, so the very next click on the thumb (still
+// `previewOpen`, per its own click handler) jumped straight back to
+// reopening the sheet instead of collapsing to the plain thumbnail first.
 function closeSheet() {
   if (!sheetOpen) return;
   sheetOpen = false;
+  previewOpen = false;
   const d = ensureDom();
   d.scrim.hidden = true; d.sheet.hidden = true; d.sheet.innerHTML = "";
+  paint();
 }
 function flashRow(beat) {
   if (!beat) return;
@@ -435,6 +461,7 @@ function nextBeat() {
 function finishMove() {
   clearTimeout(timer);
   chip = { move };
+  previewOpen = false;
   move = null; beats = []; beatIndex = -1;
   if (queue.length) { startNext(); return; }
   phase = "idle";
@@ -447,6 +474,7 @@ function endToChip() {
   clearTimeout(timer);
   if (move) chip = { move };
   else if (queue.length) chip = { move: queue[queue.length - 1] };
+  previewOpen = false;
   move = null; queue = []; beats = []; beatIndex = -1;
   phase = "idle";
   paint();
@@ -479,7 +507,7 @@ export function sync(view, info) {
 // #41's lastMoveMarks tap-clear, and never through a render() of its own.
 export function onAction() {
   clearTimeout(timer);
-  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1; chip = null;
+  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1; chip = null; previewOpen = false;
   if (sheetOpen) closeSheet();
 }
 // A new game started, a solo game resumed, or a room's first view arrived:
@@ -488,7 +516,7 @@ export function onAction() {
 export function reset() {
   clearTimeout(timer);
   revealedSeq = null;
-  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1; chip = null;
+  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1; chip = null; previewOpen = false;
   if (sheetOpen) closeSheet();
   if (dom) paint();
 }
@@ -496,9 +524,7 @@ export function reset() {
 // else (so returning to the real game afterwards can pick up cleanly).
 export function disable() {
   clearTimeout(timer);
-  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1;
-  const pill = document.getElementById("oppPill");
-  if (pill) pill.hidden = true;
+  phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1; previewOpen = false;
   if (!dom) return;
-  dom.dim.hidden = true; dom.card.hidden = true; dom.rings.hidden = true; dom.ticker.hidden = true;
+  dom.dim.hidden = true; dom.card.hidden = true; dom.rings.hidden = true; dom.ticker.hidden = true; dom.corner.hidden = true;
 }
