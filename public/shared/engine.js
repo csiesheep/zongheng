@@ -716,8 +716,19 @@ function play(st, action) {
   if (side !== st.actor) fail("not your action");
   const c = action.card, use = action.use;
   const steps = [];
+  // 頓兵堅城 is read before anything is played, the Nine Cauldrons included:
+  // while a discard is owed AND possible the round IS the discard (#57), so
+  // every other play is refused with the bog's own message. The bog check used
+  // to sit after the JIUDING branch returned, so `play()` took the Cauldrons in
+  // a bog round although `legal()` offered none -- the round was spent and the
+  // bog still owed afterwards (#59, pre-existing; the table's UI and the bots
+  // never did it because they read `legal()`).
+  const h = st.hands[side];
+  const bog = st.effects.find((e) => e.kind === "bog" && e.who === side);
+  const bogCards = bog ? h.filter((x) => CARD[x].ops >= 2) : [];
   if (c === JIUDING) {
     if (!jiudingUsable(st, side)) fail("the Nine Cauldrons are not yours to use");
+    if (bogCards.length) fail("頓兵堅城: discard a card of 2+ ops first");
     if (forcedCard(st, side)) fail("you must play the named card");
     if (!["place", "campaign", "lobby"].includes(use)) fail("the Nine Cauldrons: place, campaign or lobby only");
     validateOps(st, side, JIUDING, 4, { use, points: action.points, target: action.target }, true);
@@ -726,11 +737,8 @@ function play(st, action) {
     st.plan.unshift(...steps);
     return run(st);
   }
-  const h = st.hands[side];
   if (!h.includes(c)) fail("card not in hand");
   const card = CARD[c];
-  const bog = st.effects.find((e) => e.kind === "bog" && e.who === side);
-  const bogCards = bog ? h.filter((x) => CARD[x].ops >= 2) : [];
   // 頓兵堅城 (dunbing, 69) and 細作 (xizuo, 67) both claim this action round.
   // orchestrator's ruling (#57), flagged to the owner: the bog comes first and
   // 細作 carries. While a discard is owed AND possible, the round IS the
