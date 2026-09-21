@@ -131,6 +131,87 @@ function flattenBeats(mv, view, c) {
   return out;
 }
 
+// ---------- ① the card panel ----------
+function eventLineFor(mv, lang) {
+  const owner = cardSideOf(mv.card);
+  const text = cardText(mv.card, lang);
+  if (mv.use === "headline") return t(lang, "oppmove.eventHeadline", { text });
+  if (mv.use === "event") return t(lang, "oppmove.eventTheirs", { text });
+  if (owner == null) return t(lang, "oppmove.eventNeutral", { text });
+  if (owner === ctx.me) return t(lang, "oppmove.eventMine", { side: sideName(ctx.me, lang), text });
+  return ""; // their own card, spent for ops -- no event fires, nothing to say
+}
+function renderCard() {
+  const d = ensureDom(), lang = ctx.lang;
+  const side = move.side, card = move.card, use = move.use;
+  const sideCls = side === E.QIN ? "q" : "c";
+  const useLine = use === "headline" ? "" :
+    `<div class="opp-useops">${esc(t(lang, "oppmove.useOps", { use: t(lang, `useNames.${use}`), ops: opsOf(card) }))}</div>`;
+  const eventLine = eventLineFor(move, lang);
+  const mr = rectOf(mapEl());
+  if (mr) {
+    d.dim.style.cssText = `left:${mr.left}px;top:${mr.top}px;width:${mr.width}px;height:${Math.round(mr.height * 0.72)}px`;
+    d.card.style.cssText = `left:${mr.left + 8}px;top:${mr.top + 8}px;width:${mr.width - 16}px`;
+  }
+  d.card.className = `opp-card side-${sideCls}`;
+  d.card.innerHTML =
+    `<img class="opp-card-art" src="art/cards/${card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
+    `<div class="opp-card-body">` +
+      `<span class="opp-card-tag">${esc(t(lang, "oppmove.playedTag", { side: sideName(side, lang) }))}</span>` +
+      `<div class="opp-card-name"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(cardName(card, lang))}</div>` +
+      useLine +
+      (eventLine ? `<div class="opp-card-event"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(eventLine)}</div>` : "") +
+    `</div>` +
+    `<div class="opp-card-hint">${esc(t(lang, "oppmove.tapHint"))}</div>`;
+}
+
+// ---------- ② the steps ----------
+function renderBeat(beat) {
+  const d = ensureDom();
+  d.rings.innerHTML = "";
+  if (beat.kind === "ring" && beat.spaceId) {
+    const r = rectOf(spaceEl(beat.spaceId));
+    if (r) {
+      const ring = document.createElement("div");
+      ring.className = `opp-ring side-${(beat.side === E.QIN ? "q" : "c")}`;
+      ring.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px`;
+      if (beat.n) ring.innerHTML = `<span class="opp-ring-badge">+${beat.n}</span>`;
+      d.rings.appendChild(ring);
+    }
+  } else if (beat.kind === "final" && Array.isArray(beat.spaces)) {
+    for (const id of beat.spaces) {
+      const r = rectOf(spaceEl(id));
+      if (!r) continue;
+      const ring = document.createElement("div");
+      ring.className = "opp-ring opp-ring-gold";
+      ring.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px`;
+      d.rings.appendChild(ring);
+    }
+  } else if (beat.kind === "stat" && beat.stat) {
+    const r = rectOf(statEl(beat.stat));
+    if (r) {
+      const glow = document.createElement("div");
+      glow.className = "opp-glow";
+      glow.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
+      d.rings.appendChild(glow);
+    }
+  }
+  const mr = rectOf(mapEl());
+  if (mr) d.ticker.style.cssText = `left:${mr.left + 8}px;top:${mr.bottom - 38}px;width:${mr.width - 16}px`;
+  d.ticker.textContent = beat.text;
+}
+function renderStepsStatic() {
+  // prefers-reduced-motion: every beat's ring/glow shown at once, no ticker cycling.
+  const d = ensureDom();
+  d.rings.innerHTML = "";
+  for (const beat of beats) {
+    const prevInner = d.rings.innerHTML;
+    renderBeat(beat);
+    d.rings.innerHTML = prevInner + d.rings.innerHTML;
+  }
+  d.ticker.textContent = beats.length ? beats[beats.length - 1].text : "";
+}
+
 // ---------- public API (filled in by later edits) ----------
 export function sync(view, info) {}
 export function onAction() {}
