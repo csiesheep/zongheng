@@ -147,6 +147,7 @@ function show(view) {
   // the map (the one flexible piece) shrink first.
   document.body.classList.toggle("table-lock", view === "table");
   updateSceneMusic();
+  updateUnderlay(); // #64: leaving the table (or never having been on it) is always "no tension layer"
 }
 // #62: the one scene cue playing right now, recomputed on every view
 // transition (show(), above) AND on every table render (era/winner can
@@ -176,6 +177,22 @@ function updateSceneMusic() {
   const cue = Cues.sceneFor({ page: view, era, me, winner, tutorial });
   if (tutorial) Audio.setScene(cue, { fallbackCue: `bgm.table.reform.${E.SIDES[game.me]}`, fallbackGainMul: 0.6 });
   else Audio.setScene(cue);
+}
+// #64: the low heartbeat layer under the table music, wholly separate from
+// the scene above -- on the table only, never in the tutorial, and null the
+// moment the game is over (tensionFor() itself already says false once
+// `v.winner` is set, so the ending's own piece plays alone, per the issue).
+// `v` is either the full state or a per-seat view of it -- both carry the
+// public fields dangerFlags() reads (seals/mie/mandate/weariness/turn/
+// options/winner) -- so a spectator's own `v` drives this exactly the same
+// way a player's does: a spectator hears it too, per the issue. Called with
+// no `v` from show() itself (every OTHER page, and the instant before a
+// table render has even happened): document.body.dataset.view isn't
+// "table" there, so it short-circuits before ever touching `v`.
+function updateUnderlay(v) {
+  const view = document.body.dataset.view;
+  if (Tut.active() || view !== "table") { Audio.setUnderlay(null); return; }
+  Audio.setUnderlay(Cues.tensionFor(v) ? "bgm.tension" : null);
 }
 // The landing is its own page. Going back never loses anything: the solo game
 // is saved on every move, and a room keeps this tab's seat (the bot covers it
@@ -589,6 +606,7 @@ function render() {
     fitMap(); // after every sibling has its final flex size, so the map's own box is final too
     decorateAdvisor(v, { solo: false, side: game.me });
     updateSceneMusic(); // a spectator's era/winner can still change the scene
+    updateUnderlay(v); // #64: a spectator hears the tension layer too
     return;
   }
   // Computed before renderMap so a scoring card selected this same render
@@ -636,6 +654,7 @@ function render() {
   layoutTable(); // the map's real box depends on the hand's, so both are sized together, then fitMap() scales the map's content
   Tut.decorate(); // no-op unless a tutorial is running (#15)
   updateSceneMusic(); // era change (turn 4/7) or the game ending can happen mid-table, without a show() transition
+  updateUnderlay(v); // #64: same reasoning -- a new danger flag or the game ending can land mid-table too
 }
 // The map's scale is the viewport-width ratio (DESIGN_W is the mockup's own
 // canvas width) UNLESS that would leave no room at all for a shown hand, in
