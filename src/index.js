@@ -8,6 +8,7 @@
 // The public path segment is independent of the repo / Worker name; change
 // PREFIX alone to move the site to a different path.
 export { Room } from "./room.js";
+import { withRange } from "./range.js";
 
 const PREFIX = "/zongheng";
 const CANONICAL = "https://games.csiesheep.com" + PREFIX + "/";
@@ -77,7 +78,10 @@ export default {
     }
 
     url.pathname = sub;
-    const response = await env.ASSETS.fetch(new Request(url, request));
+    // The asset handler ignores Range; iPhones will not play media without 206
+    // (#70). withRange only touches a 200, so it is placed before the Location
+    // fix, which only touches redirects: the two never act on the same response.
+    const response = await withRange(request, await env.ASSETS.fetch(new Request(url, request)));
 
     // The static-asset handler builds Location from the url we just stripped
     // the prefix off, so a same-origin redirect would escape this Worker and
