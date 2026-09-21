@@ -43,8 +43,12 @@
   align-items: flex-end;
   justify-content: center;
 }
+/* #72: the skip pill (below) now owns the bottom-centre spot, so the tap
+   line sits above it -- its own margin-bottom has to clear the skip
+   button's full height (44px) plus the 24px+safe-area gap under it, plus a
+   further gap so the two never touch. */
 .opening-line {
-  margin: 0 0 calc(26px + env(safe-area-inset-bottom));
+  margin: 0 0 calc(24px + 44px + 16px + env(safe-area-inset-bottom));
   padding: 10px 22px;
   border-radius: 999px;
   background: rgba(10, 9, 8, 0.6);
@@ -54,19 +58,33 @@
   pointer-events: none;
 }
 
-.opening-skip, .opening-audio-slot .audio-btn {
+/* #72: the speaker stays top-left; the top-right skip is gone -- skip now
+   lives bottom-centre, against the layer's own 100svh box (opening.css's
+   .opening-layer is `inset: 0` inside .landing-page, which style.css sets
+   to `height: 100svh`, so `bottom` here is already svh-based, never vh). */
+.opening-audio-slot .audio-btn {
   position: absolute;
   top: 8px;
   z-index: 2;
   background: rgba(10, 9, 8, 0.55);
 }
+.opening-audio-slot { position: absolute; top: 8px; left: 8px; z-index: 2; }
+
 .opening-skip {
-  right: 8px;
+  position: absolute;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 9, 8, 0.7);
   border: 1px solid var(--gold-line);
   color: var(--gold);
-  border-radius: 8px;
-  font: 600 12px/1 var(--sans);
+  border-radius: 10px;
+  font: 600 16px/1 var(--sans);
   min-height: 44px;
-  min-width: 44px;
+  width: 120px;
+  cursor: pointer;
 }
-.opening-audio-slot { position: absolute; top: 8px; left: 8px; z-index: 2; }
