@@ -24,6 +24,9 @@ import {
 } from "./map-draw.js";
 import { computeLastMoveMarks } from "./lastmove.js";
 import { discParts } from "./disc-view.js";
+import * as Audio from "./audio.js";
+import * as Cues from "./audio-cues.js";
+import { mountAudioSwitches } from "./audio-switch.js";
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);
@@ -80,6 +83,8 @@ function setLang(l) {
   document.title = lang === "en" ? "Zongheng 縱橫" : "縱橫 Zongheng";
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
   renderBackLink();
+  logAudioToggles.sync();
+  sideFootAudioToggles.sync();
   $("chatIn").placeholder = t("lobby.say");
   $("lobbyChatIn").placeholder = t("lobby.say");
   renderSetup();
@@ -90,6 +95,12 @@ $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" :
 // visibility (solo table only) and everything it draws live in
 // advisor-ui.js, driven by the decorateAdvisor() call at render()'s tail.
 mountAdvisorToggle($("advisorSlot"));
+// #62: the sfx/music switches, mounted into the 紀錄 panel's header and (on
+// desktop) the side foot -- both always in the DOM (no table-view lock like
+// the advisor switch: #logBody/#sideFoot already only ever show on the
+// table view themselves, so nothing extra is needed here).
+const logAudioToggles = mountAudioSwitches($("logAudioSlot"), t);
+const sideFootAudioToggles = mountAudioSwitches($("sideFootAudioSlot"), t);
 
 // ---------- views ----------
 // The page's whole colour follows the side: the setup screen re-skins by
@@ -112,6 +123,37 @@ function show(view) {
   // by giving #table the rest of the viewport height via flex and letting
   // the map (the one flexible piece) shrink first.
   document.body.classList.toggle("table-lock", view === "table");
+  updateSceneMusic();
+}
+// #62: the one scene cue playing right now, recomputed on every view
+// transition (show(), above) AND on every table render (era/winner can
+// change mid-table without a view transition -- see render()'s own call at
+// its tail). sceneFor() itself has no idea about missing cues; the only
+// case this wiring layer special-cases is the tutorial, since bgm.tutorial
+// has no recording yet and (unlike setup/lobby, which are content keeping
+// bgm.landing playing under them) the tutorial wants its OWN substitute
+// (the reform era's table piece, quieter) rather than whatever was already
+// playing when it started.
+function updateSceneMusic() {
+  const view = document.body.dataset.view;
+  const tutorial = Tut.active();
+  // st.era is null until turn 1 actually starts (createGame() leaves it null
+  // through the opening setup placement, engine.js's own `turn: 0, era:
+  // null`) -- the table is already showing by then, so default to reform
+  // (the era the game is about to enter) rather than asking for a
+  // "bgm.table.null.<seat>" cue that can never exist.
+  const era = (game.st && game.st.era) || "reform";
+  const winner = game.st ? game.st.winner : null;
+  const me = game.spectator ? null : game.me;
+  const cue = Cues.sceneFor({ page: view, era, me, winner, tutorial });
+  if (tutorial) {
+    const m = Audio.getManifest();
+    // Manifest not loaded yet -> assume missing (true today regardless):
+    // safer than guessing a cue exists before we've actually checked.
+    const missing = !m || Cues.missingCues(m).includes(cue);
+    if (missing) { Audio.setScene(`bgm.table.reform.${E.SIDES[game.me]}`, { gainMul: 0.6 }); return; }
+  }
+  Audio.setScene(cue);
 }
 // The landing is its own page. Going back never loses anything: the solo game
 // is saved on every move, and a room keeps this tab's seat (the bot covers it
@@ -437,7 +479,14 @@ function layoutBar() {
   if (barOverflowing(bar, budget)) bar.classList.add("bar-tight");
   if (barOverflowing(bar, budget)) bar.classList.add("bar-tighter");
 }
+let lastUiErr = ""; // #62: sfx.ui.error fires once per NEW error text, not once per render while it's showing
 function render() {
+  // #62: every game.ui.err assignment (humanAct's catch, the tutorial's own
+  // wrong-tap message, a room's rejected action) calls render() right after
+  // -- so this one place catches all of them, including the table's own
+  // "tap a lit place" message, without touching any of those call sites.
+  if (game.ui && game.ui.err && game.ui.err !== lastUiErr) Audio.play("sfx.ui.error");
+  lastUiErr = (game.ui && game.ui.err) || "";
   // #34: redraw the read-only peek sheet from `game.peek` on every render —
   // never from `v` or anything else render() computes below, so a language
   // toggle (setLang() calls render() when a game is on) keeps an open
@@ -471,6 +520,7 @@ function render() {
     renderLog(v);
     fitMap(); // after every sibling has its final flex size, so the map's own box is final too
     decorateAdvisor(v, { solo: false, side: game.me });
+    updateSceneMusic(); // a spectator's era/winner can still change the scene
     return;
   }
   // Computed before renderMap so a scoring card selected this same render
@@ -517,6 +567,7 @@ function render() {
   });
   layoutTable(); // the map's real box depends on the hand's, so both are sized together, then fitMap() scales the map's content
   Tut.decorate(); // no-op unless a tutorial is running (#15)
+  updateSceneMusic(); // era change (turn 4/7) or the game ending can happen mid-table, without a show() transition
 }
 // The map's scale is the viewport-width ratio (DESIGN_W is the mockup's own
 // canvas width) UNLESS that would leave no room at all for a shown hand, in
@@ -2355,6 +2406,17 @@ setInterval(() => {
   $("barMid").textContent = `${t("tracks.turn")} ${game.st.turn} · ${game.spectator ? "" : sideName(game.me)} · ${t("lobby.clock", { s })}`;
   layoutBar();
 }, 1000);
+
+// #62: sfx.ui.tap on every button/link-button press EXCEPT the map's hit
+// buttons (#hitLayer -- placing/campaigning/lobbying already gets its own
+// sfx.map.* cues, part 2) and the hand cards (same reason, sfx.card.pick/
+// commit are part 2's job too). Capture phase so it still fires when a
+// handler underneath calls stopPropagation.
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest("button, a");
+  if (!el || el.closest("#hitLayer") || el.closest(".hand")) return;
+  Audio.play("sfx.ui.tap");
+}, true);
 
 // ---------- boot ----------
 const params = new URLSearchParams(location.search);

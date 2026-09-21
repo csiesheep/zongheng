@@ -145,6 +145,9 @@ export default {
       play: "Play vs bot · Easy", replay: "Replay", rules: "Rules", home: "Home",
     },
   },
+  // #62: the two switches (landing bar, table's 紀錄 panel header, desktop
+  // side foot) -- same "label" + "on/off aria-label" shape as advisor.* below.
+  audio: { sfx: "Sound", music: "Music", sfxOn: "Sound on", sfxOff: "Sound off", musicOn: "Music on", musicOff: "Music off" },
   advisor: {
     name: "Advisor",
     on: "Advisor on", off: "Advisor off",

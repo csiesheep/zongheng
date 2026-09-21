@@ -2,6 +2,9 @@
 // (play.html). No engine here, so it loads fast and can be indexed later.
 import en from "./i18n/en.js";
 import zh from "./i18n/zh-Hant.js";
+import * as Audio from "./audio.js";
+import * as Cues from "./audio-cues.js";
+import { mountAudioSwitches } from "./audio-switch.js";
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);
@@ -13,6 +16,12 @@ const sess = { get(k) { try { return sessionStorage.getItem(k); } catch { return
 
 let lang = "en", S = en;
 const t = (key, p = {}) => String(key.split(".").reduce((o, k) => (o ? o[k] : undefined), S) ?? key).replace(/\{(\w+)\}/g, (_, k) => (p[k] ?? `{${k}}`));
+
+// #62: the landing plays bgm.landing (and only bgm.landing -- there's no
+// era/winner/tutorial state on this page); the two switches live in the
+// bar's own right-hand group, mounted once, before 規則.
+const audioToggles = mountAudioSwitches($("audioToggles"), t);
+Audio.setScene(Cues.sceneFor({ page: "landing" }));
 
 function savedSolo() {
   try { const s = JSON.parse(store.get("zh.solo", "null")); return !!(s && s.st && s.st.winner == null); } catch { return false; }
@@ -44,6 +53,7 @@ function setLang(l) {
   // zh.solo, only its own key, and disappears for good once the tutorial
   // page has been opened.
   $("tutEntryDot").hidden = store.get("zh.tutorialSeen", "") === "1";
+  audioToggles.sync();
 }
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
 
@@ -56,6 +66,11 @@ $("btnJoin").onclick = () => {
 $("joinCode").addEventListener("keydown", (ev) => { if (ev.key === "Enter") $("btnJoin").click(); });
 
 setLang(new URLSearchParams(location.search).get("lang") || store.get("zh.lang", (navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
+
+// #62: sfx.ui.tap on every button/link-button press. The landing has no map
+// hit buttons or hand cards (play.html's own exclusions), so every
+// <button>/<a> qualifies here.
+document.addEventListener("click", (ev) => { if (ev.target.closest("button, a")) Audio.play("sfx.ui.tap"); }, true);
 
 // Desktop (>=768px, see landing-desktop.css): the backdrop's gold seam has
 // to line up with the Qin/Chu split inside the phone column. That split is
