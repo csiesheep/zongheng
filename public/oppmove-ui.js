@@ -78,8 +78,7 @@ function ensureDom() {
     `<div id="oppDim" class="opp-dim" hidden></div>` +
     `<div id="oppCard" class="opp-card" hidden></div>` +
     `<div id="oppRings" class="opp-rings" hidden></div>` +
-    `<div id="oppTicker" class="opp-ticker" hidden></div>` +
-    `<button type="button" id="oppChip" class="opp-chip no-tap-sound" hidden></button>`;
+    `<div id="oppTicker" class="opp-ticker" hidden></div>`;
   document.body.appendChild(root);
   const scrim = document.createElement("div"); scrim.id = "oppScrim"; scrim.className = "opp-scrim"; scrim.hidden = true;
   const sheet = document.createElement("div"); sheet.id = "oppSheet"; sheet.className = "opp-sheet"; sheet.hidden = true;
@@ -88,15 +87,40 @@ function ensureDom() {
   dom = {
     dim: root.querySelector("#oppDim"), card: root.querySelector("#oppCard"),
     rings: root.querySelector("#oppRings"), ticker: root.querySelector("#oppTicker"),
-    chip: root.querySelector("#oppChip"), scrim, sheet,
+    scrim, sheet,
   };
   dom.dim.addEventListener("click", skip);
   dom.card.addEventListener("click", skip);
   dom.ticker.addEventListener("click", skip);
-  dom.chip.addEventListener("click", () => openSheet(null));
   scrim.addEventListener("click", closeSheet);
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && sheetOpen) closeSheet(); });
   return dom;
+}
+// ---------- the pill (#84): the persistent chip's own new home -- the
+// first line of #promptScroll (app.js/play.html's own scrollable prompt
+// area, phone AND desktop alike -- #lowerBlock's `display: contents` on
+// desktop, desktop.css, re-anchors #prompt/#promptScroll straight into the
+// sidebar's own "prompt" grid area, so this one element already lands in
+// both places for free). Never fixed, never a child of #map -- so, unlike
+// #79's old top-left chip, it can't cover a node (#68's rect stays
+// app.js's alone regardless). app.js rebuilds #promptText/#fallbackBanner
+// in place but never #promptScroll's own child list (grepped: no
+// `promptScroll.innerHTML =`), so re-inserting the pill as the first child
+// on every paint() is enough to survive every render.
+function ensurePill() {
+  const ps = document.getElementById("promptScroll");
+  if (!ps) return null;
+  let pill = document.getElementById("oppPill");
+  if (!pill) {
+    pill = document.createElement("button");
+    pill.type = "button";
+    pill.id = "oppPill";
+    pill.className = "opp-pill no-tap-sound";
+    pill.hidden = true;
+    pill.addEventListener("click", () => openSheet(null));
+  }
+  if (ps.firstChild !== pill) ps.insertBefore(pill, ps.firstChild);
+  return pill;
 }
 function mapEl() { return document.getElementById("map"); }
 function spaceEl(id) { return id ? document.querySelector(`.node[data-space="${id}"]`) : null; }
@@ -274,20 +298,22 @@ function renderStepsStatic() {
   d.ticker.textContent = beats.length ? `${beats.length}. ${beats[beats.length - 1].text}` : "";
 }
 
-// ---------- ③ the chip ----------
-function chipHTML(mv) {
+// ---------- ③ the pill (#84: one line, off the map -- see ensurePill()) ----------
+function pillHTML(mv) {
   const lang = ctx.lang, side = mv.side, card = mv.card, use = mv.use, sideCls = side === E.QIN ? "q" : "c";
   const owner = cardSideOf(card);
   // The Cauldrons never carries an event (see eventLineFor's own note) --
   // `owner !== side` alone would say "event also happens" here, wrongly.
   const autoEvent = card !== "jiuding" && owner !== side;
-  const line2 = use === "headline" ? t(lang, "oppmove.chipHeadline")
+  // Each of these i18n strings already ends in its own "›" (zh-Hant.js/en.js,
+  // pre-#84) -- the same tap hint the old two-line chip carried on its
+  // second line, now the tail of this one line instead.
+  const tail = use === "headline" ? t(lang, "oppmove.chipHeadline")
     : use === "event" ? t(lang, "oppmove.chipEvent")
     : t(lang, autoEvent ? "oppmove.chipOpsEvent" : "oppmove.chipOps", { use: t(lang, `useNames.${use}`), ops: actualOpsOf(mv) });
-  return `<img class="opp-chip-art" src="art/cards/${card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
-    `<span class="opp-chip-text">` +
-      `<span class="opp-chip-line1"${lang === "en" ? "" : ' lang="zh-Hant"'}><b class="side-${sideCls}">${esc(sideName(side, lang))}</b> · ${esc(cardName(card, lang))}</span>` +
-      `<span class="opp-chip-line2"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(line2)}</span>` +
+  return `<img class="opp-pill-art" src="art/cards/${card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
+    `<span class="opp-pill-text"${lang === "en" ? "" : ' lang="zh-Hant"'}>` +
+      `<b class="side-${sideCls}">${esc(sideName(side, lang))}</b> · ${esc(cardName(card, lang))} · ${esc(tail)}` +
     `</span>`;
 }
 // ---------- overall visibility ----------
@@ -308,12 +334,14 @@ function paint() {
   else if (inSteps) positionMapCatcher();
   const mv = inSteps ? move : phase === "idle" ? (chip && chip.move) : null;
   const winnerDecided = ctx.view && ctx.view.winner != null;
-  const showChip = !!mv && !ctx.mapTargeting && !winnerDecided;
-  d.chip.hidden = !showChip;
-  if (showChip) {
-    const mr = rectOf(mapEl());
-    if (mr) d.chip.style.cssText = `left:${mr.left + 8}px;top:${mr.top + 8}px`;
-    d.chip.innerHTML = chipHTML(mv);
+  const showPill = !!mv && !ctx.mapTargeting && !winnerDecided;
+  const pill = ensurePill();
+  if (pill) {
+    pill.hidden = !showPill;
+    if (showPill) {
+      pill.className = `opp-pill no-tap-sound side-${mv.side === E.QIN ? "q" : "c"}`;
+      pill.innerHTML = pillHTML(mv);
+    }
   }
   if (sheetOpen) renderSheet();
 }
@@ -469,6 +497,8 @@ export function reset() {
 export function disable() {
   clearTimeout(timer);
   phase = "idle"; move = null; queue = []; beats = []; beatIndex = -1;
+  const pill = document.getElementById("oppPill");
+  if (pill) pill.hidden = true;
   if (!dom) return;
-  dom.dim.hidden = true; dom.card.hidden = true; dom.rings.hidden = true; dom.ticker.hidden = true; dom.chip.hidden = true;
+  dom.dim.hidden = true; dom.card.hidden = true; dom.rings.hidden = true; dom.ticker.hidden = true;
 }

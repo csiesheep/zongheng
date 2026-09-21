@@ -52,21 +52,36 @@
   font: 600 13px/28px var(--sans); text-align: center; white-space: nowrap; overflow: hidden;
   text-overflow: ellipsis; pointer-events: auto; cursor: pointer;
 }
-/* ③ the chip: >=44px tall (a real tap target), top-left over the map --
-   z-index above .opp-rings/.opp-ticker so it stays visible while ② plays,
-   but below the card sheet's own .sheet.overlay (40) so a real card page
-   covers it outright rather than sitting side by side with it. */
-.opp-chip {
-  position: fixed; z-index: 21; height: 44px; padding: 0 10px 0 4px; box-sizing: border-box;
-  display: flex; align-items: center; gap: 8px; background: rgba(22, 19, 14, 0.92);
-  border: 1.5px solid var(--chu-btn); border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
-  pointer-events: auto; cursor: pointer; text-align: left; font: inherit; color: inherit;
+/* ③ the pill (#84): the persistent chip's new home -- the first line of
+   #promptScroll (in-flow there, not fixed, not a child of #map -- #68's
+   map rect is untouched either way), phone AND desktop alike (desktop.css
+   re-anchors #promptScroll's own #prompt parent straight into the
+   sidebar's "prompt" grid area, so this one rule covers both). >=44px
+   tall on phone (the default here); the 1024px rule below drops it to
+   desktop.css's own >=36px floor once the sidebar's tighter rows apply. */
+.opp-pill {
+  display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;
+  /* flex: none (not the flex-item default of 0 1 auto): #promptScroll is
+     itself a flex column inside #lowerBlock's fixed budget (style.css) --
+     without this, its default flex-shrink squeezed the pill down to ~38px
+     whenever the rest of the scroll area's content didn't fit, instead of
+     just scrolling (measured: 390x669, a headline reveal, pillHeight 38).
+     #promptScroll already scrolls (overflow-y: auto) for exactly this. */
+  flex: none;
+  height: 44px; padding: 0 10px 0 4px; margin: 0 0 6px; border-radius: 10px;
+  background: rgba(22, 19, 14, 0.92); border: 1.5px solid var(--chu-btn); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  cursor: pointer; text-align: left; font: inherit; color: inherit;
 }
-.opp-chip-art { width: 27px; height: 36px; object-fit: cover; border-radius: 3px; flex: none; }
-.opp-chip-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.opp-chip-line1 { font: 900 13px/1 var(--serif); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.opp-chip-line1 b.side-q { color: var(--qin-text); } .opp-chip-line1 b.side-c { color: var(--chu-fill); }
-.opp-chip-line2 { font: 400 11px/1 var(--sans); color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.opp-pill.side-q { border-color: var(--qin-text); }
+.opp-pill-art { width: 27px; height: 36px; object-fit: cover; border-radius: 3px; flex: none; }
+.opp-pill-text {
+  min-width: 0; flex: 1; font: 700 13px/1 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.opp-pill-text b.side-q { color: var(--qin-text); } .opp-pill-text b.side-c { color: var(--chu-fill); }
+@media (min-width: 1024px) {
+  .opp-pill { height: 36px; margin-bottom: 4px; }
+  .opp-pill-art { width: 22px; height: 30px; }
+}
 
 /* ④ the sheet: same fixed bottom-sheet + scrim pattern as #logBody/#logScrim
    (style.css), its own ids so neither can collide with the log panel's. */
