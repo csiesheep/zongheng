@@ -776,7 +776,15 @@ function play(st, action) {
   } else if (["place", "campaign", "lobby"].includes(use)) {
     const payload = { use, points: action.points, target: action.target };
     const enemy = card.side != null && card.side !== side;
-    if (c === "shuoke" && action.pair) {
+    const paired = c === "shuoke" && action.pair;
+    // The player chooses whether an enemy card's ops or its event comes first
+    // (owner's ruling, #71). A missing or unknown order used to fall silently
+    // into ops-first, so an old client, a bug or a hand-made room message could
+    // skip the choice (#73). 說客's pair has no event, so it needs no order.
+    if (enemy && !paired && action.order !== "opsFirst" && action.order !== "eventFirst") {
+      fail("an enemy card needs an order: opsFirst or eventFirst");
+    }
+    if (paired) {
       // 說客: the paired enemy card's ops, no event, both discarded.
       const pair = CARD[action.pair];
       if (!h.includes(action.pair) || pair.side !== other(side)) fail("說客: pair an enemy card from your hand");
