@@ -2093,11 +2093,12 @@ function renderHand(v, mode) {
   };
   for (const id of hand) tile(id);
   if (v.phase === "action" && E.jiudingUsable(v, me)) tile(E.JIUDING, "jiuding");
-  // Desktop-only (see desktop.css, #7): the sidebar hand is a fixed grid,
-  // 3 columns up to 6 cards, 4 columns (cards at ~0.8x) from 7 up (the
-  // 9-card hand from turn 7 on, plus the Nine Cauldrons). No effect on
-  // mobile's own horizontal-scroll .hand, which never reads this class.
-  el.classList.toggle("hand-many", el.children.length > 6);
+  // #83: the sidebar hand used to switch between two fixed card sizes with
+  // a JS-toggled `.hand-many` class (3 columns up to 6 cards, 4 columns from
+  // 7 up). desktop.css now sizes the grid itself with `repeat(auto-fill,
+  // minmax(...))` off the sidebar's own width — the CSS reflows the column
+  // count on its own as cards are added/removed, so there is no longer a
+  // count threshold for this file to track.
 }
 
 // #58: a headline can now come in with one or both cards missing (a side
@@ -2409,13 +2410,6 @@ function renderLog(v) {
   // pass so the fade/give-way state layoutTable() computes reflects the DOM
   // this render actually ended up with, not the one before renderLog() ran.
   layoutTable();
-  // Desktop-only (see desktop.css, #7): the sidebar's bottom strip condenses
-  // to the single latest line (the bot's own move if it just went, else the
-  // newest log entry) plus a button that opens the same #logBody panel as
-  // #logToggle. Harmless on mobile: #sideFoot is display:none there.
-  const latest = game.botLine || (panelEntries[0] ? fmtLog(panelEntries[0]) : "") || "";
-  $("sideFootText").textContent = latest;
-  $("sideFootBtn").textContent = t("buttons.logChat");
 }
 $("chatForm").onsubmit = (ev) => {
   ev.preventDefault();
@@ -2423,12 +2417,14 @@ $("chatForm").onsubmit = (ev) => {
   if (text) send({ type: "chat", text });
   $("chatIn").value = "";
 };
-// #logToggle's own state is the only one of the panel's buttons that names
-// open/closed (#sideFootBtn always just reads "Log and chat" — see
-// renderLog); every path that opens or closes the panel must keep it in
-// sync, not just the two that already called renderLog, or it goes stale
-// until the next render (#27 follow-up: closing from the header's own
-// button or the scrim left it reading "(Hide)" while the panel was shut).
+// #logToggle's own state names open/closed; every path that opens or closes
+// the panel must keep it in sync, or it goes stale until the next render
+// (#27 follow-up: closing from the header's own button or the scrim left it
+// reading "(Hide)" while the panel was shut). #83: the desktop footer
+// (#sideFoot/#sideFootBtn) that used to also open this panel is gone —
+// #logToggle already opened the same #logBody, chat included (renderLog's
+// #chatForm.hidden only ever reads game.room/game.spectator, never which
+// button opened the panel), so removing it needed no new behavior here.
 // #30: now that this button lives in the top bar next to Advisor/Rules/lang
 // instead of the prompt row, its own label is always just "Log"/"紀錄" (no
 // "(Show)"/"(Hide)" suffix, which never fit the bar's other three-word
@@ -2444,8 +2440,8 @@ function syncLogToggleLabel() {
 // toggle button along with the whole prompt row and hand underneath — no way
 // left to close it or play a card except reloading. It now closes itself
 // from three places: its own sticky-header close button, a full-viewport
-// scrim behind it, and (unchanged) #logToggle / #sideFootBtn. Every one of
-// those paths runs through here so #logToggle's own label never goes stale.
+// scrim behind it, and (unchanged) #logToggle. Every one of those paths
+// runs through here so #logToggle's own label never goes stale.
 function setLogOpen(open) {
   $("logBody").hidden = !open;
   $("logScrim").hidden = !open;
@@ -2464,13 +2460,6 @@ $("logToggle").onclick = () => {
   Audio.play(opening ? "sfx.ui.open" : "sfx.ui.close");
   if (game.st) renderLog(E.view(game.st, game.me));
 };
-$("sideFootBtn").onclick = () => {
-  const opening = $("logBody").hidden;
-  setLogOpen(opening);
-  Audio.play(opening ? "sfx.ui.open" : "sfx.ui.close");
-  if (game.st) renderLog(game.room ? game.st : E.view(game.st, game.me));
-};
-
 // The result screen's whole colour follows the WINNER, not your own seat
 // (owner, 2026-09-19: "for win page, the background should be the winner's
 // nation background") — #over.winner-qin/winner-chu carry that in

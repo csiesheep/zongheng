@@ -89,7 +89,13 @@
        advice, the prompt, the news, a pending sheet, the hand) lives inside
        this one fixed-height block instead of feeding layoutTable()'s old
        per-render "chrome" sum -- see app.js's layoutTable() for how its
-       height is picked and why the map never reads anything from in here. -->
+       height is picked and why the map never reads anything from in here.
+       #83: on desktop this is now the grid's own flexible row (desktop.css
+       gives IT the `minmax(0, 1fr)` track, not #hand) -- #prompt/#sheet/
+       #hand negotiate the row's real height amongst themselves with
+       flexbox, same model mobile already used inside this same block, so
+       #prompt (its own .prompt-scroll, style.css) is what gives/scrolls
+       first, never #sheet or #hand pushing a sibling out of the sidebar. -->
   <div class="lowerBlock" id="lowerBlock">
     <section class="prompt" id="prompt">
       <!-- The advisor's banner (advisor-ui.js's placeBanner(), #68 addition
@@ -114,10 +120,6 @@
     <section class="hand" id="hand"></section>
   </div>
   <form id="chatForm" class="chat" hidden><input id="chatIn" maxlength="200" autocomplete="off"><button type="submit" class="small" data-t="buttons.send"></button></form>
-  <section class="sidefoot" id="sideFoot">
-    <div class="sidefoot-text" id="sideFootText"></div>
-    <button id="sideFootBtn" type="button" class="small no-tap-sound"></button>
-  </section>
   <div id="logScrim" class="logscrim" hidden></div>
   <div id="logBody" class="logbody" hidden>
     <div class="logbody-head">
