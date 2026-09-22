@@ -954,6 +954,12 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    buttons, never this detail text too. Same tone as .news (dim, read-only)
    since it isn't a side-themed sheet colour scope here. */
 .prompt-note { margin-top: 4px; font-size: 12px; line-height: 1.4; color: var(--text-dim); }
+/* #97: the always-on "still holding a scoring card" line -- setPrompt()
+   (app.js) puts it first in #promptText, ahead of whatever the state's own
+   sentence says, whether the advisor is on or off. Lives inside
+   #promptScroll (the scrolling part of #prompt), never a separate pinned
+   banner -- the table walk checks it stays there. */
+.prompt-warn { border-left: 3px solid var(--bad); padding-left: 8px; margin-bottom: 6px; color: var(--bad); font-weight: 600; }
 /* #68: the soft fade the brief asks for whenever #promptScroll actually has
    more content than its box -- painted only while there IS overflow (the
    `has-more` class, toggled by layoutTable() after every measurement) so a
@@ -1086,6 +1092,13 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .sheet button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .sheet button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-family: var(--accent-font); font-weight: var(--accent-weight); }
 .sheet .note { font-size: 12px; color: var(--text-dim); }
+/* #97: the same scoring warning restated in THIS card's own pinned area
+   (app.js's renderPromptAndSheet(), first child of .sheet-pinned) so it
+   can't be missed right before Cancel/Confirm, even on a card that isn't
+   the scoring card itself. Higher specificity than .sheet-q/c/n/s .note
+   below on purpose, so the warning colour always wins over the sheet's own
+   side tint. */
+.sheet .note.warn { color: var(--bad); font-weight: 600; border-left: 3px solid var(--bad); padding-left: 8px; }
 /* The full card sheet: art, ops badge, the name, era/no./year, its own
    text, the five-use grid, then a Cancel + Confirm footer. */
 /* #68 round 2: flex-wrap so the compact chip degrades gracefully to a
@@ -1462,6 +1475,17 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 /* Same size for whichever one is actually visible (#39: "name about 15px")
    — with only one language shown there's no reason left for zh/en to differ. */
 .card.chip .nm-zh, .card.chip .nm-en { font-size: 15px; font-weight: 700; white-space: nowrap; }
+/* #97: an always-on "must play" corner tag on any scoring card sitting in
+   hand, independent of the advisor -- a scoring card still in hand at the
+   turn's end loses outright (rulebook), and with the advisor off nothing
+   used to say so at all. A vermilion tag (app.js's tile()); its own `title`
+   carries the reason for anyone who hovers/long-presses it. */
+.card.must-play { position: relative; }
+.must-badge { position: absolute; top: 4px; right: 4px; z-index: 1; background: var(--bad); color: #3a0e08; font: 700 9px/1 var(--sans); letter-spacing: 0.5px; padding: 3px 5px; border-radius: 6px; pointer-events: none; }
+/* The chip row has no room for an absolute corner (56px tall, name already
+   runs to the edge) -- the badge joins the row's own flow instead, right
+   after the name, same colour. */
+.card.chip .must-badge { position: static; margin-left: 6px; padding: 2px 6px; }
 .chat { flex: none; display: flex; gap: 6px; padding: 2px 8px; }
 .chat input { flex: 1; min-width: 0; min-height: 44px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--gold-line); border-radius: 8px; color: var(--text); font: 14px var(--serif); padding: 0 10px; }
 /* The log opens as a bottom sheet over the whole page (C2_Log) rather than
@@ -1547,3 +1571,16 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    <body> exactly as before this wrapper existed (#7). */
 .d-frame { display: none; }
 .page-card { display: contents; }
+
+/* #97: the "开新局 overwrites your save" confirm -- the page's own sheet/
+   modal (built once by app.js's ensureSoloConfirm(), appended to <body>),
+   not window.confirm. A dimmed full-viewport scrim behind a centered
+   parchment sheet; tapping the scrim itself (not the sheet) cancels back to
+   the setup screen, same as every other Cancel on this page. */
+.confirm-backdrop { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0, 0, 0, 0.55); }
+.confirm-backdrop[hidden] { display: none; }
+.confirm-sheet { width: 100%; max-width: 360px; background: var(--neutral-bg); color: var(--neutral-ink); border-radius: 14px; padding: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+.confirm-text { margin: 0 0 14px; font: 400 15px/1.5 var(--serif); }
+.confirm-actions { display: flex; flex-direction: column; gap: 8px; }
+.confirm-actions button { min-height: 46px; border-radius: 10px; border: 1px solid var(--gold-line); background: none; color: var(--neutral-ink); font: 600 15px var(--serif); }
+.confirm-actions button.primary { background: var(--gold); border-color: var(--gold); color: var(--bg); }

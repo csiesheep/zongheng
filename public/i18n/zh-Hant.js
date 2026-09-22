@@ -62,6 +62,9 @@ export default {
       chu: "你扮演楚:把六國綁在一起。八回合,約一小時;遊戲會自動存在這個瀏覽器裡。",
       random: "開局時隨機決定你的陣營。八回合,約一小時;遊戲會自動存在這個瀏覽器裡。",
     },
+    // #97: startSolo() used to silently overwrite `zh.solo` -- shown as a
+    // confirm sheet (not window.confirm) only when a save actually exists.
+    overwriteWarn: "開新局會蓋掉目前的存檔(第 {n} 回合)。",
   },
   eras: { reform: "變法期", alliance: "縱橫期", conquest: "兼併期" },
   tracks: { mandate: "天命", weariness: "疲敝", reform: "變法", seals: "相印", mie: "滅", jiuding: "九鼎", faceDown: "蓋著", turn: "回合", round: "行動", of: "／" },
@@ -80,9 +83,16 @@ export default {
     points: "選 {n} 個(剩 {left})。", pointsMin: "最多選 {n} 個。", card: "選一張牌。", cardOptional: "選一張牌,或略過。", option: "請選擇。", ops: "使用 {ops} 點行動點:怎麼用?",
     place: "放置 {ops} 點(剩 {left})。點地圖;對手控制處每點 2。", campaign: "征伐,{ops} 點:點目標。", lobby: "遊說,{ops} 點:點目標。",
     over: "遊戲結束。",
+    // #97: always on, independent of the advisor -- shown once the actions
+    // left this round are at most the scoring cards still in hand.
+    scoringWarn: "還剩 {n} 次行動,手上有 {m} 張記分卡:要在回合結束前打出,否則判負。",
   },
   uses: { event: "事件", place: "放置", campaign: "征伐", lobby: "遊說", reform: "變法", bog: "棄牌(頓兵)", pair: "搭配", opsFirst: "先行動點", eventFirst: "先事件" },
-  buttons: { send: "送出", board: "看棋盤", result: "結果", confirm: "確認", done: "完成", cancel: "取消", skip: "略過", playAgain: "再來一局", swap: "換邊", home: "回首頁", headline: "蓋下標題牌", show: "展開", hide: "收起", log: "紀錄", logChat: "紀錄與聊天", expand: "看牌", close: "關閉" },
+  buttons: { send: "送出", board: "看棋盤", result: "結果", confirm: "確認", done: "完成", cancel: "取消", skip: "略過", playAgain: "再來一局", swap: "換邊", home: "回首頁", headline: "蓋下標題牌", show: "展開", hide: "收起", log: "紀錄", logChat: "紀錄與聊天", expand: "看牌", close: "關閉", resumeSolo: "繼續舊局", newGame: "開新局" },
+  // #97: the always-on "must play" tag on a scoring card in hand -- a
+  // separate short label (badge) and a longer sentence (its `title`), never
+  // the prompt-area/pinned-area line above (that one adds the count).
+  hand: { mustPlay: "必打", mustPlayTitle: "記分卡留到回合結束會輸" },
   preview: { campaign: "移除對方 {removed},放置己方 {placed};疲敝 {w}。", lobby: "局勢 {edge}:最多移除 {n}。", locked: "疲敝封鎖中。", enemyEvent: "這是對方的牌:事件也會觸發。" },
   over: {
     winner: "{side}獲勝", mandate: "終局天命",

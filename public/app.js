@@ -307,7 +307,15 @@ function renderSetup() {
 }
 $("setupName").value = store.get("zh.name", "");
 $("setupName").addEventListener("input", () => store.set("zh.name", $("setupName").value.trim()));
-$("btnStart").onclick = startSolo;
+// #97: startSolo() used to overwrite `zh.solo` the instant Start was pressed
+// -- silently, even with an unfinished game still in it. loadSolo()/
+// resumeSolo()/startSolo() itself are all defined further down (function
+// declarations, hoisted -- safe to call from here regardless of order).
+$("btnStart").onclick = () => {
+  const saved = loadSolo();
+  if (saved) { showSoloConfirm(saved); return; }
+  startSolo();
+};
 
 // ---------- the solo game ----------
 // `peek` (#34): the read-only card sheet's own state — { card, side } for
@@ -419,6 +427,40 @@ function resumeSolo() {
   game.botName = S.names[E.SIDES[1 - game.me]][0];
   resetVoicingState(); // #62 part 2 fix 3: nothing from the resumed log/state is "new" this render
   show("table"); render(); botLoop();
+}
+// #97: pressing Start on the setup screen while a save exists used to
+// overwrite it without asking. This is the page's own sheet/modal (not
+// window.confirm), built once and reused -- style.css's .confirm-backdrop/
+// .confirm-sheet give it the same parchment-on-scrim look the rest of the
+// page uses for an overlay, rather than a bare OS dialog.
+function ensureSoloConfirm() {
+  let el = $("soloConfirm");
+  if (el) return el;
+  el = document.createElement("div");
+  el.id = "soloConfirm";
+  el.className = "confirm-backdrop";
+  el.hidden = true;
+  el.innerHTML = `<div class="confirm-sheet" role="dialog" aria-modal="true">
+    <p class="confirm-text" id="soloConfirmText"></p>
+    <div class="confirm-actions">
+      <button type="button" id="soloConfirmResume" class="primary"></button>
+      <button type="button" id="soloConfirmNew"></button>
+    </div>
+  </div>`;
+  document.body.appendChild(el);
+  el.addEventListener("click", (e) => { if (e.target === el) hideSoloConfirm(); });
+  return el;
+}
+function hideSoloConfirm() { const el = $("soloConfirm"); if (el) el.hidden = true; }
+function showSoloConfirm(saved) {
+  const el = ensureSoloConfirm();
+  $("soloConfirmText").textContent = t("setup.overwriteWarn", { n: saved.st.turn });
+  const resumeBtn = $("soloConfirmResume"), newBtn = $("soloConfirmNew");
+  resumeBtn.textContent = t("buttons.resumeSolo");
+  newBtn.textContent = t("buttons.newGame");
+  resumeBtn.onclick = () => { hideSoloConfirm(); resumeSolo(); };
+  newBtn.onclick = () => { hideSoloConfirm(); startSolo(); };
+  el.hidden = false;
 }
 function humanAct(action) {
   if (game.spectator) return;
@@ -1512,7 +1554,7 @@ function btn(parent, label, onClick, cls = "", pressed = null, disabled = false)
   return b;
 }
 function row(parent, cls = "rowb") { const d = document.createElement("div"); d.className = cls; parent.appendChild(d); return d; }
-function note(parent, text) { const d = document.createElement("div"); d.className = "note"; d.textContent = text; parent.appendChild(d); }
+function note(parent, text, cls = "") { const d = document.createElement("div"); d.className = cls ? `note ${cls}` : "note"; d.textContent = text; parent.appendChild(d); }
 // #68 round 2 (orchestrator's ruling): the same explanatory line note()
 // puts in the SHEET, but for the compact (map-active/pending) states whose
 // sheet budget is already tight at 390x669/375x667 — a target's own
@@ -1533,6 +1575,32 @@ function appendPromptNote(text) {
 const cardZh = (id) => (id === E.JIUDING ? "九鼎" : E.CARD[id].zh);
 const cardEn = (id) => (id === E.JIUDING ? "The Nine Cauldrons" : E.CARD[id].en);
 const opsLabel = (id) => (id === E.JIUDING ? "4" : E.CARD[id].scoring ? "S" : String(E.CARD[id].ops));
+// #97: a scoring card left in hand when the turn ends loses outright
+// (rulebook) -- the advisor already says so in its own reasons, but only
+// while it's on. These two are the plain arithmetic behind an ALWAYS-ON
+// warning, independent of the advisor: how many scoring cards this side is
+// holding right now, and how many more times this side still gets to act
+// before the turn ends. `left` mirrors shared/bots.js's own `left` (its
+// scoringPain term) -- same formula, re-derived here rather than imported
+// since bots.js is BE's file: QIN acts first each round, then CHU, and
+// `round` only increments after CHU's half, so a side already past its own
+// half of the CURRENT round has one fewer action left in it than a side
+// still waiting for its half.
+const scoringCardsInHand = (v, side) => (v.hands[side] || []).filter((id) => id !== E.JIUDING && E.CARD[id].scoring).length;
+const actionsLeftThisTurn = (v, side) => {
+  if (v.phase !== "action" || v.winner != null) return null;
+  return v.rounds - v.round + ((v.actor === E.QIN || side === E.CHU) ? 1 : 0);
+};
+// The warning sentence itself, or "" when it doesn't apply -- shared by the
+// prompt area (above the hand) and, when a card page is open, that card's
+// own pinned area (renderPromptAndSheet, below), so the two never drift.
+function scoringWarnText(v, side) {
+  const m = scoringCardsInHand(v, side);
+  if (!m) return "";
+  const left = actionsLeftThisTurn(v, side);
+  if (left == null || left > m) return "";
+  return t("prompt.scoringWarn", { n: left, m });
+}
 // #29: the "uses.*" table already carries both languages (one entry per
 // i18n file) — the five-use grid on the full card page shows BOTH at once,
 // same bilingual convention as card names, so it reads the raw imported
@@ -1737,6 +1805,13 @@ function renderPromptAndSheet(v) {
   sh.className = "sheet" + (game.ui.card != null ? " sheet-" + cardSide(game.ui.card) : "");
   const me = game.me, ui = game.ui;
   const err = ui.err ? `<div class="err">${esc(ui.err)}</div>` : "";
+  // #97: always on, independent of the advisor -- see scoringWarnText()'s own
+  // comment. `warnText` is the plain sentence (reused below for the pinned
+  // copy on a card page); `roundWarn` is the same thing pre-wrapped for
+  // setPrompt() to splice in first, ahead of whatever the state's own prompt
+  // says, same as the mockup's vermilion warning line.
+  const warnText = scoringWarnText(v, me);
+  const roundWarn = warnText ? `<div class="prompt-warn">${esc(warnText)}</div>` : "";
   // #92: `ui.historyOpen` is the persisted choice for THIS card page (reset
   // only by freshUi() — see its own comment); this hands historyBox() a
   // fresh { open, onToggle } each render so a click there writes straight
@@ -1756,11 +1831,14 @@ function renderPromptAndSheet(v) {
   // be the final one) is simpler than threading it through every branch.
   let compactHint = "";
   const setPrompt = (html) => {
-    p.innerHTML = html + err;
+    // #97: roundWarn goes first, ahead of the state's own sentence -- "put it
+    // first in the text area" -- and lands inside #promptText itself (the
+    // scrolling part of #prompt), never a separate pinned banner.
+    p.innerHTML = roundWarn + html + err;
     if (compactHint) p.insertAdjacentHTML("beforeend", `<div class="prompt-note">${esc(compactHint)}</div>`);
     let titleEl = sh.querySelector(".sheet-title");
     if (!titleEl) { titleEl = document.createElement("div"); titleEl.className = "sheet-title"; titleEl.hidden = true; sh.insertBefore(titleEl, sh.firstChild); }
-    titleEl.innerHTML = html + err;
+    titleEl.innerHTML = roundWarn + html + err;
   };
   if (v.winner != null) {
     setPrompt(`${t("prompt.over")} <b>${esc(t("over.winner", { side: sideName(v.winner) }))}</b> · ${esc(t("over.reasons." + v.reason))}`);
@@ -1860,6 +1938,12 @@ function renderPromptAndSheet(v) {
   // The compact chip has no `mid`/`pinned` split at all; its own rows still
   // go straight onto `sh`, already fully on screen there (unchanged).
   pinned = showFullCard ? sheetPinned(sh) : sh;
+  // #97: the same warning, restated in this card's own pinned area (fixed,
+  // never scrolls) so it's still the last thing seen right before Cancel/
+  // Confirm even when this ISN'T the scoring card itself -- opening any
+  // other card while the turn's actions are running out must not make the
+  // warning disappear. First child of `pinned`, ahead of the use grid.
+  if (showFullCard && warnText) note(pinned, warnText, "warn");
   const uses = row(pinned, "rowb sheet-grid");
   const usable = (u) => (u === "event" ? info.uses.event : u === "reform" ? info.uses.reform : !!info.uses[u]);
   for (const u of ["event", "place", "campaign", "lobby", "reform"]) {
@@ -2133,16 +2217,22 @@ function renderHand(v, mode) {
   const chip = mode === "chip";
   const tile = (id, cls = "") => {
     const kind = cardSide(id);
+    // #97: always on, independent of the advisor -- a scoring card sitting
+    // in hand at the turn's end loses outright, so every one wears the tag
+    // the moment it's dealt, not only once the round is actually tight (that
+    // narrower condition is the separate prompt-area/pinned-area line, above).
+    const mustPlay = id !== E.JIUDING && !!E.CARD[id].scoring;
     const b = document.createElement("button");
-    b.type = "button"; b.className = `card ${chip ? "chip " : ""}${cls}`.trim();
+    b.type = "button"; b.className = `card ${chip ? "chip " : ""}${mustPlay ? "must-play " : ""}${cls}`.trim();
     b.setAttribute("aria-pressed", String(ui.card === id));
     // #39 part 1: the hand shows the interface language only (CSS hides the
     // other .nm-zh/.nm-en span off :root[lang]) -- the other language stays
     // reachable here as the button's own aria-label, and on the full card
     // page (renderCardView/cardHeader, untouched) which still shows both.
-    b.setAttribute("aria-label", `${cardZh(id)} / ${cardEn(id)}`);
+    b.setAttribute("aria-label", `${cardZh(id)} / ${cardEn(id)}${mustPlay ? " · " + t("hand.mustPlay") : ""}`);
     const ci = `<span class="ci"><span class="ops ${kind}">${esc(opsLabel(id))}</span><span class="nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span></span>`;
-    b.innerHTML = chip ? ci : `<img class="cardimg" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` + ci;
+    const badge = mustPlay ? `<span class="must-badge" title="${esc(t("hand.mustPlayTitle"))}">${esc(t("hand.mustPlay"))}</span>` : "";
+    b.innerHTML = (chip ? ci : `<img class="cardimg" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` + ci) + badge;
     b.disabled = !canPick;
     b.onclick = () => {
       const opening = ui.card !== id; // #62 part 2: "a hand card opens" -- not closing it back down (tapping the same open card again)
