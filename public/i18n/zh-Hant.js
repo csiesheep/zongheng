@@ -74,7 +74,7 @@ export default {
   lastMove: { destroyed: "滅", restored: "復國" },
   weariness: { 5: "承平", 4: "兵連", 3: "禍結", 2: "民困", 1: "土崩" },
   prompt: {
-    setup: "放置 {n} 點起始影響力(剩 {left}):只能放在己方據點或其相鄰處。", setupBonus: "在已有影響力處放 {n} 點補償(剩 {left})。",
+    setup: "放置 {n} 點起始影響力(剩 {left}):{regions}的任何據點。", setupBonus: "在已有影響力處放 {n} 點補償(剩 {left})。",
     headline: "蓋一張牌當標題:雙方同時翻開,行動點高者先結算,事件一定發生。",
     // #60:紀錄/側欄裡說的是「電腦做了什麼」,不是「玩家該做什麼」——見 app.js
     // actionText() 自己的註解。

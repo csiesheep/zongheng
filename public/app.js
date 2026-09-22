@@ -64,6 +64,12 @@ const regionName = (r) => (lang === "en" ? E.REGIONS[r].en : E.REGIONS[r].zh);
 // confuse with 三晉 at a glance on a real phone; regionShort.zhou is now
 // "周" and this reads it like every other region already did in English).
 const regionShortName = (r) => t("regionShort." + r);
+// #103: the setup prompt names the regions the engine actually allows for
+// the free placement being asked (SETUP.qin.freeIn / SETUP.chu.freeIn) --
+// joins their short names the way each language would say "A or B".
+const orJoin = (arr) => (lang === "en"
+  ? arr.length <= 2 ? arr.join(" or ") : arr.slice(0, -1).join(", ") + ", or " + arr[arr.length - 1]
+  : arr.join("或"));
 const stateName = (s) => (lang === "en" ? E.STATES[s].en : E.STATES[s].zh);
 const cardName = (id) => (id === E.JIUDING ? (lang === "en" ? "The Nine Cauldrons" : "九鼎") : lang === "en" ? E.CARD[id].en : E.CARD[id].zh);
 // #29: the card sheet shows BOTH languages' card text at once regardless of
@@ -2217,7 +2223,14 @@ function renderPending(v, p, setPrompt, sh) {
   game.givesWay = true;
   if (p.kind === "points") {
     const key = p.tag === "setup" ? (p.min === v.options.comp && v.turn === 0 && game.me === 1 && !p.options.includes("ying") ? "setupBonus" : "setup") : p.min < p.n ? "pointsMin" : "points";
-    setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t(`prompt.${key}`, { n: p.n, left: p.n - ui.picks.length })}`);
+    // #103: "setup" (the two sides' free-placement prompts) names the
+    // regions the engine allows -- derived from p.options's own spaces
+    // (SETUP.qin.freeIn / SETUP.chu.freeIn) rather than hard-coded per side,
+    // so it stays right if SETUP ever changes. "setupBonus" keeps its own
+    // text (#103: that step is right already -- only spaces Chu already
+    // holds, not a region list).
+    const regions = key === "setup" ? orJoin([...new Set(p.options.map((id) => E.SPACE[id].region))].map(regionShortName)) : "";
+    setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t(`prompt.${key}`, { n: p.n, left: p.n - ui.picks.length, regions })}`);
     const r = row(sh);
     btnSound(r, t("buttons.confirm"), () => humanAct({ type: "choose", choice: ui.picks }), "sfx.map.confirm", "primary", null, ui.picks.length < p.min);
     btn(r, t("buttons.cancel"), () => { ui.picks = []; render(); }, "", null, ui.picks.length === 0);
