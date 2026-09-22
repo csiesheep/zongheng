@@ -86,7 +86,7 @@ export default {
   lastMove: { destroyed: "Fell", restored: "Restored" },
   weariness: { 5: "Peace", 4: "War", 3: "Strife", 2: "Misery", 1: "Collapse" },
   prompt: {
-    setup: "Place {n} free influence ({left} left): where you hold influence, or adjacent to it.", setupBonus: "Place {n} bonus influence where you already are ({left} left).",
+    setup: "Place {n} ({left} left): on or next to your influence.", setupBonus: "Place {n} bonus influence where you already are ({left} left).",
     headline: "Commit one card face down as the headline: both reveal together, higher ops resolves first, and its event always happens.",
     // #60: what the log/sidebar says the BOT did, not what the player is
     // told to do -- see actionText()'s own comment in app.js.
