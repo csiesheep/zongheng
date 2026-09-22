@@ -229,13 +229,38 @@ export const STATE_TAG_COLOR = { han: "#2f7f6a", wei: "#b0801f", zhao: "#6a4c9c"
 // to that corner, NODE_PILL_POS above) and with the seal chop's lower-right
 // on a capital, so each entry here was picked against this space's own
 // anchor/pill/stab corner, not copied from the mockup.
+// Round 2 (orchestrator, #95): the corner-offset table above put every tag
+// PARTLY ON its own disc (a diagonal offset only clears a CIRCLE by
+// sqrt(2), never a plain bounding-box overlap check, which is how the
+// owner's "never covers the numbers" rule is actually measured) — five of
+// them sat on their own influence numerals. A state tag is a label, not a
+// stamp (unlike the seal chop, which is deliberately designed to overlap
+// its own disc's corner) — every entry below is a PURE axis offset (one of
+// dx/dy is 0) of at least discHalf + 6.5 (the tag's own half-width) + a few
+// px margin, which is the only offset shape that clears a disc's full
+// bounding SQUARE with zero overlap regardless of whether the disc itself
+// is round or (on a capital) squared — a diagonal offset of the same
+// magnitude would still read as overlapping under that test. Each
+// direction is picked against this space's own NODE_ANCHOR/NODE_PILL_POS/
+// NODE_STAB_RIGHT/isCapital (which corner the name/pill/stab/seal already
+// use), then confirmed with the same exhaustive sweep as before, now with
+// two more required-zero columns: this tag's own disc (plain rect
+// intersection, not circle-aware — matches how the collision was
+// measured) and this tag's own influence numeral (a Range on the digit
+// text node, not the half-disc span). ji (the tightest spot on the board,
+// boxed in by liaodong/zhongshan and the map's own top edge, #90's own
+// comment) can't go "up" at all despite that being its only fully-free
+// side — dy far enough negative to clear its own disc's bounding square
+// runs the tag off the map's own top edge (checked against #map's real
+// getBoundingClientRect, not just against other marks); "right" clears
+// its own disc on the x-axis alone instead and stays fully on screen.
 export const STATE_TAG_POS = {
-  yiyang: { dx: -13, dy: 13 }, xinzheng: { dx: -15, dy: -9 },
-  hedong: { dx: -13, dy: 13 }, daliang: { dx: -15, dy: -14 },
-  shangdang: { dx: -13, dy: -13 }, handan: { dx: -15, dy: -14 },
-  zhongshan: { dx: -13, dy: -13 }, dai: { dx: -13, dy: -13 },
-  linzi: { dx: -15, dy: -9 }, jimo: { dx: 13, dy: 13 }, ju: { dx: -13, dy: 13 }, xue: { dx: -13, dy: 13 },
-  ji: { dx: -15, dy: 14 }, liaodong: { dx: -13, dy: -13 },
+  yiyang: { dx: -23, dy: 0 }, xinzheng: { dx: -25, dy: 0 },
+  hedong: { dx: 0, dy: 23 }, daliang: { dx: 25, dy: 0 },
+  shangdang: { dx: 0, dy: -25 }, handan: { dx: 0, dy: -26 },
+  zhongshan: { dx: -23, dy: 0 }, dai: { dx: -23, dy: 0 },
+  linzi: { dx: 25, dy: 0 }, jimo: { dx: 23, dy: 0 }, ju: { dx: -23, dy: 0 }, xue: { dx: 23, dy: 0 },
+  ji: { dx: 25, dy: 0 }, liaodong: { dx: -23, dy: 0 },
 };
 // Decorative like stabilityTagHTML()/the seal chop's own inner text — the
 // state is already named for assistive tech through `title`, so the glyph
