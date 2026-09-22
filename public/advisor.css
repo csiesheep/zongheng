@@ -263,6 +263,25 @@ body:not(.table-lock) .advisor-banner {
 :root[lang="en"] .rowb button[data-skip].adv-pick::before, :root[lang="en"] .sheet-footer button[data-use].adv-pick::before {
   content: "Advisor";
 }
+/* #102 item 1 (orchestrator, 390x669 zh screenshot: the hand strip cuts the
+   tab's upper half): `.card` (style.css) carries its own `overflow: hidden`
+   -- needed so a full card's own art/corners stay inside its rounded edge --
+   which clips this tab's OWN pseudo-element too whenever it straddles the
+   card's top edge (top: -8px, half outside the card's own box), independent
+   of whatever ancestor (the mobile chip row, the desktop grid) the card
+   happens to sit in; #7's desktop grid card carries the exact same `.card`
+   overflow rule, so the desktop hand clips it too (`.hand`'s own overflow
+   there is `visible` -- desktop.css -- so the card's own clip is the only
+   culprit, confirming it isn't the hand strip's overflow at all). Only the
+   card variant moves fully inside its own box (top 0, ending flush with
+   the tab's own 15px height); the sheet/rowb button variants above keep
+   their original straddle -- not the reported case, and each of those
+   buttons' own top edge has real headroom above it (a `.rowb`/`.sheet-grid`
+   row gap) that the hand's card, sitting flush against `.hand`'s own edge,
+   doesn't have. */
+.card.adv-pick::before {
+  top: 0;
+}
 
 /* ---------- advisor decoration: the map target ---------- */
 /* #69 (owner, iPhone screenshot of a lobby's target-picking state): the

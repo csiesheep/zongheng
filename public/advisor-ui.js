@@ -593,7 +593,17 @@ function decorateMap(adv, meta) {
 function setBannerText(adv, meta, real, view) {
   if (!real) { banner.title.textContent = meta.t("advisor.thinking"); banner.why.textContent = ""; return; }
   if (!adv) return; // caller hides the banner itself in this case
-  const title = bannerTitle(adv, meta, view) ?? meta.t("advisor.name");
+  // #102 item 2 (orchestrator, iPhone screenshot: Chu Conquers Yue open
+  // while the advisor suggests Sima Cuo Takes Shu -- the banner kept
+  // showing the Sima Cuo line with nothing to say it wasn't about the open
+  // card). meta.uiCard is whichever card page is actually open (app.js's
+  // game.ui.card, or falsy when none is); adv.card is the card the
+  // suggestion is FOR (falsy for a pending ops/option/card choice, which
+  // names no card at all -- left alone, same as before). Only the title
+  // line changes; the reason line underneath still explains the real
+  // suggestion, unchanged.
+  const mismatch = adv.card != null && meta.uiCard != null && meta.uiCard !== adv.card;
+  const title = mismatch ? meta.t("advisor.notThisCard", { card: meta.cardName(adv.card) }) : (bannerTitle(adv, meta, view) ?? meta.t("advisor.name"));
   const why = meta.t(`advisor.reasons.${adv.reason.key}`, fmtParams(adv.reason.params, meta));
   banner.title.textContent = title;
   banner.why.textContent = why;

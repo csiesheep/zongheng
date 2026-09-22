@@ -1367,14 +1367,23 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    used-strings, tighter kai glyphs) were never the problem and keep their
    17px size untouched. */
 :root[lang="en"] .sheet-grid button { font: 600 12px/1.15 var(--sans); letter-spacing: 0; padding: 0 2px; }
-/* Below ~340px wide even that no longer fits "Campaign" on one line (a
-   320-wide column here is 55px, and 12px/0-padding still wants 57px) --
-   two lines, not a further font shrink past the 12px floor. `anywhere`
-   (not the default word-boundary wrap, since this is one word with no
-   space to break on) lets it fold the one long label; the row's fixed
-   44px height already has room for two 12px lines. */
+/* #102 item 4 (orchestrator, 320 en: "Campaign" broke mid-word as
+   "Campai/gn"): `overflow-wrap: anywhere` folds a word with no space to
+   break on wherever it likes -- exactly the "must never break mid-word"
+   case the brief rules out, so this no longer reaches for it. Below
+   ~340px wide the row's 12px/2px-padding size still doesn't fit
+   "Campaign" (a 320-wide column here is ~55px, and that combination
+   measured 57px) -- dropped once more to 11px (this file's own floor for
+   phone legibility, matched elsewhere) with the side padding closed to 0,
+   which measures comfortably under the column width with margin to
+   spare, so every label fits whole on its one line. `white-space: nowrap`
+   (the base rule, unchanged) plus the base rule's own ellipsis stay as the
+   fallback for a still-longer label a future translation might add: an
+   ellipsis clips whole characters, never mid-word by folding letters
+   apart the way `anywhere` did, and "break only at a space" has nothing to
+   act on here since "Campaign" itself has none. */
 @media (max-width: 340px) {
-  :root[lang="en"] .sheet-grid button { white-space: normal; overflow-wrap: anywhere; line-height: 1.05; }
+  :root[lang="en"] .sheet-grid button { font-size: 11px; padding: 0; }
 }
 /* #100 (owner, UX audit item 4): a Confirm tap or a map tap with no use
    chosen shakes this row once and names why (app.js's flashUseWarning()) --

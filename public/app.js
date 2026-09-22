@@ -1665,7 +1665,13 @@ function scoringWarnText(v, side) {
   if (!m) return "";
   const left = actionsLeftThisTurn(v, side);
   if (left == null || left > m) return "";
-  return t("prompt.scoringWarn", { n: left, m });
+  // #102 item 3: {n} actions and {m} scoring cards each pluralize on their
+  // OWN count (either can be 1 while the other isn't) -- prompt.scoringWarn
+  // is now { action: {one,other}, card: {one,other}, full } in both i18n
+  // files (see their own comments), not a single "(s)" template.
+  const action = t(`prompt.scoringWarn.action.${left === 1 ? "one" : "other"}`, { n: left });
+  const card = t(`prompt.scoringWarn.card.${m === 1 ? "one" : "other"}`, { m });
+  return t("prompt.scoringWarn.full", { action, card });
 }
 // #29: the "uses.*" table already carries both languages (one entry per
 // i18n file) — the five-use grid on the full card page shows BOTH at once,
