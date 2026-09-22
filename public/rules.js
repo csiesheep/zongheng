@@ -25,6 +25,17 @@ const stateName = (id) => (id ? (lang === "en" ? E.STATES[id].en : E.STATES[id].
 // "周室" here no matter what regionShort.zhou said.
 const regionShortName = (r) => (lang === "en" ? en.regionShort[r] : zh.regionShort[r]);
 
+// #99 item 6: the back link used to always go to "./" (the landing), even
+// when the page was opened from a running game via play.html's own
+// #rulesLink (target="_blank"). play.html's link now adds ?from=play; that's
+// the only reliable signal (its `rel="noopener"` means window.opener is
+// null in this tab, per spec — so it can't be used here despite being the
+// first thing that comes to mind). window.opener is still checked as a
+// belt-and-suspenders fallback in case some other caller ever opens this
+// page without noopener.
+let fromGame;
+try { fromGame = new URLSearchParams(location.search).get("from") === "play" || !!window.opener; } catch { fromGame = false; }
+
 // The header (Back / centre label / language button) reads the same nav.*
 // and landing.rulesLink strings play.html and landing.js use, so it stays
 // one voice with the rest of the app instead of forking its own copy.
@@ -1045,7 +1056,7 @@ function render() {
   const S = T[lang];
   const N = NAV[lang];
   document.documentElement.lang = lang;
-  $("backLink").textContent = N.nav.back;
+  $("backLink").textContent = fromGame ? N.nav.backGame : N.nav.back;
   $("barMid").textContent = N.landing.rulesLink;
   $("langBtn").textContent = N.nav.lang;
   $("credit").textContent = S.credit;
@@ -1068,6 +1079,24 @@ function render() {
   renderDetail(); // #35/#44: re-draw the open card's detail (overlay or desktop panel) in the new language/layout
 }
 $("langBtn").onclick = () => { lang = lang === "en" ? "zh-Hant" : "en"; try { localStorage.setItem("zh.lang", lang); } catch {} render(); };
+
+// #99 item 6: opened from the game -> close this tab and return focus to
+// play.html; opened any other way -> the plain href="./" already on the
+// element does its normal thing, untouched. iOS Chrome (and some other
+// browsers) refuse window.close() on a tab they don't consider
+// script-opened (a plain <a target="_blank"> click counts as user
+// navigation, not window.open()) and simply leave the tab as-is — silently,
+// no error, no rejected promise to catch — so the only way to detect the
+// refusal is to check, one tick later, whether we're still here.
+if (fromGame) {
+  const backLink = $("backLink");
+  backLink.href = "play.html?resume";
+  backLink.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    window.close();
+    setTimeout(() => { location.href = "play.html?resume"; }, 50);
+  });
+}
 
 // #44: the two-tab pill switch — static buttons in rules.html (like
 // #langBtn), wired once here rather than rebuilt every render().
