@@ -791,6 +791,24 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
   z-index: 4; pointer-events: none;
 }
 .node .seal-chop span { font: 900 10.5px/1 var(--serif); color: #fff6ea; }
+/* #95: the state tag (design A 國字小籤, owner's pick) — a small square
+   naming which of the five states a space belongs to, since today's map
+   colour is the SCORING REGION, not the state, and a state's spaces don't
+   all sit in one region. Sized/positioned exactly like .seal-chop above
+   (fixed px, inline transform off STATE_TAG_POS so it scales with the map
+   like every other disc-relative mark) but square-cornered (no tilt) and
+   without a drop shadow, so it reads as a label, not a stamp. One colour
+   per STATE (map-draw.js's STATE_TAG_COLOR), never animated (#95's own
+   "everywhere, no animation" requirement — no lit/picked/lastmove variant
+   touches it). */
+.node .state-tag {
+  position: absolute; box-sizing: border-box; top: 50%; left: 50%;
+  width: 13px; height: 13px; transform: translate(-50%, -50%);
+  border-radius: 2px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 4; pointer-events: none;
+}
+.node .state-tag span { font: 900 9px/1 var(--serif); color: #fff; }
 /* #7/#32: .hit-layer used to sit flush with .map's own box (inset:0) and
    position each button by percentage of THAT box, which drifted away from
    the visual disc (inside .map-inner, a fixed design canvas fitMap()

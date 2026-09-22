@@ -204,6 +204,79 @@ export const SEAL_MARK_POS = {
   xinzheng: { dx: 15, dy: 14 }, handan: { dx: 15, dy: 14 }, daliang: { dx: 15, dy: 14 },
   linzi: { dx: 15, dy: 14 }, ji: { dx: 15, dy: 14 },
 };
+// #95: the state tag (design A 國字小籤, owner's pick off canvas
+// State_A_Tags, generator C:/Users/sheep/code/_orch_keep/statedesign.py's
+// tags()) — a small square on each of the 14 state spaces naming which of
+// the five states it belongs to. Today's map colours are the SCORING
+// REGIONS, not the states, and a state's own spaces don't all sit in one
+// region (中山/dai are Zhao's but sit in the north region) — destroying a
+// state needs every one of its spaces, so the player has to be able to tell
+// which spaces those are without opening a card. One colour per STATE, not
+// per region:
+export const STATE_TAG_COLOR = { han: "#2f7f6a", wei: "#b0801f", zhao: "#6a4c9c", qi: "#2d6ea3", yan: "#8a5a3c" };
+// STATE_TAG_POS: per-space {dx, dy} PIXEL offset of the tag's own centre off
+// the node's centre — same convention SEAL_MARK_POS above already uses, so
+// app.js/rules.js apply it the same way (an inline transform, since the tag
+// is a fixed 13x13 square that must not scale/rotate with anything else).
+// Checked with an exhaustive getBoundingClientRect overlap sweep — every
+// .state-tag against every disc/.hit/.stab/.nm/region-label/badge/
+// lastmove-tag/seal-chop/other .state-tag under #map (own node's own
+// elements excluded) — at 390x669 zh, 375x667 en and 1280x800, in four
+// states: an ordinary position, a placement in progress (+N badges show),
+// right after the bot's move (last-move tags show), and all five capitals
+// sealed. Zero hits in every one. The design's own upper-right starting
+// spot collides with the badge/last-move pill on every space (both default
+// to that corner, NODE_PILL_POS above) and with the seal chop's lower-right
+// on a capital, so each entry here was picked against this space's own
+// anchor/pill/stab corner, not copied from the mockup.
+// Round 2 (orchestrator, #95): the corner-offset table above put every tag
+// PARTLY ON its own disc (a diagonal offset only clears a CIRCLE by
+// sqrt(2), never a plain bounding-box overlap check, which is how the
+// owner's "never covers the numbers" rule is actually measured) — five of
+// them sat on their own influence numerals. A state tag is a label, not a
+// stamp (unlike the seal chop, which is deliberately designed to overlap
+// its own disc's corner) — every entry below is a PURE axis offset (one of
+// dx/dy is 0) of at least discHalf + 6.5 (the tag's own half-width) + a few
+// px margin, which is the only offset shape that clears a disc's full
+// bounding SQUARE with zero overlap regardless of whether the disc itself
+// is round or (on a capital) squared — a diagonal offset of the same
+// magnitude would still read as overlapping under that test. Each
+// direction is picked against this space's own NODE_ANCHOR/NODE_PILL_POS/
+// NODE_STAB_RIGHT/isCapital (which corner the name/pill/stab/seal already
+// use), then confirmed with the same exhaustive sweep as before, now with
+// two more required-zero columns: this tag's own disc (plain rect
+// intersection, not circle-aware — matches how the collision was
+// measured) and this tag's own influence numeral (a Range on the digit
+// text node, not the half-disc span). ji (the tightest spot on the board,
+// boxed in by liaodong/zhongshan and the map's own top edge, #90's own
+// comment) can't go "up" at all despite that being its only fully-free
+// side — dy far enough negative to clear its own disc's bounding square
+// runs the tag off the map's own top edge (checked against #map's real
+// getBoundingClientRect, not just against other marks); "right" clears
+// its own disc on the x-axis alone instead and stays fully on screen.
+export const STATE_TAG_POS = {
+  yiyang: { dx: 23, dy: 0 }, xinzheng: { dx: -25, dy: 0 },
+  hedong: { dx: -23, dy: 0 }, daliang: { dx: 25, dy: 0 },
+  shangdang: { dx: 0, dy: -25 }, handan: { dx: 0, dy: -26 },
+  zhongshan: { dx: -23, dy: 0 }, dai: { dx: -23, dy: 0 },
+  linzi: { dx: 25, dy: 0 }, jimo: { dx: 23, dy: 0 }, ju: { dx: -23, dy: 0 }, xue: { dx: 23, dy: 0 },
+  ji: { dx: 25, dy: 0 }, liaodong: { dx: -23, dy: 0 },
+};
+// Decorative like stabilityTagHTML()/the seal chop's own inner text — the
+// state is already named for assistive tech through `title`, so the glyph
+// itself is aria-hidden. `name` is the caller's own state name (app.js/
+// rules.js: E.STATES[id].en or .zh off the current language), `esc` its own
+// HTML escaper. The glyph is always the Chinese character regardless of UI
+// language (the seal chop is always 印, never "Seal" — it's a mark).
+export function stateTagHTML(sp, name, esc) {
+  if (!sp.state) return "";
+  const pos = STATE_TAG_POS[sp.id];
+  if (!pos) return "";
+  const style = `transform:translate(calc(-50% + ${pos.dx}px), calc(-50% + ${pos.dy}px));` +
+    `background:${STATE_TAG_COLOR[sp.state]}`;
+  return `<span class="state-tag" style="${style}" title="${esc(name)}" role="img" aria-label="${esc(name)}">` +
+    `<span aria-hidden="true" lang="zh-Hant">${esc(E.STATES[sp.state].zh)}</span></span>`;
+}
 // `name` is the already-resolved display name (the caller's own spaceName()
 // — app.js and rules.js each have their own, reading the same E.SPACE[id]
 // but keyed to their own current language); `esc` is the caller's own HTML

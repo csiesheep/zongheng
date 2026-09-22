@@ -20,7 +20,7 @@ import {
   DESIGN_W, DESIGN_H, NODE_POS, nodeCenter, regionMembers, isCapital,
   renderRegionBlobs, renderRoads, REGION_LABEL_POS,
   NODE_BREAK_EN, NODE_SMALL_EN, NODE_ANCHOR, nodeLabelHTML, stabilityTagHTML,
-  NODE_STAB_RIGHT, NODE_STAB_HI, NODE_PILL_POS, SEAL_MARK_POS,
+  NODE_STAB_RIGHT, NODE_STAB_HI, NODE_PILL_POS, SEAL_MARK_POS, stateTagHTML,
 } from "./map-draw.js";
 import { sealProgress } from "./seal-progress.js"; // #89: 相印 progress marks on the capitals
 import { computeLastMoveMarks } from "./lastmove.js";
@@ -1446,6 +1446,7 @@ function renderMap(v) {
       (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
       (mvTag ? `<span class="lastmove-tag${lastMoveTagClass(mv)}" aria-hidden="true">${esc(mvTag)}</span>` : "") +
       sealMarkHTML +
+      stateTagHTML(sp, sp.state ? stateName(sp.state) : "", esc) +
       nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc);
     el.appendChild(vis);
     const hb = document.createElement("button");
