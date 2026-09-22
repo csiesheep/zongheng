@@ -73,6 +73,9 @@ export default {
       chu: "You play Chu: bind the states together. Eight turns, about an hour; the game saves itself in this browser.",
       random: "Your side is picked at random when you start. Eight turns, about an hour; the game saves itself in this browser.",
     },
+    // #97: startSolo() used to silently overwrite the save -- shown as a
+    // confirm sheet (not window.confirm) only when a save actually exists.
+    overwriteWarn: "Starting a new game will overwrite your current save (turn {n}).",
   },
   eras: { reform: "Reform era", alliance: "Alliance era", conquest: "Conquest era" },
   tracks: { mandate: "Mandate", weariness: "Weariness", reform: "Reform", seals: "Seals", mie: "Destroyed", jiuding: "Cauldrons", faceDown: "face down", turn: "Turn", round: "Action", of: " of " },
@@ -92,9 +95,16 @@ export default {
     points: "Pick {n} ({left} left).", pointsMin: "Pick up to {n}.", card: "Pick a card.", cardOptional: "Pick a card, or skip.", option: "Choose.", ops: "Spend {ops} ops: how?",
     place: "Placing {ops} ops ({left} left). Tap spaces; 2 per point where the enemy holds control.", campaign: "Campaign with {ops} ops: tap a target.", lobby: "Lobby with {ops} ops: tap a target.",
     over: "Game over.",
+    // #97: always on, independent of the advisor -- shown once the actions
+    // left this round are at most the scoring cards still in hand.
+    scoringWarn: "{n} action(s) left this round; {m} scoring card(s) in hand: play them before the turn ends, or you lose.",
   },
   uses: { event: "Event", place: "Place", campaign: "Campaign", lobby: "Lobby", reform: "Reform", bog: "Discard (bogged)", pair: "Pair with", opsFirst: "Ops first", eventFirst: "Event first" },
-  buttons: { send: "Send", board: "View the board", result: "Result", confirm: "Confirm", done: "Done", cancel: "Cancel", skip: "Skip", playAgain: "Play again", swap: "Swap sides", home: "Home", headline: "Commit headline", show: "Show", hide: "Hide", log: "Log", logChat: "Log and chat", expand: "Card", close: "Close" },
+  buttons: { send: "Send", board: "View the board", result: "Result", confirm: "Confirm", done: "Done", cancel: "Cancel", skip: "Skip", playAgain: "Play again", swap: "Swap sides", home: "Home", headline: "Commit headline", show: "Show", hide: "Hide", log: "Log", logChat: "Log and chat", expand: "Card", close: "Close", resumeSolo: "Resume game", newGame: "New game" },
+  // #97: the always-on "must play" tag on a scoring card in hand -- a
+  // separate short label (badge) and a longer sentence (its `title`), never
+  // the prompt-area/pinned-area line above (that one adds the count).
+  hand: { mustPlay: "Must play", mustPlayTitle: "A scoring card held at the turn's end loses" },
   preview: { campaign: "Removes {removed} of theirs, places {placed} of yours; weariness {w}.", lobby: "Edge {edge}: removes up to {n}.", locked: "Locked by weariness.", enemyEvent: "This is their card: its event will happen too." },
   // The result screen's colour and art always follow the WINNER, not your
   // own seat, so each ending's line and body read as fact from the table,
