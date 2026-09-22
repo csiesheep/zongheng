@@ -135,6 +135,14 @@ body.setup-chu {
 .audio-btn:not(.on) .audio-btn-waves { display: none; }
 .audio-btn:not(.on) .audio-btn-slash { display: inline; }
 #barMid { font-size: 12px; color: var(--text-dim); }
+/* #101: an empty #barMid (every table render outside the tutorial -- see
+   layoutTable()'s own `$("barMid").textContent = Tut.active() ? ... : ""`)
+   used to still take its own place in `.bar`'s flex row, so its TWO
+   surrounding `gap`s cost real width even though it drew nothing --
+   exactly the kind of waste #101's sweep asked to reclaim before touching
+   either label. `:empty` (no elements OR text) is false only for the
+   tutorial's own `Tut.barText()` string, so that view is untouched. */
+#barMid:empty { display: none; }
 /* #30: the table's own header row (own comment at app.js's layoutBar()) is
    shorter than every other view's -- 48px on a touch device, 44px button +
    2px top/bottom instead of the 54px (44 + 10 + 0) every other view still
@@ -142,7 +150,18 @@ body.setup-chu {
    table/lobby/setup/over views' own attribute, so setup/lobby/over/rules
    (none of which carry it) keep the original 54px bar untouched. Desktop's
    >=1024px rule (desktop.css) overrides this again, to 40px. */
-body[data-view="table"] .bar { padding: 2px 14px; }
+body[data-view="table"] .bar { padding: 2px 4px; }
+/* #101: the table header packs six real controls (back, sound, log,
+   advisor, rules, lang) into one row -- the widest of any view's bar, and
+   the one #101's 390/375 en sweep caught losing the back link's and the
+   advisor switch's own labels. `gap` was the same 8px every other,
+   less-crowded bar uses; tightened here only, so setup/lobby/landing keep
+   their original spacing. This alone doesn't close the gap -- paired with
+   the letter-spacing/padding trims below (back, hub) and the empty-#barMid
+   fix above, it's what lets both labels survive at 390 and 375 without
+   ever reaching bar-tight/bar-tighter (see app.js's layoutBar()). */
+body[data-view="table"] .bar { gap: 2px; }
+body[data-view="table"] .bar-right { gap: 2px; }
 /* #30: caught by the new 360-390 x en/zh x advisor matrix -- 規則/Rules's
    own box (`.bar .hub`, above) never had a min-width, only min-height, so
    its short Chinese text ("規則", 2 characters) fell under 44px wide even
@@ -152,13 +171,40 @@ body[data-view="table"] .bar { padding: 2px 14px; }
    already >=44px, and the mobile column never had this squeeze) isn't
    failing anything today. */
 body[data-view="table"] .bar .hub { min-width: 44px; justify-content: center; }
-/* #30 giveaway ①: same track-only shape advisor.css already used below
-   380px wide, now also reachable by app.js's layoutBar() measuring the row
-   at ANY width once the Log button's added width can push it past budget
-   (a width breakpoint alone can't know that -- it depends on the current
+/* #101: RULES (`.hub` on its own, i.e. not `.back`) is one of the two
+   letter-spacing budgets the issue names -- 3px per uppercase letter was
+   sized for the roomier setup/lobby/landing bars this same class also
+   serves, never re-checked once the table view's own crowded row (six
+   controls, not four) came along. min-width above already floors this
+   link at a real 44px target, so this can't shrink the tap area, only the
+   letter-spacing padding around short strings ("Rules", "規則") wastes on
+   top of it. */
+body[data-view="table"] .bar .hub:not(.back) { letter-spacing: 1px; }
+/* #30's giveaway ①, now the SECOND step after #101 reordered layoutBar()'s
+   ladder (own comment there) so the back link gives up its label first --
+   same track-only shape advisor.css already used below 380px wide, now
+   also reachable by app.js's layoutBar() measuring the row at ANY width
+   once the Log button's added width can push it past budget (a width
+   breakpoint alone can't know that -- it depends on the current
    language's other label lengths too). */
 .bar.bar-tight #advisorSlot .adv-toggle-label { display: none; }
 .bar.bar-tight #advisorSlot .adv-toggle { min-width: 44px; justify-content: center; padding: 0; gap: 0; }
+/* #101: advisor.css's own `@media (max-width: 379.98px)` (comment just
+   above) predates layoutBar()'s measured squeeze and fires purely on
+   viewport width, with no idea whether the row still fits -- once #101's
+   other trims (bar/bar-right padding+gap, the back link and RULES
+   letter-spacing) made 375px wide en fit WITHOUT bar-tight, that raw media
+   query kept hiding the advisor label anyway, which is exactly the bug
+   this issue reported. Overridden here, on a table-view selector specific
+   enough to beat the plain `.adv-toggle-label` class it's fighting
+   (advisor.css loads after style.css, so load order alone can't do it --
+   see its own top-of-file comment), but ONLY while `.bar` is not
+   `.bar-tight`: once layoutBar() decides the row genuinely doesn't fit
+   (320px, or a language whose strings are longer), this selector's own
+   :not(.bar-tight) stops matching and the real hide -- both this file's
+   own rule above and advisor.css's -- applies exactly as before. */
+body[data-view="table"] .bar:not(.bar-tight) #advisorSlot .adv-toggle-label { display: inline-block; }
+body[data-view="table"] .bar:not(.bar-tight) #advisorSlot .adv-toggle { min-width: 0; justify-content: flex-start; padding: 0 2px; gap: 3px; }
 .view { padding: 16px 14px 24px; max-width: 640px; width: 100%; margin: 0 auto; }
 h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px 0 14px; color: var(--gold); }
 .about { line-height: 1.7; color: var(--text-dim); margin: 0 0 16px; }
@@ -167,9 +213,11 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .bar .back { font-family: var(--kai); font-size: 15px; letter-spacing: 2px; padding: 8px 10px 8px 0; min-height: 44px; display: inline-flex; align-items: center; flex: none; }
 /* #30: the back link is now two spans (app.js's renderBackLink(), which
    parses "‹ Name" out of the one existing nav.back string instead of a new
-   i18n key) so giveaway ② can drop everything after the chevron on its own
-   -- the aria-label (set by the same function) keeps the full name for a
-   screen reader even once the visible text is gone. */
+   i18n key) so the giveaway (now step ①, #101 reordered it ahead of the
+   advisor switch's own label -- see layoutBar()'s comment) can drop
+   everything after the chevron on its own -- the aria-label (set by the
+   same function) keeps the full name for a screen reader even once the
+   visible text is gone. */
 /* #98: `.bar` is a flex row, and `.back`'s own default flex-shrink (1) let
    the row's flexbox shrink it BELOW its text's min-content width whenever
    the row was tight -- the box itself then still fit inside `.bar` (so
@@ -181,10 +229,20 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
    88px over a 44px box and covered the sound button at 74px). `flex: none`
    keeps `.back` at its own content width, so a too-tight row now shows up
    as a REAL overflow (a child's right edge past `.bar`'s) that
-   barOverflowing() already catches, and the existing give-away ladder
-   (.bar-tight then .bar-tighter, which drops the label to a bare "‹") takes
-   it from there exactly as it does for every other cause of overflow. */
+   barOverflowing() already catches, and the give-away ladder (#101:
+   .bar-tighter, which drops this label to a bare "‹", now runs BEFORE
+   .bar-tight) takes it from there exactly as it does for every other cause
+   of overflow. */
 .bar .back .back-chevron { margin-right: 4px; }
+/* #101: the back link's own letter-spacing/padding is the other budget the
+   issue names -- same idea as RULES above, scoped to the table view's own
+   crowded row only (setup/lobby/landing's back link keeps the roomier 2px/
+   10px original, unchanged, since only the table bar was ever short on
+   room). Font-size and the word itself are untouched -- #98's own fix
+   (flex:none, just above) still depends on this box sizing to its real
+   text, and Process for #101 keeps i18n text out of scope regardless. */
+body[data-view="table"] .bar .back { letter-spacing: -0.3px; padding-right: 1px; }
+body[data-view="table"] .bar .back .back-chevron { margin-right: 1px; }
 .bar.bar-tighter .back .back-label { display: none; }
 .bar.bar-tighter .back .back-chevron { margin-right: 0; }
 /* A bare "‹" is a couple of pixels wide on its own -- min-width plus

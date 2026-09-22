@@ -379,6 +379,21 @@
   body[data-view="table"] .peek-footer button {
     font-size: var(--d-btn-fs);
   }
+  /* #101 (owner's sweep, 1280x800/1440x900 en): style.css's own
+     `:root[lang="en"] .sheet-grid button` rule (`padding: 0 2px`, its
+     column already the tightest of the five-use grid's uses) was sized
+     against that rule's OWN 12px font -- once this file's `--d-btn-fs`
+     (13px on desktop en) grows the text a size up without a matching
+     column-width change, "Campaign" alone (the longest of the five use
+     names) measured 65px of content in a 62px column, clipping by 3px
+     (`scrollWidth` > `clientWidth`). One button still 32px tall (`--d-btn-
+     h`, unchanged) -- only the horizontal padding and letter-spacing give
+     ground, en only (`:root[lang="en"]`, matching the rule this narrows),
+     and only on top of the grid's own `minmax(0, 1fr)` columns, never
+     changing how many fit. */
+  :root[lang="en"] body[data-view="table"] .sheet-grid button {
+    padding: 0 1px; letter-spacing: -0.5px;
+  }
   /* `.sheet:has(.sheet-head) .sheet-footer button` (style.css) is a 3-class-
      deep selector that otherwise beats the plainer `.sheet button` above on
      specificity alone -- named explicitly here, same as #83 already had to. */
