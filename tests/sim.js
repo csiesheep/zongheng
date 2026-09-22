@@ -6,6 +6,8 @@
 //   node tests/sim.js 200 seals=5 cap=3         # one cell
 //   node tests/sim.js 200 qin=hard chu=normal   # levels
 //   node tests/sim.js 200 --cells [--jobs=4]    # every cell in child processes, with retries
+//   node tests/sim.js 1000 --only=nn/control,nn/ts --out=f.txt [--resume]   # resumable batch
+//   node tests/sim.js --report=f.txt.state.json # markdown table with 95% intervals (#104)
 //
 // Cells run as child processes because Node 24 on the development machine
 // dies with an access violation a few percent of the time on long runs.
@@ -15,35 +17,76 @@ import { fileURLToPath } from "node:url";
 import * as E from "../public/shared/engine.js";
 import * as B from "../public/shared/bots.js";
 
+// #104: every real place action is watched through `E.probe.place`, which the
+// engine calls once per `placePoints` before the first point. The probe is on
+// only around the game's own `E.apply` (never while a bot thinks), and the dry
+// run `validateOps` makes first is skipped by its emptied log. Per action it
+// records the spaces eligible at the start under both reach rules, measured
+// here from influence and control, not from the engine's `canPlaceAt`:
+//   chained  - a point outside today's start set (own influence, or control next door)
+//   beyondTs - a point outside the TS start set (own influence here or next door)
+// `probeMiss` counts games where the watched actions and the logged "place"
+// entries disagree, so a probe that stops seeing placements shows up.
+function startSets(st, side) {
+  const ctl = new Set(), ts = new Set();
+  for (const sp of E.SPACES) {
+    const own = E.infOf(st, sp.id)[side] > 0;
+    if (own || sp.adj.some((a) => E.controller(st, a) === side)) ctl.add(sp.id);
+    if (own || sp.adj.some((a) => E.infOf(st, a)[side] > 0)) ts.add(sp.id);
+  }
+  return { ctl, ts };
+}
 export function playGame(seed, { qin = "normal", chu = "normal", options = {} } = {}) {
   const rng = E.makeRng((seed * 2654435761) >>> 0);
   let st = E.createGame(seed, options);
   const scores = [];
   let seen = 0;
+  const pl = { places: 0, placedPts: 0, chained: 0, chainedPts: 0, beyondTs: 0, beyondTsPts: 0, logged: 0 };
+  const watch = (s, side, points) => {
+    if (!s.log.length) return;
+    const { ctl, ts } = startSets(s, side);
+    const outC = points.filter((id) => !ctl.has(id)).length, outT = points.filter((id) => !ts.has(id)).length;
+    pl.places++; pl.placedPts += points.length;
+    if (outC) { pl.chained++; pl.chainedPts += outC; }
+    if (outT) { pl.beyondTs++; pl.beyondTsPts += outT; }
+  };
   for (let steps = 0; st.winner == null; steps++) {
     if (steps > 6000) throw new Error(`seed ${seed}: no end after ${steps} actions`);
     const who = E.mustAct(st);
     const side = who[rng.int(who.length)];
     const a = B.decide(E.view(st, side), side, side === E.QIN ? qin : chu, rng);
     if (!a) throw new Error(`seed ${seed}: no action for ${side} at turn ${st.turn}`);
-    st = E.apply(st, a);
+    E.probe.place = watch;
+    try { st = E.apply(st, a); } finally { E.probe.place = null; }
     for (const l of st.log) if (l.i > seen && l.type === "score") scores.push(l);
+    for (const l of st.log) if (l.i > seen && l.type === "place") pl.logged++;
     seen = st.logSeq || seen;
   }
-  return { st, scores };
+  return { st, scores, pl };
 }
 
 export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal", options = {} } = {}) {
   const t0 = Date.now();
-  const out = { games, qin, chu, options, qinWins: 0, ends: {}, turns: 0, mandate: 0, absMandate: 0, mie: 0, seals: 0, regions: {}, errors: [] };
+  const out = { games, qin, chu, options, qinWins: 0, ends: {}, turns: 0, mandate: 0, absMandate: 0, mie: 0, seals: 0, regions: {}, errors: [],
+    places: 0, placedPts: 0, chained: 0, chainedPts: 0, beyondTs: 0, beyondTsPts: 0, probeMiss: 0, stuck: 0, rows: [] };
   for (let g = 0; g < games; g++) {
     let res;
-    try { res = playGame(seed + g, { qin, chu, options }); } catch (e) { out.errors.push(`${seed + g}: ${e.message}`); continue; }
-    const { st, scores } = res;
+    try { res = playGame(seed + g, { qin, chu, options }); } catch (e) {
+      out.errors.push(`${seed + g}: ${e.message}`);
+      if (/no end after|no action for/.test(e.message)) out.stuck++;
+      continue;
+    }
+    const { st, scores, pl } = res;
+    for (const k of ["places", "placedPts", "chained", "chainedPts", "beyondTs", "beyondTsPts"]) out[k] += pl[k];
+    if (pl.logged !== pl.places) out.probeMiss++;
     if (st.winner === E.QIN) out.qinWins++;
     out.ends[st.reason] = (out.ends[st.reason] || 0) + 1;
     out.turns += st.turn; out.mandate += st.mandate; out.absMandate += Math.abs(st.mandate);
     out.mie += Object.keys(st.mieVp).length; out.seals += Object.keys(st.sealVp).length;
+    // One row per game (ROW names the columns), so `--report` can give intervals,
+    // distributions and the outlying seeds, not only the means.
+    out.rows.push([seed + g, st.winner === E.QIN ? 1 : 0, st.reason, st.turn, st.mandate, Object.keys(st.mieVp).length, Object.keys(st.sealVp).length,
+      pl.places, pl.placedPts, pl.chained, pl.chainedPts, pl.beyondTs]);
     for (const l of scores) {
       const r = out.regions[l.region] || (out.regions[l.region] = { n: 0, net: 0, q: 0, c: 0 });
       r.n++; r.net += l.qin.total - l.chu.total; r.q += l.qin.total; r.c += l.chu.total;
@@ -95,6 +138,15 @@ export const CELLS = [
   ["chu=hard", { chu: "hard" }],
   ["qin=easy", { qin: "easy" }],
   ["chu=easy", { chu: "easy" }],
+  // #104: placement reach, today's rule against Twilight Struggle 6.1 (option B).
+  ["nn/control", { options: { reach: "control" } }],
+  ["nn/ts", { options: { reach: "ts" } }],
+  ["hh/control", { qin: "hard", chu: "hard", options: { reach: "control" } }],
+  ["hh/ts", { qin: "hard", chu: "hard", options: { reach: "ts" } }],
+  ["hqnc/control", { qin: "hard", chu: "normal", options: { reach: "control" } }],
+  ["hqnc/ts", { qin: "hard", chu: "normal", options: { reach: "ts" } }],
+  ["nqhc/control", { qin: "normal", chu: "hard", options: { reach: "control" } }],
+  ["nqhc/ts", { qin: "normal", chu: "hard", options: { reach: "ts" } }],
 ];
 
 function parseArgs(argv) {
@@ -142,16 +194,19 @@ async function runOneByOne(args) {
   for (let i = 0; i < n; i++) {
     let one;
     try { one = await runChild(["1", `seed=${seed + i}`, ...rest], 2); }
-    catch { one = { games: 1, played: 0, qinWins: 0, ends: {}, turns: 0, mandate: 0, absMandate: 0, mie: 0, seals: 0, regions: {}, errors: [`${seed + i}: child crashed`], ms: 0 }; }
+    catch { one = { games: 1, played: 0, qinWins: 0, ends: {}, turns: 0, mandate: 0, absMandate: 0, mie: 0, seals: 0, regions: {}, errors: [`${seed + i}: child crashed`], ms: 0, ...Object.fromEntries(SUMS.map((k) => [k, 0])) }; }
     total = merge(total, one);
   }
   return total;
 }
 
+export const ROW = ["seed", "qinWin", "reason", "turn", "mandate", "mie", "seals", "places", "placedPts", "chained", "chainedPts", "beyondTs"];
+const SUMS = ["places", "placedPts", "chained", "chainedPts", "beyondTs", "beyondTsPts", "probeMiss", "stuck"];
 function merge(a, b) {
   if (!a) return b;
-  const out = { ...a, qinWins: a.qinWins + b.qinWins, turns: a.turns + b.turns, mandate: a.mandate + b.mandate, absMandate: a.absMandate + b.absMandate,
-    mie: a.mie + b.mie, seals: a.seals + b.seals, played: a.played + b.played, games: a.games + b.games, ms: a.ms + b.ms, errors: a.errors.concat(b.errors), ends: { ...a.ends }, regions: { ...a.regions } };
+  const out = { ...a, rows: (a.rows || []).concat(b.rows || []),qinWins: a.qinWins + b.qinWins, turns: a.turns + b.turns, mandate: a.mandate + b.mandate, absMandate: a.absMandate + b.absMandate,
+    mie: a.mie + b.mie, seals: a.seals + b.seals, played: a.played + b.played,
+    ...Object.fromEntries(SUMS.map((k) => [k, (a[k] || 0) + (b[k] || 0)])), games: a.games + b.games, ms: a.ms + b.ms, errors: a.errors.concat(b.errors), ends: { ...a.ends }, regions: { ...a.regions } };
   for (const [k, v] of Object.entries(b.ends)) out.ends[k] = (out.ends[k] || 0) + v;
   for (const [k, v] of Object.entries(b.regions)) {
     const r = out.regions[k] ? { ...out.regions[k] } : { n: 0, net: 0, q: 0, c: 0 };
@@ -228,7 +283,104 @@ async function runCells(cfg) {
   if (cfg.out) appendFileSync(cfg.out, "# done\n");
 }
 
+// ---------- report (#104) ----------
+//   node tests/sim.js --report=a.state.json,b.state.json > table.md
+// Reads the `--out` state files and prints a markdown table per cell with 95%
+// intervals (Wilson for rates, normal for means), then, for every pair of
+// cells named `<x>/control` and `<x>/ts`, the difference ts − control with its
+// 95% interval; a difference whose interval leaves out 0 is marked **.
+const Z = 1.96;
+function wilson(k, n) {
+  if (!n) return [NaN, NaN];
+  const p = k / n, d = 1 + Z * Z / n, c = (p + Z * Z / (2 * n)) / d, h = (Z / d) * Math.sqrt(p * (1 - p) / n + Z * Z / (4 * n * n));
+  return [c - h, c + h];
+}
+function meanCi(xs) {
+  const n = xs.length, m = xs.reduce((a, b) => a + b, 0) / (n || 1);
+  const v = n > 1 ? xs.reduce((a, b) => a + (b - m) ** 2, 0) / (n - 1) : 0;
+  return { m, v, n, h: Z * Math.sqrt(v / (n || 1)) };
+}
+function quant(xs, q) { const s = xs.slice().sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor(q * (s.length - 1) + 0.5))]; }
+const REASONS = ["mandate", "unification", "alliance", "collapse", "scoring", "scoringBoth", "final", "tie"];
+const REASON_ZH = { mandate: "天命", unification: "滅國(一統)", alliance: "相印(合縱)", collapse: "土崩", scoring: "記分", scoringBoth: "記分2", final: "終局(回合上限)", tie: "平手" };
+function cellStats(r) {
+  const rows = (r.rows || []).map((x) => Object.fromEntries(ROW.map((k, i) => [k, x[i]])));
+  const n = rows.length, col = (k) => rows.map((x) => x[k]);
+  const places = col("places"), pts = col("placedPts");
+  const perAction = rows.filter((x) => x.places).map((x) => x.placedPts / x.places);
+  return {
+    n, rows, errors: r.errors.length, stuck: r.stuck || 0, probeMiss: r.probeMiss || 0,
+    win: { k: rows.filter((x) => x.qinWin).length },
+    ends: Object.fromEntries(REASONS.map((e) => [e, rows.filter((x) => x.reason === e).length])),
+    turn: meanCi(col("turn")), mandate: meanCi(col("mandate")), mie: meanCi(col("mie")), seals: meanCi(col("seals")),
+    places: meanCi(places), ptsPerAction: { m: pts.reduce((a, b) => a + b, 0) / (places.reduce((a, b) => a + b, 0) || 1) },
+    perGamePtsPerAction: meanCi(perAction),
+    chainedShare: { k: rows.reduce((a, x) => a + x.chained, 0), n: places.reduce((a, b) => a + b, 0) },
+    chainedPts: rows.reduce((a, x) => a + x.chainedPts, 0), totalPts: pts.reduce((a, b) => a + b, 0),
+    beyondTs: rows.reduce((a, x) => a + x.beyondTs, 0),
+    gamesWithChain: rows.filter((x) => x.chained > 0).length,
+  };
+}
+const pc = (x) => (100 * x).toFixed(1);
+const ci = (lo, hi) => `[${pc(lo)}, ${pc(hi)}]`;
+const f2 = (x) => (x >= 0 ? "+" : "") + x.toFixed(2);
+function report(files) {
+  const cells = {};
+  for (const f of files) {
+    const st = JSON.parse(readFileSync(f, "utf8"));
+    for (const [name, v] of Object.entries(st)) if (v.result) cells[name] = { ...cellStats(v.result), games: v.result.games, done: v.done.length, file: f };
+  }
+  const out = [];
+  const names = CELLS.map(([n]) => n).filter((n) => cells[n]);
+  out.push("| cell | n | Qin win % [95%] | errors / stuck | avg turn [95%] | avg final mandate [95%] | 滅 / game | 相印 / game | place actions / game | points / action | place actions with a point outside the control start set, % (under control: chaining) | points outside the TS start set |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|---|---|");
+  for (const name of names) {
+    const c = cells[name], [lo, hi] = wilson(c.win.k, c.n);
+    out.push(`| ${name} | ${c.n} | ${pc(c.win.k / c.n)} ${ci(lo, hi)} | ${c.errors} / ${c.stuck} | ${c.turn.m.toFixed(2)} ±${c.turn.h.toFixed(2)} | ${f2(c.mandate.m)} ±${c.mandate.h.toFixed(2)} | ${c.mie.m.toFixed(2)} ±${c.mie.h.toFixed(2)} | ${c.seals.m.toFixed(2)} ±${c.seals.h.toFixed(2)} | ${c.places.m.toFixed(2)} ±${c.places.h.toFixed(2)} | ${c.ptsPerAction.m.toFixed(2)} | ${pc(c.chainedShare.k / (c.chainedShare.n || 1))} (${c.chainedShare.k}/${c.chainedShare.n}; ${c.gamesWithChain} games) | ${c.beyondTs} |`);
+  }
+  out.push("", "End reasons, % of games [Wilson 95%]:", "");
+  out.push(`| cell | ${REASONS.map((e) => REASON_ZH[e]).join(" | ")} |`);
+  out.push(`|---|${REASONS.map(() => "---").join("|")}|`);
+  for (const name of names) {
+    const c = cells[name];
+    out.push(`| ${name} | ${REASONS.map((e) => { const [lo, hi] = wilson(c.ends[e], c.n); return c.ends[e] ? `${pc(c.ends[e] / c.n)} ${ci(lo, hi)}` : "0"; }).join(" | ")} |`);
+  }
+  out.push("", "Distributions (per game): end turn histogram; final mandate and place actions as min / p5 / p25 / median / p75 / p95 / max; the outlying seeds.", "");
+  for (const name of names) {
+    const c = cells[name];
+    const turns = {}; for (const x of c.rows) turns[x.turn] = (turns[x.turn] || 0) + 1;
+    const q = (k) => [0, 0.05, 0.25, 0.5, 0.75, 0.95, 1].map((p) => quant(c.rows.map((x) => x[k]), p)).join(" / ");
+    const byMandate = c.rows.slice().sort((a, b) => a.mandate - b.mandate);
+    const byPlaces = c.rows.slice().sort((a, b) => b.places - a.places);
+    out.push(`- **${name}**: turn ${Object.entries(turns).map(([t, k]) => `${t}:${k}`).join(" ")}; mandate ${q("mandate")}; place actions ${q("places")}; ` +
+      `lowest mandate seeds ${byMandate.slice(0, 3).map((x) => `${x.seed}(${x.mandate},${x.reason})`).join(" ")}, highest ${byMandate.slice(-3).map((x) => `${x.seed}(${x.mandate},${x.reason})`).join(" ")}; most place actions ${byPlaces.slice(0, 3).map((x) => `${x.seed}(${x.places})`).join(" ")}` +
+      `${c.probeMiss ? `; PROBE MISSED IN ${c.probeMiss} GAMES` : ""}`);
+  }
+  const pairs = names.filter((n) => n.endsWith("/control") && cells[n.replace(/control$/, "ts")]);
+  if (pairs.length) {
+    out.push("", "Difference ts − control [95%]; ** = the interval leaves out 0:", "");
+    out.push(`| pair | Qin win pp | turn | final mandate | 滅 | 相印 | place actions | points / action (per-game mean) | ${REASONS.map((e) => REASON_ZH[e] + " pp").join(" | ")} |`);
+    out.push(`|---|---|---|---|---|---|---|---|${REASONS.map(() => "---").join("|")}|`);
+    const dp = (k1, n1, k2, n2) => {
+      const p1 = k1 / n1, p2 = k2 / n2, d = p2 - p1, h = Z * Math.sqrt(p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2);
+      return `${d - h > 0 || d + h < 0 ? "**" : ""}${(100 * d >= 0 ? "+" : "") + (100 * d).toFixed(1)} [${(100 * (d - h)).toFixed(1)}, ${(100 * (d + h)).toFixed(1)}]${d - h > 0 || d + h < 0 ? "**" : ""}`;
+    };
+    const dm = (a, b) => {
+      const d = b.m - a.m, h = Z * Math.sqrt(a.v / a.n + b.v / b.n);
+      const sig = d - h > 0 || d + h < 0;
+      return `${sig ? "**" : ""}${f2(d)} [${f2(d - h)}, ${f2(d + h)}]${sig ? "**" : ""}`;
+    };
+    for (const n of pairs) {
+      const a = cells[n], b = cells[n.replace(/control$/, "ts")];
+      out.push(`| ${n.replace(/\/control$/, "")} | ${dp(a.win.k, a.n, b.win.k, b.n)} | ${dm(a.turn, b.turn)} | ${dm(a.mandate, b.mandate)} | ${dm(a.mie, b.mie)} | ${dm(a.seals, b.seals)} | ${dm(a.places, b.places)} | ${dm(a.perGamePtsPerAction, b.perGamePtsPerAction)} | ${REASONS.map((e) => dp(a.ends[e], a.n, b.ends[e], b.n)).join(" | ")} |`);
+    }
+  }
+  return out.join("\n");
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  const rep = process.argv.find((a) => a.startsWith("--report="));
+  if (rep) { console.log(report(rep.slice(9).split(","))); process.exit(0); }
   const cfg = parseArgs(process.argv.slice(2));
   if (cfg.cells) await runCells(cfg);
   else {
