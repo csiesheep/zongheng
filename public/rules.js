@@ -54,16 +54,16 @@ const T = {
     control: "影響力與控制",
     controlText: "控制 = 我方影響力 ≥ 對方影響力 + 安定值。任一方在任一據點最多安定值 + 2 點,多的消失。",
     uses: "一張牌的五種用法",
-    usesRows: [["事件", "照牌面做。用行動點打出對手陣營的牌時,對手的事件仍然觸發,你決定事件先或行動點先。"], ["放置", "每 1 點行動點放 1 點影響力,只能放在已有自己影響力的據點,或與自己控制的據點相鄰處;目標由對手控制時每點花 2,逐點判定。"], ["征伐", "花 X 點對一個有對手影響力的據點:先移除對手 min(X, 其影響力),剩下的放為自己的(不受相鄰限制)。目標是要衝則疲敝軌前進 1。受疲敝封鎖。"], ["遊說", "局勢 = 我方控制的相鄰據點數 − 對方控制的相鄰據點數。移除對手 min(X, 局勢) 點。不動疲敝、不受封鎖。"], ["變法", "棄掉行動點 ≥ 門檻的牌,變法軌前進 1;每回合 1 次(到第 2 格後 2 次)。"]],
+    usesRows: [["事件", "照牌面做。用行動點打出對手陣營的牌時,對手的事件仍然觸發,你決定事件先或行動點先。"], ["扶植", "每 1 點行動點放 1 點影響力,只能放在已有自己影響力的據點,或與自己控制的據點相鄰處;目標由對手控制時每點花 2,逐點判定。"], ["奇襲", "花 X 點對一個有對手影響力的據點:先移除對手 min(X, 其影響力),剩下的放為自己的(不受相鄰限制)。目標是要衝則疲敝軌前進 1。受疲敝封鎖。"], ["遊說", "局勢 = 我方控制的相鄰據點數 − 對方控制的相鄰據點數。移除對手 min(X, 局勢) 點。不動疲敝、不受封鎖。"], ["變法", "棄掉行動點 ≥ 門檻的牌,變法軌前進 1;每回合 1 次(到第 2 格後 2 次)。"]],
     tracks: "疲敝軌與變法軌",
-    weariness: "疲敝軌:承平 5 → 兵連 4 → 禍結 3 → 民困 2 → 土崩 1。要衝征伐推 1;每回合結算回復 1。封鎖(只限征伐):兵連以下不可征伐本土(西土、南方);禍結以下再加上三晉與周;民困時任何要衝都不可。推到土崩者立刻敗北,推進者是正在行動的玩家。",
+    weariness: "疲敝軌:承平 5 → 兵連 4 → 禍結 3 → 民困 2 → 土崩 1。要衝奇襲推 1;每回合結算回復 1。封鎖(只限奇襲):兵連以下不可奇襲本土(西土、南方);禍結以下再加上三晉與周;民困時任何要衝都不可。推到土崩者立刻敗北,推進者是正在行動的玩家。",
     reformText: "變法軌 6 格,先到者得分,解鎖是重點:",
-    reformRows: E.REFORM.map((r) => [String(r.box), r.zh, String(r.ops), `${r.first} / ${r.second}`, { null: "無", twice: "每回合可推進變法 2 次", campaign: "每回合一次,一次征伐 +1", peek: "標題階段對手先亮牌", discard: "回合結算時可棄 1 張牌而不觸發事件", emperor: "到達時疲敝軌後退 1" }[r.perk]]),
+    reformRows: E.REFORM.map((r) => [String(r.box), r.zh, String(r.ops), `${r.first} / ${r.second}`, { null: "無", twice: "每回合可推進變法 2 次", campaign: "每回合一次,一次奇襲 +1", peek: "標題階段對手先亮牌", discard: "回合結算時可棄 1 張牌而不觸發事件", emperor: "到達時疲敝軌後退 1" }[r.perk]]),
     reformHead: ["格", "名稱", "門檻", "先到 / 後到", "解鎖"],
     special: "九鼎與洛邑",
     // #91: 滅/相印 的完整規則與例子移到新分節「滅國與相印」(mieSectionHTML);
     // 這裡只留九鼎與洛邑本身的一句話摘要,例子見下方 specialExtrasHTML()。
-    specialText: "九鼎:4 點行動點,全部用在三晉或周視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。洛邑:每回合結算時控制者天命 +1,直到「秦滅周」。",
+    specialText: "九鼎:4 點行動點,全部用在三晉或周視為 5;只能扶植、奇襲、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。洛邑:每回合結算時控制者天命 +1,直到「秦滅周」。",
     mie: "滅國與相印",
     turn: "回合",
     turnEras: "8 回合:變法期 1 到 3(手牌 8,行動 6 次)、縱橫期 4 到 6、兼併期 7 到 8(手牌 9,行動 7 次)。每回合依下列四步進行:",
@@ -96,18 +96,18 @@ const T = {
     control: "Influence and control",
     controlText: "Control = your influence ≥ theirs + stability. Nobody holds more than stability + 2 in a space; the excess is lost.",
     uses: "A card's five uses",
-    usesRows: [["Event", "Do what it says. When you spend an enemy card for ops its event happens too; you choose event first or ops first."], ["Place", "1 op per point, where you already have influence or next to a space you control; 2 per point into a space the enemy controls, re-priced point by point."], ["Campaign", "Spend X ops on a space with enemy influence: remove up to X of theirs, place the rest of yours (no adjacency needed). A battleground tires the realm by one. Locked by weariness."], ["Lobby", "Edge = your controlled neighbours minus theirs. Remove min(X, edge) enemy points. Never tires, never locked."], ["Reform", "Discard a card of at least the threshold to climb one box; once a turn (twice from box 2)."]],
+    usesRows: [["Event", "Do what it says. When you spend an enemy card for ops its event happens too; you choose event first or ops first."], ["Foster", "1 op per point, where you already have influence or next to a space you control; 2 per point into a space the enemy controls, re-priced point by point."], ["Raid", "Spend X ops on a space with enemy influence: remove up to X of theirs, place the rest of yours (no adjacency needed). A battleground tires the realm by one. Locked by weariness."], ["Lobby", "Edge = your controlled neighbours minus theirs. Remove min(X, edge) enemy points. Never tires, never locked."], ["Reform", "Discard a card of at least the threshold to climb one box; once a turn (twice from box 2)."]],
     tracks: "Weariness and reform",
-    weariness: "Weariness: Peace 5 → War 4 → Strife 3 → Misery 2 → Collapse 1. A battleground campaign costs 1; the realm recovers 1 at the end of each turn. Locks (campaigns only): at War or below no campaigns in the homes (West, South); at Strife or below none in the Three Jin or Zhou either; at Misery none in any battleground. Pushing to Collapse loses at once; the pusher is whoever is acting.",
+    weariness: "Weariness: Peace 5 → War 4 → Strife 3 → Misery 2 → Collapse 1. A battleground raid costs 1; the realm recovers 1 at the end of each turn. Locks (raids only): at War or below no raids in the homes (West, South); at Strife or below none in the Three Jin or Zhou either; at Misery none in any battleground. Pushing to Collapse loses at once; the pusher is whoever is acting.",
     reformText: "The reform track has six boxes; the first to arrive scores, and the unlocks are the point:",
-    reformRows: E.REFORM.map((r) => [String(r.box), r.zh, String(r.ops), `${r.first} / ${r.second}`, { null: "none", twice: "two reform advances a turn", campaign: "once a turn, one campaign gets +1 op", peek: "the other side reveals its headline first", discard: "at the turn's end, discard one card without its event", emperor: "weariness recovers one box on arrival" }[r.perk]]),
+    reformRows: E.REFORM.map((r) => [String(r.box), r.zh, String(r.ops), `${r.first} / ${r.second}`, { null: "none", twice: "two reform advances a turn", campaign: "once a turn, one raid gets +1 op", peek: "the other side reveals its headline first", discard: "at the turn's end, discard one card without its event", emperor: "weariness recovers one box on arrival" }[r.perk]]),
     reformHead: ["Box", "Name", "Ops needed", "First / second", "Unlock"],
     special: "The Nine Cauldrons and Luoyi",
     // #91: destruction/seals' full rules and examples moved to the new
     // "Destruction & Seals" section (mieSectionHTML); this stays a one-line
     // summary of the Cauldrons and Luoyi themselves — examples in
     // specialExtrasHTML() below.
-    specialText: "The Nine Cauldrons: 4 ops, 5 if all of it lands in the Three Jin or Zhou; place, campaign or lobby only; then it passes face down and the other side may use it from the next turn; Chu holds it at the start. Luoyi: its controller gains 1 Mandate at the end of each turn, until Qin Ends the Zhou.",
+    specialText: "The Nine Cauldrons: 4 ops, 5 if all of it lands in the Three Jin or Zhou; foster, raid or lobby only; then it passes face down and the other side may use it from the next turn; Chu holds it at the start. Luoyi: its controller gains 1 Mandate at the end of each turn, until Qin Ends the Zhou.",
     mie: "Destruction & Seals",
     turn: "The turn",
     turnEras: "8 turns: the Reform era, turns 1 to 3 (hand 8, 6 actions), the Alliance era, 4 to 6, and the Conquest era, 7 and 8 (hand 9, 7 actions). Every turn runs through four steps:",
@@ -436,18 +436,18 @@ function usesExamplesHTML(l) {
   const T5 = zh
     ? { arrowE: "商鞅變法", capE1: `變法軌:秦 0`, capE2: `變法軌:秦 1(本回合秦所有牌 +1 行動點)`,
         noteE: "沒有事件先/事件後的差別要考慮:標題牌的事件一定發生,就算是對手陣營的牌,見上表「事件」列。",
-        arrowP: "秦 放置 3", capP1: `宜陽 ${infWords(EX.place.before, "yiyang", l)} · 洛邑 ${infWords(EX.place.before, "luoyi", l)}`,
+        arrowP: "秦 扶植 3", capP1: `宜陽 ${infWords(EX.place.before, "yiyang", l)} · 洛邑 ${infWords(EX.place.before, "luoyi", l)}`,
         capP2: `宜陽 +1(1 點,鄰函谷關)· 洛邑 +1(2 點,楚控制)`,
-        arrowC: "秦 征伐 3", capC1: `大梁:${infWords(EX.campaign.before, "daliang", l)}`, capC2: `大梁:${infWords(EX.campaign.after, "daliang", l)}(移除 min(3,2)=2,剩 1 點落地)`,
+        arrowC: "秦 奇襲 3", capC1: `大梁:${infWords(EX.campaign.before, "daliang", l)}`, capC2: `大梁:${infWords(EX.campaign.after, "daliang", l)}(移除 min(3,2)=2,剩 1 點落地)`,
         arrowL: "楚 遊說 2", capL1: `邯鄲:${infWords(EX.lobby.before, "handan", l)}`, capL2: `邯鄲:${infWords(EX.lobby.after, "handan", l)}`,
         edgeCap: `局勢 = 2 − 1 = 1,移除 min(2, 1) = 1`,
         arrowR: "秦 變法", capR1: `變法軌:秦 0`, capR2: `變法軌:秦 1(門檻 ${EX.reform.threshold} 點,棄牌 收復河西 2 點)`,
         noteR: "沒有事件觸發。" }
     : { arrowE: "Shang Yang's Reforms", capE1: `Reform track: Qin 0`, capE2: `Reform track: Qin 1 (+1 op on every Qin card this turn)`,
         noteE: "No event-first/ops-first choice to make here: a headline's event always happens, even for the other side's card — see the Event row above.",
-        arrowP: "Qin places, 3 ops", capP1: `Yiyang ${infWords(EX.place.before, "yiyang", l)} · Luoyi ${infWords(EX.place.before, "luoyi", l)}`,
+        arrowP: "Qin fosters, 3 ops", capP1: `Yiyang ${infWords(EX.place.before, "yiyang", l)} · Luoyi ${infWords(EX.place.before, "luoyi", l)}`,
         capP2: `Yiyang +1 (1 op, next to Hangu Pass) · Luoyi +1 (2 ops, Chu-controlled)`,
-        arrowC: "Qin campaigns, 3 ops", capC1: `Daliang: ${infWords(EX.campaign.before, "daliang", l)}`, capC2: `Daliang: ${infWords(EX.campaign.after, "daliang", l)} (removes min(3,2)=2, 1 left to place)`,
+        arrowC: "Qin raids, 3 ops", capC1: `Daliang: ${infWords(EX.campaign.before, "daliang", l)}`, capC2: `Daliang: ${infWords(EX.campaign.after, "daliang", l)} (removes min(3,2)=2, 1 left to place)`,
         arrowL: "Chu lobbies, 2 ops", capL1: `Handan: ${infWords(EX.lobby.before, "handan", l)}`, capL2: `Handan: ${infWords(EX.lobby.after, "handan", l)}`,
         edgeCap: `Edge = 2 − 1 = 1, removes min(2, 1) = 1`,
         arrowR: "Qin reforms", capR1: `Reform track: Qin 0`, capR2: `Reform track: Qin 1 (needs ${EX.reform.threshold} ops, discards Retaking Hexi's 2)`,
@@ -498,7 +498,7 @@ function mieSectionHTML(l) {
   const han = "han", zhao = "zhao";
   const mieHanCap1 = zh ? `宜陽 ${infWords(EX.mieHan.before, "yiyang", l)} · 新鄭 ${infWords(EX.mieHan.before, "xinzheng", l)}` : `Yiyang ${infWords(EX.mieHan.before, "yiyang", l)} · Xinzheng ${infWords(EX.mieHan.before, "xinzheng", l)}`;
   const mieHanCap2 = zh ? `${stName(han, l)} · 滅,天命 秦 +${E.STATES.han.vp}（${EX.mieHan.before.mandate} → ${EX.mieHan.after.mandate}）` : `${stName(han, l)} · Destroyed, Mandate Qin +${E.STATES.han.vp} (${EX.mieHan.before.mandate} → ${EX.mieHan.after.mandate})`;
-  const ex6 = figPairHTML(EX.mieHan.ids, EX.mieHan.before, EX.mieHan.after, esc(mieHanCap1), esc(mieHanCap2), zh ? "秦 征伐 新鄭,4 點" : "Qin campaigns Xinzheng, 4 ops");
+  const ex6 = figPairHTML(EX.mieHan.ids, EX.mieHan.before, EX.mieHan.after, esc(mieHanCap1), esc(mieHanCap2), zh ? "秦 奇襲 新鄭,4 點" : "Qin raids Xinzheng, 4 ops");
   const zhaoCap = zh ? `${stName(zhao, l)}還差${spName("dai", l)}` : `${stName(zhao, l)} still needs ${spName("dai", l)}`;
   const ex7 = figSingleHTML(EX.zhaoMissing.ids, EX.zhaoMissing.st, esc(zhaoCap));
   const ex8 = figRowHTML(EX.seals.map((s) => ({
@@ -507,10 +507,10 @@ function mieSectionHTML(l) {
   })));
   const sealBeforeCap = zh ? `新鄭:楚 ${EX.sealKeep.before.inf.xinzheng[1]}（已得相印）` : `Xinzheng: Chu ${EX.sealKeep.before.inf.xinzheng[1]} (sealed)`;
   const sealKeepCap = zh ? `新鄭:楚 ${EX.sealKeep.after.inf.xinzheng[1]},仍是楚控制——相印仍在` : `Xinzheng: Chu ${EX.sealKeep.after.inf.xinzheng[1]}, still Chu-controlled — the seal stays`;
-  const ex9a = figPairHTML(EX.sealKeep.ids, EX.sealKeep.before, EX.sealKeep.after, esc(sealBeforeCap), esc(sealKeepCap), zh ? "秦 征伐 新鄭,1 點" : "Qin campaigns Xinzheng, 1 op");
+  const ex9a = figPairHTML(EX.sealKeep.ids, EX.sealKeep.before, EX.sealKeep.after, esc(sealBeforeCap), esc(sealKeepCap), zh ? "秦 奇襲 新鄭,1 點" : "Qin raids Xinzheng, 1 op");
   const unsealCap1 = zh ? `新鄭:楚 ${EX.unseal.before.inf.xinzheng[1]}（已得相印）` : `Xinzheng: Chu ${EX.unseal.before.inf.xinzheng[1]} (sealed)`;
   const unsealCap2 = zh ? `新鄭:秦 ${EX.unseal.after.inf.xinzheng[0]},秦控制——相印解除` : `Xinzheng: Qin ${EX.unseal.after.inf.xinzheng[0]}, Qin controls — the seal is removed`;
-  const ex9b = figPairHTML(EX.unseal.ids, EX.unseal.before, EX.unseal.after, esc(unsealCap1), esc(unsealCap2), zh ? "秦 征伐 新鄭,6 點" : "Qin campaigns Xinzheng, 6 ops");
+  const ex9b = figPairHTML(EX.unseal.ids, EX.unseal.before, EX.unseal.after, esc(unsealCap1), esc(unsealCap2), zh ? "秦 奇襲 新鄭,6 點" : "Qin raids Xinzheng, 6 ops");
   const ex9 = ex9a + ex9b;
   const cmpHead = zh ? ["", "秦 滅國", "楚 相印"] : ["", "Qin destruction", "Chu seals"];
   const cmpRows = zh
@@ -532,8 +532,8 @@ function specialExtrasHTML(l) {
   const capB2 = zh ? `${spName("hangu", l)}在三晉／周之外,仍是 4 點：${EX.jiudingB.ids.map((id) => `${spName(id, l)} +1`).join("、")}` : `${spName("hangu", l)} is outside the Three Jin/Zhou, still 4 ops: ${EX.jiudingB.ids.map((id) => `${spName(id, l)} +1`).join(", ")}`;
   const exB = figPairHTML(EX.jiudingB.ids, EX.jiudingB.before, EX.jiudingB.after, esc(capB1), esc(capB2), zh ? "楚 九鼎（仍 4）" : "Chu, the Cauldrons (still 4)");
   const condNote = zh
-    ? `<p class="fig-note">引擎的判定(engine.js doOps):放置要「全部」落點在三晉或周才 +1 點;征伐、遊說只看目標本身是否在三晉或周(<code>choice.points.every(inZhou)</code> / <code>inZhou(choice.target)</code>)。</p>`
-    : `<p class="fig-note">The engine's own condition (engine.js's doOps): placing needs EVERY point in the Three Jin or Zhou for the +1; a campaign or lobby only checks the target itself (<code>choice.points.every(inZhou)</code> / <code>inZhou(choice.target)</code>).</p>`;
+    ? `<p class="fig-note">引擎的判定(engine.js doOps):扶植要「全部」落點在三晉或周才 +1 點;奇襲、遊說只看目標本身是否在三晉或周(<code>choice.points.every(inZhou)</code> / <code>inZhou(choice.target)</code>)。</p>`
+    : `<p class="fig-note">The engine's own condition (engine.js's doOps): fostering needs EVERY point in the Three Jin or Zhou for the +1; a raid or lobby only checks the target itself (<code>choice.points.every(inZhou)</code> / <code>inZhou(choice.target)</code>).</p>`;
   const passCap1 = zh ? "楚持有,可用" : "Chu holds it, usable";
   const passCap2 = zh ? "蓋著交給秦,下回合起可用" : "passes face down to Qin, usable from next turn";
   const passFig = `<div class="fig"><div class="fig-pair">` +

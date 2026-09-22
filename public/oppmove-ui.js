@@ -22,7 +22,7 @@ function t(lang, key, p = {}) {
 }
 const cardZh = (id) => (id === E.JIUDING ? "九鼎" : E.CARD[id].zh);
 const cardEn = (id) => (id === E.JIUDING ? "The Nine Cauldrons" : E.CARD[id].en);
-const cardTextZh = (id) => (id === E.JIUDING ? "4 點行動點,全部用在三晉或周視為 5;只能放置、征伐、遊說;用後蓋著交給對手。" : E.CARD[id].text);
+const cardTextZh = (id) => (id === E.JIUDING ? "4 點行動點,全部用在三晉或周視為 5;只能扶植、奇襲、遊說;用後蓋著交給對手。" : E.CARD[id].text);
 const cardTextEn = (id) => (id === E.JIUDING ? "4 ops; 5 if all of it lands in the Three Jin or Zhou. Then it passes face down." : CARD_EN[id] ?? E.CARD[id].text);
 const cardName = (id, lang) => (lang === "en" ? cardEn(id) : cardZh(id));
 const cardText = (id, lang) => (lang === "en" ? cardTextEn(id) : cardTextZh(id));

@@ -8,7 +8,7 @@ Will live at https://games.csiesheep.com/zongheng/ (not deployed yet).
 
 ## The game in one paragraph
 
-26 spaces in five scoring regions, with five states (韓 魏 趙 齊 燕) and their capitals drawn inside them. Each turn both players headline a card, then alternate six or seven actions: play a card's event, place influence, 征伐 (a campaign: remove enemy influence, place your own, tire the realm), 遊說 (lobby: remove enemy influence where your neighbours outnumber theirs), or discard it to climb the reform track. Six ways it ends: Qin destroys three states, Chu holds four states' seals, the Mandate track reaches 20, someone pushes weariness to collapse, someone is caught holding a scoring card, or eight turns run out and every region scores.
+26 spaces in five scoring regions, with five states (韓 魏 趙 齊 燕) and their capitals drawn inside them. Each turn both players headline a card, then alternate six or seven actions: play a card's event, place influence, 奇襲 (a raid: remove enemy influence, place your own, tire the realm), 遊說 (lobby: remove enemy influence where your neighbours outnumber theirs), or discard it to climb the reform track. Six ways it ends: Qin destroys three states, Chu holds four states' seals, the Mandate track reaches 20, someone pushes weariness to collapse, someone is caught holding a scoring card, or eight turns run out and every region scores.
 
 The rules are in the owner's vault (`Projects/zongheng/zongheng - rulebook.md`) and will be on the rules page.
 
