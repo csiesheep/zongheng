@@ -204,10 +204,10 @@ export default {
     thinking: "軍師思考中",
     suggestCard: {
       event: "打出{card}的事件。",
-      place: "用{card}在{space}放置影響力。",
+      place: "用{card}在{space}扶植。",
       // #60:還沒選到目標(對手的牌、先觸發事件——advisor-ui.js 的
       // bannerTitle() 在 {space} 是空字串時改選這幾個)。
-      placeNoTarget: "用{card}放置影響力。",
+      placeNoTarget: "用{card}扶植。",
       campaign: "用{card}奇襲{space}。",
       campaignNoTarget: "用{card}奇襲。",
       lobby: "用{card}遊說{space}。",
@@ -218,7 +218,7 @@ export default {
     },
     suggestUse: {
       event: "打出它的事件。",
-      place: "在{space}放置影響力。",
+      place: "在{space}扶植。",
       campaign: "奇襲{space}。",
       lobby: "遊說{space}。",
       reform: "拿它變法。",

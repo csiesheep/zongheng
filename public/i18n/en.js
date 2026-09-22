@@ -235,10 +235,10 @@ export default {
     thinking: "The advisor is thinking",
     suggestCard: {
       event: "Play {card} for its event.",
-      place: "Place with {card} in {space}.",
+      place: "Foster with {card} in {space}.",
       // #60: no target chosen yet (an opponent's card, event first --
       // bannerTitle() in advisor-ui.js picks these when {space} is empty).
-      placeNoTarget: "Place with {card}.",
+      placeNoTarget: "Foster with {card}.",
       campaign: "Raid in {space} with {card}.",
       campaignNoTarget: "Raid with {card}.",
       lobby: "Lobby {space} with {card}.",
@@ -249,7 +249,7 @@ export default {
     },
     suggestUse: {
       event: "Play it for its event.",
-      place: "Place it in {space}.",
+      place: "Foster in {space}.",
       campaign: "Raid in {space}.",
       lobby: "Lobby {space}.",
       reform: "Use it to reform.",

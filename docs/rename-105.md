@@ -58,11 +58,28 @@ Uses table (`uses`/`useNames` in `public/i18n/*.js`), the in-turn prompt
 headers (`prompt.place`/`prompt.campaign`), the log and opponent-reveal
 ticker lines (`log.place`/`log.campaign`, `oppmove.tickerPlace`/
 `tickerCampaign`), the tutorial intro/hand/place/campaign steps and the
-advisor's `suggestUse.campaign`/`suggestCard.campaign` lines, the rules
+advisor's `suggestUse.place`/`suggestCard.place` and `suggestUse.campaign`/
+`suggestCard.campaign` lines, the rules
 page's uses table, weariness text, reform-perk text, the 九鼎 special text
 (also duplicated in `public/oppmove-ui.js`'s hardcoded jiuding string), five
 worked-example figure captions, the doOps fig-note, and README.md's
 one-paragraph rules summary.
+
+### Orchestrator correction (2026-09-22)
+
+First pass kept `advisor.suggestCard.place`/`placeNoTarget` and
+`suggestUse.place` unchanged, reading them as the brief's own "「放置影響
+力」 / place influence" exemption. Sent back: that exemption is for text
+describing points put down, not for the advisor's own button-naming
+instruction — since #100 the suggested button wears the 軍師 tab and reads
+「扶植」, so a sentence still saying 放置影響力/"Place with..." points at a
+word no longer on screen. Fixed, mirroring the raid lines:
+
+| Key | zh before | zh after | en before | en after |
+|---|---|---|---|---|
+| `suggestCard.place` | 用{card}在{space}放置影響力。 | 用{card}在{space}扶植。 | Place with {card} in {space}. | Foster with {card} in {space}. |
+| `suggestCard.placeNoTarget` | 用{card}放置影響力。 | 用{card}扶植。 | Place with {card}. | Foster with {card}. |
+| `suggestUse.place` | 在{space}放置影響力。 | 在{space}扶植。 | Place it in {space}. | Foster in {space}. |
 
 ## Kept on purpose (grep after the change)
 
@@ -71,17 +88,13 @@ are all code comments (`public/rules.js:255,263`, `public/advisor-ui.js`,
 `public/app.js:2174`, `public/shared/cards.js:18` — none rendered to a
 player).
 
-`放置` / capitalised `Place` as the use name: kept in six places, all
-"plain action, not the use name" per the brief's own rule and its own
-"「放置影響力」 / place influence" example:
+`放置` / capitalised `Place` as the use name: kept in four places, all
+"plain action, not the use name" — `advisor.suggestCard.place`/
+`placeNoTarget`/`suggestUse.place` are no longer among them, see the
+orchestrator correction above:
 
-- `prompt.setup` / `prompt.setupBonus` (zh/en): the pre-game deployment
-  phase, not the in-turn Place/Foster use.
-- `advisor.suggestCard.place` / `placeNoTarget` and `suggestUse.place`
-  (zh/en): literally the brief's own exempted phrase, "用{card}在{space}
-  放置影響力。" / "Place with {card} in {space}." etc.
-- `advisor.suggestSetup` (zh/en): same deployment-phase exemption as
-  `prompt.setup`.
+- `prompt.setup` / `prompt.setupBonus` and `advisor.suggestSetup` (zh/en):
+  the pre-game deployment phase, not the in-turn Place/Foster use.
 - `preview.campaign` and `log.campaign` / `oppmove.tickerCampaign`'s
   trailing "放置 {placed}" / "places {placed}": the campaign's own
   leftover-troops placement, not a report of the Place/Foster use.
