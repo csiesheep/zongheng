@@ -574,9 +574,16 @@ function describeAction(a) {
 // by measuring after each one and only taking the next if still over
 // budget -- guessing a width breakpoint would depend on the current
 // language's string lengths, which is exactly what grew `.bar` past its
-// budget in the first place (#24):
-//   1. drop the advisor switch's own label, keep just its track (.bar-tight)
-//   2. drop everything after the back link's chevron (.bar-tighter)
+// budget in the first place (#24). #101 (owner's sweep, en 390/375/320):
+// style.css's own letter-spacing/gap/padding trims for the table bar are
+// meant to close the gap on their own at 390 and 375 -- neither step below
+// should even fire there. At 320, one step is still expected, and it must
+// be the back link's, not the advisor switch's: a bare chevron is still a
+// findable "go back", but an unlabelled switch with no visible name isn't
+// findable at all (#101's own wording) -- so the order flipped from #30's
+// original (advisor label first, back label last):
+//   1. drop everything after the back link's chevron (.bar-tighter)
+//   2. drop the advisor switch's own label, keep just its track (.bar-tight)
 // Overflow shows up two different ways depending on what's left to give:
 // while #barMid (or an un-shrunk label) still has room to wrap, the ROW
 // grows taller (its own children stack, .bar's height passes budget); once
@@ -597,12 +604,28 @@ function layoutBar() {
   const bar = document.querySelector(".bar"), mid = $("barMid");
   if (!bar || !mid) return;
   const tut = Tut.active();
-  const budget = window.matchMedia("(min-width: 1024px)").matches ? 40 : 48;
+  // #101 (orchestrator, #97's own confirm-dialog screenshot): every
+  // NON-table view (setup/lobby/over/rules) keeps the original 54px bar
+  // (44px button + 10px top padding + 0 bottom -- style.css's own comment
+  // on body[data-view="table"] .bar, and desktop.css only ever overrides
+  // the TABLE view's bar height, never this one -- every other view stays
+  // the mobile 390-wide column even on desktop, per that file's own header
+  // comment). The budget used to be a flat 48/40 regardless of view, so
+  // barOverflowing()'s own height check (bar taller than budget+1) was
+  // true here BEFORE this function ever looked at a single child's width --
+  // setup's bar always measured 54px, always over a 48px budget, so the
+  // back link lost its label on every load, at any width, in either
+  // language, four items or not. Only the table view (`table-lock`, set
+  // together with `data-view="table"` by show()) ever actually gets the
+  // shorter bar this function was written for.
+  const tableBar = document.body.classList.contains("table-lock");
+  const desktop = window.matchMedia("(min-width: 1024px)").matches;
+  const budget = tableBar ? (desktop ? 40 : 48) : 54;
   mid.hidden = false;
   bar.classList.remove("bar-tight", "bar-tighter");
   if (!tut && mid.textContent && barOverflowing(bar, budget)) mid.hidden = true;
-  if (barOverflowing(bar, budget)) bar.classList.add("bar-tight");
   if (barOverflowing(bar, budget)) bar.classList.add("bar-tighter");
+  if (barOverflowing(bar, budget)) bar.classList.add("bar-tight");
   syncBackLabel(); // #62 part 2: aria-label/title follow whichever squeeze stage this just landed on
 }
 let lastUiErr = ""; // #62: sfx.ui.error fires once per NEW error text, not once per render while it's showing
