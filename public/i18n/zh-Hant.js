@@ -85,12 +85,16 @@ export default {
     over: "遊戲結束。",
     // #97: always on, independent of the advisor -- shown once the actions
     // left this round are at most the scoring cards still in hand.
-    // #102 item 3: mirrors en.js's own one/other split (app.js's
-    // scoringWarnText() reads the same three keys for both languages) --
-    // 中文不論單複數都是同一種寫法,所以 one/other 兩個值一樣,不是這裡漏改。
+    // #102 item 3 (round 1 + round 2's verb split): mirrors en.js's own
+    // one/other split (app.js's scoringWarnText() reads the same four keys
+    // for both languages) -- 中文不論單複數都是同一種寫法,所以每一組
+    // one/other 兩個值都一樣,不是這裡漏改。`full`本來就沒有另外講「它/
+    // 它們」的代名詞子句(「打出」動詞不分單複數),所以 verb 這組值算出來
+    // 沒被 full 用到,留著只是跟 en.js 用同一組 key、同一段程式碼路徑。
     scoringWarn: {
       action: { one: "還剩 {n} 次行動", other: "還剩 {n} 次行動" },
       card: { one: "手上有 {m} 張記分卡", other: "手上有 {m} 張記分卡" },
+      verb: { one: "打出", other: "打出" },
       full: "{action},{card}:要在回合結束前打出,否則判負。",
     },
   },

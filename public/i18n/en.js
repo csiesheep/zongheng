@@ -104,10 +104,16 @@ export default {
     // the two clauses into `full`. zh-Hant.js's own copy doesn't inflect on
     // number at all, so its one/other pairs are identical (see that file's
     // own comment) rather than this structure being English-only.
+    // #102 item 3 round 2 (orchestrator: "...play them..." is wrong with
+    // exactly one scoring card): the verb pronoun pluralizes on the SAME
+    // {m} count as `card` above, split the same way -- app.js's
+    // scoringWarnText() picks one/other for this too and feeds the result
+    // into `full` as {verb}.
     scoringWarn: {
       action: { one: "{n} action left this round", other: "{n} actions left this round" },
       card: { one: "{m} scoring card in hand", other: "{m} scoring cards in hand" },
-      full: "{action}; {card}: play them before the turn ends, or you lose.",
+      verb: { one: "play it", other: "play them" },
+      full: "{action}; {card}: {verb} before the turn ends, or you lose.",
     },
   },
   uses: { event: "Event", place: "Place", campaign: "Campaign", lobby: "Lobby", reform: "Reform", bog: "Discard (bogged)", pair: "Pair with", opsFirst: "Ops first", eventFirst: "Event first" },
