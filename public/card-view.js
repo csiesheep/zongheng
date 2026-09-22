@@ -104,20 +104,23 @@ export function cardTextBox(parent, id, lang) {
 //
 // #92 (owner, iPhone screenshot: 「牌的史實,可以縮起或展開,預設縮起」): a
 // fourth `state` argument turns this into a collapsible <button>+region
-// instead of the old fixed-open title/body. `state` is omitted by every
-// caller that must stay exactly as it was before this issue (rules.js's own
-// card detail view — "the rules page card list is not the game," #92's own
-// words) so that path is untouched below. Callers that ARE the game (the
-// interactive card page's own historyBox() calls in app.js, and
-// renderCardView()'s `opts.historyState` a few lines down, which is how the
-// 看牌 peek and the log's card peek — #88's openPeek — both get it) pass
-// `{ open, onToggle }`: `open` decides the FIRST paint only (never
-// re-derived from anything visual after that) and `onToggle(nextOpen)` is
-// how the caller remembers the choice across the next re-render — this
-// function never re-renders itself. The actual click toggles this box's own
-// classes/attributes in place (not a re-render) so the CSS transition below
-// has a real before/after state to animate between; a re-render elsewhere
-// (advisor text arriving, a language switch) just rebuilds fresh from
+// instead of the old fixed-open title/body. `state` stays optional — the
+// stateless branch just below renders fully open/opaque, same markup as
+// before #92, for any caller that has no open/closed state to track at all —
+// but every real caller now passes one: the interactive card page's own
+// historyBox() calls in app.js, renderCardView()'s `opts.historyState` a few
+// lines down (how the 看牌 peek and the log's card peek — #88's openPeek —
+// both get it), and, since #96, rules.js's own card detail view too (#92
+// originally left it on the stateless path — "the rules page card list is
+// not the game" — but the owner asked for the same collapse there as well;
+// see rules.js's own `cardHistoryState()`). `{ open, onToggle }`: `open`
+// decides the FIRST paint only (never re-derived from anything visual after
+// that) and `onToggle(nextOpen)` is how the caller remembers the choice
+// across the next re-render — this function never re-renders itself. The
+// actual click toggles this box's own classes/attributes in place (not a
+// re-render) so the CSS transition below has a real before/after state to
+// animate between; a re-render elsewhere (advisor text arriving, a language
+// switch, the rules page's own tab/language redraw) just rebuilds fresh from
 // whatever `state.open` now is, per #92 point 2 ("stays expanded until the
 // page closes").
 let historySeq = 0;
@@ -126,11 +129,22 @@ export function historyBox(parent, id, lang, state) {
   if (!story) return null;
   const text = lang === "en" ? story.en : story.zh;
   const src = lang === "en" ? story.srcEn : story.srcZh;
+  // #96 (regression from #92, owner iPhone screenshot on the rules page,
+  // 西土記分): these two lines never carried the `sheet-text` class the
+  // card-text box above already uses, so none of `.sheet-q/.sheet-c/
+  // .sheet-n/.sheet-s .sheet-text`'s per-side colours ever reached them —
+  // they fell through to whatever ambient `<p>` colour the surrounding page
+  // happened to set (on the game's own pages, no page-level `p` rule exists,
+  // so this never showed; the rules page's `.rules p, .rules li` — rules.css
+  // — does, and painted the dark theme's own light `--text-soft` straight
+  // onto the light parchment card, which read as "faded"). `sheet-text-en`/
+  // `sheet-text-zh` stay too (no rule currently keys off them, kept as a
+  // hook for anyone who later wants lang-specific sizing here).
   const textCls = lang === "en" ? "sheet-text-en" : "sheet-text-zh";
   const box = document.createElement("div"); box.className = "sheet-textbox sheet-history";
   const bodyHtml =
-    `<p class="${textCls}"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(text)}</p>` +
-    (src ? `<p class="sheet-history-src">${esc(t(lang, "sheet.source"))}${esc(src)}</p>` : "");
+    `<p class="sheet-text ${textCls}"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(text)}</p>` +
+    (src ? `<p class="sheet-text sheet-history-src">${esc(t(lang, "sheet.source"))}${esc(src)}</p>` : "");
   if (!state) {
     box.innerHTML = `<div class="sheet-history-title">${esc(t(lang, "sheet.history"))}</div>` + bodyHtml;
     parent.appendChild(box);
@@ -196,10 +210,12 @@ export function renderCardView(container, id, lang, opts = {}) {
   cardHeader(container, id, lang);
   const mid = document.createElement("div"); mid.className = "sheet-mid"; container.appendChild(mid);
   cardTextBox(mid, id, lang);
-  // #92: `opts.historyState` is only ever passed by app.js's peek (both the
-  // 看牌 peek and the log's card peek go through this same renderCardView —
-  // see openPeek() there); rules.js's own card detail view never sets it, so
-  // its history section stays exactly as it was before this issue.
+  // #92/#96: `opts.historyState` is passed by app.js's peek (both the 看牌
+  // peek and the log's card peek go through this same renderCardView — see
+  // openPeek() there) and, since #96, by rules.js's own card detail view too
+  // (renderDetail()'s `cardHistoryState()`) — every caller of renderCardView
+  // now passes one, so this only stays undefined for a hypothetical future
+  // caller that has no state of its own to track.
   historyBox(mid, id, lang, opts.historyState);
   if (opts.note) {
     const n = document.createElement("div"); n.className = "note"; n.textContent = opts.note;

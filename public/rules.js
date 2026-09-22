@@ -1098,6 +1098,23 @@ let openCardId = null;
 // card panel has no Close button, so this flag only ever matters below
 // 1024px, same as before this issue.
 let cameFromHash = false;
+// #96 (regression from #92, owner: 「卡牌,史實顯示有錯,可縮起展開,預設縮起」):
+// the rules page's own card detail — both the mobile overlay and the
+// desktop #dCardPanel, same renderCardView() call either way — never passed
+// a history state at all, so historyBox() (card-view.js) fell back to its
+// always-open, pre-#92 shape here. That shape turned out to render with the
+// wrong colour on this page (see card-view.js's own #96 comment) as well as
+// never collapsing, so this page now gets the same collapsible state app.js
+// keeps per open card: a plain module-level flag, reset (not carried over)
+// whenever a DIFFERENT card becomes `openCardId` — same rule as app.js's
+// freshUi()'s own `historyOpen: false`, just without a whole fresh object
+// since this page has no other per-card UI state to reset alongside it.
+let historyOpenId = null;
+let historyOpen = false;
+function cardHistoryState() {
+  if (historyOpenId !== openCardId) { historyOpenId = openCardId; historyOpen = false; }
+  return { open: historyOpen, onToggle: (v) => { historyOpen = v; } };
+}
 
 function refreshDetailLock(open) {
   document.body.classList.toggle("sheet-open", open);
@@ -1140,14 +1157,14 @@ function renderDetail() {
     const panel = $("dCardPanelInner");
     if (!panel) return; // the 規則 tab is showing: no cards panel mounted at all
     if (!openCardId) { panel.className = ""; panel.innerHTML = `<p class="d-card-hint">${esc(NAV[lang].rules.pickHint)}</p>`; return; }
-    renderCardView(panel, openCardId, lang, {});
+    renderCardView(panel, openCardId, lang, { historyState: cardHistoryState() });
     return;
   }
   const el = $("cardDetail");
   if (!openCardId) { el.hidden = true; el.innerHTML = ""; refreshDetailLock(false); return; }
   el.hidden = false;
   refreshDetailLock(true);
-  renderCardView(el, openCardId, lang, { onClose: closeCardDetail });
+  renderCardView(el, openCardId, lang, { onClose: closeCardDetail, historyState: cardHistoryState() });
   positionDetailOverlay();
 }
 // Review item 4 (#44): a pick used to call the full render() every time —
