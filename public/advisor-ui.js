@@ -25,6 +25,7 @@
 //     Colouring never uses a transition (owner: colours are static).
 import { advise } from "./shared/advisor.js";
 import * as E from "./shared/engine.js";
+import { AdvisorCache } from "./advisor-cache.js";
 
 const STORE_KEY = "zh.advisor";
 const USE_ORDER_FULL = ["event", "place", "campaign", "lobby", "reform"];
@@ -44,42 +45,12 @@ function persist() { try { localStorage.setItem(STORE_KEY, enabled ? "1" : "0");
 let toggle = null; // { root, label, track, dot } -- built once by mountAdvisorToggle
 let banner = null; // { root, title, why } -- built once, lazily, by ensureBanner
 let lastCtx = null; // the most recent {view, meta, switchVisible}, so the switch's own click can redecorate
-let gen = 0; // invalidates a scheduled advise() the moment the position moves on
 let lastScrolledCard;
-const cache = { fp: null, adv: null, hasResult: false };
-
-// A fingerprint of everything advise()'s answer can depend on, EXCLUDING the
-// player's own in-progress UI picks (which card sheet is open, which target
-// is tentatively chosen) -- those change on almost every click, and none of
-// them change what the best move is, so recomputing on every one of them
-// would be wasted work and would flash "thinking" for no reason.
-//
-// #99 item 7 (the banner sometimes showed the previous move's text): this
-// used to fold `view.pending` down to a bare 0/1, on the theory that
-// turn/round/actor/phase/logSeq/hand already changed whenever the position
-// really moved on. That's true across a full action, but NOT within one --
-// engine.js's own event step (the "event" case in exec()) can call a card's
-// effect() more than once for the SAME step, each time returning a fresh
-// ask() with no log() in between (choose() itself never logs; see
-// shared/cards.js's own two-stage effects, e.g. 質子交換/遠交近攻: the SAME
-// side is asked twice in a row, with different options each time). Turn,
-// round, actor, phasing, phase, side, logSeq and hand are ALL identical
-// across those two asks -- only `pending` itself differs -- so the old
-// fingerprint collided and the second, genuinely different question reused
-// the first one's cached answer. Confirmed with a direct repro (yuanjiao's
-// two placement asks): identical old-fingerprint string, different
-// advise() targets ("song" vs "daliang"). Serializing the pending object
-// itself (kind/tag/card/who/options/...) instead of a boolean closes this --
-// it's small (at most a couple dozen space ids) and always plain data,
-// since `view` is JSON-cloned by engine.js's own view().
-function fingerprint(view, side) {
-  const hand = view && view.hands ? view.hands[side] : null;
-  let pendingSig = "-";
-  if (view?.pending) { try { pendingSig = JSON.stringify(view.pending); } catch { pendingSig = "1"; } }
-  return [view?.turn, view?.round, view?.actor, view?.phasing, view?.phase, side,
-    view?.logSeq || 0, pendingSig, hand ? hand.join(",") : "-",
-    view?.winner].join("|");
-}
+// #99 item 7: the fingerprint/generation-guard logic itself lives in
+// advisor-cache.js now, DOM-free, so it can be pinned directly in
+// tests/advisor-cache.test.js. This file only owns painting the DOM off
+// whatever AdvisorCache decides.
+const cache = new AdvisorCache();
 
 export function mountAdvisorToggle(host) {
   if (!host || toggle || !host.appendChild) return;
@@ -672,22 +643,20 @@ function couldAdvise(view, side) {
   return kind === "action" || kind === "headline" || kind === "pending";
 }
 function applyDecorations(view, meta, force, switchVisible) {
-  // #99 item 7 hardening: bump `gen` on every call, not only the cache-miss
-  // branch below. Belt-and-suspenders alongside the fingerprint fix above --
-  // with a correct fingerprint this was never observed to matter, but the
-  // old code left a real gap: a stale in-flight advise() (scheduled from an
-  // EARLIER call) only got cancelled if some LATER call happened to take the
-  // cache-miss branch; a run of cache-hit or inactive (clearAll) calls in
-  // between left `gen` untouched, so a stale timeout could still pass the
-  // `myGen !== gen` check. Bumping here means any call at all -- hit, miss,
-  // or inactive -- invalidates every computation scheduled before it.
-  gen++;
   const active = switchVisible && enabled && couldAdvise(view, meta.side);
-  if (!active) { clearAll(); return; }
+  if (!active) {
+    // Bump the stale-guard here too, for the same reason AdvisorCache.begin()
+    // bumps it on a hit as well as a miss: keep every path that can decide
+    // "nothing new is being computed" consistent, even though no exploitable
+    // gap was found in practice (see advisor-cache.js's own note on why a
+    // cache hit can never leave an older token dangling).
+    cache.guard.start();
+    clearAll();
+    return;
+  }
   ensureBanner();
-  const fp = fingerprint(view, meta.side);
-  const cacheHit = !force && cache.fp === fp && cache.hasResult;
-  if (cacheHit) {
+  const { hit, token } = cache.begin(view, meta.side, force);
+  if (hit) {
     // Already know the real answer for this exact position (the player
     // clicked something that doesn't change what the best move is) -- fill
     // in the real text BEFORE placing/measuring, so placeBanner()'s own
@@ -715,24 +684,20 @@ function applyDecorations(view, meta, force, switchVisible) {
   setBannerText(null, meta, false);
   placeBanner(meta);
   banner.root.hidden = false;
-  cache.fp = fp;
-  cache.hasResult = false;
   decorateHand(null, view, meta);
   decorateSheet(null, meta);
   decoratePending(null, view);
   decorateMap(null, meta);
   // advise() is synchronous and can take real time on a midgame position
   // (#17's own budget: comfortably under 3s, but not instant) -- yielding
-  // once here at least lets "thinking" paint before that runs, and the gen
-  // check throws the answer away if the position has already moved on.
-  const myGen = gen; // already bumped at the top of this call
+  // once here at least lets "thinking" paint before that runs, and
+  // cache.accept() below throws the answer away if the position has
+  // already moved on (#99 item 7's (b) hypothesis: an answer scheduled for
+  // an OLDER position must never be painted once a newer one has started).
   setTimeout(() => {
-    if (myGen !== gen) return;
     let adv = null;
     try { adv = advise(view, meta.side); } catch { adv = null; }
-    if (myGen !== gen) return;
-    cache.adv = adv;
-    cache.hasResult = true;
+    if (!cache.accept(token, adv)) return;
     if (!adv) {
       banner.root.hidden = true;
       decorateHand(null, view, meta); decorateSheet(null, meta); decoratePending(null, view); decorateMap(null, meta);
@@ -765,15 +730,6 @@ function applyDecorations(view, meta, force, switchVisible) {
     meta.layoutTable && meta.layoutTable();
   }, 0);
 }
-
-// #99 item 7 -- probe-only, no behaviour change: lets an external probe
-// (public/__advprobe.js, untracked) compare what the banner is CURRENTLY
-// showing (cache.fp/cache.adv) against advise() recomputed fresh off the
-// same view the last decorate() call actually received (lastCtx.view),
-// and independently check whether cache.fp still matches that view's own
-// fingerprint. Neither function touches any state; both are read-only.
-export function __debugSnapshot() { return { view: lastCtx?.view, meta: lastCtx?.meta, cache: { fp: cache.fp, adv: cache.adv, hasResult: cache.hasResult } }; }
-export function __debugFingerprint(view, side) { return fingerprint(view, side); }
 
 // The one call app.js makes, now BEFORE its own layoutTable() (see the call
 // site): meta carries exactly what this file can't read out of app.js's own
