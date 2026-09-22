@@ -255,8 +255,8 @@ export const STATE_TAG_COLOR = { han: "#2f7f6a", wei: "#b0801f", zhao: "#6a4c9c"
 // getBoundingClientRect, not just against other marks); "right" clears
 // its own disc on the x-axis alone instead and stays fully on screen.
 export const STATE_TAG_POS = {
-  yiyang: { dx: -23, dy: 0 }, xinzheng: { dx: -25, dy: 0 },
-  hedong: { dx: 0, dy: 23 }, daliang: { dx: 25, dy: 0 },
+  yiyang: { dx: 23, dy: 0 }, xinzheng: { dx: -25, dy: 0 },
+  hedong: { dx: -23, dy: 0 }, daliang: { dx: 25, dy: 0 },
   shangdang: { dx: 0, dy: -25 }, handan: { dx: 0, dy: -26 },
   zhongshan: { dx: -23, dy: 0 }, dai: { dx: -23, dy: 0 },
   linzi: { dx: 25, dy: 0 }, jimo: { dx: 23, dy: 0 }, ju: { dx: -23, dy: 0 }, xue: { dx: 23, dy: 0 },
