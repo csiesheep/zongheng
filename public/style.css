@@ -164,12 +164,26 @@ h2 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 6px
 .about { line-height: 1.7; color: var(--text-dim); margin: 0 0 16px; }
 .soon { font-size: 13px; line-height: 1.6; border-left: 3px solid var(--gold-line); padding-left: 10px; margin: 16px 0 0; color: var(--text-dim); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-.bar .back { font-family: var(--kai); font-size: 15px; letter-spacing: 2px; padding: 8px 10px 8px 0; min-height: 44px; display: inline-flex; align-items: center; }
+.bar .back { font-family: var(--kai); font-size: 15px; letter-spacing: 2px; padding: 8px 10px 8px 0; min-height: 44px; display: inline-flex; align-items: center; flex: none; }
 /* #30: the back link is now two spans (app.js's renderBackLink(), which
    parses "‹ Name" out of the one existing nav.back string instead of a new
    i18n key) so giveaway ② can drop everything after the chevron on its own
    -- the aria-label (set by the same function) keeps the full name for a
    screen reader even once the visible text is gone. */
+/* #98: `.bar` is a flex row, and `.back`'s own default flex-shrink (1) let
+   the row's flexbox shrink it BELOW its text's min-content width whenever
+   the row was tight -- the box itself then still fit inside `.bar` (so
+   layoutBar()'s own barOverflowing() check, which only compares each
+   child's outer edge to the row's, never saw an overflow to react to), but
+   the "‹ Zongheng"/"‹ Zongheng" text inside kept its full width and bled
+   out both sides of that shrunk box (English "Zongheng" doesn't fit a
+   squeezed box; caught at 390 wide, English, where it ran from -26px to
+   88px over a 44px box and covered the sound button at 74px). `flex: none`
+   keeps `.back` at its own content width, so a too-tight row now shows up
+   as a REAL overflow (a child's right edge past `.bar`'s) that
+   barOverflowing() already catches, and the existing give-away ladder
+   (.bar-tight then .bar-tighter, which drops the label to a bare "‹") takes
+   it from there exactly as it does for every other cause of overflow. */
 .bar .back .back-chevron { margin-right: 4px; }
 .bar.bar-tighter .back .back-label { display: none; }
 .bar.bar-tighter .back .back-chevron { margin-right: 0; }
@@ -1244,7 +1258,24 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    phone (and shared/default) ones; desktop.css overrides them down to 40px
    under its >=1024px media query. */
 .sheet-grid button { flex: none; height: 44px; min-height: 44px; padding: 0 4px; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 600 17px/1.1 var(--serif); }
-:root[lang="en"] .sheet-grid button { font: 600 14px/1.15 var(--sans); letter-spacing: 0.1px; }
+/* #98: en's own longest label ("Campaign") measured 72px (scrollWidth)
+   inside this row's 66px button at 375/390 wide with the old 14px sans --
+   its last letter was clipped by the ellipsis. Smaller font (still >=12px,
+   the phone tap-target/legibility floor the rest of this file already
+   holds to) plus tighter side padding (4px -> 2px) closes that gap at
+   375/390 with room to spare. zh's own labels (event/place/campaign as
+   used-strings, tighter kai glyphs) were never the problem and keep their
+   17px size untouched. */
+:root[lang="en"] .sheet-grid button { font: 600 12px/1.15 var(--sans); letter-spacing: 0; padding: 0 2px; }
+/* Below ~340px wide even that no longer fits "Campaign" on one line (a
+   320-wide column here is 55px, and 12px/0-padding still wants 57px) --
+   two lines, not a further font shrink past the 12px floor. `anywhere`
+   (not the default word-boundary wrap, since this is one word with no
+   space to break on) lets it fold the one long label; the row's fixed
+   44px height already has room for two 12px lines. */
+@media (max-width: 340px) {
+  :root[lang="en"] .sheet-grid button { white-space: normal; overflow-wrap: anywhere; line-height: 1.05; }
+}
 .sheet-footer { flex: none; display: flex; gap: 8px; margin-top: 2px; }
 .sheet-footer button { flex: 1; height: 44px; min-height: 44px; border-radius: 22px; font-size: 17px; }
 :root[lang="en"] .sheet-footer button { font-size: 14px; }
