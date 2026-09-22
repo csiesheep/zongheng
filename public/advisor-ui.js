@@ -155,7 +155,17 @@ function placeBanner(meta) {
   const promptText = document.getElementById("promptText");
   if (!table) return;
   const takeOverPrompt = () => {
-    if (promptText) promptText.hidden = true;
+    // #97 (orchestrator's ruling, FE hand-in sent back): app.js's setPrompt()
+    // always puts the always-on scoring-card warning (`.prompt-warn`) first
+    // in #promptText, independent of the advisor -- this desktop-only
+    // fallback used to hide #promptText outright the moment the advisor's
+    // own banner had no room in the hand, which is exactly the state where a
+    // desktop player with the advisor ON could lose to an unplayed scoring
+    // card without ever seeing why. Only the ordinary "your turn" sentence
+    // ever needed to make room for the banner -- when a warning is present,
+    // #promptText stays up (its warning line first, same DOM order as
+    // always) and the banner still follows right after it, unchanged.
+    if (promptText) promptText.hidden = !promptText.querySelector(".prompt-warn");
     prompt.appendChild(banner.root);
     setSlot("adv-slot-prompt");
   };
