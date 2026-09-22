@@ -25,6 +25,7 @@
 //     Colouring never uses a transition (owner: colours are static).
 import { advise } from "./shared/advisor.js";
 import * as E from "./shared/engine.js";
+import { AdvisorCache } from "./advisor-cache.js";
 
 const STORE_KEY = "zh.advisor";
 const USE_ORDER_FULL = ["event", "place", "campaign", "lobby", "reform"];
@@ -44,21 +45,12 @@ function persist() { try { localStorage.setItem(STORE_KEY, enabled ? "1" : "0");
 let toggle = null; // { root, label, track, dot } -- built once by mountAdvisorToggle
 let banner = null; // { root, title, why } -- built once, lazily, by ensureBanner
 let lastCtx = null; // the most recent {view, meta, switchVisible}, so the switch's own click can redecorate
-let gen = 0; // invalidates a scheduled advise() the moment the position moves on
 let lastScrolledCard;
-const cache = { fp: null, adv: null, hasResult: false };
-
-// A fingerprint of everything advise()'s answer can depend on, EXCLUDING the
-// player's own in-progress UI picks (which card sheet is open, which target
-// is tentatively chosen) -- those change on almost every click, and none of
-// them change what the best move is, so recomputing on every one of them
-// would be wasted work and would flash "thinking" for no reason.
-function fingerprint(view, side) {
-  const hand = view && view.hands ? view.hands[side] : null;
-  return [view?.turn, view?.round, view?.actor, view?.phasing, view?.phase, side,
-    view?.logSeq || 0, view?.pending ? 1 : 0, hand ? hand.join(",") : "-",
-    view?.winner].join("|");
-}
+// #99 item 7: the fingerprint/generation-guard logic itself lives in
+// advisor-cache.js now, DOM-free, so it can be pinned directly in
+// tests/advisor-cache.test.js. This file only owns painting the DOM off
+// whatever AdvisorCache decides.
+const cache = new AdvisorCache();
 
 export function mountAdvisorToggle(host) {
   if (!host || toggle || !host.appendChild) return;
@@ -652,11 +644,19 @@ function couldAdvise(view, side) {
 }
 function applyDecorations(view, meta, force, switchVisible) {
   const active = switchVisible && enabled && couldAdvise(view, meta.side);
-  if (!active) { clearAll(); return; }
+  if (!active) {
+    // Bump the stale-guard here too, for the same reason AdvisorCache.begin()
+    // bumps it on a hit as well as a miss: keep every path that can decide
+    // "nothing new is being computed" consistent, even though no exploitable
+    // gap was found in practice (see advisor-cache.js's own note on why a
+    // cache hit can never leave an older token dangling).
+    cache.guard.start();
+    clearAll();
+    return;
+  }
   ensureBanner();
-  const fp = fingerprint(view, meta.side);
-  const cacheHit = !force && cache.fp === fp && cache.hasResult;
-  if (cacheHit) {
+  const { hit, token } = cache.begin(view, meta.side, force);
+  if (hit) {
     // Already know the real answer for this exact position (the player
     // clicked something that doesn't change what the best move is) -- fill
     // in the real text BEFORE placing/measuring, so placeBanner()'s own
@@ -684,24 +684,20 @@ function applyDecorations(view, meta, force, switchVisible) {
   setBannerText(null, meta, false);
   placeBanner(meta);
   banner.root.hidden = false;
-  cache.fp = fp;
-  cache.hasResult = false;
   decorateHand(null, view, meta);
   decorateSheet(null, meta);
   decoratePending(null, view);
   decorateMap(null, meta);
   // advise() is synchronous and can take real time on a midgame position
   // (#17's own budget: comfortably under 3s, but not instant) -- yielding
-  // once here at least lets "thinking" paint before that runs, and the gen
-  // check throws the answer away if the position has already moved on.
-  const myGen = ++gen;
+  // once here at least lets "thinking" paint before that runs, and
+  // cache.accept() below throws the answer away if the position has
+  // already moved on (#99 item 7's (b) hypothesis: an answer scheduled for
+  // an OLDER position must never be painted once a newer one has started).
   setTimeout(() => {
-    if (myGen !== gen) return;
     let adv = null;
     try { adv = advise(view, meta.side); } catch { adv = null; }
-    if (myGen !== gen) return;
-    cache.adv = adv;
-    cache.hasResult = true;
+    if (!cache.accept(token, adv)) return;
     if (!adv) {
       banner.root.hidden = true;
       decorateHand(null, view, meta); decorateSheet(null, meta); decoratePending(null, view); decorateMap(null, meta);

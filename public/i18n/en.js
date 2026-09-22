@@ -11,7 +11,7 @@ export default {
   // #62 part 2: "home" is the back link's aria-label/title ONLY once the bar
   // is tight enough to drop its own word (app.js's syncBackLabel()) -- the
   // full "‹ Zongheng" stays the visible text and the spoken name otherwise.
-  nav: { back: "‹ Zongheng", rules: "Rules", hub: "csiesheep games", lang: "中文", home: "Home" },
+  nav: { back: "‹ Zongheng", backGame: "‹ Back to the game", rules: "Rules", hub: "csiesheep games", lang: "中文", home: "Home" },
   // The rules page's 72nd row: the Nine Cauldrons aren't in shared/cards.js
   // (they're the engine's special `st.jiuding` card, not a CARDS entry), so
   // rules.js can't read this name/text off the deck the way it does for the
@@ -86,13 +86,13 @@ export default {
   lastMove: { destroyed: "Fell", restored: "Restored" },
   weariness: { 5: "Peace", 4: "War", 3: "Strife", 2: "Misery", 1: "Collapse" },
   prompt: {
-    setup: "Place {n} free influence ({left} left). Tap spaces.", setupBonus: "Place {n} bonus influence where you already are ({left} left).",
+    setup: "Place {n} ({left} left): on or next to your influence.", setupBonus: "Place {n} bonus influence where you already are ({left} left).",
     headline: "Commit one card face down as the headline: both reveal together, higher ops resolves first, and its event always happens.",
     // #60: what the log/sidebar says the BOT did, not what the player is
     // told to do -- see actionText()'s own comment in app.js.
     headlineDone: "committed a headline",
     yourAction: "Your action. Pick a card.", wait: "Waiting for {name}…",
-    points: "Pick {n} ({left} left).", pointsMin: "Pick up to {n}.", card: "Pick a card.", cardOptional: "Pick a card, or skip.", option: "Choose.", ops: "Spend {ops} ops: how?",
+    points: "Pick {n} ({left} left): tap a highlighted space.", pointsMin: "Pick up to {n}: tap a highlighted space.", card: "Pick a card.", cardOptional: "Pick a card, or skip.", option: "Choose.", ops: "Spend {ops} ops: how?",
     place: "Placing {ops} ops ({left} left). Tap spaces; 2 per point where the enemy holds control.", campaign: "Campaign with {ops} ops: tap a target.", lobby: "Lobby with {ops} ops: tap a target.",
     over: "Game over.",
     // #97: always on, independent of the advisor -- shown once the actions

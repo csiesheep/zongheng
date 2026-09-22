@@ -8,7 +8,7 @@ export default {
   credit: "同人、免費。靈感來自《冷戰熱鬥》的卡驅動設計;與 GMT Games 無關。",
   // #62 part 2:「回首頁」只在 bar 擠到要拿掉 back link 文字時當 aria-label/title
   // 用(app.js 的 syncBackLabel());其他時候還是原本「‹ 縱橫」那句。
-  nav: { back: "‹ 縱橫", rules: "規則", hub: "csiesheep games", lang: "EN", home: "回首頁" },
+  nav: { back: "‹ 縱橫", backGame: "‹ 回到牌局", rules: "規則", hub: "csiesheep games", lang: "EN", home: "回首頁" },
   // 規則頁牌表的第 72 列:九鼎不在 shared/cards.js 的 CARDS 裡(它是引擎的
   // 特殊牌 st.jiuding,不是一張 CARDS 紀錄),rules.js 沒辦法像其他 71 張
   // 那樣直接從牌堆讀名字/說明。文字沿用這個檔案裡規則頁本來就有的「九鼎」
@@ -74,13 +74,13 @@ export default {
   lastMove: { destroyed: "滅", restored: "復國" },
   weariness: { 5: "承平", 4: "兵連", 3: "禍結", 2: "民困", 1: "土崩" },
   prompt: {
-    setup: "放置 {n} 點起始影響力(剩 {left})。點地圖。", setupBonus: "在已有影響力處放 {n} 點補償(剩 {left})。",
+    setup: "放置 {n} 點起始影響力(剩 {left}):只能放在己方據點或其相鄰處。", setupBonus: "在已有影響力處放 {n} 點補償(剩 {left})。",
     headline: "蓋一張牌當標題:雙方同時翻開,行動點高者先結算,事件一定發生。",
     // #60:紀錄/側欄裡說的是「電腦做了什麼」,不是「玩家該做什麼」——見 app.js
     // actionText() 自己的註解。
     headlineDone: "蓋下了標題牌",
     yourAction: "輪到你,選一張牌。", wait: "等待 {name}…",
-    points: "選 {n} 個(剩 {left})。", pointsMin: "最多選 {n} 個。", card: "選一張牌。", cardOptional: "選一張牌,或略過。", option: "請選擇。", ops: "使用 {ops} 點行動點:怎麼用?",
+    points: "選 {n} 個(剩 {left}):點地圖上亮起的格子。", pointsMin: "最多選 {n} 個:點地圖上亮起的格子。", card: "選一張牌。", cardOptional: "選一張牌,或略過。", option: "請選擇。", ops: "使用 {ops} 點行動點:怎麼用?",
     place: "放置 {ops} 點(剩 {left})。點地圖;對手控制處每點 2。", campaign: "征伐,{ops} 點:點目標。", lobby: "遊說,{ops} 點:點目標。",
     over: "遊戲結束。",
     // #97: always on, independent of the advisor -- shown once the actions
