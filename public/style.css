@@ -1328,13 +1328,10 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 @media (prefers-reduced-motion: reduce) {
   .use-shake { animation: none; }
 }
-/* The line itself: the page's own warning shape (`.prompt .err`/`.sheet-
-   title .err`, above, already use `--bad` for this kind of text) — a
-   vermilion left bar makes it read as a warning at a glance, not just
-   differently-coloured text. Stays up until a real use is picked (or the
-   sheet resets) — see app.js's `ui.useWarn`. */
-.use-warn { margin-top: 6px; padding-left: 8px; border-left: 3px solid var(--bad); font-size: 12px; line-height: 1.4; color: var(--bad); }
-:root[lang="en"] .use-warn { font-size: 11.5px; }
+/* The line itself reuses #97's own `.sheet .note.warn` (the scoring-card
+   warning's look, above -- vermilion left bar, `--bad`) via app.js's
+   `note(pinned, text, "warn")`, instead of a second, bespoke warning class
+   -- one warning look on this page, not two that could drift apart. */
 .sheet-footer { flex: none; display: flex; gap: 8px; margin-top: 2px; }
 .sheet-footer button { flex: 1; height: 44px; min-height: 44px; border-radius: 22px; font-size: 17px; }
 :root[lang="en"] .sheet-footer button { font-size: 14px; }
