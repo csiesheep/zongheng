@@ -1367,14 +1367,30 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    used-strings, tighter kai glyphs) were never the problem and keep their
    17px size untouched. */
 :root[lang="en"] .sheet-grid button { font: 600 12px/1.15 var(--sans); letter-spacing: 0; padding: 0 2px; }
-/* Below ~340px wide even that no longer fits "Campaign" on one line (a
-   320-wide column here is 55px, and 12px/0-padding still wants 57px) --
-   two lines, not a further font shrink past the 12px floor. `anywhere`
-   (not the default word-boundary wrap, since this is one word with no
-   space to break on) lets it fold the one long label; the row's fixed
-   44px height already has room for two 12px lines. */
+/* #102 item 4 (orchestrator, 320 en: "Campaign" broke mid-word as
+   "Campai/gn"): `overflow-wrap: anywhere` folds a word with no space to
+   break on wherever it likes -- exactly the "must never break mid-word"
+   case the brief rules out, so this no longer reaches for it. Below
+   ~340px wide the row's 12px/2px-padding size still doesn't fit
+   "Campaign" (a real #sheet.overlay's own 5-column grid at 320 measures a
+   52px column). `white-space: nowrap` (the base rule, unchanged) plus the
+   base rule's own ellipsis stay as the fallback for a still-longer label a
+   future translation might add: an ellipsis clips whole characters, never
+   mid-word by folding letters apart the way `anywhere` did, and "break
+   only at a space" has nothing to act on here since "Campaign" itself has
+   none.
+   Round 2 (orchestrator, still ~1px over at exactly 320 with just the
+   11px/0-padding combination below -- scrollWidth 53 vs a 52px column,
+   enough for text-overflow:ellipsis to clip a still-visible fragment,
+   which is the very thing this issue removes): closed the last ~1-2px with
+   letter-spacing instead of dropping the font further, reusing desktop.css's
+   own already-shipped -0.5px value for this exact same squeeze (its
+   `:root[lang="en"] body[data-view="table"] .sheet-grid button` rule).
+   Measured (real #sheet.overlay, 5-col grid, scrollWidth vs clientWidth,
+   all five use labels): 320 -> 52/52, 340 -> 56/56, 375 -> 63/63,
+   390 -> 66/66 -- no overflow, no wrap, no ellipsis at any of the four. */
 @media (max-width: 340px) {
-  :root[lang="en"] .sheet-grid button { white-space: normal; overflow-wrap: anywhere; line-height: 1.05; }
+  :root[lang="en"] .sheet-grid button { font-size: 11px; padding: 0; letter-spacing: -0.5px; }
 }
 /* #100 (owner, UX audit item 4): a Confirm tap or a map tap with no use
    chosen shakes this row once and names why (app.js's flashUseWarning()) --

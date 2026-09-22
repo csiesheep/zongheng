@@ -97,7 +97,24 @@ export default {
     over: "Game over.",
     // #97: always on, independent of the advisor -- shown once the actions
     // left this round are at most the scoring cards still in hand.
-    scoringWarn: "{n} action(s) left this round; {m} scoring card(s) in hand: play them before the turn ends, or you lose.",
+    // #102 item 3 (orchestrator: "1 action(s) left ... 1 scoring card(s)
+    // ..." isn't real English): {n} and {m} can each be 1 or more
+    // independently, so each noun gets its own one/other pair --
+    // app.js's scoringWarnText() picks one/other per count, then stitches
+    // the two clauses into `full`. zh-Hant.js's own copy doesn't inflect on
+    // number at all, so its one/other pairs are identical (see that file's
+    // own comment) rather than this structure being English-only.
+    // #102 item 3 round 2 (orchestrator: "...play them..." is wrong with
+    // exactly one scoring card): the verb pronoun pluralizes on the SAME
+    // {m} count as `card` above, split the same way -- app.js's
+    // scoringWarnText() picks one/other for this too and feeds the result
+    // into `full` as {verb}.
+    scoringWarn: {
+      action: { one: "{n} action left this round", other: "{n} actions left this round" },
+      card: { one: "{m} scoring card in hand", other: "{m} scoring cards in hand" },
+      verb: { one: "play it", other: "play them" },
+      full: "{action}; {card}: {verb} before the turn ends, or you lose.",
+    },
   },
   uses: { event: "Event", place: "Place", campaign: "Campaign", lobby: "Lobby", reform: "Reform", bog: "Discard (bogged)", pair: "Pair with", opsFirst: "Ops first", eventFirst: "Event first" },
   buttons: { send: "Send", board: "View the board", result: "Result", confirm: "Confirm", done: "Done", cancel: "Cancel", skip: "Skip", playAgain: "Play again", swap: "Swap sides", home: "Home", headline: "Commit headline", show: "Show", hide: "Hide", log: "Log", logChat: "Log and chat", expand: "Card", close: "Close", resumeSolo: "Resume game", newGame: "New game" },
@@ -259,6 +276,13 @@ export default {
       option: "Choose {option}.",
     },
     anyLegal: "Anything lit up is legal. Gold is just the advisor's pick.",
+    // #102 item 2 (orchestrator, iPhone screenshot: Chu Conquers Yue open,
+    // the banner still read the Sima Cuo suggestion with nothing to say
+    // it wasn't about THIS card): the banner's first line when a card page
+    // is open for a card other than the one the advisor is suggesting --
+    // the reason line underneath keeps explaining the ACTUAL suggestion,
+    // unchanged (advisor-ui.js's setBannerText()).
+    notThisCard: "The advisor suggests {card}, not this card.",
     reasons: {
       takeControl: "This takes control of {space}.",
       breakControl: "This breaks their control of {space}.",

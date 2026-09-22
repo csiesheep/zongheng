@@ -1665,7 +1665,16 @@ function scoringWarnText(v, side) {
   if (!m) return "";
   const left = actionsLeftThisTurn(v, side);
   if (left == null || left > m) return "";
-  return t("prompt.scoringWarn", { n: left, m });
+  // #102 item 3: {n} actions and {m} scoring cards each pluralize on their
+  // OWN count (either can be 1 while the other isn't) -- prompt.scoringWarn
+  // is now { action: {one,other}, card: {one,other}, verb: {one,other},
+  // full } in both i18n files (see their own comments), not a single "(s)"
+  // template. Round 2: the "play them" pronoun pluralizes on the SAME {m}
+  // count as `card` (one scoring card in hand needs "play IT", not "them").
+  const action = t(`prompt.scoringWarn.action.${left === 1 ? "one" : "other"}`, { n: left });
+  const card = t(`prompt.scoringWarn.card.${m === 1 ? "one" : "other"}`, { m });
+  const verb = t(`prompt.scoringWarn.verb.${m === 1 ? "one" : "other"}`);
+  return t("prompt.scoringWarn.full", { action, card, verb });
 }
 // #29: the "uses.*" table already carries both languages (one entry per
 // i18n file) — the five-use grid on the full card page shows BOTH at once,

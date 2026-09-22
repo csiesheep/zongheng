@@ -85,7 +85,18 @@ export default {
     over: "遊戲結束。",
     // #97: always on, independent of the advisor -- shown once the actions
     // left this round are at most the scoring cards still in hand.
-    scoringWarn: "還剩 {n} 次行動,手上有 {m} 張記分卡:要在回合結束前打出,否則判負。",
+    // #102 item 3 (round 1 + round 2's verb split): mirrors en.js's own
+    // one/other split (app.js's scoringWarnText() reads the same four keys
+    // for both languages) -- 中文不論單複數都是同一種寫法,所以每一組
+    // one/other 兩個值都一樣,不是這裡漏改。`full`本來就沒有另外講「它/
+    // 它們」的代名詞子句(「打出」動詞不分單複數),所以 verb 這組值算出來
+    // 沒被 full 用到,留著只是跟 en.js 用同一組 key、同一段程式碼路徑。
+    scoringWarn: {
+      action: { one: "還剩 {n} 次行動", other: "還剩 {n} 次行動" },
+      card: { one: "手上有 {m} 張記分卡", other: "手上有 {m} 張記分卡" },
+      verb: { one: "打出", other: "打出" },
+      full: "{action},{card}:要在回合結束前打出,否則判負。",
+    },
   },
   uses: { event: "事件", place: "放置", campaign: "征伐", lobby: "遊說", reform: "變法", bog: "棄牌(頓兵)", pair: "搭配", opsFirst: "先行動點", eventFirst: "先事件" },
   buttons: { send: "送出", board: "看棋盤", result: "結果", confirm: "確認", done: "完成", cancel: "取消", skip: "略過", playAgain: "再來一局", swap: "換邊", home: "回首頁", headline: "蓋下標題牌", show: "展開", hide: "收起", log: "紀錄", logChat: "紀錄與聊天", expand: "看牌", close: "關閉", resumeSolo: "繼續舊局", newGame: "開新局" },
@@ -233,6 +244,10 @@ export default {
       option: "選{option}。",
     },
     anyLegal: "亮著的都能選,金色只是軍師的推薦。",
+    // #102 item 2:打開的這張牌不是軍師建議的那張時,banner 的第一行改講
+    // 這件事;下面的理由行照舊講軍師真正建議的那手(advisor-ui.js 的
+    // setBannerText())。
+    notThisCard: "軍師建議打{card}(不是這張)",
     reasons: {
       takeControl: "這一手讓你拿下{space}的控制。",
       breakControl: "這一手讓對方失去{space}的控制。",
