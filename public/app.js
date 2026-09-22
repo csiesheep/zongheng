@@ -391,7 +391,10 @@ const sess = {
 // collapsed, while re-renders of the SAME card page (the advisor's text
 // arriving, a language switch) keep whatever the player already chose —
 // nothing here resets it except a genuinely fresh freshUi() call.
-const freshUi = (card = null) => ({ card, use: null, order: null, pair: null, points: [], target: null, picks: [], opsUse: null, err: "", historyOpen: false });
+// #100: `useWarn`/`useWarnPulse` back the "pick a use first" warning (see
+// flashUseWarning() below) -- both false on every fresh card/reset, same as
+// `err`.
+const freshUi = (card = null) => ({ card, use: null, order: null, pair: null, points: [], target: null, picks: [], opsUse: null, err: "", historyOpen: false, useWarn: false, useWarnPulse: false });
 
 function startSolo() {
   game.room = false; game.spectator = false;
@@ -1219,7 +1222,21 @@ function currentMode(v) {
     }
     return none;
   }
-  if (L.kind !== "action" || !ui.card || !ui.use) return none;
+  if (L.kind !== "action" || !ui.card) return none;
+  // #100 (owner, UX audit item 4): a card is open but no use is chosen yet.
+  // `lit` is empty, so every hit button would normally be a real `disabled`
+  // one (renderMap()'s own `hb.disabled = !lit`) -- and a real `disabled`
+  // button never dispatches a click at all, the same reason Confirm needed
+  // `aria-disabled` instead of `disabled` in renderPromptAndSheet()'s own
+  // `!ui.use` branch. `warnTap: true` tells renderMap() to leave these
+  // particular hit buttons enabled (still invisible, still unlit -- `.hit`
+  // carries no look of its own either way, see style.css) so the tap can
+  // reach flashUseWarning() instead of being swallowed by the disabled
+  // attribute. Every OTHER reason the map can't be tapped right now --
+  // waiting, a pending choice, an unchosen order -- keeps `none`'s real
+  // no-op and the real `disabled` state; this brief only asked about the
+  // "browsing a card, no use yet" case.
+  if (!ui.use) return { ...none, warnTap: true, onTap: () => flashUseWarning() };
   const info = cardInfo(L, ui.card);
   if (!info) return none;
   // #71: no order chosen yet on an opponent's card -- no map tap (place,
@@ -1518,7 +1535,12 @@ function renderMap(v) {
     hb.type = "button";
     hb.className = "hit";
     hb.style.cssText = `left:${x}px;top:${y}px`;
-    hb.disabled = !lit;
+    // #100: `mode.warnTap` (currentMode()'s own `!ui.use` case) keeps every
+    // hit button real-clickable even while none are lit, so the tap reaches
+    // `mode.onTap` (flashUseWarning()) instead of being swallowed by a real
+    // `disabled` attribute -- `.hit` has no visual state of its own either
+    // way (style.css), so nothing on screen changes.
+    hb.disabled = !lit && !mode.warnTap;
     // #51: the outer control ring is gone -- tone (dark vs grey/pink) is now
     // the ONLY visual sign of who controls a space, so the accessible name
     // spells out both counts and the controller instead of leaving it to be
@@ -1578,6 +1600,27 @@ function btn(parent, label, onClick, cls = "", pressed = null, disabled = false)
 }
 function row(parent, cls = "rowb") { const d = document.createElement("div"); d.className = cls; parent.appendChild(d); return d; }
 function note(parent, text, cls = "") { const d = document.createElement("div"); d.className = cls ? `note ${cls}` : "note"; d.textContent = text; parent.appendChild(d); }
+// #100 (owner, UX audit item 4, two auditors read the advisor's gold ring as
+// a selection): a Confirm tap or a map tap with no use chosen yet used to do
+// nothing at all -- the footer's Confirm already looked disabled and every
+// map hit button was a real `disabled` one too (renderMap()'s `hb.disabled`,
+// `lit` empty while `ui.use` is unset) -- so neither tap told the player why.
+// `useWarnPulse` is one-shot: renderPromptAndSheet()'s own `!ui.use` branch
+// reads it once (to add the row's `.use-shake` class to a freshly built
+// element -- the CSS animation plays on mount, no restart trick needed) and
+// clears it in the SAME render, so a later, unrelated render (this is still
+// local `game.ui` state, but nothing rules out a bot/room update landing
+// mid-deliberation) doesn't replay the shake. `useWarn` is the persisting
+// line under the row -- it only clears when a real use is picked (useBtn()'s
+// own onclick below) or the sheet resets (freshUi(), same as `err`).
+// Guarded to the exact state the brief describes (a card open, no use yet)
+// so this can't fire from a stray call once a use IS picked.
+function flashUseWarning() {
+  if (!game.ui.card || game.ui.use) return;
+  game.ui.useWarnPulse = true;
+  game.ui.useWarn = true;
+  render();
+}
 // #68 round 2 (orchestrator's ruling): the same explanatory line note()
 // puts in the SHEET, but for the compact (map-active/pending) states whose
 // sheet budget is already tight at 390x669/375x667 — a target's own
@@ -1971,7 +2014,7 @@ function renderPromptAndSheet(v) {
   const usable = (u) => (u === "event" ? info.uses.event : u === "reform" ? info.uses.reform : !!info.uses[u]);
   for (const u of ["event", "place", "campaign", "lobby", "reform"]) {
     if (ui.card === E.JIUDING && (u === "event" || u === "reform")) continue;
-    useBtn(uses, u, () => { ui.use = u; ui.points = []; ui.target = null; ui.err = ""; render(); }, ui.use === u, !usable(u));
+    useBtn(uses, u, () => { ui.use = u; ui.points = []; ui.target = null; ui.err = ""; ui.useWarn = false; ui.useWarnPulse = false; render(); }, ui.use === u, !usable(u));
   }
   // #24 round 2, fix #3 (owner): "their card"'s ops-first/event-first order
   // and 說客's pairing used to only render once a map-needing use was
@@ -2043,7 +2086,24 @@ function renderPromptAndSheet(v) {
   // use that doesn't need the map is actually picked), rather than Cancel
   // standing alone.
   const cancelToFresh = () => { game.ui = freshUi(); render(); };
-  if (!ui.use) { setPrompt(""); footer(sh, confirmPhrase(), () => {}, true, cancelToFresh, true); return; }
+  if (!ui.use) {
+    setPrompt("");
+    // #100: Confirm stays a REAL button (not `disabled`) so it can still
+    // receive the tap -- `aria-disabled` gives it the identical look
+    // (style.css's `button[aria-disabled="true"]`) and tells a screen reader
+    // the same "unavailable" story `disabled` would have, while the click
+    // still reaches flashUseWarning() instead of vanishing.
+    const r = footer(sh, confirmPhrase(), () => flashUseWarning(), false, cancelToFresh, true);
+    const cbtn = r.querySelector(".primary");
+    if (cbtn) cbtn.setAttribute("aria-disabled", "true");
+    if (ui.useWarnPulse) { uses.classList.add("use-shake"); ui.useWarnPulse = false; }
+    // #97 landed `note()`'s own `cls` param and the page's one warning look
+    // (`.sheet .note.warn`, style.css) for the scoring-card warning above --
+    // reused here instead of a second, bespoke warning class, so the two
+    // warnings can never drift into two different looks.
+    if (ui.useWarn) note(pinned, t("sheet.pickUseFirst"), "warn");
+    return;
+  }
   if (ui.use === "event" || ui.use === "reform") {
     setPrompt("");
     footer(sh, confirmPhrase(), () => humanAct(base), false, cancelToFresh, true);

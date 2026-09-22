@@ -259,6 +259,10 @@ export default {
     // no order is chosen yet on an opponent's card (place/campaign/lobby);
     // sheet.hint.enemy itself stays put further down once an order is picked.
     chooseOrder: "先選順序:先行動點,或先事件",
+    // #100 (owner, UX audit item 4): a Confirm tap or a map tap with no use
+    // chosen yet used to do nothing at all -- app.js's flashUseWarning()
+    // shows this under the use row until a use is actually picked.
+    pickUseFirst: "先選一個用法才能確認",
     hint: {
       own: "你自己的事件:打出就發生。",
       neutral: "中立牌:事件或行動點,二選一。",

@@ -287,6 +287,10 @@ export default {
     // no order is chosen yet on an opponent's card (place/campaign/lobby);
     // sheet.hint.enemy itself stays put further down once an order is picked.
     chooseOrder: "Choose the order first: ops first, or event first.",
+    // #100 (owner, UX audit item 4): a Confirm tap or a map tap with no use
+    // chosen yet used to do nothing at all -- app.js's flashUseWarning()
+    // shows this under the use row until a use is actually picked.
+    pickUseFirst: "Pick a use first",
     hint: {
       own: "Your own event: it happens when you play it.",
       neutral: "A neutral card: the event or the ops, never both.",

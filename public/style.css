@@ -26,6 +26,13 @@
   --accent: var(--gold); --accent-ink: var(--bg); --accent-font: var(--serif); --accent-weight: 600;
   --field-bg: rgba(255, 255, 255, 0.06);
   --table-bg: var(--bg);
+  /* #100 (owner, UX audit item 4, canvas AdvCol_Orange): the advisor's own
+     single colour, everywhere it marks anything (advisor.css) -- gold stays
+     gold for Confirm/borders/headings, this is the ONE thing that changes.
+     The rgb triple is for rgba() alpha uses (a halo, a tinted background);
+     keep it in sync with --advisor by hand, CSS has no colour-channel
+     function old enough to derive one from the other reliably here. */
+  --advisor: #f5892a; --advisor-rgb: 245, 137, 42;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -33,6 +40,12 @@ html, body { margin: 0; min-height: 100%; }
 body { background: var(--bg); color: var(--text); font-family: var(--serif); display: flex; flex-direction: column; min-height: 100vh; min-height: 100svh; font-size: 14px; }
 button { font-family: var(--serif); cursor: pointer; }
 button:disabled { opacity: 0.45; cursor: default; }
+/* #100: a button marked `aria-disabled` (not the real `disabled` attribute)
+   still receives clicks -- app.js's Confirm-with-no-use-chosen is the one
+   caller, on purpose, so the tap can trigger the "pick a use first" warning
+   instead of silently vanishing the way a truly `disabled` button would.
+   Same look as `disabled` above so nothing on screen tells the two apart. */
+button[aria-disabled="true"]:not(:disabled) { opacity: 0.45; cursor: default; }
 
 /* Seated side re-skins the accent used by primary controls and the hand, and
    the block below the map (the whole court's own colour: black for Qin,
@@ -768,8 +781,9 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
    zero layout — the node's own box and the disc's own box are exactly the
    same size with or without this class, #41's "no layout change"
    requirement, same rule as the advisor's ring below. The advisor's
-   suggestion ring (advisor.css, #e9b92e) is a circle floating OUTSIDE the
-   disc with a bright glow; these are square brackets, no glow, a
+   suggestion ring (advisor.css, `--advisor` — orange since #100, was gold's
+   #e9b92e) is a circle floating OUTSIDE the disc with a bright glow; these
+   are square brackets, no glow, a
    different (darker, cooler) colour — a disc that is both an advisor
    target and a last-move space still reads as two distinct marks, not one
    thicker ring. */
@@ -1242,8 +1256,23 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    `.sheet button`'s 44px-tall base (this file) and the desktop override down
    to #86's 32px token (desktop.css) for free — no height rule needed here.
    `.sheet-textbox`'s own flex column + 12px padding wraps both the button
-   and the (collapsed-to-nothing) body below. */
-.sheet-history-toggle { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
+   and the (collapsed-to-nothing) body below.
+   #100 (owner, small fix: "box inside a box" on the collapsed card): `.sheet
+   button` (this file, above) borders EVERY button inside `.sheet`, including
+   this one -- stacked ~12px inside `.sheet-textbox`'s own border (this
+   button fills the box's padded width), it read as a second, nested box.
+   This button isn't a standalone control, just the row that opens/closes
+   the one border `.sheet-textbox` already draws -- no border or fill of its
+   own, and no padding of its own either (the parent's 12px is enough; a
+   second layer here would just re-introduce the inset that made the border
+   look doubled in the first place).
+   orchestrator's own catch (checker at bf040ab): a plain `.sheet-history-
+   toggle` selector is (0,1,0) -- LOWER specificity than `.sheet button`'s
+   (0,1,1) above, so that rule's `border: 1px solid var(--gold-line)` still
+   won regardless of source order, and the box-inside-a-box never actually
+   went away. `.sheet button.sheet-history-toggle` is (0,2,1), which beats
+   it outright. */
+.sheet button.sheet-history-toggle { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: none; background: none; padding: 0; }
 .sheet-history-arrow { flex: none; width: 12px; text-align: center; font-size: 10px; opacity: 0.7; }
 .sheet-history-arrow::before { content: "\25B8"; }
 .sheet-history-open .sheet-history-arrow::before { content: "\25BE"; }
@@ -1347,6 +1376,26 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 @media (max-width: 340px) {
   :root[lang="en"] .sheet-grid button { white-space: normal; overflow-wrap: anywhere; line-height: 1.05; }
 }
+/* #100 (owner, UX audit item 4): a Confirm tap or a map tap with no use
+   chosen shakes this row once and names why (app.js's flashUseWarning()) --
+   `.use-shake` lands on a freshly built `.rowb.sheet-grid` (a new element
+   every render, see app.js's `row()`), so the animation just plays on
+   mount; no restart trick needed, and it is never re-added by a later
+   render that only redraws the same still-open warning. */
+@keyframes use-shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+.use-shake { animation: use-shake 0.3s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .use-shake { animation: none; }
+}
+/* The line itself reuses #97's own `.sheet .note.warn` (the scoring-card
+   warning's look, above -- vermilion left bar, `--bad`) via app.js's
+   `note(pinned, text, "warn")`, instead of a second, bespoke warning class
+   -- one warning look on this page, not two that could drift apart. */
 .sheet-footer { flex: none; display: flex; gap: 8px; margin-top: 2px; }
 .sheet-footer button { flex: 1; height: 44px; min-height: 44px; border-radius: 22px; font-size: 17px; }
 :root[lang="en"] .sheet-footer button { font-size: 14px; }

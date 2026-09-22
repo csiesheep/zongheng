@@ -13,8 +13,15 @@
    grid on desktop), with its own solid dark background so the contrast
    never depends on what would otherwise be underneath it.
 
-   One colour throughout: gold #e9b92e (owner: "改成黃金色,而不是淡黃色"),
-   never a transition (owner: colours are static, not animated). */
+   One colour throughout, never a transition (owner: colours are static, not
+   animated). #100 (owner, UX audit item 4, canvas AdvCol_Orange): the
+   original colour (gold #e9b92e, owner: "改成黃金色,而不是淡黃色") turned
+   out to be the bug -- two auditors both read the advisor's gold ring on a
+   suggested use as an actual selection, since gold is ALSO the page's own
+   Confirm/border/heading colour. Every advisor mark below now uses
+   `--advisor`/`--advisor-rgb` (style.css's `:root`, #f5892a) instead --
+   Confirm, borders and headings keep gold, untouched, so the advisor's own
+   colour never means anything else on this page. */
 
 /* ---------- the switch, mounted once inside #advisorSlot in the .bar ---------- */
 #advisorSlot { display: inline-flex; align-items: center; }
@@ -33,17 +40,17 @@
   font-family: var(--kai); font-weight: 900; font-size: 13px; color: var(--text-dim);
   white-space: nowrap;
 }
-.adv-toggle.on .adv-toggle-label { color: #e9b92e; }
+.adv-toggle.on .adv-toggle-label { color: var(--advisor); }
 .adv-toggle-track {
   width: 26px; height: 16px; box-sizing: border-box; border-radius: 8px;
   border: 1.5px solid var(--gold-line); background: none; position: relative; flex: none;
 }
-.adv-toggle.on .adv-toggle-track { border-color: #e9b92e; background: rgba(233, 185, 46, 0.28); }
+.adv-toggle.on .adv-toggle-track { border-color: var(--advisor); background: rgba(var(--advisor-rgb), 0.28); }
 .adv-toggle-dot {
   position: absolute; top: 1.5px; left: 1.5px; width: 10px; height: 10px;
   border-radius: 50%; background: var(--gold-line);
 }
-.adv-toggle.on .adv-toggle-dot { left: 12px; background: #e9b92e; }
+.adv-toggle.on .adv-toggle-dot { left: 12px; background: var(--advisor); }
 /* A very short viewport (#5's 28px topbar row) still gives the switch a
    real 44px tap target -- the button's own box, not the visible track. */
 /* #24 (diagnosed by a side session, folded into the ruling): at 375px wide
@@ -60,13 +67,19 @@
 }
 
 /* ---------- the suggestion banner: always a solid, flow-positioned box ---------- */
+/* #100: the banner's own contrast still never depends on what's underneath
+   it (the comment above explains why it needs a real background of its
+   own) -- a flat 10% orange tint layered OVER the same solid dark base,
+   not a swap to a transparent orange, so it reads identically everywhere
+   this gets placed (dark table, light sheet, cream card). */
 .advisor-banner {
   box-sizing: border-box;
-  background: #1a1713; border: 1px solid #e9b92e; border-radius: 8px;
+  background: linear-gradient(rgba(var(--advisor-rgb), 0.10), rgba(var(--advisor-rgb), 0.10)), #1a1713;
+  border: 1px solid var(--advisor); border-radius: 8px;
   padding: 6px 10px;
 }
 .advisor-banner-title {
-  font: 600 13px/1.3 var(--serif); color: #e9b92e; margin: 0 0 2px;
+  font: 600 13px/1.3 var(--serif); color: var(--advisor); margin: 0 0 2px;
   overflow-wrap: break-word;
 }
 .advisor-banner-why {
@@ -193,29 +206,65 @@ body:not(.table-lock) .advisor-banner {
   background-attachment: local, scroll;
 }
 
-/* ---------- gold decoration: hand card / sheet use-button / order-button ---------- */
+/* ---------- advisor decoration: hand card / sheet use-button / order-button ---------- */
+/* #100 (owner, UX audit item 4): the suggested HAND CARD keeps a glow (it
+   isn't a control the player picks between, just "look at this one") --
+   only recoloured orange, same ring/halo shape as before. */
 .card.adv-pick {
-  box-shadow: 0 0 0 2px #e9b92e, 0 0 14px 5px rgba(233, 185, 46, 0.6);
-  border-color: #e9b92e;
+  position: relative;
+  box-shadow: 0 0 0 2px var(--advisor), 0 0 14px 5px rgba(var(--advisor-rgb), 0.6);
+  border-color: var(--advisor);
 }
+/* Every suggested-use CONTROL, though, is the thing both auditors misread
+   as already selected -- a solid gold ring around a button looks exactly
+   like this page's own "picked" fill (style.css's `button[aria-pressed=
+   "true"]`, which the same gold paints solid). Dropped the ring/fill look
+   entirely: a dashed outline only (never a solid border-color change, never
+   a box-shadow that could pass for a fill) -- "suggested" now looks
+   structurally different from "selected", not just differently coloured,
+   and painting via `outline` (outside the box, its own layer) means it
+   survives untouched once the player DOES press it and the real selected
+   look (background/border-color, per side) applies underneath. */
 .sheet-grid button.adv-pick, .rowb.order button.adv-pick,
 /* #52: renderPending()'s plain .rowb rows (the "ops" use-picker, an
-   "option" pending choice, a "card" pending choice) -- same ring, no
-   layout change: box-shadow paints outside the button's own box, border-
-   color reuses the border width/radius the row's own buttons already have. */
+   "option" pending choice, a "card" pending choice) -- same mark, no
+   layout change: `outline` paints outside the button's own box. */
 .rowb button[data-use].adv-pick, .rowb button[data-option].adv-pick, .rowb button[data-card].adv-pick,
 /* #69 addendum: the end-of-round/event card pick's own Skip button --
    marked exactly like its sibling [data-card] buttons when advise()'s own
    answer is to skip (an empty choice). */
 .rowb button[data-skip].adv-pick,
 /* #60: the headline phase's own confirm button (footer(), app.js) sits in
-   a plain .sheet-footer row, not a .rowb -- same ring, its own selector. */
+   a plain .sheet-footer row, not a .rowb -- same mark, its own selector. */
 .sheet-footer button[data-use].adv-pick {
-  box-shadow: 0 0 0 2px #e9b92e, 0 0 10px 3px rgba(233, 185, 46, 0.55);
-  border-color: #e9b92e;
+  position: relative;
+  outline: 2px dashed var(--advisor);
+  outline-offset: 2px;
+}
+/* The small "軍師"/"Advisor" tab (owner: design A, canvas Adv_A_Tab, then
+   recoloured orange per AdvCol_Orange) sitting on the mark's own top edge --
+   shared by the hand card's glow and every suggested-use control above,
+   same list of selectors. Orange background, dark text (never white -- the
+   owner's own contrast floor on this small a chip), 10px bold, 15px tall.
+   `pointer-events: none` so it never steals the tap meant for the card/
+   button underneath it. */
+.card.adv-pick::before, .sheet-grid button.adv-pick::before, .rowb.order button.adv-pick::before,
+.rowb button[data-use].adv-pick::before, .rowb button[data-option].adv-pick::before, .rowb button[data-card].adv-pick::before,
+.rowb button[data-skip].adv-pick::before, .sheet-footer button[data-use].adv-pick::before {
+  content: "軍師";
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+  height: 15px; line-height: 15px; padding: 0 6px; border-radius: 4px;
+  background: var(--advisor); color: #1a1611; font: 700 10px/15px var(--sans);
+  white-space: nowrap; pointer-events: none; z-index: 2;
+}
+:root[lang="en"] .card.adv-pick::before, :root[lang="en"] .sheet-grid button.adv-pick::before,
+:root[lang="en"] .rowb.order button.adv-pick::before, :root[lang="en"] .rowb button[data-use].adv-pick::before,
+:root[lang="en"] .rowb button[data-option].adv-pick::before, :root[lang="en"] .rowb button[data-card].adv-pick::before,
+:root[lang="en"] .rowb button[data-skip].adv-pick::before, :root[lang="en"] .sheet-footer button[data-use].adv-pick::before {
+  content: "Advisor";
 }
 
-/* ---------- gold decoration: the map target ---------- */
+/* ---------- advisor decoration: the map target ---------- */
 /* #69 (owner, iPhone screenshot of a lobby's target-picking state): the
    suggested city's ring "reads almost like the dashed ring every legal
    target already wears" -- too easy to miss among four or five of those on
@@ -236,7 +285,7 @@ body:not(.table-lock) .advisor-banner {
 .node.adv-target::before {
   content: ""; position: absolute; left: 50%; top: 50%; width: 84px; height: 84px;
   transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: 0;
-  background: radial-gradient(circle, transparent 25px, rgba(233, 185, 46, 0.8) 30px, rgba(233, 185, 46, 0.32) 42px, transparent 42px);
+  background: radial-gradient(circle, transparent 25px, rgba(var(--advisor-rgb), 0.8) 30px, rgba(var(--advisor-rgb), 0.32) 42px, transparent 42px);
   /* The disc's own top (where a +n placement badge or the cost badge sits)
      stays clear of the glow (owner: "圆盤正上方留空不蓋住數字"). */
   -webkit-mask-image: conic-gradient(transparent 0deg 34deg, #000 34deg 326deg, transparent 326deg 360deg);
@@ -251,7 +300,14 @@ body:not(.table-lock) .advisor-banner {
 }
 .node.adv-target::after {
   content: ""; position: absolute; left: 50%; top: 50%; width: 38px; height: 38px;
-  transform: translate(-50%, -50%); border-radius: 50%; border: 4.6px solid #e9b92e;
+  transform: translate(-50%, -50%); border-radius: 50%; border: 4.6px solid var(--advisor);
+  /* #100 (owner: keep enough contrast on the light map): orange reads
+     lower-contrast than the old gold against a pale disc/parchment ground
+     (the light map's own `.map::before` wash included) -- a thin dark edge
+     just outside the solid ring gives it a floor that doesn't depend on
+     whatever the ring happens to sit on, the same trick `.node.picked`
+     above already uses (a light ring, THEN a dark one) for the same reason. */
+  box-shadow: 0 0 0 1.5px rgba(26, 22, 17, 0.65);
   pointer-events: none; z-index: 1;
 }
 .node.big.adv-target::after { width: 42px; height: 42px; }
@@ -268,7 +324,7 @@ body:not(.table-lock) .advisor-banner {
    ("兩個下角都排,籤放在遠離城名的那一個"). */
 .node .adv-badge {
   position: absolute; bottom: -4px; right: -6px; min-width: 15px; height: 15px;
-  border-radius: 8px; background: #e9b92e; color: #1a1a1a; text-align: center;
+  border-radius: 8px; background: var(--advisor); color: #1a1a1a; text-align: center;
   font: 700 9px/15px var(--sans); padding: 0 3px; z-index: 5;
 }
 .node.anchor-left .adv-badge { right: auto; left: -6px; }
