@@ -73,9 +73,49 @@ test("sheet.pickUseFirst exists in both language files and is non-empty", () => 
   assert.notEqual(EN.sheet.pickUseFirst, ZH.sheet.pickUseFirst);
 });
 
-test("the collapsed history toggle button has no border/background of its own (no box-inside-a-box)", () => {
-  const css = read("style.css");
-  const rule = /\.sheet-history-toggle\s*\{([^}]*)\}/.exec(css);
-  assert.ok(rule, "expected a .sheet-history-toggle rule in style.css");
-  assert.match(rule[1], /border\s*:\s*none/, "the toggle button should not draw its own border inside .sheet-textbox's border");
+// A minimal CSS specificity calculator (ids, then classes/attrs/pseudo-
+// classes, then types/pseudo-elements) -- just enough to compare the two
+// selectors this test cares about, not a full cascade engine.
+function specificity(selector) {
+  let s = selector;
+  let ids = 0, classes = 0, types = 0;
+  ids += (s.match(/#[\w-]+/g) || []).length; s = s.replace(/#[\w-]+/g, " ");
+  classes += (s.match(/\.[\w-]+/g) || []).length; s = s.replace(/\.[\w-]+/g, " ");
+  classes += (s.match(/(?<!:):[\w-]+(\([^)]*\))?/g) || []).length; s = s.replace(/(?<!:):[\w-]+(\([^)]*\))?/g, " ");
+  classes += (s.match(/\[[^\]]*\]/g) || []).length; s = s.replace(/\[[^\]]*\]/g, " ");
+  types += (s.match(/::[\w-]+/g) || []).length; s = s.replace(/::[\w-]+/g, " ");
+  types += (s.match(/[a-zA-Z][\w-]*/g) || []).length;
+  return [ids, classes, types];
+}
+function outranks(a, b) { // strictly greater, lexicographic over [ids, classes, types] -- a tie is NOT enough, since then source order (fragile) decides
+  for (let i = 0; i < 3; i++) { if (a[i] !== b[i]) return a[i] > b[i]; }
+  return false;
+}
+
+test("the collapsed history toggle's own border-removal rule actually wins the cascade (not just source text)", () => {
+  // orchestrator's own catch (checker at bf040ab): `.sheet-history-toggle
+  // { border: none }` is specificity (0,1,0) -- LOWER than `.sheet button`'s
+  // (0,1,1), so `.sheet button`'s `border: 1px solid var(--gold-line)` won
+  // regardless of what the toggle's own rule said, and the box-inside-a-box
+  // never actually went away. A regex check of the source text alone can't
+  // catch that (both rules were textually present and correct on their
+  // own) -- this compares actual specificity, the way the cascade does.
+  const withoutComments = read("style.css").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  const baseRule = /^\.sheet button \{([^}]*)\}/m.exec(withoutComments);
+  assert.ok(baseRule, "expected the base `.sheet button` border rule in style.css (read live, not hand-copied)");
+  assert.match(baseRule[1], /border\s*:/, "expected `.sheet button` to declare a border -- that's the rule the toggle has to outrank");
+  const baseSelector = ".sheet button";
+
+  const toggleRule = /([^{}]*\.sheet-history-toggle[^{}]*)\{([^}]*)\}/.exec(withoutComments);
+  assert.ok(toggleRule, "expected a rule targeting .sheet-history-toggle in style.css");
+  const toggleSelector = toggleRule[1].trim();
+  assert.match(toggleRule[2], /border\s*:\s*none/, "the toggle should declare border: none");
+
+  assert.ok(
+    outranks(specificity(toggleSelector), specificity(baseSelector)),
+    `"${toggleSelector}" (specificity ${JSON.stringify(specificity(toggleSelector))}) must outrank ` +
+    `"${baseSelector}" (specificity ${JSON.stringify(specificity(baseSelector))}) -- otherwise its border:none loses ` +
+    `to the base rule regardless of source order, and the box-inside-a-box comes back`
+  );
 });

@@ -1207,8 +1207,14 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    the one border `.sheet-textbox` already draws -- no border or fill of its
    own, and no padding of its own either (the parent's 12px is enough; a
    second layer here would just re-introduce the inset that made the border
-   look doubled in the first place). */
-.sheet-history-toggle { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: none; background: none; padding: 0; }
+   look doubled in the first place).
+   orchestrator's own catch (checker at bf040ab): a plain `.sheet-history-
+   toggle` selector is (0,1,0) -- LOWER specificity than `.sheet button`'s
+   (0,1,1) above, so that rule's `border: 1px solid var(--gold-line)` still
+   won regardless of source order, and the box-inside-a-box never actually
+   went away. `.sheet button.sheet-history-toggle` is (0,2,1), which beats
+   it outright. */
+.sheet button.sheet-history-toggle { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: none; background: none; padding: 0; }
 .sheet-history-arrow { flex: none; width: 12px; text-align: center; font-size: 10px; opacity: 0.7; }
 .sheet-history-arrow::before { content: "\25B8"; }
 .sheet-history-open .sheet-history-arrow::before { content: "\25BE"; }
