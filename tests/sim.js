@@ -26,7 +26,9 @@ import * as B from "../public/shared/bots.js";
 //   chained  - a point outside today's start set (own influence, or control next door)
 //   beyondTs - a point outside the TS start set (own influence here or next door)
 // `probeMiss` counts games where the watched actions and the logged "place"
-// entries disagree, so a probe that stops seeing placements shows up.
+// entries disagree in number, or a logged entry is not the one a watched call
+// produced (its log number), so a probe that stops seeing placements, or sees
+// the dry run instead of the real one, shows up.
 function startSets(st, side) {
   const ctl = new Set(), ts = new Set();
   for (const sp of E.SPACES) {
@@ -41,9 +43,11 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
   let st = E.createGame(seed, options);
   const scores = [];
   let seen = 0;
-  const pl = { places: 0, placedPts: 0, chained: 0, chainedPts: 0, beyondTs: 0, beyondTsPts: 0, logged: 0 };
+  const pl = { places: 0, placedPts: 0, chained: 0, chainedPts: 0, beyondTs: 0, beyondTsPts: 0, logged: 0, unmatched: 0 };
+  const seqs = new Set(); // the log number each watched placement will get
   const watch = (s, side, points) => {
     if (!s.log.length) return;
+    seqs.add((s.logSeq || 0) + 1);
     const { ctl, ts } = startSets(s, side);
     const outC = points.filter((id) => !ctl.has(id)).length, outT = points.filter((id) => !ts.has(id)).length;
     pl.places++; pl.placedPts += points.length;
@@ -59,7 +63,7 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
     E.probe.place = watch;
     try { st = E.apply(st, a); } finally { E.probe.place = null; }
     for (const l of st.log) if (l.i > seen && l.type === "score") scores.push(l);
-    for (const l of st.log) if (l.i > seen && l.type === "place") pl.logged++;
+    for (const l of st.log) if (l.i > seen && l.type === "place") { pl.logged++; if (!seqs.has(l.i)) pl.unmatched++; }
     seen = st.logSeq || seen;
   }
   return { st, scores, pl };
@@ -78,7 +82,7 @@ export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal"
     }
     const { st, scores, pl } = res;
     for (const k of ["places", "placedPts", "chained", "chainedPts", "beyondTs", "beyondTsPts"]) out[k] += pl[k];
-    if (pl.logged !== pl.places) out.probeMiss++;
+    if (pl.logged !== pl.places || pl.unmatched) out.probeMiss++;
     if (st.winner === E.QIN) out.qinWins++;
     out.ends[st.reason] = (out.ends[st.reason] || 0) + 1;
     out.turns += st.turn; out.mandate += st.mandate; out.absMandate += Math.abs(st.mandate);
