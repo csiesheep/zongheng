@@ -7,7 +7,7 @@ import CARD_EN from "./i18n/cards.en.js";
 import {
   DESIGN_W, DESIGN_H, NODE_POS, regionMembers, isCapital,
   renderRegionBlobs, renderRoads, REGION_LABEL_POS, NODE_ANCHOR, nodeLabelHTML,
-  stabilityTagHTML, NODE_STAB_RIGHT, NODE_STAB_HI,
+  stabilityTagHTML, NODE_STAB_RIGHT, NODE_STAB_HI, stateTagHTML,
 } from "./map-draw.js";
 import { renderCardView, cardHeader } from "./card-view.js";
 import { discParts } from "./disc-view.js";
@@ -17,6 +17,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 let lang = (new URLSearchParams(location.search).get("lang") || (() => { try { return localStorage.getItem("zh.lang"); } catch { return null; } })() || ((navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
 if (!["en", "zh-Hant"].includes(lang)) lang = "en";
 const spaceName = (id) => (lang === "en" ? E.SPACE[id].en : E.SPACE[id].zh);
+const stateName = (id) => (id ? (lang === "en" ? E.STATES[id].en : E.STATES[id].zh) : ""); // #95: state tag title/aria
 // Same regionShort table app.js's map uses (see its own comment on this
 // function) — zh's used to fall back to E.REGIONS[r].zh, which is why the
 // owner's "regionShort.zhou: 周室→周" (#26 追加(2)) needed this read fixed
@@ -37,8 +38,8 @@ const T = {
     endsRows: [["一統", "秦同時滅掉五國(韓、魏、趙、齊、燕)之中的三國:控制該國全部據點即為滅。"], ["合縱", "楚同時持有四國相印:控制該國國都,而且在那裡的影響力達到上限(安定值 + 2)。"], ["天命", "天命軌到達任一方 20。"], ["土崩", "把疲敝軌推到土崩的人立刻敗北,包括打出對手陣營的牌時觸發的對手事件。"], ["記分卡", "回合結束時手上還有記分卡的人敗北。"], ["終局", "第 8 回合結束後五區各結算一次,天命領先者勝;平手楚勝。"]],
     board: "棋盤",
     boardText: "26 個據點,分五個記分區(三晉、西土、南方、東方、北疆)與周。五個「國」畫在區域之內,各有一個國都:韓(新鄭)、魏(大梁)、趙(邯鄲)、齊(臨淄)、燕(薊)。★ 為要衝,共八個。每據點有安定值 2 到 4。",
-    mapAlt: "地圖:26 個據點分屬五個記分區與周,每個據點旁的小方籤標著它的安定值,★ 是要衝,方形圓盤是國都。",
-    mapLegend: "★ 要衝　▢ 國都　籤上的數字 = 安定值　色塊 = 記分區",
+    mapAlt: "地圖:26 個據點分屬五個記分區與周,每個據點旁的小方籤標著它的安定值,★ 是要衝,方形圓盤是國都;屬於五國之一的 14 個據點,還帶著一個彩色小方籤,籤上一字標著所屬國(韓、魏、趙、齊、燕)。",
+    mapLegend: "★ 要衝　▢ 國都　籤上的數字 = 安定值　色塊 = 記分區　小方籤:所屬國(韓 魏 趙 齊 燕)",
     control: "影響力與控制",
     controlText: "控制 = 我方影響力 ≥ 對方影響力 + 安定值。任一方在任一據點最多安定值 + 2 點,多的消失。",
     uses: "一張牌的五種用法",
@@ -79,8 +80,8 @@ const T = {
     endsRows: [["Unification", "Qin holds three of the five states (韓 Han, 魏 Wei, 趙 Zhao, 齊 Qi, 燕 Yan) at once: a state is destroyed when Qin controls every one of its spaces."], ["Alliance", "Chu holds the seals of four states at once: a seal needs control of the capital with Chu's influence there at the cap (stability + 2)."], ["Mandate", "The Mandate track reaches 20 for either side."], ["Collapse", "Whoever pushes weariness to the last box loses, even through the other side's event played for ops."], ["Scoring card", "A scoring card still in hand when the turn ends loses."], ["Final scoring", "After turn 8 every region scores once; the Mandate leader wins, a tie goes to Chu."]],
     board: "The map",
     boardText: "26 spaces in five scoring regions (Three Jin, West, South, East, North) and Zhou. Five states sit inside the regions, each with a capital: Han (Xinzheng), Wei (Daliang), Zhao (Handan), Qi (Linzi), Yan (Ji). ★ marks the eight battlegrounds. Each space has a stability of 2 to 4.",
-    mapAlt: "A map of the 26 spaces across five scoring regions and Zhou; a small tag beside each space's disc carries its stability number, a star marks a battleground, and a square disc marks a state capital.",
-    mapLegend: "★ battleground　▢ capital　the tag's number = stability　colour = scoring region",
+    mapAlt: "A map of the 26 spaces across five scoring regions and Zhou; a small tag beside each space's disc carries its stability number, a star marks a battleground, and a square disc marks a state capital. The 14 spaces belonging to one of the five states also carry a small coloured square tag naming that state (Han, Wei, Zhao, Qi, Yan).",
+    mapLegend: "★ battleground　▢ capital　the tag's number = stability　colour = scoring region　small square tag = the state it belongs to (Han/Wei/Zhao/Qi/Yan)",
     control: "Influence and control",
     controlText: "Control = your influence ≥ theirs + stability. Nobody holds more than stability + 2 in a space; the excess is lost.",
     uses: "A card's five uses",
@@ -786,6 +787,7 @@ function ruleNodeHTML(sp) {
   return `<div class="${cls}" style="left:${x}px;top:${y}px">` +
     `<span class="disc${cap ? " sq" : ""}"></span>` +
     stabilityTagHTML(sp) +
+    stateTagHTML(sp, stateName(sp.state), esc) +
     nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc) +
     `</div>`;
 }
