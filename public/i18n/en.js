@@ -260,6 +260,12 @@ export default {
     suggestOrder: { opsFirst: "Spend the ops first, then let the event happen.", eventFirst: "Trigger the event first, then spend the ops." },
     suggestHeadline: "Commit {card} as the headline.",
     suggestSetup: "Place {n} influence in {space}.",
+    // #105 addendum: suggestSetup is for the setup phase only (see above);
+    // an in-progress Foster mid-card (e.g. Guest Ministers' two-tap place)
+    // hits the same opsUse === "place" branch, but the button already
+    // reads "Foster", so this can't say "Place" again -- see
+    // advisor-ui.js's bannerTitle() branch on opsUse.
+    continuePlace: "Foster {n} in {space}.",
     // #69 addendum: a pending "card"/"option" choice (the end-of-round
     // discard, and every cards.js card/option pick -- 呂不韋/韓非入秦/春申君/
     // 細作 among them) names no map space, so it fell through bannerTitle()

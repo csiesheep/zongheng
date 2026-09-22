@@ -229,6 +229,11 @@ export default {
     suggestOrder: { opsFirst: "先用行動點,再讓事件發生。", eventFirst: "先觸發事件,再用行動點。" },
     suggestHeadline: "蓋下{card}當標題。",
     suggestSetup: "在{space}放置{n}點影響力。",
+    // #105 追加:suggestSetup 是佈局階段專用的句子(見上一行);打到一半的
+    // 扶植(例如客卿制度分兩次點地圖)走的是同一個 opsUse === "place" 分支,
+    // 但這時按鈕已經蓋著「扶植」,不能再說「放置」——見 advisor-ui.js
+    // bannerTitle() 對 opsUse 的判斷。
+    continuePlace: "在{space}扶植 {n} 點。",
     // #69 追加:一個「card」/「option」的待決選擇(回合結束棄牌,以及
     // cards.js 的每一張選牌/選項——呂不韋、韓非入秦、春申君、細作都在內)
     // 都點不到地圖上的任何一格,所以以前 bannerTitle() 一路 fall through
