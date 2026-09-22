@@ -243,4 +243,12 @@
   .d-card-panel .peek-footer { display: none; }
   .d-card-panel .sheet-mid { max-height: none; overflow: visible; }
   .d-card-hint { margin: 4px; color: var(--text-dim); font-size: 13px; }
+
+  /* #91: before/after side by side from this breakpoint (rules.css's own
+     stacked default stays for the text column's narrower phone width). The
+     arrow sits between the two halves as its own middle column rather than
+     a row of its own, so it doesn't force the halves to wrap. */
+  .fig-pair { flex-direction: row; align-items: flex-start; gap: 14px; }
+  .fig-arrow { flex: none; width: 64px; padding: 0; align-self: center; }
+  .fig-solo { max-width: 260px; }
 }
