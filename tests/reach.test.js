@@ -27,8 +27,11 @@ function bare(options, inf) {
 // 宜陽 (yiyang, stability 2) neighbours, from the rulebook map: 函谷關, 洛邑, 新鄭, 上黨.
 const YIYANG_AND_NEIGHBOURS = ["hangu", "luoyi", "shangdang", "xinzheng", "yiyang"];
 
-test("reach: the option exists, defaults to control, and a state without it plays as control", () => {
-  assert.equal(E.DEFAULT_OPTIONS.reach, "control");
+// #107 (owner, 2026-09-22: 「B 改成預設」) flipped the default to "ts". Only the
+// two facts that the flip made false are changed below; every other assertion
+// in this file is #104's, untouched.
+test("reach: the option exists, defaults to ts, and a state without it plays as control", () => {
+  assert.equal(E.DEFAULT_OPTIONS.reach, "ts");
   const legacy = bare({}, { yiyang: [1, 0] });
   delete legacy.options.reach;
   assert.equal(E.canPlaceAt(legacy, QIN, "shangdang"), false, "no control next to 上黨: not placeable under today's rule");
@@ -71,9 +74,11 @@ test("reach=control: the old chaining still works", () => {
   const spent = E.placePoints(ctl, QIN, ["yiyang", "shangdang", "shangdang", "handan"], 4);
   assert.equal(spent, 4);
   assert.deepEqual(E.infOf(ctl, "handan"), [1, 0]);
-  // The default (no option given) chains the same way.
-  const def = bare({}, { yiyang: [1, 0] });
-  assert.equal(E.placePoints(def, QIN, ["yiyang", "shangdang", "shangdang", "handan"], 4), 4);
+  // A state with no `reach` key at all -- a game saved before #107 -- chains
+  // the same way. (The DEFAULT no longer does: see #107's own test file.)
+  const legacy = bare({}, { yiyang: [1, 0] });
+  delete legacy.options.reach;
+  assert.equal(E.placePoints(legacy, QIN, ["yiyang", "shangdang", "shangdang", "handan"], 4), 4);
   // And the same payload is refused under ts (邯鄲 was not eligible at the start).
   const ts = bare({ reach: "ts" }, { yiyang: [1, 0] });
   assert.throws(() => E.placePoints(ts, QIN, ["yiyang", "shangdang", "shangdang", "handan"], 4), /handan is not reachable/);

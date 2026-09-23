@@ -1203,14 +1203,16 @@ function currentMode(v) {
   const me = game.me, ui = game.ui;
   if (v.winner != null) return none;
   const L = E.legal(v, me);
+  // #107: the lit set comes from the engine (E.placeTargets), not from a second
+  // copy of the reach rule here. `v` is the state at the START of this place
+  // action and `points` what has been tapped but not confirmed -- under the
+  // "ts" rule the eligible set is fixed at `v`, so a point that wins control
+  // must NOT open its neighbours mid-action. The old loop re-read the reach
+  // rule on the trial board per point, which lit spaces Confirm then refused
+  // ("place: ji is not reachable"); a probe over 20 games found 841 such
+  // lit-but-illegal spaces across 654 mid-action states, up to 5 at once.
   const placing = (ops, points) => {
-    const { trial, spent } = placementTrial(v, me, points);
-    const left = ops - spent;
-    const lit = new Set(), costs = {};
-    for (const sp of E.SPACES) {
-      const cost = E.placeCost(trial, me, sp.id);
-      if (cost <= left && E.canPlaceAt(trial, me, sp.id) && E.infOf(trial, sp.id)[me] < E.capOf(trial, sp.id)) { lit.add(sp.id); costs[sp.id] = cost; }
-    }
+    const { lit, costs } = E.placeTargets(v, me, ops, points);
     const picked = {}; for (const id of points) picked[id] = (picked[id] || 0) + 1;
     return { lit, picked, costs, side: me, onTap: (id) => { placeTapSound(points, id); points.push(id); render(); } };
   };
