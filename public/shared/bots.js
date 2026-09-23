@@ -230,9 +230,10 @@ function bestPoints(st, p, who, rng) {
 }
 
 // Where to put `ops` points: greedy per point, costs and reach re-read as
-// control changes.
+// control changes (under reach "ts" the eligible set is the one at the start).
 export function greedyPlacement(st, side, ops, restrict = null) {
   const s = E.clone(st); s.log = [];
+  const reach = E.reachFrom(s, side);
   const points = [];
   let left = ops;
   while (left > 0) {
@@ -240,7 +241,7 @@ export function greedyPlacement(st, side, ops, restrict = null) {
     for (const sp of SPACES) {
       if (restrict && !restrict(sp.id)) continue;
       const cost = E.placeCost(s, side, sp.id);
-      if (cost > left || !E.canPlaceAt(s, side, sp.id) || E.infOf(s, sp.id)[side] >= E.capOf(s, sp.id)) continue;
+      if (cost > left || !E.canPlaceAt(s, side, sp.id, reach) || E.infOf(s, sp.id)[side] >= E.capOf(s, sp.id)) continue;
       const a = s.inf[sp.id] || (s.inf[sp.id] = [0, 0]);
       a[side]++; const v = evaluate(s, side) - 0.01 * cost; a[side]--;
       if (v > bestV) { bestV = v; best = sp.id; bestCost = cost; }
@@ -354,10 +355,11 @@ function bestHeadline(view, side, cards, rng, level) {
 // ---------- random play (easy, and the fuzz driver) ----------
 export function randomPoints(st, side, ops, rng) {
   const trial = E.clone(st); trial.log = [];
+  const reach = E.reachFrom(trial, side);
   const points = [];
   let left = ops;
   for (let i = 0; i < ops; i++) {
-    const cands = SPACES.filter((s) => E.canPlaceAt(trial, side, s.id) && E.infOf(trial, s.id)[side] < E.capOf(trial, s.id) && E.placeCost(trial, side, s.id) <= left);
+    const cands = SPACES.filter((s) => E.canPlaceAt(trial, side, s.id, reach) && E.infOf(trial, s.id)[side] < E.capOf(trial, s.id) && E.placeCost(trial, side, s.id) <= left);
     if (!cands.length) break;
     const id = pickOne(cands, rng).id;
     left -= E.placeCost(trial, side, id);

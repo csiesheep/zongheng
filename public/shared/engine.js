@@ -58,11 +58,15 @@ export const REFORM = [
 // `wuguo`: "any" lets 五國伐秦 strike any West space; "nonbg" keeps it out of 關中.
 // `yue`: "lasting" gives 楚滅越 a +1 on every South scoring, "none" leaves it at the two points.
 // `westBonus`: 司馬錯伐蜀 also gives Qin +1 on every West scoring (the granary of 蜀).
+// `reach` (#104): "control" places where you have influence or next to a space
+// you control, re-read point by point (a point that wins control opens its
+// neighbours in the same action); "ts" is Twilight Struggle 6.1: where you have
+// influence or next to any of your influence, fixed at the start of the action.
 // Defaults are the rules as decided on 2026-09-18 from the harness (plan note,
 // Balance log); the first drafts stay reachable as cells: sealAt "control",
 // comp 2, hangu 2, wuguo "any", and round 2's westBonus false with yue "lasting"
 // (Qin 39 % over 1,000 games; the pair below brought it to 50 %).
-export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none" };
+export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "control" };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 
 // ---------- RNG (mulberry32) ----------
@@ -133,10 +137,21 @@ export function remove(st, side, id, n) {
   return k;
 }
 export function controlled(st, side) { return SPACES.filter((s) => controller(st, s.id) === side).map((s) => s.id); }
-export function canPlaceAt(st, side, id) {
+// `reach` is what `reachFrom` returned at the start of the place action: under
+// "ts" the eligible set is fixed then; under "control" it is null and reach is
+// re-read on `st` as it stands. A state without the option plays as "control".
+export function canPlaceAt(st, side, id, reach = null) {
+  if (reach) return reach.has(id);
   if (infOf(st, id)[side] > 0) return true;
+  if (st.options.reach === "ts") return SPACE[id].adj.some((a) => infOf(st, a)[side] > 0);
   return SPACE[id].adj.some((a) => controller(st, a) === side);
 }
+export function reachFrom(st, side) {
+  if (st.options.reach !== "ts") return null;
+  return new Set(SPACES.filter((s) => canPlaceAt(st, side, s.id)).map((s) => s.id));
+}
+// Set by the balance harness (tests/sim.js) to watch placements; null in play.
+export const probe = { place: null };
 export function placeCost(st, side, id) { return controller(st, id) === other(side) ? 2 : 1; }
 // 局勢 for 遊說: my controlled neighbours minus theirs.
 export function edge(st, side, id) {
@@ -280,12 +295,15 @@ export function lobby(st, side, target, ops) {
   return removed;
 }
 // Points one at a time, so the cost re-evaluates as control changes.
+// Under reach "ts" the eligible set is taken once, before the first point.
 export function placePoints(st, side, points, ops) {
+  if (probe.place) probe.place(st, side, points);
+  const reach = reachFrom(st, side);
   let spent = 0;
   for (const id of points) {
     const cost = placeCost(st, side, id);
     if (spent + cost > ops) fail(`place: not enough ops for ${id}`);
-    if (!canPlaceAt(st, side, id)) fail(`place: ${id} is not reachable`);
+    if (!canPlaceAt(st, side, id, reach)) fail(`place: ${id} is not reachable`);
     if (infOf(st, id)[side] >= capOf(st, id)) fail(`place: ${id} is at the cap`);
     place(st, side, id, 1);
     spent += cost;
