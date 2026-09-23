@@ -93,7 +93,7 @@ export default {
     headlineDone: "committed a headline",
     yourAction: "Your action. Pick a card.", wait: "Waiting for {name}…",
     points: "Pick {n} ({left} left): tap a highlighted space.", pointsMin: "Pick up to {n}: tap a highlighted space.", card: "Pick a card.", cardOptional: "Pick a card, or skip.", option: "Choose.", ops: "Spend {ops} ops: how?",
-    place: "Fostering {ops} ops ({left} left). Tap spaces; 2 per point where the enemy holds control.", campaign: "Raid with {ops} ops: tap a target.", lobby: "Lobby with {ops} ops: tap a target.",
+    place: "Fostering {ops} ops ({left} left). Lit spaces are fixed; 2 per point into enemy control.", campaign: "Raid with {ops} ops: tap a target.", lobby: "Lobby with {ops} ops: tap a target.",
     over: "Game over.",
     // #97: always on, independent of the advisor -- shown once the actions
     // left this round are at most the scoring cards still in hand.
@@ -203,7 +203,7 @@ export default {
       map: { title: "The map", text: "26 spaces in five regions plus Zhou; a star marks a battleground. A disc's colour is influence: black is Qin, red is Chu; grey and pink mean influence without control.", do: "Tap {space}" },
       control: { title: "Control", text: "Control needs yours at least theirs plus stability; the cap is stability + 2. {space}: {qin} is at least {chu} plus {stability}, so it's yours.", do: "Tap {space}" },
       hand: { title: "Your hand", text: "The round badge is the card's points. Black carries Qin's event, red Chu's, white nobody's. A card has five uses; start with the simplest, foster.", do: "Tap the lit card" },
-      place: { title: "Foster", text: "1 op places 1 point, only where you already stand or next to your control; 2 ops per point into enemy control. {n} into {space}: {qin} is at least {chu} plus {stability}, so it's yours.", do: "Tap {space} {n} times" },
+      place: { title: "Foster", text: "1 op places 1 point, where you already stand or next to any space where you have influence, fixed when the action starts; 2 ops per point into enemy control. {n} into {space}: {qin} is at least {chu} plus {stability}, so it's yours.", do: "Tap {space} {n} times" },
       event: { title: "Event", text: "Play your own card for its event: {card}, reform +1. First to arrive scores, but the unlock matters more.", do: "Choose Event" },
       enemyCard: { title: "An enemy card", text: "Spend the other side's card for ops; its event still happens. You choose which goes first.", do: "Choose ops first" },
       campaign: { title: "Raid", text: "Remove up to {n} of theirs, place the rest as yours. A battleground tires the realm by one; pushing it to {to} loses.", do: "Confirm the raid on {space}" },

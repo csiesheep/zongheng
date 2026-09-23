@@ -189,11 +189,14 @@ test("advisor: a 要衝 that changes hands is takeControl, not battleground", ()
 });
 
 test("advisor: reason battleground -- aimed at a 要衝 without taking it", () => {
-  // 河東 holds Qin at its cap with nowhere else to reach, and at 禍結 三晉 is
-  // shut to campaigns, so the only ops this card has is a campaign on 宋 --
-  // a 要衝 with no state behind it, where 4 Chu points keep control whatever
-  // one op removes. Nothing changes hands, and the 要衝 is all there is to say.
-  const inf = { hedong: [4, 4], song: [0, 4] };
+  // Qin holds no influence anywhere on this board, so there is nowhere to
+  // place under either reach rule (#107 made "ts" the default: the fixture
+  // used to lean on 河東 [4,4], which under "ts" opens 函谷關/上黨/邯鄲 next
+  // door and gave the card a placement again). At 禍結 三晉 is shut to
+  // campaigns, so the only ops this card has is a campaign on 宋 -- a 要衝
+  // with no state behind it, where 4 Chu points keep control whatever one op
+  // removes. Nothing changes hands, and the 要衝 is all there is to say.
+  const inf = { hedong: [0, 4], song: [0, 4] };
   const patch = { turn: 3, round: 2, weariness: 3 };
   const st = board([["envoy"], ["mozhe"]], inf, patch);
   assert.ok(SPACE.song.battleground, "宋 is a 要衝");
@@ -207,7 +210,7 @@ test("advisor: reason battleground -- aimed at a 要衝 without taking it", () =
   }
   // Twin: the same position with 薛 in 宋's place. 薛 is not a 要衝, so with
   // nothing else moving the advisor has nothing to name.
-  const st2 = board([["envoy"], ["mozhe"]], { hedong: [4, 4], xue: [0, 4] }, patch);
+  const st2 = board([["envoy"], ["mozhe"]], { hedong: [0, 4], xue: [0, 4] }, patch);
   assert.ok(!SPACE.xue.battleground, "薛 is not a 要衝");
   const adv2 = advise(E.view(st2, QIN), QIN, E.makeRng(2));
   assert.deepStrictEqual(adv2.targets, ["xue"]);

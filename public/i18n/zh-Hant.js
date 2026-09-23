@@ -81,7 +81,7 @@ export default {
     headlineDone: "蓋下了標題牌",
     yourAction: "輪到你,選一張牌。", wait: "等待 {name}…",
     points: "選 {n} 個(剩 {left}):點地圖上亮起的格子。", pointsMin: "最多選 {n} 個:點地圖上亮起的格子。", card: "選一張牌。", cardOptional: "選一張牌,或略過。", option: "請選擇。", ops: "使用 {ops} 點行動點:怎麼用?",
-    place: "扶植 {ops} 點(剩 {left})。點地圖;對手控制處每點 2。", campaign: "奇襲,{ops} 點:點目標。", lobby: "遊說,{ops} 點:點目標。",
+    place: "扶植 {ops} 點(剩 {left})。可放處已定,點地圖;對手控制處每點 2。", campaign: "奇襲,{ops} 點:點目標。", lobby: "遊說,{ops} 點:點目標。",
     over: "遊戲結束。",
     // #97: always on, independent of the advisor -- shown once the actions
     // left this round are at most the scoring cards still in hand.
@@ -177,7 +177,7 @@ export default {
       map: { title: "地圖", text: "26 個據點,分五個記分區加上周;★ 是要衝。圓盤的顏色是影響力:黑是秦、紅是楚;灰和粉紅是有影響力但還沒控制。", do: "點{space}" },
       control: { title: "控制", text: "我方影響力 ≥ 對方 + 安定值就控制,上限是安定值+2。{space}:{qin}≥{chu}+{stability},所以歸你控制。", do: "點{space}" },
       hand: { title: "手牌", text: "圓形徽章是點數;黑是秦的事件、紅是楚的、白是中立的。一張牌有五種用法,先學最簡單的:扶植。", do: "點亮著的牌" },
-      place: { title: "扶植", text: "放在已有自己影響力的據點,或自己控制的據點旁邊,每點花 1;對方控制的據點每點花 2。放 {n} 點到 {space},它就歸你控制。", do: "點{space} {n} 次" },
+      place: { title: "扶植", text: "放在已有自己影響力的據點,或與自己有影響力的據點相鄰處,每點花 1;對方控制的據點每點花 2。能放哪裡在行動開始時就決定。放 {n} 點到 {space},它就歸你控制。", do: "點{space} {n} 次" },
       event: { title: "事件", text: "把自己的牌當事件打:{card},變法 +1。先到的人得分,更重要的是解鎖能力。", do: "選「事件」" },
       enemyCard: { title: "敵方的牌", text: "把對方的牌當行動點用,它的事件還是會發生;由你決定事件先、還是行動點先。", do: "選「先行動點」" },
       campaign: { title: "奇襲", text: "奇襲有對方影響力的據點,最多移除 {n} 點,剩下的變成我方的;打要衝疲敝 +1,把疲敝推到{to}的人立刻輸。", do: "確認奇襲{space}" },

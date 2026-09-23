@@ -58,15 +58,21 @@ export const REFORM = [
 // `wuguo`: "any" lets 五國伐秦 strike any West space; "nonbg" keeps it out of 關中.
 // `yue`: "lasting" gives 楚滅越 a +1 on every South scoring, "none" leaves it at the two points.
 // `westBonus`: 司馬錯伐蜀 also gives Qin +1 on every West scoring (the granary of 蜀).
-// `reach` (#104): "control" places where you have influence or next to a space
-// you control, re-read point by point (a point that wins control opens its
-// neighbours in the same action); "ts" is Twilight Struggle 6.1: where you have
-// influence or next to any of your influence, fixed at the start of the action.
+// `reach`: "ts" (the rule since #107; owner, 2026-09-22: 「B 改成預設」) places
+// where you have influence or next to ANY space where you have influence, with
+// the eligible set fixed at the start of the place action -- a space reachable
+// only through a point placed earlier in the same action is not eligible.
+// "control" is the first-draft rule (#104's other cell): where you have
+// influence or next to a space you CONTROL, re-read point by point, so a point
+// that wins control opens its neighbours in the same action. Cost and cap are
+// the same either way. A state with no `reach` key at all plays as "control":
+// it can only be a game that started before the flip, and a game in progress
+// must not change its rules under the players (no migration, #107).
 // Defaults are the rules as decided on 2026-09-18 from the harness (plan note,
 // Balance log); the first drafts stay reachable as cells: sealAt "control",
 // comp 2, hangu 2, wuguo "any", and round 2's westBonus false with yue "lasting"
 // (Qin 39 % over 1,000 games; the pair below brought it to 50 %).
-export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "control" };
+export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts" };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 
 // ---------- RNG (mulberry32) ----------
@@ -149,6 +155,33 @@ export function canPlaceAt(st, side, id, reach = null) {
 export function reachFrom(st, side) {
   if (st.options.reach !== "ts") return null;
   return new Set(SPACES.filter((s) => canPlaceAt(st, side, s.id)).map((s) => s.id));
+}
+// Where the NEXT point of a place action may go, with what it costs -- the one
+// answer both the map's lighting (public/app.js) and `placePoints` are read
+// from, so a lit space can never be one the engine refuses (#107; before this,
+// app.js re-read `canPlaceAt` per point on the trial board, which under "ts"
+// lit up to 5 spaces the engine then refused only at Confirm).
+//
+// `st` is the state at the START of the place action and `points` the points
+// picked so far but not yet committed. That split is the rule: the eligible set
+// comes from `st` (under "ts" it is fixed there), while the cost and the cap are
+// re-read on the board with `points` already on it -- exactly the order
+// `placePoints` checks them in, point by point.
+export function placeTargets(st, side, ops, points = []) {
+  const reach = reachFrom(st, side);
+  const trial = clone(st); trial.log = [];
+  let spent = 0;
+  for (const id of points) { spent += placeCost(trial, side, id); place(trial, side, id, 1); }
+  const left = ops - spent;
+  const lit = new Set(), costs = {};
+  for (const s of SPACES) {
+    const cost = placeCost(trial, side, s.id);
+    if (cost <= left && canPlaceAt(trial, side, s.id, reach) && infOf(trial, s.id)[side] < capOf(trial, s.id)) {
+      lit.add(s.id);
+      costs[s.id] = cost;
+    }
+  }
+  return { lit, costs, spent, left };
 }
 // Set by the balance harness (tests/sim.js) to watch placements; null in play.
 export const probe = { place: null };
