@@ -971,12 +971,26 @@ function layoutTable() {
   // "fine"). An explicit min-height (not "auto") isn't subject to that
   // carve-out, so this pins one to the banner's real rendered height each
   // pass, before fits() ever reads #lowerBlock's own scrollHeight.
+  //
+  // #109: with the advisor OFF (no banner), this used to fall through to a
+  // flat "0px" floor — the same overflow:hidden carve-out above then let a
+  // sheet-heavy state's flex-shrink squeeze #prompt to literally
+  // clientHeight:0, taking the whole prompt line (and #97's always-on
+  // scoring warning, spliced in as the FIRST line of #promptText — see
+  // renderPromptAndSheet()) with it. Two lines of #prompt's own text
+  // (line-height/padding read live off its computed style, not hardcoded,
+  // so a font-size change stays in sync) is enough room for that first
+  // line to actually paint before anything below it has to scroll; #prompt
+  // remains flex:1 1 auto so it still grows past this floor whenever the
+  // budget allows, and lowerOverflow's existing table-overflow fallback
+  // (below) still catches the rare state where even this floor doesn't fit.
   const advBanner = document.getElementById("advisorBanner");
   const bannerShown = advBanner && !advBanner.hidden && advBanner.parentElement === promptEl;
   const promptCS = getComputedStyle(promptEl);
+  const promptPad = parseFloat(promptCS.paddingTop) + parseFloat(promptCS.paddingBottom);
   promptEl.style.minHeight = bannerShown
-    ? Math.ceil(advBanner.getBoundingClientRect().height + parseFloat(promptCS.paddingTop) + parseFloat(promptCS.paddingBottom)) + "px"
-    : "0px";
+    ? Math.ceil(advBanner.getBoundingClientRect().height + promptPad) + "px"
+    : Math.ceil((parseFloat(promptCS.lineHeight) || 18) * 2 + promptPad) + "px";
   const fits = () => lowerBlock.scrollHeight <= LOWER_BLOCK_H + 1;
   if (mapActive && !hand.hidden && !fits()) {
     // Stage 1: the hand row gives way first — its cards (if it holds any)
