@@ -81,7 +81,7 @@ export default {
     headlineDone: "蓋下了標題牌",
     yourAction: "輪到你,選一張牌。", wait: "等待 {name}…",
     points: "選 {n} 個(剩 {left}):點地圖上亮起的格子。", pointsMin: "最多選 {n} 個:點地圖上亮起的格子。", card: "選一張牌。", cardOptional: "選一張牌,或略過。", option: "請選擇。", ops: "使用 {ops} 點行動點:怎麼用?",
-    place: "扶植 {ops} 點(剩 {left})。只能點亮起的據點,開始時就定了;對手控制處每點 2。", campaign: "奇襲,{ops} 點:點目標。", lobby: "遊說,{ops} 點:點目標。",
+    place: "扶植 {ops} 點(剩 {left})。可放處已定,點地圖;對手控制處每點 2。", campaign: "奇襲,{ops} 點:點目標。", lobby: "遊說,{ops} 點:點目標。",
     over: "遊戲結束。",
     // #97: always on, independent of the advisor -- shown once the actions
     // left this round are at most the scoring cards still in hand.

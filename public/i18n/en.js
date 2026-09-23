@@ -93,7 +93,7 @@ export default {
     headlineDone: "committed a headline",
     yourAction: "Your action. Pick a card.", wait: "Waiting for {name}…",
     points: "Pick {n} ({left} left): tap a highlighted space.", pointsMin: "Pick up to {n}: tap a highlighted space.", card: "Pick a card.", cardOptional: "Pick a card, or skip.", option: "Choose.", ops: "Spend {ops} ops: how?",
-    place: "Fostering {ops} ops ({left} left). Tap the lit spaces, fixed when the action started; 2 per point where the enemy holds control.", campaign: "Raid with {ops} ops: tap a target.", lobby: "Lobby with {ops} ops: tap a target.",
+    place: "Fostering {ops} ops ({left} left). Lit spaces are fixed; 2 per point into enemy control.", campaign: "Raid with {ops} ops: tap a target.", lobby: "Lobby with {ops} ops: tap a target.",
     over: "Game over.",
     // #97: always on, independent of the advisor -- shown once the actions
     // left this round are at most the scoring cards still in hand.
