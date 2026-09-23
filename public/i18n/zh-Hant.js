@@ -14,7 +14,7 @@ export default {
   // 那樣直接從牌堆讀名字/說明。文字沿用這個檔案裡規則頁本來就有的「九鼎」
   // 那句話(見 rules.js 自己的 specialText)。
   rules: {
-    jiuding: "九鼎", jiudingText: "4 點行動點,全部用在三晉或周視為 5;只能放置、征伐、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。",
+    jiuding: "九鼎", jiudingText: "4 點行動點,全部用在三晉或周視為 5;只能扶植、奇襲、遊說;用後蓋著交給對手,對方下回合起可用;開局由楚持有。",
     // #40:規則頁的區塊導覽(sticky chip 列)短標,對應 rules.js render() 裡
     // 每個 h2 的順序;top 是列尾固定的「回頂端」那顆。
     // #91:「特殊」改名為「九鼎與洛邑」(滅國/相印移到自己的新分節「滅國與相印」)。
@@ -81,7 +81,7 @@ export default {
     headlineDone: "蓋下了標題牌",
     yourAction: "輪到你,選一張牌。", wait: "等待 {name}…",
     points: "選 {n} 個(剩 {left}):點地圖上亮起的格子。", pointsMin: "最多選 {n} 個:點地圖上亮起的格子。", card: "選一張牌。", cardOptional: "選一張牌,或略過。", option: "請選擇。", ops: "使用 {ops} 點行動點:怎麼用?",
-    place: "放置 {ops} 點(剩 {left})。點地圖;對手控制處每點 2。", campaign: "征伐,{ops} 點:點目標。", lobby: "遊說,{ops} 點:點目標。",
+    place: "扶植 {ops} 點(剩 {left})。點地圖;對手控制處每點 2。", campaign: "奇襲,{ops} 點:點目標。", lobby: "遊說,{ops} 點:點目標。",
     over: "遊戲結束。",
     // #97: always on, independent of the advisor -- shown once the actions
     // left this round are at most the scoring cards still in hand.
@@ -98,7 +98,7 @@ export default {
       full: "{action},{card}:要在回合結束前打出,否則判負。",
     },
   },
-  uses: { event: "事件", place: "放置", campaign: "征伐", lobby: "遊說", reform: "變法", bog: "棄牌(頓兵)", pair: "搭配", opsFirst: "先行動點", eventFirst: "先事件" },
+  uses: { event: "事件", place: "扶植", campaign: "奇襲", lobby: "遊說", reform: "變法", bog: "棄牌(頓兵)", pair: "搭配", opsFirst: "先行動點", eventFirst: "先事件" },
   buttons: { send: "送出", board: "看棋盤", result: "結果", confirm: "確認", done: "完成", cancel: "取消", skip: "略過", playAgain: "再來一局", swap: "換邊", home: "回首頁", headline: "蓋下標題牌", show: "展開", hide: "收起", log: "紀錄", logChat: "紀錄與聊天", expand: "看牌", close: "關閉", resumeSolo: "繼續舊局", newGame: "開新局" },
   // #97: the always-on "must play" tag on a scoring card in hand -- a
   // separate short label (badge) and a longer sentence (its `title`), never
@@ -126,7 +126,7 @@ export default {
     headlineOne: "{side}的標題:{card};{other}不出標題。",
     headlineNone: "雙方都沒有手牌,跳過標題階段。",
     play: "{side}打出{card}({use})。",
-    place: "{side}在{spaces}放置。", campaign: "{side}以 {ops} 點征伐{target}:移除 {removed},放置 {placed}。", lobby: "{side}遊說{target}:移除 {removed}。",
+    place: "{side}在{spaces}扶植。", campaign: "{side}以 {ops} 點奇襲{target}:移除 {removed},放置 {placed}。", lobby: "{side}遊說{target}:移除 {removed}。",
     score: "{region}結算:秦 {q},楚 {c}。", vp: "天命 {mandate}。", tire: "疲敝降至{to}。", seal: "楚取得{state}相印。", unseal: "楚失去{state}相印。",
     mie: "秦滅{state}。", restore: "{state}復國。", reform: "{side}變法軌到第 {box} 格。", jiuding: "九鼎蓋著交給{side}。", discard: "{side}棄掉{card}。",
     bog: "{side}頓兵堅城,棄掉{card}。", skip: "{side}無牌可出。", opsLost: "{side}的 {ops} 點行動點無處可用。", reshuffle: "棄牌堆重洗。", era: "{era}牌庫洗入。",
@@ -155,7 +155,7 @@ export default {
     eventNeutral: "這是中立牌,它的事件也為你發生:{text}",
     eventTheirs: "事件:{text}", eventHeadline: "標題:{text}",
     tapHint: "點一下繼續",
-    tickerPlace: "{side}在{space}放置 {n}", tickerCampaign: "{side}征伐{target}:移除{removed}、放置{placed}",
+    tickerPlace: "{side}在{space}扶植 {n}", tickerCampaign: "{side}奇襲{target}:移除{removed}、放置{placed}",
     tickerLobby: "{side}遊說{target}:移除{removed}", tickerReform: "{side}變法軌到第 {box} 格",
     // 天命變化與得利方,例如「天命 楚 +1」——絕不只顯示結果總值(那樣讀起來像
     // 對面得利)。tickerMandateArrow 只在總值也值得一併顯示時才接在後面。
@@ -165,22 +165,22 @@ export default {
     tickerUnseal: "楚失去{state}相印", tickerMie: "秦滅{state}", tickerRestore: "{state}復國",
     tickerJiuding: "九鼎蓋著交給{side}", tickerFinal: "事件造成的改變",
   },
-  useNames: { event: "事件", place: "放置", campaign: "征伐", lobby: "遊說", reform: "變法", bog: "頓兵" },
+  useNames: { event: "事件", place: "扶植", campaign: "奇襲", lobby: "遊說", reform: "變法", bog: "頓兵" },
   scoringLevel: { none: "無", presence: "存在", domination: "優勢", control: "獨佔" },
   regionShort: { west: "西土", jin: "三晉", zhou: "周", east: "東方", south: "南方", north: "北疆" },
   tutorial: {
     button: "教學 · 5 分鐘",
-    intro: { kicker: "教學 · 約 5 分鐘", title: "初入戰國", sub: "", text: "你扮演秦。十個小步驟裡,你會拿下一個據點、學會一張牌的四種用法、打一次征伐,還會滅掉韓。對方照劇本走,不會出錯。", start: "開始", notNow: "先不要" },
+    intro: { kicker: "教學 · 約 5 分鐘", title: "初入戰國", sub: "", text: "你扮演秦。十個小步驟裡,你會拿下一個據點、學會一張牌的四種用法、打一次奇襲,還會滅掉韓。對方照劇本走,不會出錯。", start: "開始", notNow: "先不要" },
     skip: "跳過教學", back: "上一步", stepOf: "第 {n} / {total} 課", topbar: "教學 · 第 {n} / {total} 課", gotIt: "知道了",
     wrong: "要點亮著的地方。",
     steps: {
       map: { title: "地圖", text: "26 個據點,分五個記分區加上周;★ 是要衝。圓盤的顏色是影響力:黑是秦、紅是楚;灰和粉紅是有影響力但還沒控制。", do: "點{space}" },
       control: { title: "控制", text: "我方影響力 ≥ 對方 + 安定值就控制,上限是安定值+2。{space}:{qin}≥{chu}+{stability},所以歸你控制。", do: "點{space}" },
-      hand: { title: "手牌", text: "圓形徽章是點數;黑是秦的事件、紅是楚的、白是中立的。一張牌有五種用法,先學最簡單的:放置。", do: "點亮著的牌" },
-      place: { title: "放置", text: "放在已有自己影響力的據點,或自己控制的據點旁邊,每點花 1;對方控制的據點每點花 2。放 {n} 點到 {space},它就歸你控制。", do: "點{space} {n} 次" },
+      hand: { title: "手牌", text: "圓形徽章是點數;黑是秦的事件、紅是楚的、白是中立的。一張牌有五種用法,先學最簡單的:扶植。", do: "點亮著的牌" },
+      place: { title: "扶植", text: "放在已有自己影響力的據點,或自己控制的據點旁邊,每點花 1;對方控制的據點每點花 2。放 {n} 點到 {space},它就歸你控制。", do: "點{space} {n} 次" },
       event: { title: "事件", text: "把自己的牌當事件打:{card},變法 +1。先到的人得分,更重要的是解鎖能力。", do: "選「事件」" },
       enemyCard: { title: "敵方的牌", text: "把對方的牌當行動點用,它的事件還是會發生;由你決定事件先、還是行動點先。", do: "選「先行動點」" },
-      campaign: { title: "征伐", text: "征伐有對方影響力的據點,最多移除 {n} 點,剩下的變成我方的;打要衝疲敝 +1,把疲敝推到{to}的人立刻輸。", do: "確認征伐{space}" },
+      campaign: { title: "奇襲", text: "奇襲有對方影響力的據點,最多移除 {n} 點,剩下的變成我方的;打要衝疲敝 +1,把疲敝推到{to}的人立刻輸。", do: "確認奇襲{space}" },
       lobby: { title: "遊說", text: "局勢 = 我方控制的相鄰據點數 − 對方的;最多移除 {n} 點,但不超過局勢。不放置,也不增加疲敝。", do: "遊說{space}" },
       scoring: { title: "記分", text: "打三晉記分:存在、優勢或控制,每個要衝再 +1;差額移動天命。記分卡留在手上到回合結束就輸。", do: "打記分卡" },
       destroy: { title: "滅國", text: "秦控制一整國的所有據點,那國就滅:{state} 滅,秦 +{n}。滅三國,秦統一;教學到這裡完成。", do: "完成" },
@@ -204,12 +204,12 @@ export default {
     thinking: "軍師思考中",
     suggestCard: {
       event: "打出{card}的事件。",
-      place: "用{card}在{space}放置影響力。",
+      place: "用{card}在{space}扶植。",
       // #60:還沒選到目標(對手的牌、先觸發事件——advisor-ui.js 的
       // bannerTitle() 在 {space} 是空字串時改選這幾個)。
-      placeNoTarget: "用{card}放置影響力。",
-      campaign: "用{card}征伐{space}。",
-      campaignNoTarget: "用{card}征伐。",
+      placeNoTarget: "用{card}扶植。",
+      campaign: "用{card}奇襲{space}。",
+      campaignNoTarget: "用{card}奇襲。",
       lobby: "用{card}遊說{space}。",
       lobbyNoTarget: "用{card}遊說。",
       reform: "用{card}變法。",
@@ -218,8 +218,8 @@ export default {
     },
     suggestUse: {
       event: "打出它的事件。",
-      place: "在{space}放置影響力。",
-      campaign: "征伐{space}。",
+      place: "在{space}扶植。",
+      campaign: "奇襲{space}。",
       lobby: "遊說{space}。",
       reform: "拿它變法。",
       score: "現在打出它。",
@@ -229,6 +229,11 @@ export default {
     suggestOrder: { opsFirst: "先用行動點,再讓事件發生。", eventFirst: "先觸發事件,再用行動點。" },
     suggestHeadline: "蓋下{card}當標題。",
     suggestSetup: "在{space}放置{n}點影響力。",
+    // #105 追加:suggestSetup 是佈局階段專用的句子(見上一行);打到一半的
+    // 扶植(例如客卿制度分兩次點地圖)走的是同一個 opsUse === "place" 分支,
+    // 但這時按鈕已經蓋著「扶植」,不能再說「放置」——見 advisor-ui.js
+    // bannerTitle() 對 opsUse 的判斷。
+    continuePlace: "在{space}扶植 {n} 點。",
     // #69 追加:一個「card」/「option」的待決選擇(回合結束棄牌,以及
     // cards.js 的每一張選牌/選項——呂不韋、韓非入秦、春申君、細作都在內)
     // 都點不到地圖上的任何一格,所以以前 bannerTitle() 一路 fall through

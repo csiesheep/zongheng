@@ -74,7 +74,7 @@ export const CARDS = [
       if (st.options.westBonus) E.addEffect(st, { card: "simacuo", side: Q, kind: "score", region: "west", who: Q, delta: 1, until: "game" });
     } },
   { id: "hangu", num: 11, zh: "函谷關天險", en: "Hangu Pass", era: "reform", side: Q, ops: 2, remove: false,
-    text: "持續:楚對西土征伐行動點 −2。「五國伐秦」或「合縱攻秦」事件觸發時移除本牌。",
+    text: "持續:楚對西土奇襲行動點 −2。「五國伐秦」或「合縱攻秦」事件觸發時移除本牌。",
     effect(st) { E.removeEffect(st, (e) => e.card === "hangu"); E.addEffect(st, { card: "hangu", side: Q, kind: "campaign", who: C, delta: -2, regions: ["west"], until: "game" }); } },
   { id: "keqing", num: 12, zh: "客卿制度", en: "Guest Ministers", era: "reform", side: Q, ops: 2, remove: false,
     text: "秦在任一據點放 2,不受相鄰限制。",
@@ -98,11 +98,11 @@ export const CARDS = [
     text: "楚在東方放 3(可分散)。",
     effect(st, side, ch) { if (!ch.length) return pts(C, 3, withRoom(st, C, ids("east"))); placeAll(st, C, ch[0]); } },
   { id: "wuguo", num: 19, zh: "五國伐秦", en: "Five States Attack Qin", era: "reform", side: C, ops: 3, remove: true, year: 318,
-    text: "楚對西土任一非要衝據點發動免費征伐,行動點 +1,不受疲敝限制;移除「函谷關天險」。",
+    text: "楚對西土任一非要衝據點發動免費奇襲,行動點 +1,不受疲敝限制;移除「函谷關天險」。",
     // The 318 BC coalition never got past 函谷關: not 關中 (option `wuguo: "any"` is the first draft).
     effect(st, side, ch) { dropHanguPass(st); return freeCampaign(st, C, ch, ids("west").filter((id) => st.options.wuguo !== "nonbg" || !E.SPACE[id].battleground), 3 + 1, { ignoreLocks: true }); } },
   { id: "mozhe", num: 20, zh: "墨者守城", en: "Mohist Defenders", era: "reform", side: C, ops: 1, remove: false,
-    text: "指定 1 個據點,本回合內不可對其征伐或遊說。",
+    text: "指定 1 個據點,本回合內不可對其奇襲或遊說。",
     effect(st, side, ch) { if (!ch.length) return pick(C, all()); E.addEffect(st, { card: "mozhe", side: C, kind: "protect", space: ch[0][0], until: "turn" }); } },
   { id: "chumieyue", num: 21, zh: "楚滅越", en: "Chu Conquers Yue", era: "reform", side: C, ops: 2, remove: true, year: 306,
     text: "楚在吳越放 2。",
@@ -140,7 +140,7 @@ export const CARDS = [
       else st.discard.push(c);
     } },
   { id: "yetie", num: 27, zh: "冶鐵與弩機", en: "Iron and Crossbows", era: "reform", side: null, ops: 2, remove: false,
-    text: "持續至回合結束:打出者征伐行動點 +1。",
+    text: "持續至回合結束:打出者奇襲行動點 +1。",
     effect(st, side) { E.addEffect(st, { card: "yetie", side, kind: "campaign", who: side, delta: 1, regions: null, until: "turn" }); } },
   { id: "zhouzuo", num: 28, zh: "周天子賜胙", en: "The Zhou King's Gift", era: "reform", side: null, ops: 1, remove: false,
     text: "打出者在洛邑放 2。", effect(st, side) { E.place(st, side, "luoyi", 2); } },
@@ -162,7 +162,7 @@ export const CARDS = [
       if (had && E.controller(st, t) !== C) E.vp(st, Q, 1);
     } },
   { id: "yiyang", num: 31, zh: "宜陽之戰", en: "Battle of Yiyang", era: "alliance", side: Q, ops: 2, remove: true, year: 307,
-    text: "秦對三晉任一據點發動免費征伐,不推進疲敝。",
+    text: "秦對三晉任一據點發動免費奇襲,不推進疲敝。",
     effect(st, side, ch) { return freeCampaign(st, Q, ch, ids("jin"), 2, { noTire: true }); } },
   { id: "huaiwang", num: 32, zh: "楚懷王入秦", en: "King Huai Enters Qin", era: "alliance", side: Q, ops: 2, remove: true, year: 299,
     text: "移除楚在南方(郢除外)任一據點的全部影響力;疲敝軌前進 1。",
@@ -172,7 +172,7 @@ export const CARDS = [
       E.tire(st, 1, st.phasing);
     } },
   { id: "baiqi", num: 33, zh: "白起", en: "Bai Qi", era: "alliance", side: Q, ops: 3, remove: true, year: 293,
-    text: "持續:秦對三晉、南方征伐行動點 +1。",
+    text: "持續:秦對三晉、南方奇襲行動點 +1。",
     effect(st) { E.addEffect(st, { card: "baiqi", side: Q, kind: "campaign", who: Q, delta: 1, regions: ["jin", "south"], until: "game" }); } },
   { id: "yueyi", num: 34, zh: "樂毅伐齊", en: "Yue Yi Invades Qi", era: "alliance", side: Q, ops: 3, remove: true, year: 284,
     text: "移除楚在東方每個據點各 2。", effect(st) { for (const id of ids("east")) E.remove(st, C, id, 2); } },
@@ -200,7 +200,7 @@ export const CARDS = [
   { id: "mengchang", num: 39, zh: "孟嘗君", en: "Lord Mengchang", era: "alliance", side: C, ops: 2, remove: false,
     text: "楚抽 1 張;若楚控制薛,改抽 2 張。", effect(st) { E.draw(st, C, E.controller(st, "xue") === C ? 2 : 1, { nonScoring: true }); } },
   { id: "hezong", num: 40, zh: "合縱攻秦", en: "The Alliance Attacks Qin", era: "alliance", side: C, ops: 4, remove: true, year: 296,
-    text: "楚對西土任一據點發動免費征伐,行動點 +2,不受疲敝限制;移除「函谷關天險」。",
+    text: "楚對西土任一據點發動免費奇襲,行動點 +2,不受疲敝限制;移除「函谷關天險」。",
     effect(st, side, ch) { dropHanguPass(st); return freeCampaign(st, C, ch, ids("west"), 4 + 2, { ignoreLocks: true }); } },
   { id: "tiandan", num: 41, zh: "田單復國", en: "Tian Dan Restores Qi", era: "alliance", side: C, ops: 3, remove: true, year: 279,
     text: "移除秦在臨淄 2;楚在即墨、莒各放 2;若齊已滅,移除滅國標記。",
@@ -208,7 +208,7 @@ export const CARDS = [
   { id: "wanbi", num: 42, zh: "完璧歸趙", en: "The Jade Returns to Zhao", era: "alliance", side: C, ops: 1, remove: true, year: 283,
     text: "查看秦的手牌。", effect(st) { st.revealed[C] = true; } },
   { id: "yuyu", num: 43, zh: "閼與之戰", en: "Battle of Yuyu", era: "alliance", side: C, ops: 2, remove: true, year: 269,
-    text: "楚對三晉或西土任一據點發動免費征伐,不推進疲敝。",
+    text: "楚對三晉或西土任一據點發動免費奇襲,不推進疲敝。",
     effect(st, side, ch) { return freeCampaign(st, C, ch, ids("jin", "west"), 2, { noTire: true }); } },
   { id: "quyuan", num: 44, zh: "屈原", en: "Qu Yuan", era: "alliance", side: C, ops: 1, remove: true, year: 278,
     text: "楚在三晉任一國都放 2。",
@@ -228,7 +228,7 @@ export const CARDS = [
       st.plan.splice(1, 0, { do: "ops", side, card: c, ops: E.opsOf(st, side, c), payload: null, choices: [] }, { do: "finishCard", card: c, side, triggered: false });
     } },
   { id: "mianchi", num: 48, zh: "澠池之會", en: "The Meeting at Mianchi", era: "alliance", side: null, ops: 2, remove: false, year: 279,
-    text: "疲敝軌後退 1;持續至回合結束:雙方征伐行動點 −1。",
+    text: "疲敝軌後退 1;持續至回合結束:雙方奇襲行動點 −1。",
     effect(st, side) { E.recover(st, 1); E.addEffect(st, { card: "mianchi", side, kind: "campaign", who: "both", delta: -1, regions: null, until: "turn" }); } },
   { id: "yili", num: 49, zh: "疫癘", en: "Pestilence", era: "alliance", side: null, ops: 1, remove: false,
     text: "雙方各在對手控制的 1 個據點移除 2,打出者先選。",
@@ -239,7 +239,7 @@ export const CARDS = [
       if (ch[1][0]) E.remove(st, side, ch[1][0], 2);
     } },
   { id: "changcheng", num: 50, zh: "修長城", en: "Building the Long Wall", era: "alliance", side: null, ops: 2, remove: false,
-    text: "選 1 區,持續至回合結束:對手在該區征伐行動點 −1。",
+    text: "選 1 區,持續至回合結束:對手在該區奇襲行動點 −1。",
     effect(st, side, ch) {
       if (!ch.length) return { kind: "option", who: side, options: E.SCORED_REGIONS.map((r) => ({ id: r, label: E.REGIONS[r].zh })) };
       E.addEffect(st, { card: "changcheng", side, kind: "campaign", who: opp(side), delta: -1, regions: [ch[0]], until: "turn" });
@@ -257,7 +257,7 @@ export const CARDS = [
 
   // ---------- 兼併期・秦 ----------
   { id: "changping", num: 52, zh: "長平之戰", en: "Battle of Changping", era: "conquest", side: Q, ops: 4, remove: true, year: 260,
-    text: "秦對三晉任一據點發動征伐,行動點 4 +3;疲敝軌額外前進 1。",
+    text: "秦對三晉任一據點發動奇襲,行動點 4 +3;疲敝軌額外前進 1。",
     effect(st, side, ch) { const need = freeCampaign(st, Q, ch, ids("jin"), 4 + 3); if (need) return need; E.tire(st, 1, st.phasing); } },
   { id: "miezhou", num: 53, zh: "秦滅周", en: "Qin Ends the Zhou", era: "conquest", side: Q, ops: 2, remove: true, year: 256,
     text: "若秦控制洛邑,秦天命 +3;洛邑此後不再產生天命;九鼎立即交給秦,正面朝上。",
@@ -284,7 +284,7 @@ export const CARDS = [
       else { const i = Number(ch[0].split(":")[1]); st.effects.splice(i, 1); }
     } },
   { id: "wangjian", num: 57, zh: "王翦滅楚", en: "Wang Jian Conquers Chu", era: "conquest", side: Q, ops: 4, remove: true, year: 223,
-    text: "秦對南方任一據點發動征伐,行動點 4 +2,不受疲敝限制;疲敝軌額外前進 1。",
+    text: "秦對南方任一據點發動奇襲,行動點 4 +2,不受疲敝限制;疲敝軌額外前進 1。",
     effect(st, side, ch) { const need = freeCampaign(st, Q, ch, ids("south"), 4 + 2, { ignoreLocks: true }); if (need) return need; E.tire(st, 1, st.phasing); } },
   { id: "hanfei", num: 58, zh: "韓非入秦", en: "Han Fei Comes to Qin", era: "conquest", side: Q, ops: 1, remove: true, year: 233,
     text: "變法軌前進 1;秦可棄掉手中 1 張楚方牌,事件不觸發。",
@@ -300,7 +300,7 @@ export const CARDS = [
     text: "楚在南方任一據點放 2;楚抽 1 張。",
     effect(st, side, ch) { if (!ch.length) return pick(C, withRoom(st, C, ids("south"))); if (ch[0][0]) E.place(st, C, ch[0][0], 2); E.draw(st, C, 1, { nonScoring: true }); } },
   { id: "lianpo", num: 61, zh: "廉頗與李牧", en: "Lian Po and Li Mu", era: "conquest", side: C, ops: 3, remove: true, year: 260,
-    text: "持續:秦對三晉、北疆征伐行動點 −1。可被「反間」移除。",
+    text: "持續:秦對三晉、北疆奇襲行動點 −1。可被「反間」移除。",
     effect(st) { E.addEffect(st, { card: "lianpo", side: C, kind: "campaign", who: Q, delta: -1, regions: ["jin", "north"], until: "game" }); } },
   { id: "chunshenjun", num: 62, zh: "春申君", en: "Lord Chunshen", era: "conquest", side: C, ops: 2, remove: false,
     text: "楚抽 2 張,然後棄 1 張(不可棄記分卡)。",
@@ -351,10 +351,10 @@ export const CARDS = [
     text: "持續:對手在其下一個行動回合開始時,須棄掉 1 張行動點 ≥ 2 的牌(事件不觸發)作為該次行動,然後本效果解除;若無可棄之牌,正常行動,效果延到下一個行動回合。",
     effect(st, side) { E.removeEffect(st, (e) => e.kind === "bog" && e.who === opp(side)); E.addEffect(st, { card: "dunbing", side, kind: "bog", who: opp(side), until: "game" }); } },
   { id: "mibing", num: 70, zh: "弭兵之議", en: "A Proposal to Lay Down Arms", era: "conquest", side: null, ops: 3, remove: false,
-    text: "疲敝軌後退 2;持續至回合結束:雙方征伐行動點 −1。",
+    text: "疲敝軌後退 2;持續至回合結束:雙方奇襲行動點 −1。",
     effect(st, side) { E.recover(st, 2); E.addEffect(st, { card: "mibing", side, kind: "campaign", who: "both", delta: -1, regions: null, until: "turn" }); } },
   { id: "jianbing", num: 71, zh: "兼併小邦", en: "Swallowing the Small States", era: "conquest", side: null, ops: 2, remove: false,
-    text: "打出者對任一非要衝據點發動免費征伐,不推進疲敝、不受疲敝限制。",
+    text: "打出者對任一非要衝據點發動免費奇襲,不推進疲敝、不受疲敝限制。",
     effect(st, side, ch) { return freeCampaign(st, side, ch, all().filter((id) => !E.SPACE[id].battleground), 2, { noTire: true, ignoreLocks: true }); } },
 ];
 

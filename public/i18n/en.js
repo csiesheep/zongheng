@@ -18,7 +18,7 @@ export default {
   // other 71. Wording matches the existing "Nine Cauldrons" sentence in this
   // file's rules page prose (see rules.js's own specialText).
   rules: {
-    jiuding: "The Nine Cauldrons", jiudingText: "4 ops, 5 if all of it lands in the Three Jin or Zhou; place, campaign or lobby only; then it passes face down and the other side may use it from the next turn; Chu holds it at the start.",
+    jiuding: "The Nine Cauldrons", jiudingText: "4 ops, 5 if all of it lands in the Three Jin or Zhou; foster, raid or lobby only; then it passes face down and the other side may use it from the next turn; Chu holds it at the start.",
     // #40: the rules page's sticky section-nav chip labels, in the same
     // order as rules.js render()'s h2s; "top" is the fixed last chip.
     // #91: "special" renamed from "Special" to name what it now only covers
@@ -93,7 +93,7 @@ export default {
     headlineDone: "committed a headline",
     yourAction: "Your action. Pick a card.", wait: "Waiting for {name}…",
     points: "Pick {n} ({left} left): tap a highlighted space.", pointsMin: "Pick up to {n}: tap a highlighted space.", card: "Pick a card.", cardOptional: "Pick a card, or skip.", option: "Choose.", ops: "Spend {ops} ops: how?",
-    place: "Placing {ops} ops ({left} left). Tap spaces; 2 per point where the enemy holds control.", campaign: "Campaign with {ops} ops: tap a target.", lobby: "Lobby with {ops} ops: tap a target.",
+    place: "Fostering {ops} ops ({left} left). Tap spaces; 2 per point where the enemy holds control.", campaign: "Raid with {ops} ops: tap a target.", lobby: "Lobby with {ops} ops: tap a target.",
     over: "Game over.",
     // #97: always on, independent of the advisor -- shown once the actions
     // left this round are at most the scoring cards still in hand.
@@ -116,7 +116,7 @@ export default {
       full: "{action}; {card}: {verb} before the turn ends, or you lose.",
     },
   },
-  uses: { event: "Event", place: "Place", campaign: "Campaign", lobby: "Lobby", reform: "Reform", bog: "Discard (bogged)", pair: "Pair with", opsFirst: "Ops first", eventFirst: "Event first" },
+  uses: { event: "Event", place: "Foster", campaign: "Raid", lobby: "Lobby", reform: "Reform", bog: "Discard (bogged)", pair: "Pair with", opsFirst: "Ops first", eventFirst: "Event first" },
   buttons: { send: "Send", board: "View the board", result: "Result", confirm: "Confirm", done: "Done", cancel: "Cancel", skip: "Skip", playAgain: "Play again", swap: "Swap sides", home: "Home", headline: "Commit headline", show: "Show", hide: "Hide", log: "Log", logChat: "Log and chat", expand: "Card", close: "Close", resumeSolo: "Resume game", newGame: "New game" },
   // #97: the always-on "must play" tag on a scoring card in hand -- a
   // separate short label (badge) and a longer sentence (its `title`), never
@@ -150,7 +150,7 @@ export default {
     headlineOne: "{side}'s headline: {card}; {other} commits none.",
     headlineNone: "Both sides have no card; the headline phase is skipped.",
     play: "{side} plays {card} ({use}).",
-    place: "{side} places in {spaces}.", campaign: "{side} campaigns in {target} with {ops}: removes {removed}, places {placed}.", lobby: "{side} lobbies in {target}: removes {removed}.",
+    place: "{side} fosters in {spaces}.", campaign: "{side} raids in {target} with {ops}: removes {removed}, places {placed}.", lobby: "{side} lobbies in {target}: removes {removed}.",
     score: "{region} scores: Qin {q}, Chu {c}.", vp: "Mandate {mandate}.", tire: "Weariness falls to {to}.", seal: "Chu holds the seal of {state}.", unseal: "Chu loses the seal of {state}.",
     mie: "Qin destroys {state}.", restore: "{state} is restored.", reform: "{side} reaches reform box {box}.", jiuding: "The Cauldrons pass to {side}, face down.", discard: "{side} discards {card}.",
     bog: "{side} is bogged down and discards {card}.", skip: "{side} has no card to play.", opsLost: "{side} has nowhere to spend {ops} ops.", reshuffle: "The discards are reshuffled.", era: "The {era} deck is shuffled in.",
@@ -180,7 +180,7 @@ export default {
     eventNeutral: "A neutral card -- its event happens for you too: {text}",
     eventTheirs: "Event: {text}", eventHeadline: "Headline: {text}",
     tapHint: "Tap to continue",
-    tickerPlace: "{side} places {n} at {space}", tickerCampaign: "{side} campaigns {target}: removes {removed}, places {placed}",
+    tickerPlace: "{side} fosters {n} at {space}", tickerCampaign: "{side} raids {target}: removes {removed}, places {placed}",
     tickerLobby: "{side} lobbies {target}: removes {removed}", tickerReform: "{side}'s reform reaches box {box}",
     // The change and who got it, e.g. "Mandate Chu +1" -- never the resulting
     // total alone (that reads as the OTHER side's number). tickerMandateArrow
@@ -191,22 +191,22 @@ export default {
     tickerUnseal: "Chu loses {state}'s seal", tickerMie: "Qin destroys {state}", tickerRestore: "{state} is restored",
     tickerJiuding: "The Cauldrons pass face down to {side}", tickerFinal: "Changes from the event",
   },
-  useNames: { event: "event", place: "place", campaign: "campaign", lobby: "lobby", reform: "reform", bog: "bog" },
+  useNames: { event: "event", place: "foster", campaign: "raid", lobby: "lobby", reform: "reform", bog: "bog" },
   scoringLevel: { none: "None", presence: "Presence", domination: "Domination", control: "Control" },
   regionShort: { west: "West", jin: "Three Jin", zhou: "Zhou", east: "East", south: "South", north: "North" },
   tutorial: {
     button: "Tutorial · 5 minutes",
-    intro: { kicker: "Tutorial · about 5 minutes", title: "Into the Warring States", sub: "First steps in the Warring States", text: "You play Qin. In ten short steps you take a space, use a card four ways, fight one campaign, and destroy the state of Han. The other side follows a script, so nothing can go wrong.", start: "Start", notNow: "Not now" },
+    intro: { kicker: "Tutorial · about 5 minutes", title: "Into the Warring States", sub: "First steps in the Warring States", text: "You play Qin. In ten short steps you take a space, use a card four ways, fight one raid, and destroy the state of Han. The other side follows a script, so nothing can go wrong.", start: "Start", notNow: "Not now" },
     skip: "Skip the tutorial", back: "Back", stepOf: "Step {n} of {total}", topbar: "Tutorial {n}/{total}", gotIt: "Got it",
     wrong: "Tap the highlighted spot.",
     steps: {
       map: { title: "The map", text: "26 spaces in five regions plus Zhou; a star marks a battleground. A disc's colour is influence: black is Qin, red is Chu; grey and pink mean influence without control.", do: "Tap {space}" },
       control: { title: "Control", text: "Control needs yours at least theirs plus stability; the cap is stability + 2. {space}: {qin} is at least {chu} plus {stability}, so it's yours.", do: "Tap {space}" },
-      hand: { title: "Your hand", text: "The round badge is the card's points. Black carries Qin's event, red Chu's, white nobody's. A card has five uses; start with the simplest, place.", do: "Tap the lit card" },
-      place: { title: "Place", text: "1 op places 1 point, only where you already stand or next to your control; 2 ops per point into enemy control. {n} into {space}: {qin} is at least {chu} plus {stability}, so it's yours.", do: "Tap {space} {n} times" },
+      hand: { title: "Your hand", text: "The round badge is the card's points. Black carries Qin's event, red Chu's, white nobody's. A card has five uses; start with the simplest, foster.", do: "Tap the lit card" },
+      place: { title: "Foster", text: "1 op places 1 point, only where you already stand or next to your control; 2 ops per point into enemy control. {n} into {space}: {qin} is at least {chu} plus {stability}, so it's yours.", do: "Tap {space} {n} times" },
       event: { title: "Event", text: "Play your own card for its event: {card}, reform +1. First to arrive scores, but the unlock matters more.", do: "Choose Event" },
       enemyCard: { title: "An enemy card", text: "Spend the other side's card for ops; its event still happens. You choose which goes first.", do: "Choose ops first" },
-      campaign: { title: "Campaign", text: "Remove up to {n} of theirs, place the rest as yours. A battleground tires the realm by one; pushing it to {to} loses.", do: "Confirm the campaign on {space}" },
+      campaign: { title: "Raid", text: "Remove up to {n} of theirs, place the rest as yours. A battleground tires the realm by one; pushing it to {to} loses.", do: "Confirm the raid on {space}" },
       lobby: { title: "Lobby", text: "Edge is your controlled neighbours minus theirs. Remove up to {n}, capped by the edge. It places nothing and never tires the realm.", do: "Lobby {space}" },
       scoring: { title: "Scoring", text: "Play Three Jin scoring: presence, domination or control, plus 1 per battleground; the gap moves the Mandate. A scoring card left in hand loses.", do: "Play the scoring card" },
       destroy: { title: "Destroy a state", text: "Qin controls every space of a state and it is destroyed: {state} falls, Qin +{n}. Three states and Qin wins. Tutorial complete.", do: "Finish" },
@@ -235,12 +235,12 @@ export default {
     thinking: "The advisor is thinking",
     suggestCard: {
       event: "Play {card} for its event.",
-      place: "Place with {card} in {space}.",
+      place: "Foster with {card} in {space}.",
       // #60: no target chosen yet (an opponent's card, event first --
       // bannerTitle() in advisor-ui.js picks these when {space} is empty).
-      placeNoTarget: "Place with {card}.",
-      campaign: "Campaign in {space} with {card}.",
-      campaignNoTarget: "Campaign with {card}.",
+      placeNoTarget: "Foster with {card}.",
+      campaign: "Raid in {space} with {card}.",
+      campaignNoTarget: "Raid with {card}.",
       lobby: "Lobby {space} with {card}.",
       lobbyNoTarget: "Lobby with {card}.",
       reform: "Reform with {card}.",
@@ -249,8 +249,8 @@ export default {
     },
     suggestUse: {
       event: "Play it for its event.",
-      place: "Place it in {space}.",
-      campaign: "Campaign in {space}.",
+      place: "Foster in {space}.",
+      campaign: "Raid in {space}.",
       lobby: "Lobby {space}.",
       reform: "Use it to reform.",
       score: "Play it now.",
@@ -260,6 +260,12 @@ export default {
     suggestOrder: { opsFirst: "Spend the ops first, then let the event happen.", eventFirst: "Trigger the event first, then spend the ops." },
     suggestHeadline: "Commit {card} as the headline.",
     suggestSetup: "Place {n} influence in {space}.",
+    // #105 addendum: suggestSetup is for the setup phase only (see above);
+    // an in-progress Foster mid-card (e.g. Guest Ministers' two-tap place)
+    // hits the same opsUse === "place" branch, but the button already
+    // reads "Foster", so this can't say "Place" again -- see
+    // advisor-ui.js's bannerTitle() branch on opsUse.
+    continuePlace: "Foster {n} in {space}.",
     // #69 addendum: a pending "card"/"option" choice (the end-of-round
     // discard, and every cards.js card/option pick -- 呂不韋/韓非入秦/春申君/
     // 細作 among them) names no map space, so it fell through bannerTitle()

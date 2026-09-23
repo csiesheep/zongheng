@@ -403,7 +403,13 @@ function bannerTitle(adv, meta, view) {
     // Each line is already its own full sentence ("Place {n} ... in
     // {space}."), so multiple spaces are joined with a space, not the
     // language's list separator (which would double up the punctuation).
-    return ids.map((id) => t("advisor.suggestSetup", { n: counts[id], space: meta.spaceName(id) })).join(" ");
+    // #105: opsUse === "place" here means an in-progress Foster mid-card
+    // (e.g. Guest Ministers' two-tap place) -- the button already reads
+    // Foster/扶植, so it needs its own key, not suggestSetup (which is the
+    // setup phase's line and still says Place/放置 there on purpose). Only
+    // a fully-placed setup pick (opsUse null) falls through to suggestSetup.
+    const key = opsUse === "place" ? "advisor.continuePlace" : "advisor.suggestSetup";
+    return ids.map((id) => t(key, { n: counts[id], space: meta.spaceName(id) })).join(" ");
   }
   if (adv.card == null) return null;
   const use = adv.use || "event";
