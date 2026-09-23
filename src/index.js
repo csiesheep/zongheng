@@ -12,20 +12,86 @@ import { withRange } from "./range.js";
 
 const PREFIX = "/zongheng";
 const CANONICAL = "https://games.csiesheep.com" + PREFIX + "/";
-// Prefix-scoped sitemap. Game modes are query strings on the one page and
-// carry a canonical back to it, so the page and the rules are all there is.
+// #108: went live (landing page's noindex removed) 2026-09-22. Prefix-scoped
+// sitemap. Game modes are query strings on the one page and carry a
+// canonical back to it, so the page and the rules are all there is -- the
+// landing page is listed once per language, same convention as the hub's
+// own sitemap (games/src/index.js SITEMAP_URLS), since each version names
+// the other through <link rel="alternate" hreflang"> and listing both here
+// just makes sure a crawler finds the Chinese one without following links.
+const LAST_MOD = "2026-09-22";
+const SITEMAP_URLS = [
+  { loc: CANONICAL, lastmod: LAST_MOD },
+  { loc: CANONICAL + "?lang=zh-Hant", lastmod: LAST_MOD },
+  { loc: CANONICAL + "rules", lastmod: LAST_MOD },
+];
 const SITEMAP_XML = [
   '<?xml version="1.0" encoding="UTF-8"?>',
   '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-  "  <url>",
-  "    <loc>" + CANONICAL + "</loc>",
-  "  </url>",
-  "  <url>",
-  "    <loc>" + CANONICAL + "rules</loc>",
-  "  </url>",
+  ...SITEMAP_URLS.map((u) =>
+    ["  <url>", "    <loc>" + u.loc + "</loc>", "    <lastmod>" + u.lastmod + "</lastmod>", "  </url>"].join(String.fromCharCode(10))
+  ),
   "</urlset>",
   "",
 ].join(String.fromCharCode(10));
+// ---- The Chinese head, server-rendered ------------------------------------
+//
+// Both pages carry both languages client-side (landing.js / rules.js switch
+// the visible half by CSS), so to a crawler that runs no script -- and to a
+// link preview, which never does -- there is only one page, and it is
+// English. /?lang=zh-Hant (and /rules?lang=zh-Hant) are that same file, with
+// <html lang> and the head rewritten here before it leaves, same pattern as
+// toChinese in the hub's own src/index.js. The body needs nothing: the
+// landing page's CSS already shows the Chinese half whenever
+// <html lang="zh-Hant">, and the rules page is built entirely by rules.js
+// after load regardless of language, so there is nothing in the body for a
+// crawler to read either way.
+const ZH = "zh-Hant";
+const OG_IMAGE = CANONICAL + "art/og-zongheng.jpg";
+const ZH_HEAD = {
+  "/": {
+    url: CANONICAL + "?lang=" + ZH,
+    title: "縱橫 Zongheng — 戰國兩人卡牌策略遊戲",
+    description: "縱橫 Zongheng:戰國時期兩人對戰的卡牌策略遊戲,秦對楚。單人對戰機器人,或與朋友開房間對戰。",
+  },
+  "/rules": {
+    url: CANONICAL + "rules?lang=" + ZH,
+    title: "縱橫 Zongheng 規則 — 怎麼玩這個兩人卡牌遊戲",
+    description: "縱橫 Zongheng 的完整規則與七十二張牌:戰國時期兩人對戰的卡牌策略遊戲,秦對楚。",
+  },
+};
+
+function set(attr, value) {
+  return { element(e) { e.setAttribute(attr, value); } };
+}
+
+function toChinese(res, sub) {
+  const type = res.headers.get("content-type") || "";
+  if (res.status !== 200 || !type.includes("text/html")) return res;
+  const head = ZH_HEAD[sub];
+  if (!head) return res;
+
+  const out = new HTMLRewriter()
+    .on("html", set("lang", ZH))
+    .on("title", { element(e) { e.setInnerContent(head.title); } })
+    .on('meta[name="description"]', set("content", head.description))
+    .on('link[rel="canonical"]', set("href", head.url))
+    .on('meta[property="og:url"]', set("content", head.url))
+    .on('meta[property="og:title"]', set("content", head.title))
+    .on('meta[property="og:description"]', set("content", head.description))
+    .on('meta[property="og:locale"]', set("content", "zh_TW"))
+    .on('meta[property="og:locale:alternate"]', set("content", "en_US"))
+    .on('meta[name="twitter:title"]', set("content", head.title))
+    .on('meta[name="twitter:description"]', set("content", head.description))
+    .transform(res);
+
+  // The asset's ETag describes the English bytes. These are not those bytes,
+  // so it must not be offered back for a 304.
+  const headers = new Headers(out.headers);
+  headers.delete("etag");
+  return new Response(out.body, { status: out.status, headers });
+}
+
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function newCode() {
@@ -81,7 +147,11 @@ export default {
     // The asset handler ignores Range; iPhones will not play media without 206
     // (#70). withRange only touches a 200, so it is placed before the Location
     // fix, which only touches redirects: the two never act on the same response.
-    const response = await withRange(request, await env.ASSETS.fetch(new Request(url, request)));
+    let response = await withRange(request, await env.ASSETS.fetch(new Request(url, request)));
+
+    // Only this exact value. ?lang=en and every other query get the page
+    // untouched, whose canonical already points at the English URL.
+    if (url.searchParams.get("lang") === ZH) response = toChinese(response, sub);
 
     // The static-asset handler builds Location from the url we just stripped
     // the prefix off, so a same-origin redirect would escape this Worker and
