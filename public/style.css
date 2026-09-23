@@ -268,6 +268,61 @@ body[data-view="table"] .bar .back .back-chevron { margin-right: 1px; }
    its previous three controls. */
 body:not(.table-lock) #logToggle { display: none; }
 
+/* #106 (owner, screenshot: "end page 上方應該就是輸贏的圖,而不是一條黑"):
+   on the end page ONLY, `.bar` is lifted out of the flex column (it was
+   the column's first flow item, pushing #over's own 100vh box down by its
+   own height -- exactly the black strip the owner is pointing at) and
+   floated over `.over-art`'s image instead, which then reaches the true
+   top edge on its own (screens.css's `#over.view.over-view` already gives
+   #over the FULL 100vh/100svh via body:has(#over) -- once .bar stops being
+   a sibling flex item, #over is the only one left and simply fills it).
+   `position: absolute` (not `fixed`) so desktop.css's `.page-card` --
+   `position: relative` only at >=1024px, `display: contents` (no box at
+   all) below it -- becomes the containing block on desktop, confining the
+   bar to the 390px card exactly like every other over-view control,
+   while on mobile (no positioned ancestor) it resolves against the
+   initial containing block, i.e. the viewport, same as `fixed` would have
+   looked given body:has(#over) already pins body to one non-scrolling
+   100svh box (screens.css). No z-index needed: #over itself is never
+   `position`-ed, so the one positioned element here (.bar) already paints
+   above it per normal stacking-order rules -- kept explicit anyway since
+   the next person editing this shouldn't have to re-derive that.
+   Every other view (table/setup/lobby) is untouched: `.bar` stays exactly
+   the static in-flow header it always was there. */
+body:has(#over:not([hidden])) .bar {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 5;
+  padding-top: max(10px, env(safe-area-inset-top));
+}
+/* No solid background (the picture must show through) -- but plain
+   transparency was the owner's OTHER rejected option ("white-on-red text
+   unreadable" per the brief): this gradient is opaque enough at every
+   point a label/button can occupy to hold 4.5:1 for the two colours that
+   actually sit in this bar on the end page (#logToggle/#advisorSlot are
+   both hidden outside table-lock already, so only .hub links, the lang
+   button and the audio icon remain -- see the contrast note below). Worst
+   case assumed is a pure-white pixel of the underlying photo, not
+   whatever the current art happens to show, so this holds regardless of
+   which piece of art ships later.
+     text  bg needed (L<=)   min alpha over white   chosen
+     --gold  #d8b56a  L=.487  .0693              .268           0.86 top / 0.80 bottom (comfortable margin)
+     --text-dim #b9b09a L=.438 .0584             .268(needs .732) 0.86 / 0.80 (>=0.732 throughout)
+   (both stay well inside the 0.80-0.86 band used below; see the issue
+   comment for the full sRGB-luminance derivation.) `.over-shade`
+   (screens.css) already darkens the image's own top edge on top of this,
+   so real-world contrast on the shipped art is higher still. */
+body:has(#over:not([hidden])) .bar {
+  background: linear-gradient(to bottom, rgba(6, 5, 4, 0.86) 0%, rgba(6, 5, 4, 0.8) 100%);
+}
+/* Purely decorative continuation of the same scrim fading out into the
+   picture below the bar's own box -- no label ever sits in this band, so
+   it isn't part of the contrast guarantee above, just what keeps the cut
+   from looking like a hard-edged box floating on the photo. */
+body:has(#over:not([hidden])) .bar::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 56px;
+  background: linear-gradient(to bottom, rgba(6, 5, 4, 0.8), rgba(6, 5, 4, 0));
+  pointer-events: none;
+}
+
 /* Solo setup: three picture tiles (Qin/Chu/Random), the level pills, a name
    field and a description that follows the pick, with Back/Start pinned to
    the bottom — see C2_SetupQin/Setup/SetupRandom. The whole screen already
