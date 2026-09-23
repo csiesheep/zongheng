@@ -93,7 +93,19 @@ export default {
     headlineDone: "committed a headline",
     yourAction: "Your action. Pick a card.", wait: "Waiting for {name}…",
     points: "Pick {n} ({left} left): tap a highlighted space.", pointsMin: "Pick up to {n}: tap a highlighted space.", card: "Pick a card.", cardOptional: "Pick a card, or skip.", option: "Choose.", ops: "Spend {ops} ops: how?",
-    place: "Fostering {ops} ops ({left} left). Lit spaces are fixed; 2 per point into enemy control.", campaign: "Raid with {ops} ops: tap a target.", lobby: "Lobby with {ops} ops: tap a target.",
+    // #109: shortened again -- #107's own shortening still ran 454px in a
+    // 339px box at 375 (354px at 390), both measured on the placement-time
+    // copy that lives on (a) #promptText at 13px in the normal case and
+    // (b) the compact sheet's `.sheet-title` at 12.5px whenever the map's
+    // own give-way (style.css's `#sheet.sheet-compact .sheet-title`, a
+    // deliberate single-line nowrap+ellipsis -- see its own comment) is
+    // active, which it is for nearly every real "Foster" pick at this
+    // width (a lit map plus the ops/order sheet already fills the budget).
+    // That single-line path can't wrap, so shortening (not wrapping) is
+    // the fix here -- measured (canvas-metrics, same font/weight) at
+    // 258.5px/248.5px (13px/12.5px) with single-digit {ops}/{left}, comfortably
+    // under even the 320-wide case's 284px box, not just 375/390's wider ones.
+    place: "Foster {ops} ({left} left): fixed spaces, 2/pt enemy.", campaign: "Raid with {ops} ops: tap a target.", lobby: "Lobby with {ops} ops: tap a target.",
     over: "Game over.",
     // #97: always on, independent of the advisor -- shown once the actions
     // left this round are at most the scoring cards still in hand.
