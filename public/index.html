@@ -3,12 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="robots" content="noindex">
-<title>Zongheng 縱橫</title>
+<!-- #108: was noindex while the game was unlisted. This is the landing page,
+     the one page with unique content worth ranking -- play.html (a room / a
+     live game state) and vp.html (a throwaway measuring page) keep noindex. -->
+<title>Zongheng 縱橫 — a two-player Warring States card-driven strategy game</title>
 <meta name="description" content="縱橫 Zongheng: a two-player Warring States card-driven strategy game, Qin against Chu. Solo against a bot, or a room with a friend.">
 <link rel="canonical" href="https://games.csiesheep.com/zongheng/">
+<!-- Each language version names every version, itself included -- same
+     scheme as the hub (games/index.html). /?lang=zh-Hant is the same file,
+     served with its head rewritten server-side; see toChinese in
+     src/index.js. -->
+<link rel="alternate" hreflang="en" href="https://games.csiesheep.com/zongheng/">
+<link rel="alternate" hreflang="zh-Hant" href="https://games.csiesheep.com/zongheng/?lang=zh-Hant">
+<link rel="alternate" hreflang="x-default" href="https://games.csiesheep.com/zongheng/">
 <meta name="theme-color" content="#0c0b0a">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Zongheng 縱橫 — a two-player Warring States card-driven strategy game">
+<meta property="og:description" content="縱橫 Zongheng: a two-player Warring States card-driven strategy game, Qin against Chu. Solo against a bot, or a room with a friend.">
+<meta property="og:url" content="https://games.csiesheep.com/zongheng/">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="zh_TW">
+<meta property="og:image" content="https://games.csiesheep.com/zongheng/art/og-zongheng.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Zongheng 縱橫: bronze tiger tallies for Qin facing a red phoenix for Chu.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Zongheng 縱橫 — a two-player Warring States card-driven strategy game">
+<meta name="twitter:description" content="縱橫 Zongheng: a two-player Warring States card-driven strategy game, Qin against Chu. Solo against a bot, or a room with a friend.">
+<meta name="twitter:image" content="https://games.csiesheep.com/zongheng/art/og-zongheng.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;700;900&display=swap">
@@ -16,6 +41,22 @@
 <link rel="stylesheet" href="landing-desktop.css">
 <link rel="stylesheet" href="ui-states.css">
 <link rel="stylesheet" href="opening.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Zongheng 縱橫",
+  "alternateName": "縱橫 Zongheng",
+  "description": "A two-player Warring States card-driven strategy game, Qin against Chu, solo against a bot or in an online room. 戰國時期兩人對戰的卡牌策略遊戲,秦對楚,單人對戰機器人或開房間與朋友對戰。",
+  "url": "https://games.csiesheep.com/zongheng/",
+  "image": "https://games.csiesheep.com/zongheng/art/og-zongheng.jpg",
+  "gamePlatform": "Web browser",
+  "playMode": ["SinglePlayer", "MultiPlayer"],
+  "applicationCategory": "Game",
+  "isAccessibleForFree": true,
+  "author": { "@type": "Person", "name": "csiesheep" }
+}
+</script>
 </head>
 <body class="landing-body">
 <div class="desktop-frame" aria-hidden="true">
