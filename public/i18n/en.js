@@ -141,14 +141,18 @@ export default {
   over: {
     winner: "{side} wins", mandate: "Final Mandate",
     reasons: {
-      unification: { title: "Qin unites the realm", body: "Three states destroyed: the map answers to Qin alone.", win: "You win. The realm is united under Qin.", lose: "You lose. Qin unites the realm." },
-      alliance: { title: "The Vertical holds", body: "Four seals held: Qin cannot break what is bound together.", win: "You win. The Vertical holds.", lose: "You lose. The Vertical holds against you." },
-      mandate: { title: "{winner} carries the Mandate", body: "The Mandate reached twenty: the realm has decided for {winner}.", win: "You win. The Mandate is yours.", lose: "You lose. The Mandate turned to {winner}." },
-      collapse: { title: "The realm gives out on {loser}", body: "Weariness ran out before {winner} had to spend the last of it.", win: "You win. The realm gave out under them first.", lose: "You lose. The realm gave out under you first." },
-      scoring: { title: "A card left in hand", body: "A scoring card was still in hand when the turn ended; the tally falls to {winner}.", win: "You win. They were still holding a scoring card.", lose: "You lose. The scoring card was still in your hand." },
-      scoringBoth: { title: "Both still holding", body: "Both sides were still holding a scoring card; the tally falls to {winner} regardless.", win: "You win. Both of you were still holding a scoring card, and the tally favours you.", lose: "You lose. Both of you were still holding a scoring card, and the tally favours {winner}." },
-      final: { title: "The tally closes", body: "Turn eight closed with the Mandate favouring {winner}.", win: "You win. The Mandate favoured you at the end.", lose: "You lose. The Mandate favoured {winner} at the end." },
-      tie: { title: "Level Mandate, {winner}'s tie", body: "The Mandate was level; the tie rule favours {winner}.", win: "You win. The Mandate was level, and the tie favours you.", lose: "You lose. The Mandate was level, and the tie favours {winner}." },
+      // #113: `watch` is the spectator's own third line -- never "you", read
+      // by nobody's seat. Kept as its own key rather than reused from
+      // `win`/`lose` (per the issue) so a seated player's text can keep
+      // saying "you" without a spectator ever hearing it.
+      unification: { title: "Qin unites the realm", body: "Three states destroyed: the map answers to Qin alone.", win: "You win. The realm is united under Qin.", lose: "You lose. Qin unites the realm.", watch: "Qin unites the realm." },
+      alliance: { title: "The Vertical holds", body: "Four seals held: Qin cannot break what is bound together.", win: "You win. The Vertical holds.", lose: "You lose. The Vertical holds against you.", watch: "Chu's alliance holds." },
+      mandate: { title: "{winner} carries the Mandate", body: "The Mandate reached twenty: the realm has decided for {winner}.", win: "You win. The Mandate is yours.", lose: "You lose. The Mandate turned to {winner}.", watch: "{winner} carries the Mandate." },
+      collapse: { title: "The realm gives out on {loser}", body: "Weariness ran out before {winner} had to spend the last of it.", win: "You win. The realm gave out under them first.", lose: "You lose. The realm gave out under you first.", watch: "The realm gives out on {loser} first." },
+      scoring: { title: "A card left in hand", body: "A scoring card was still in hand when the turn ended; the tally falls to {winner}.", win: "You win. They were still holding a scoring card.", lose: "You lose. The scoring card was still in your hand.", watch: "{loser} was still holding a scoring card." },
+      scoringBoth: { title: "Both still holding", body: "Both sides were still holding a scoring card; the tally falls to {winner} regardless.", win: "You win. Both of you were still holding a scoring card, and the tally favours you.", lose: "You lose. Both of you were still holding a scoring card, and the tally favours {winner}.", watch: "Both sides were still holding a scoring card; the tally favours {winner}." },
+      final: { title: "The tally closes", body: "Turn eight closed with the Mandate favouring {winner}.", win: "You win. The Mandate favoured you at the end.", lose: "You lose. The Mandate favoured {winner} at the end.", watch: "The Mandate favoured {winner} at the end." },
+      tie: { title: "Level Mandate, {winner}'s tie", body: "The Mandate was level; the tie rule favours {winner}.", win: "You win. The Mandate was level, and the tie favours you.", lose: "You lose. The Mandate was level, and the tie favours {winner}.", watch: "The Mandate was level, and the tie favours {winner}." },
     },
   },
   log: {
