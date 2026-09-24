@@ -143,12 +143,27 @@ function paintBody(view) {
   if (view === "setup") document.body.classList.add("setup-" + setup.side);
   else if ((view === "table" || view === "over") && !game.spectator) document.body.classList.add(game.me === 0 ? "side-qin" : "side-chu");
 }
+// #111: the funnel GA needs (landing -> setup -> table -> end) is invisible
+// to a default pageview install, since this whole app is one document that
+// never navigates once play.html has loaded. Fire one custom event per
+// funnel step, on the view actually changing (not on every show() call for
+// a view already showing -- botLoop() and friends call show("table") again
+// mid-game). No room code, name or save contents in the payload: just which
+// screen. "over" is named "end" to match the brief's own funnel names.
+const VIEW_EVENT = { setup: "view_setup", table: "view_table", over: "view_end" };
+function trackView(view) {
+  const name = VIEW_EVENT[view];
+  if (!name || typeof gtag !== "function") return;
+  gtag("event", name);
+}
 function show(view) {
   for (const v of ["setup", "lobby", "table", "over"]) $(v).hidden = v !== view;
   window.scrollTo(0, 0);
+  const prevView = document.body.dataset.view;
   // Desktop-only (see desktop.css, #7): which backdrop/frame the page-card
   // shell gets follows the active view. Mobile never reads this attribute.
   document.body.dataset.view = view;
+  if (view !== prevView) trackView(view);
   paintBody(view);
   // The table is a fixed one-screen layout (header -> mandate -> map ->
   // stat line -> prompt -> hand): it never scrolls, on 375x667 or 390x844,
