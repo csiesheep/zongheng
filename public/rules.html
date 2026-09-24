@@ -13,7 +13,17 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'G-Q4VS3P3T58');
+  // #111: same allow-list guard as index.html/play.html. rules.html's own
+  // query params (lang, from) are never player-identifying, but the point
+  // of an allow-list is that nothing else gets through even if that changes.
+  gtag('config', 'G-Q4VS3P3T58', { page_location: (function () {
+    var ALLOW = ["lang", "from"];
+    var u = new URL(location.href);
+    var kept = new URLSearchParams();
+    ALLOW.forEach(function (k) { if (u.searchParams.has(k)) kept.set(k, u.searchParams.get(k)); });
+    var qs = kept.toString();
+    return u.origin + u.pathname + (qs ? "?" + qs : "");
+  })() });
 </script>
 <title>Zongheng 縱橫 rules — how to play the two-player card game</title>
 <meta name="description" content="The full rules for Zongheng 縱橫 and all 72 cards: a two-player Warring States card-driven strategy game, Qin against Chu.">

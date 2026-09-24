@@ -16,6 +16,7 @@ import CARD_EN from "./i18n/cards.en.js";
 import { mountAdvisorToggle, decorate as decorateAdvisor } from "./advisor-ui.js";
 import * as Tut from "./tutorial-ui.js";
 import { renderCardView, historyBox } from "./card-view.js";
+import { sanitizeGaLocation } from "./ga-safe-location.js";
 import {
   DESIGN_W, DESIGN_H, NODE_POS, nodeCenter, regionMembers, isCapital,
   renderRegionBlobs, renderRoads, REGION_LABEL_POS,
@@ -154,7 +155,10 @@ const VIEW_EVENT = { setup: "view_setup", table: "view_table", over: "view_end" 
 function trackView(view) {
   const name = VIEW_EVENT[view];
   if (!name || typeof gtag !== "function") return;
-  gtag("event", name);
+  // document.title is always one of the two fixed "Zongheng 縱橫"/"縱橫
+  // Zongheng" strings (see setLang() above) -- never a room code or a
+  // player's name -- so it needs no sanitizing, just stating here.
+  gtag("event", name, { page_location: sanitizeGaLocation(location.href), page_title: document.title });
 }
 function show(view) {
   for (const v of ["setup", "lobby", "table", "over"]) $(v).hidden = v !== view;

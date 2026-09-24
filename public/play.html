@@ -9,7 +9,18 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'G-Q4VS3P3T58');
+  // #111 (orchestrator, room-code leak): this page's own URL can carry a
+  // room code -- on load (?room=CODE, a shared link) and later, when
+  // app.js's onRoomMsg() calls history.replaceState(null, "", `?room=...`)
+  // after a room is created, without a reload. GA4's default automatic
+  // page_view fires on load with page_location = location.href verbatim, so
+  // either moment can send the code to Google. There is no page_location
+  // override safe enough for the SECOND one (a config-time value can't
+  // un-see a URL that changes after it ran), so the automatic page_view is
+  // switched off entirely: app.js sends its own view_setup/view_table/
+  // view_end events instead (trackView() in app.js), each stamped with a
+  // page_location built from an allow-list, never the raw URL.
+  gtag('config', 'G-Q4VS3P3T58', { send_page_view: false });
 </script>
 <meta name="robots" content="noindex">
 <title>Zongheng 縱橫 · the table</title>
