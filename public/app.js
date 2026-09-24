@@ -2865,6 +2865,12 @@ function renderOver() {
   const lost = !game.spectator && game.me !== winner;
   const loserSide = lost ? game.me : null;
   const p = { winner: sideName(winner), loser: sideName(1 - winner) };
+  // #113: a spectator never reads "you" -- lost/win decide a SEATED player's
+  // wording only (and still drive the art/glyph/colour below, unchanged: a
+  // spectator sees exactly the winner's page, per the issue). The line of
+  // text itself gets a third variant, `watch`, added to both i18n files
+  // rather than reused from win/lose (see #113's own comment there).
+  const outcome = lost ? "lose" : game.spectator ? "watch" : "win";
   $("overImg").src = lost ? `art/ui/lose_${E.SIDES[loserSide]}.jpg` : `art/ui/win_${E.SIDES[winner]}.jpg`;
   // Neither page uses the greyscale filter any more: it existed only because
   // the loser used to see the WINNER's own picture, unweathered, and needed
@@ -2880,7 +2886,7 @@ function renderOver() {
     $("overGlyph").classList.toggle("glyph-qin", winner === E.QIN);
   }
   $("overReasonTitle").textContent = t(`over.reasons.${st.reason}.title`, p);
-  $("overLine").textContent = t(`over.reasons.${st.reason}.${lost ? "lose" : "win"}`, p);
+  $("overLine").textContent = t(`over.reasons.${st.reason}.${outcome}`, p);
   $("overBody").textContent = t(`over.reasons.${st.reason}.body`, p);
   $("overStatTurnLabel").textContent = t("tracks.turn");
   $("overStatTurn").textContent = st.turn;

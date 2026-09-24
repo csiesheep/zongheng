@@ -107,14 +107,17 @@ export default {
   over: {
     winner: "{side}獲勝", mandate: "終局天命",
     reasons: {
-      unification: { title: "秦并天下", body: "三國盡滅,天下再無缺口歸秦。", win: "你贏了。天下已歸秦所有。", lose: "你輸了。秦并天下。" },
-      alliance: { title: "合縱成", body: "四方相印盡合,秦再無可乘之隙。", win: "你贏了。合縱已成。", lose: "你輸了。合縱已成,你被困其中。" },
-      mandate: { title: "天命歸{winner}", body: "天命積滿二十,天下已為{winner}所決。", win: "你贏了。天命在你。", lose: "你輸了。天命歸於{winner}。" },
-      collapse: { title: "天下先向{loser}崩", body: "疲敝先耗盡,{winner}未耗盡自己的氣力。", win: "你贏了。對手先撐不住。", lose: "你輸了。你先撐不住。" },
-      scoring: { title: "記分未清", body: "回合結束時記分卡仍在手上,結算歸於{winner}。", win: "你贏了。對手手上還握著記分卡。", lose: "你輸了。記分卡還留在你手上。" },
-      scoringBoth: { title: "記分兩不清", body: "雙方回合結束時都還握著記分卡,結算仍歸{winner}。", win: "你贏了。雙方都還握著記分卡,結算仍算你贏。", lose: "你輸了。雙方都還握著記分卡,結算算你輸。" },
-      final: { title: "終局論定", body: "第八回合終了,天命偏向{winner}。", win: "你贏了。終局時天命在你這邊。", lose: "你輸了。終局時天命偏向{winner}。" },
-      tie: { title: "天命持平,歸{winner}", body: "天命持平,依規則判給{winner}。", win: "你贏了。天命持平,依規則判你勝。", lose: "你輸了。天命持平,依規則判{winner}勝。" },
+      // #113:watch 是給旁觀者看的第三句——永遠不用「你」,誰的座位都不是。
+      // 獨立一個 key,不共用 win/lose(照 issue 的要求),這樣入座玩家的文字
+      // 還是可以說「你」,旁觀者永遠聽不到。
+      unification: { title: "秦并天下", body: "三國盡滅,天下再無缺口歸秦。", win: "你贏了。天下已歸秦所有。", lose: "你輸了。秦并天下。", watch: "秦統一天下。" },
+      alliance: { title: "合縱成", body: "四方相印盡合,秦再無可乘之隙。", win: "你贏了。合縱已成。", lose: "你輸了。合縱已成,你被困其中。", watch: "楚合縱成功。" },
+      mandate: { title: "天命歸{winner}", body: "天命積滿二十,天下已為{winner}所決。", win: "你贏了。天命在你。", lose: "你輸了。天命歸於{winner}。", watch: "天命歸於{winner}。" },
+      collapse: { title: "天下先向{loser}崩", body: "疲敝先耗盡,{winner}未耗盡自己的氣力。", win: "你贏了。對手先撐不住。", lose: "你輸了。你先撐不住。", watch: "天下先向{loser}崩潰。" },
+      scoring: { title: "記分未清", body: "回合結束時記分卡仍在手上,結算歸於{winner}。", win: "你贏了。對手手上還握著記分卡。", lose: "你輸了。記分卡還留在你手上。", watch: "{loser}手上還握著記分卡。" },
+      scoringBoth: { title: "記分兩不清", body: "雙方回合結束時都還握著記分卡,結算仍歸{winner}。", win: "你贏了。雙方都還握著記分卡,結算仍算你贏。", lose: "你輸了。雙方都還握著記分卡,結算算你輸。", watch: "雙方都還握著記分卡,結算歸{winner}。" },
+      final: { title: "終局論定", body: "第八回合終了,天命偏向{winner}。", win: "你贏了。終局時天命在你這邊。", lose: "你輸了。終局時天命偏向{winner}。", watch: "終局時天命偏向{winner}。" },
+      tie: { title: "天命持平,歸{winner}", body: "天命持平,依規則判給{winner}。", win: "你贏了。天命持平,依規則判你勝。", lose: "你輸了。天命持平,依規則判{winner}勝。", watch: "天命持平,依規則判{winner}勝。" },
     },
   },
   log: {
