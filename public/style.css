@@ -1530,11 +1530,34 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    than shrinking the map or the map's own chrome further. Not the "don't
    cut a sentence" rule #18 set for the advisor's OWN text (a different,
    narrower promise about its reasoning line) — this is the same kind of
-   graceful degradation .statline's own cauldrons value already uses. */
-#sheet.sheet-compact .sheet-title {
+   graceful degradation .statline's own cauldrons value already uses.
+   #110: this used to target `.sheet-title` itself, which also clipped the
+   #97 scoring warning (`.prompt-warn`, always the title's own first child
+   when present) whenever it and the state's own sentence together ran long
+   -- a warning that can lose the game must never be the thing that gets
+   cut. setPrompt() now wraps everything BUT the warning in its own
+   `.sheet-rest` child (roundWarn stays a direct, unclipped child of
+   `.sheet-title`), so only that supplementary part keeps the one-line
+   ellipsis treatment described above. */
+#sheet.sheet-compact .sheet-rest {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* #110: the #97 warning, when the compact chip has to show it as this
+   fallback title (layoutTable() reveals `.sheet-title` only once #prompt
+   itself has already given way), gets its own line(s) instead of sharing
+   `.sheet-rest`'s single clipped line -- "a warning that can lose the game
+   is never truncated" (the rule the checker filed this against). It wraps
+   normally rather than inheriting `.sheet-title`'s own nowrap, so a long
+   warning (either language, en's is the longer one) grows the title
+   downward -- same give-way budget every other compact row already lives
+   inside -- rather than being cut off unseen. */
+#sheet.sheet-compact .sheet-title > .prompt-warn {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  margin-bottom: 2px;
 }
 /* An enemy card's compact chip can stack the order/pair summary AND a
    target's own preview note (round 2: "Campaign with 3 ops" + "Spend the
