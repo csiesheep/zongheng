@@ -3,23 +3,30 @@
 // (index.html, play.html, rules.html) -- vp.html is a throwaway measuring
 // page and stays out on purpose (see the #111 brief).
 //
-// Sent back once already: the first pass let GA4's automatic page_view send
-// document.location.href verbatim, and play.html?room=CODE is a real,
-// shareable URL, so the room code reached Google. The fix is an allow-list
-// (public/ga-safe-location.js's sanitizeGaLocation) applied to page_location
-// on every hit -- config-time for index.html/rules.html, event-time for
-// play.html's own view_setup/view_table/view_end (whose page_location can't
-// be fixed at config time, since onRoomMsg() rewrites the address bar to
-// ?room=CODE with history.replaceState well after that config call ran, see
-// app.js). play.html's own automatic page_view is switched off outright
-// (send_page_view: false) since no page_location override, config-time or
-// not, can un-see a URL that changes after it fires.
+// Sent back twice already.
+//
+// 1st bounce: GA4's automatic page_view sent document.location.href
+// verbatim, and play.html?room=CODE is a real, shareable URL, so the room
+// code reached Google. Answered with an allow-list (ga-safe-location.js's
+// sanitizeGaLocation) applied to page_location on every hit.
+//
+// 2nd bounce: that wasn't enough. GA4 Enhanced Measurement's own listeners
+// (scroll, form_start, and page_view triggered by a history.replaceState
+// call -- onRoomMsg() used to rewrite the address bar to ?room=CODE once a
+// room was joined) read location.href directly; no page_location parameter
+// on any gtag() call reaches them. The only fix that holds is keeping the
+// room code out of the address bar completely: play.html's own inline
+// <head> script (before the gtag tag, before app.js) moves a shared link's
+// ?room=CODE into sessionStorage and cleans the URL; onRoomMsg() no longer
+// writes it back. sanitizeGaLocation stays on as a second line of defence
+// for the hits this app does send on purpose (the view_* funnel events).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { sanitizeGaLocation, GA_SAFE_PARAMS } from "../public/ga-safe-location.js";
+import { stripRoomFromUrl, buildRoomShareUrl, readAndConsume } from "../public/room-url.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const GTAG_SRC = /<script[^>]*async[^>]*src="https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=G-Q4VS3P3T58"[^>]*><\/script>/;
@@ -91,4 +98,68 @@ test("sanitizeGaLocation: an allow-list, not a strip-list -- room and any unlist
 test("GA_SAFE_PARAMS itself never includes room or name", () => {
   assert.ok(!GA_SAFE_PARAMS.includes("room"));
   assert.ok(!GA_SAFE_PARAMS.includes("name"));
+});
+
+// ---------- 2nd bounce: the room code must never reach the address bar ----------
+
+test("stripRoomFromUrl: pulls ?room= out, keeps everything else (other params, hash)", () => {
+  assert.deepEqual(
+    stripRoomFromUrl("https://games.csiesheep.com/zongheng/play.html?room=SECRET7"),
+    { code: "SECRET7", cleanUrl: "https://games.csiesheep.com/zongheng/play.html" },
+  );
+  assert.deepEqual(
+    stripRoomFromUrl("https://games.csiesheep.com/zongheng/play.html?create=1&room=secret7&side=qin"),
+    { code: "SECRET7", cleanUrl: "https://games.csiesheep.com/zongheng/play.html?create=1&side=qin" },
+  );
+  assert.deepEqual(
+    stripRoomFromUrl("https://x.example/play.html?room=ABCD#lobby"),
+    { code: "ABCD", cleanUrl: "https://x.example/play.html#lobby" },
+  );
+});
+
+test("stripRoomFromUrl: a URL with no room param is returned unchanged", () => {
+  const href = "https://games.csiesheep.com/zongheng/play.html?play&side=qin";
+  assert.deepEqual(stripRoomFromUrl(href), { code: null, cleanUrl: href });
+});
+
+test("buildRoomShareUrl: the share link is built from the code in state, nothing else", () => {
+  assert.equal(
+    buildRoomShareUrl("https://games.csiesheep.com", "/zongheng/play.html", "ABCD"),
+    "https://games.csiesheep.com/zongheng/play.html?room=ABCD",
+  );
+});
+
+test("readAndConsume: a sessionStorage round trip that only ever fires once", () => {
+  const store = new Map();
+  const storage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, v),
+    removeItem: (k) => store.delete(k),
+  };
+  storage.setItem("zh.joinRoom", "SECRET7");
+  assert.equal(readAndConsume(storage, "zh.joinRoom"), "SECRET7");
+  // consumed: reading again (e.g. some other code path booting later, or a
+  // second call by mistake) must not still find it and silently rejoin.
+  assert.equal(readAndConsume(storage, "zh.joinRoom"), null);
+});
+
+test("readAndConsume: a key that was never set returns null and touches nothing", () => {
+  const storage = { getItem: () => null, setItem: () => { throw new Error("must not write"); }, removeItem: () => { throw new Error("must not remove"); } };
+  assert.equal(readAndConsume(storage, "zh.joinRoom"), null);
+});
+
+test("play.html's own inline <head> script strips ?room= before the gtag tag loads", () => {
+  const html = readFileSync(path.join(here, "../public/play.html"), "utf8");
+  const gtagIdx = html.indexOf("googletagmanager.com");
+  const stripIdx = html.indexOf('sessionStorage.setItem("zh.joinRoom"');
+  assert.ok(stripIdx !== -1, "play.html must strip the room code into sessionStorage before anything else");
+  assert.ok(stripIdx < gtagIdx, "the room-code stripping script must come before the gtag tag in document order");
+  assert.match(html, /u\.searchParams\.delete\("room"\)/, "must actually remove ?room= from the URL object");
+  assert.match(html, /history\.replaceState\(/, "must rewrite the address bar, not just read it");
+});
+
+test("app.js's onRoomMsg no longer writes the room code back into the address bar", () => {
+  const js = readFileSync(path.join(here, "../public/app.js"), "utf8");
+  assert.doesNotMatch(js, /history\.replaceState\([^)]*room/i, "no history.replaceState call may reference a room code");
+  assert.match(js, /buildRoomShareUrl\(/, "the copy-link button must build its URL from state, via room-url.js");
 });

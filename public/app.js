@@ -17,6 +17,7 @@ import { mountAdvisorToggle, decorate as decorateAdvisor } from "./advisor-ui.js
 import * as Tut from "./tutorial-ui.js";
 import { renderCardView, historyBox } from "./card-view.js";
 import { sanitizeGaLocation } from "./ga-safe-location.js";
+import { buildRoomShareUrl, readAndConsume } from "./room-url.js";
 import {
   DESIGN_W, DESIGN_H, NODE_POS, nodeCenter, regionMembers, isCapital,
   renderRegionBlobs, renderRoads, REGION_LABEL_POS,
@@ -2978,7 +2979,13 @@ function onRoomMsg(m) {
       room.code = m.code; room.me = m.side; room.token = m.token;
       if (m.token) { sess.set("zh.token." + m.code, m.token); sess.set("zh.lastRoom", m.code); }
       game.spectator = m.side == null; game.me = m.side ?? 0;
-      history.replaceState(null, "", `?room=${m.code}`);
+      // #111: this used to rewrite the address bar to show the code here,
+      // via the History API -- GA4's Enhanced Measurement fires its own
+      // automatic page_view off any history change, reading location.href
+      // itself, so that call was sending the code to Google no matter what
+      // our own gtag() calls did. The code lives in room.code (state) and
+      // sessionStorage's zh.lastRoom (so a refresh still finds the room);
+      // the address bar keeps whatever clean URL it already had.
       break;
     case "lobby":
       room.phase = m.phase; room.seats = m.seats; room.settings = m.settings;
@@ -3046,7 +3053,9 @@ function renderLobbyChat() {
 }
 let lobbyCopyTimer = 0;
 $("lobbyCopy").onclick = async () => {
-  const url = `${location.origin}${location.pathname}?room=${room.code}`;
+  // #111: built from room.code (state), never from the address bar -- the
+  // address bar no longer carries the code at all, on purpose.
+  const url = buildRoomShareUrl(location.origin, location.pathname, room.code);
   try { await navigator.clipboard.writeText(url); } catch { return; }
   const btn = $("lobbyCopy");
   const original = btn.textContent;
@@ -3212,14 +3221,29 @@ if (params.has("tutorial")) {
   Tut.start({ E, t, game, freshUi, render, show, layoutTable, $, esc, getLang: () => lang });
 } else if (params.has("resume") && loadSolo()) resumeSolo();
 else if (params.get("create") === "1") maybeConnect({ create: "1" });
-else if (params.get("room")) { const code = params.get("room").toUpperCase(); maybeConnect({ room: code, token: sess.get("zh.token." + code) || "" }); }
 else {
-  // The landing's Qin/Chu/Random taps preselect a side and land here; the
-  // level (bot strength) is still picked on this screen.
-  const side = params.get("side");
-  if (side === "qin" || side === "chu" || side === "random") { setup.side = side; store.set("zh.side", side); }
-  renderSetup();
-  show("setup");
+  // #111: a room's code never lives in the URL any more (this page's own
+  // inline <head> script already moved a shared link's ?room=CODE into
+  // sessionStorage's zh.joinRoom and cleaned the address bar, before this
+  // module -- or the GA tag -- ever loaded; see room-url.js). zh.joinRoom
+  // is read once here and forgotten, so leaving and coming back to this
+  // page some other way doesn't silently rejoin. zh.lastRoom (set once a
+  // "joined" message actually confirms the seat, in onRoomMsg above) is
+  // what makes a mid-room refresh land back in the same room.
+  let linkRoom = null;
+  try { linkRoom = readAndConsume(sessionStorage, "zh.joinRoom"); } catch {}
+  const resumeRoom = linkRoom || sess.get("zh.lastRoom");
+  if (resumeRoom) {
+    const code = resumeRoom.toUpperCase();
+    maybeConnect({ room: code, token: sess.get("zh.token." + code) || "" });
+  } else {
+    // The landing's Qin/Chu/Random taps preselect a side and land here;
+    // the level (bot strength) is still picked on this screen.
+    const side = params.get("side");
+    if (side === "qin" || side === "chu" || side === "random") { setup.side = side; store.set("zh.side", side); }
+    renderSetup();
+    show("setup");
+  }
 }
 // #24 round 2, fix #5: the very first paint into the table view can land
 // before the webfonts finish loading — a fallback font's metrics measured

@@ -3,23 +3,48 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- #111 (orchestrator, 3rd bounce): GA4 Enhanced Measurement's own
+     listeners (scroll, form_start, and page_view triggered by a
+     history.replaceState call) read location.href themselves -- no
+     page_location parameter on any gtag() call reaches them, so the only
+     fix that actually holds is keeping the room code out of the address bar
+     completely, before anything below (the gtag tag included) has a chance
+     to load. Runs synchronously, first thing in <head>, the same way the
+     hub's own language bootstrap runs before first paint. This is
+     stripRoomFromUrl()'s logic, duplicated here on purpose: a classic
+     script this early can't import app.js's ES module (and shouldn't --
+     app.js does a lot more than this on import). Kept in sync with
+     public/room-url.js, which is what app.js and the tests actually use. -->
+<script>
+  (function () {
+    try {
+      var u = new URL(location.href);
+      var code = u.searchParams.get("room");
+      if (code) {
+        sessionStorage.setItem("zh.joinRoom", code.toUpperCase());
+        u.searchParams.delete("room");
+        history.replaceState(null, "", u.pathname + u.search + u.hash);
+      }
+    } catch (e) {}
+  })();
+</script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q4VS3P3T58"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  // #111 (orchestrator, room-code leak): this page's own URL can carry a
-  // room code -- on load (?room=CODE, a shared link) and later, when
-  // app.js's onRoomMsg() calls history.replaceState(null, "", `?room=...`)
-  // after a room is created, without a reload. GA4's default automatic
-  // page_view fires on load with page_location = location.href verbatim, so
-  // either moment can send the code to Google. There is no page_location
-  // override safe enough for the SECOND one (a config-time value can't
-  // un-see a URL that changes after it ran), so the automatic page_view is
-  // switched off entirely: app.js sends its own view_setup/view_table/
+  // #111 (orchestrator, room-code leak): this page's own URL used to be
+  // able to carry a room code (a shared link's ?room=CODE, or later via
+  // onRoomMsg()'s own history.replaceState after a room was created) --
+  // GA4's default automatic page_view sends page_location = location.href
+  // verbatim, so either moment could send the code to Google. Both are
+  // closed now (the inline script above strips ?room= before this tag even
+  // loads; onRoomMsg() no longer writes it back), but automatic page_view
+  // stays off regardless -- app.js sends its own view_setup/view_table/
   // view_end events instead (trackView() in app.js), each stamped with a
-  // page_location built from an allow-list, never the raw URL.
+  // page_location built from an allow-list (public/ga-safe-location.js) as
+  // a second line of defence, never the raw URL.
   gtag('config', 'G-Q4VS3P3T58', { send_page_view: false });
 </script>
 <meta name="robots" content="noindex">
