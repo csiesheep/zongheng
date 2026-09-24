@@ -3,6 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Q4VS3P3T58"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  // #111 (orchestrator, room-code leak found on play.html): page_location
+  // defaults to document.location.href verbatim. The landing page never
+  // carries a room code itself, but this is an allow-list on principle --
+  // only params named here reach Google, so a future one can't leak by just
+  // existing. Keep the list in sync with GA_SAFE_PARAMS in app.js (this runs
+  // as a classic script before app.js, a module, so it can't import it).
+  gtag('config', 'G-Q4VS3P3T58', { page_location: (function () {
+    var ALLOW = ["lang"];
+    var u = new URL(location.href);
+    var kept = new URLSearchParams();
+    ALLOW.forEach(function (k) { if (u.searchParams.has(k)) kept.set(k, u.searchParams.get(k)); });
+    var qs = kept.toString();
+    return u.origin + u.pathname + (qs ? "?" + qs : "");
+  })() });
+</script>
 <!-- #108: was noindex while the game was unlisted. This is the landing page,
      the one page with unique content worth ranking -- play.html (a room / a
      live game state) and vp.html (a throwaway measuring page) keep noindex. -->
