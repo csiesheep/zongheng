@@ -576,7 +576,15 @@ function startTurn(st) {
 // (#57), flagged to the owner. Before this the phase simply never ended, for
 // anyone: `legal()` answered `{ kind: "headline", cards: [] }` for ever and
 // `mustAct` kept naming a side that could do nothing.
-function needsHeadline(st, side) { return st.headline[side] == null && st.hands[side].length > 0; }
+// #112: this also runs on a per-seat view, where the hand you may not see is
+// `null` and its size lives in `handCounts` (`view` below; bots.js reads the
+// same channel to rebuild a hidden hand). Every room client calls `mustAct` on
+// a view once a second, so reading `hands[side].length` here threw a TypeError
+// every second of every headline phase, for both seats and for a spectator.
+// The count answers the same question without showing a card: hiding a hand
+// must neither invent a headline nor lose one.
+function handSize(st, side) { const h = st.hands[side]; return h ? h.length : st.handCounts[side]; }
+function needsHeadline(st, side) { return st.headline[side] == null && handSize(st, side) > 0; }
 
 function resolveHeadlines(st) {
   const played = [QIN, CHU].filter((s) => st.headline[s] != null);
