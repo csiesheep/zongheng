@@ -1935,7 +1935,15 @@ function renderPromptAndSheet(v) {
     if (compactHint) p.insertAdjacentHTML("beforeend", `<div class="prompt-note">${esc(compactHint)}</div>`);
     let titleEl = sh.querySelector(".sheet-title");
     if (!titleEl) { titleEl = document.createElement("div"); titleEl.className = "sheet-title"; titleEl.hidden = true; sh.insertBefore(titleEl, sh.firstChild); }
-    titleEl.innerHTML = roundWarn + html + err;
+    // #110: roundWarn used to share the compact form's single nowrap/ellipsis
+    // line with the state's own sentence (`html`) -- a scoring warning that
+    // can lose the game must never be the part that gets clipped, so it's no
+    // longer inside the same clipped box. `html`+`err` (the give-way-first
+    // half, same clipping style.css already applied to the whole title for
+    // the enemy order/pair summary case) move into their own `.sheet-rest`
+    // wrapper; roundWarn stays a direct child of `.sheet-title` so the
+    // compact-form CSS can let it wrap onto its own line(s) instead.
+    titleEl.innerHTML = roundWarn + (html || err ? `<div class="sheet-rest">${html}${err}</div>` : "");
   };
   if (v.winner != null) {
     setPrompt(`${t("prompt.over")} <b>${esc(t("over.winner", { side: sideName(v.winner) }))}</b> · ${esc(t("over.reasons." + v.reason))}`);
