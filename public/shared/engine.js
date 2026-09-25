@@ -927,7 +927,9 @@ function play(st, action) {
       steps.push({ do: "finishCard", card: c, side, triggered: enemy }, { do: "endAction" });
     }
   } else fail(`play: bad use ${use}`);
-  log(st, { type: "play", side, card: c, use });
+  // 說客's pair is named (#115): its ops are the move's ops and it goes to the
+  // discard pile, so a log without it read as 說客 played alone.
+  log(st, { type: "play", side, card: c, use, ...(c === "shuoke" && action.pair ? { pair: action.pair } : {}) });
   st.plan.unshift(...steps);
   return run(st);
 }
