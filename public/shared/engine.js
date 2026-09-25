@@ -476,15 +476,26 @@ function exec(st, step) {
     case "headline": return resolveHeadlines(st), true;
     case "event": {
       st.phasing = step.by ?? step.side;
+      // #115: an event used to leave no trace of its own in the log -- an
+      // enemy card spent for ops showed its ops and nothing else, so an event
+      // the opponent resolved (or one with nothing to do) looked like one
+      // that never happened. `event` marks the start (before the effect's own
+      // entries: vp, tire, campaign, discard ...), `eventEnd` says whether it
+      // changed anything and, if not, why.
+      if (step.pre == null) {
+        step.pre = eventMark(st);
+        log(st, { type: "event", card: step.card, side: step.side, by: st.phasing });
+      }
       for (let guard = 0; guard < 20; guard++) {
         const need = CARD[step.card].effect(st, step.side, step.choices, step);
         if (!need) break;
         // A choice with nothing to choose from resolves itself as "nothing".
-        if ((need.kind === "points" || need.kind === "card") && (!need.options.length || need.n === 0) && !(need.min > 0)) { step.choices.push([]); continue; }
+        if ((need.kind === "points" || need.kind === "card") && (!need.options.length || need.n === 0) && !(need.min > 0)) { step.empty = true; step.choices.push([]); continue; }
         return ask(st, step, { ...need, tag: "event", card: step.card });
       }
       step.done = true;
       checkMarkers(st);
+      logEventEnd(st, step);
       return true;
     }
     case "score": return scoreRegion(st, step.region), true;
@@ -543,6 +554,56 @@ function exec(st, step) {
     }
     default: fail(`exec: unknown step ${step.do}`);
   }
+}
+
+// What an event can change, read before it runs and compared after (#115).
+// Only what both seats may see: it rides in the plan step, and `view` keeps
+// the plan, so a hand is its size and never its cards.
+function eventMark(st) {
+  return {
+    inf: clone(st.inf), mandate: st.mandate, weariness: st.weariness, reform: st.reform.slice(),
+    hands: [st.hands[QIN].length, st.hands[CHU].length], draw: st.draw.length, discard: st.discard.length, removed: st.removed.length,
+    effects: st.effects.map((e) => JSON.stringify(e)), seals: Object.keys(st.seals).sort(), mie: Object.keys(st.mie).sort(),
+    jiuding: clone(st.jiuding), revealed: st.revealed.slice(), forced: st.forced.slice(), luoyiYields: st.luoyiYields, winner: st.winner,
+  };
+}
+// `effect`: did the event change anything at all. When it did not, `why`:
+// "noTarget" -- a choice it needed had nothing to choose from (no space with
+// enemy influence, nothing in the region to hit, an empty discard pile ...);
+// "noChange" -- it ran, but the board came out as it went in (every space at
+// the cap, nothing left to remove, a track already full, a lasting effect
+// already in play). What it changed that no other entry reports rides along:
+// influence per space (`inf`: [space, Qin delta, Chu delta]), lasting effects
+// added and removed (`fx`), hand sizes (`hands`: [Qin delta, Chu delta]) and a
+// recovery of the weariness track (`recover`). Mandate, weariness lost,
+// reform, seals, 滅 and discards already log themselves.
+function logEventEnd(st, step) {
+  const a = step.pre, b = eventMark(st);
+  const inf = [];
+  for (const s of SPACES) {
+    const x = a.inf[s.id] || [0, 0], y = b.inf[s.id] || [0, 0];
+    if (x[0] !== y[0] || x[1] !== y[1]) inf.push([s.id, y[0] - x[0], y[1] - x[1]]);
+  }
+  const count = (arr) => arr.reduce((m, k) => ((m[k] = (m[k] || 0) + 1), m), {});
+  const ca = count(a.effects), cb = count(b.effects);
+  const fx = { add: [], rm: [] };
+  for (const k of new Set([...a.effects, ...b.effects])) {
+    const d = (cb[k] || 0) - (ca[k] || 0), card = JSON.parse(k).card;
+    for (let i = 0; i < d; i++) fx.add.push(card);
+    for (let i = 0; i < -d; i++) fx.rm.push(card);
+  }
+  // Influence by value (a space first touched shows up as [0, 0]), lasting
+  // effects as a set (函谷關天險 re-played is removed and pushed back: same set).
+  const rest = (m) => JSON.stringify({ ...m, inf: null, effects: m.effects.slice().sort() });
+  const effect = inf.length > 0 || rest(a) !== rest(b);
+  const entry = { type: "eventEnd", card: step.card, side: step.side, by: step.by ?? step.side, effect };
+  if (!effect) entry.why = step.empty ? "noTarget" : "noChange";
+  if (inf.length) entry.inf = inf;
+  if (fx.add.length || fx.rm.length) entry.fx = fx;
+  const dh = [b.hands[0] - a.hands[0], b.hands[1] - a.hands[1]];
+  if (dh[0] || dh[1]) entry.hands = dh;
+  if (b.weariness > a.weariness) entry.recover = b.weariness;
+  log(st, entry);
 }
 
 function startTurn(st) {
