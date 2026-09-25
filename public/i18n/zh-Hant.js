@@ -214,6 +214,16 @@ export default {
       campaignNoTarget: "用{card}奇襲。",
       lobby: "用{card}遊說{space}。",
       lobbyNoTarget: "用{card}遊說。",
+      // #117:說客搭配一張對手的牌時,建議要點名那張被搭配的牌——「用說客
+      // 單獨…」漏掉了整手棋真正的重點。只有 place/campaign/lobby 三種用法
+      // 會被搭配(shared/bots.js 的候選手只給這三種),事件/變法不需要
+      // *Paired 版本。
+      placePaired: "用{card}搭配「{pair}」,在{space}扶植。",
+      placePairedNoTarget: "用{card}搭配「{pair}」扶植。",
+      campaignPaired: "用{card}搭配「{pair}」奇襲{space}。",
+      campaignPairedNoTarget: "用{card}搭配「{pair}」奇襲。",
+      lobbyPaired: "用{card}搭配「{pair}」遊說{space}。",
+      lobbyPairedNoTarget: "用{card}搭配「{pair}」遊說。",
       reform: "用{card}變法。",
       score: "現在打出{card}。",
       bog: "棄掉{card}。",
@@ -285,9 +295,24 @@ export default {
     // chosen yet used to do nothing at all -- app.js's flashUseWarning()
     // shows this under the use row until a use is actually picked.
     pickUseFirst: "先選一個用法才能確認",
+    // #117:說客這張牌的搭配選擇——選一張手上對手陣營的牌一起打出,或明確
+    // 選不搭配。{enemy} 是對手陣營的名字(秦/楚),打楚的說客時填秦,反之
+    // 亦然。none/noEnemy/eventReason 是三種狀況各自的說明:選了不搭配、
+    // 手上沒有牌可搭、以及為什麼事件用法被關掉(說客單獨打出的 effect() 是
+    // 空的,見 shared/cards.js)。
+    shuoke: {
+      explain: "說客:選一張手上{enemy}的牌一起打出——用那張牌的行動點,它的事件不觸發,兩張都進棄牌堆。",
+      none: "不搭配,單獨打出",
+      noEnemy: "手上沒有{enemy}的牌:說客只能單獨打出,1 點行動點。",
+      eventReason: "說客單獨打出時,事件沒有效果。",
+    },
     hint: {
       own: "你自己的事件:打出就發生。",
       neutral: "中立牌:事件或行動點,二選一。",
+      // #117:說客是中立牌,但「事件或行動點二選一」對它是錯的——它真正的
+      // 玩法是搭配一張對手的牌,參見上面 shuoke.explain 那一行(牌頁裡搭配
+      // 選擇的正上方已經有那句完整說明,這裡只留一句短的分類提示)。
+      shuoke: "說客:搭配一張{enemy}的牌打出,用它的行動點。",
       enemy: "對手的牌:行動點照用,但事件也會發生;先後由你選。",
       score: "記分卡:本回合內一定要打出。",
       // #34:唯讀牌頁自己的一行說明(owner 授權文案);{side} 是打出/棄掉/

@@ -424,7 +424,12 @@ function bannerTitle(adv, meta, view) {
   // dangling "in ."/"在"; event/reform/score never had a {space} to begin
   // with, so they're untouched.
   const noTarget = !space && (use === "place" || use === "campaign" || use === "lobby");
-  let s = t(`advisor.suggestCard.${noTarget ? use + "NoTarget" : use}`, { card: cardName(adv.card), space });
+  // #117: 說客 paired with an enemy card gets its own key (advisor.suggestCard.
+  // <use>Paired[NoTarget]) so the banner names the paired card too -- only
+  // place/campaign/lobby are ever paired (shared/bots.js's own candidate
+  // list), so `adv.pair` can only be set alongside one of those three.
+  const key = adv.pair ? `${use}Paired${noTarget ? "NoTarget" : ""}` : noTarget ? `${use}NoTarget` : use;
+  let s = t(`advisor.suggestCard.${key}`, { card: cardName(adv.card), space, pair: adv.pair ? cardName(adv.pair) : "" });
   if (adv.order) s += " " + t(`advisor.suggestOrder.${adv.order}`);
   return s;
 }
@@ -466,10 +471,23 @@ function decorateSheet(adv, meta) {
   // five-use card page -- so it needs its own selector cleared/marked here,
   // by the stable [data-use="headline"] hook footer() now gives it, same
   // idea as the [data-use] hooks decoratePending() below already reads.
-  sheet.querySelectorAll(".sheet-grid button, .rowb.order button, [data-use='headline']").forEach((b) => b.classList.remove("adv-pick"));
+  // #117: `[data-pair]` marks 說客's own pair-choice row (app.js's pairing
+  // block, below the use grid) -- cleared here every render alongside the
+  // use grid/order row so a stale mark never survives past the move it was
+  // suggesting.
+  sheet.querySelectorAll(".sheet-grid button, .rowb.order button, [data-pair], [data-use='headline']").forEach((b) => b.classList.remove("adv-pick"));
   if (!adv || !meta || meta.uiCard !== adv.card) return; // the open sheet isn't for the suggested card
   if (adv.use === "headline") {
     const b = sheet.querySelector("[data-use='headline']");
+    if (b) b.classList.add("adv-pick");
+  }
+  // #117: names the pair, not only the use -- when the recommended move
+  // pairs 說客 with an enemy card, the gold ring lands on THAT card in the
+  // pairing row; when it deliberately plays 說客 alone (a pair was on offer
+  // but not worth it), the ring instead lands on "不搭配/Don't pair" so the
+  // ring is never silent about a choice the banner's sentence already made.
+  if (adv.card === "shuoke" && adv.use && adv.use !== "headline") {
+    const b = sheet.querySelector(`[data-pair="${adv.pair || "none"}"]`);
     if (b) b.classList.add("adv-pick");
   }
   if (adv.use) {

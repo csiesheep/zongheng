@@ -258,6 +258,17 @@ export default {
       campaignNoTarget: "Raid with {card}.",
       lobby: "Lobby {space} with {card}.",
       lobbyNoTarget: "Lobby with {card}.",
+      // #117: when The Lobbyist is paired with an enemy card, the suggestion
+      // names that card too -- "play it alone" used to be the only sentence
+      // the banner could form for it. Only place/campaign/lobby ever get
+      // paired (shared/bots.js's own candidate list), so event/reform need
+      // no *Paired sibling.
+      placePaired: "Foster with {card}, paired with {pair}, in {space}.",
+      placePairedNoTarget: "Foster with {card}, paired with {pair}.",
+      campaignPaired: "Raid in {space} with {card}, paired with {pair}.",
+      campaignPairedNoTarget: "Raid with {card}, paired with {pair}.",
+      lobbyPaired: "Lobby {space} with {card}, paired with {pair}.",
+      lobbyPairedNoTarget: "Lobby with {card}, paired with {pair}.",
       reform: "Reform with {card}.",
       score: "Play {card} now.",
       bog: "Discard {card}.",
@@ -336,9 +347,26 @@ export default {
     // chosen yet used to do nothing at all -- app.js's flashUseWarning()
     // shows this under the use row until a use is actually picked.
     pickUseFirst: "Pick a use first",
+    // #117: The Lobbyist's pairing choice -- pick an enemy card from hand to
+    // play with it, or explicitly choose not to. {enemy} is the other side's
+    // name (Qin/Chu). none/noEnemy/eventReason cover the three states: chose
+    // not to pair, no enemy card to pair with, and why the event use is
+    // turned off (playing The Lobbyist alone has an empty effect() --
+    // shared/cards.js).
+    shuoke: {
+      explain: "The Lobbyist: pick a {enemy} card from your hand to play with it — you use that card's ops, its event doesn't fire, and both go to the discard pile.",
+      none: "Don't pair — play alone",
+      noEnemy: "No {enemy} card in hand: The Lobbyist can only be played alone, for 1 op.",
+      eventReason: "The Lobbyist alone has no event.",
+    },
     hint: {
       own: "Your own event: it happens when you play it.",
       neutral: "A neutral card: the event or the ops, never both.",
+      // #117: The Lobbyist is neutral, but "the event or the ops" is wrong
+      // for it -- its real play is pairing with an enemy card (see
+      // shuoke.explain above, already shown right above the pairing choice
+      // on the card page; this is just the short classification line).
+      shuoke: "The Lobbyist: paired with a {enemy} card, using its ops.",
       enemy: "An enemy card: you use the ops, and its event still happens; you choose the order.",
       score: "A scoring card: it must be played this turn.",
       // #34: the read-only peek sheet's own one-line hint (owner-authorised

@@ -73,6 +73,12 @@ export function advise(view, side, rng) {
     card: action.type === "choose" ? null : action.card,
     use: useOf(action),
     order: orderOf(action, side),
+    // #117: 說客's own pairing choice (bots.js's candidate list already
+    // builds paired place/campaign/lobby moves for it -- see its own
+    // comment there) used to be dropped here, so the banner could only ever
+    // say "play 說客", never name the enemy card it was paired with, even
+    // when that pairing was the entire point of the recommended move.
+    pair: action.type === "play" ? action.pair ?? null : null,
     targets,
     reason: reasonFor(st, action, side, aux, targets, L),
   };
