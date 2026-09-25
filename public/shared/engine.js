@@ -518,6 +518,7 @@ function exec(st, step) {
           return ask(st, step, { kind: "ops", ops: step.ops, card: step.card, allowed, options: o, tag: "ops" });
         }
         choice = step.choices[0];
+        if (step.playSeq) { const e = st.log.find((l) => l.i === step.playSeq && l.type === "play"); if (e) e.use = choice.use; }
       }
       doOps(st, step.side, step.card, step.ops, choice);
       return true;
@@ -936,6 +937,10 @@ function play(st, action) {
   // 說客's pair is named (#115): its ops are the move's ops and it goes to the
   // discard pile, so a log without it read as 說客 played alone.
   log(st, { type: "play", side, card: c, use, ...(c === "shuoke" && action.pair ? { pair: action.pair } : {}) });
+  // Event first, the ops are chosen only after the event, and may go to any
+  // use then: the `use` above is only what the play said. The ops step writes
+  // the real one back into this entry (#115: the log read 「扶植 4」 for a raid).
+  for (const s of steps) if (s.do === "ops" && !s.payload) s.playSeq = st.logSeq;
   st.plan.unshift(...steps);
   return run(st);
 }

@@ -131,6 +131,27 @@ for (const order of ["opsFirst", "eventFirst"]) {
   });
 }
 
+// Event first, the ops are chosen after the event and may go to any legal use;
+// the play entry kept the use the play named, so a raid read 「扶植 4」 (seen in
+// the browser for #115: 秦打出蘇秦合縱 · 扶植 4, then 大梁:移除楚 1、大梁 +3).
+test("event first: the play entry ends up naming the use the ops were actually spent on", () => {
+  const st = firstAction(3);
+  give(st, E.CHU, "envoy");
+  const seq = st.logSeq;
+  let s = E.apply(st, { type: "play", side: E.CHU, card: "envoy", use: "place", order: "eventFirst" });
+  for (let g = 0; s.pending && g < 5; g++) {
+    const p = s.pending;
+    if (p.tag === "event") s = E.apply(s, { type: "choose", side: p.who, choice: [p.options[0]] });
+    else {
+      assert.ok(p.allowed.includes("campaign"), "setup: a raid is legal for the ops");
+      s = E.apply(s, { type: "choose", side: E.CHU, choice: { use: "campaign", target: E.opsOptions(s, E.CHU).campaignTargets[0] } });
+    }
+  }
+  const L = after(s, seq);
+  assert.ok(L.some((l) => l.type === "campaign" && l.side === E.CHU), "the ops went to a raid");
+  assert.equal(L.find((l) => l.type === "play").use, "campaign");
+});
+
 test("an owner's own event is logged the same way (楚滅越 by Chu: 吳越 +2)", () => {
   const st = firstAction(3);
   st.inf.wuyue = [0, 0];
