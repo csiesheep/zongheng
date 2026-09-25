@@ -182,6 +182,8 @@ function runOne(base, card, player, use, order) {
   r.diff = REC.pre && REC.post ? diffStates(REC.pre, REC.post) : null;
   r.pre = REC.pre;
   r.preSeq = REC.preSeq;
+  // Enough of the board before the event to read a no-effect run by eye.
+  r.preSummary = REC.pre ? { turn: REC.pre.turn, reform: REC.pre.reform, weariness: REC.pre.weariness, effects: REC.pre.effects.map((e) => e.card), revealed: REC.pre.revealed, jiuding: REC.pre.jiuding, luoyiYields: REC.pre.luoyiYields, draw: REC.pre.draw.length, discard: REC.pre.discard.length } : null;
   const fin = res.s;
   r.over = fin ? fin.winner != null : false;
   if (fin) {
@@ -195,7 +197,7 @@ function runOne(base, card, player, use, order) {
     // the engine's own log entries for this event (#115), checked against the instrument
     r.logStart = fin.log.filter((l) => l.type === "event" && l.card === card && l.i > (playE ? playE.i : 0)).length;
     const end = fin.log.find((l) => l.type === "eventEnd" && l.card === card && l.i > (playE ? playE.i : 0));
-    r.logEnd = end ? { effect: end.effect, why: end.why ?? null, side: end.side, by: end.by } : null;
+    r.logEnd = end ? { effect: end.effect, why: end.why ?? null, side: end.side, by: end.by, chose: end.chose } : null;
     r.cardEnd = fin.removed.includes(card) ? "removed" : fin.discard.includes(card) ? "discard" : fin.hands[QIN].includes(card) || fin.hands[CHU].includes(card) ? "hand" : "game over";
   }
   return r;
@@ -283,7 +285,10 @@ for (const r of rows) {
   if (!r.called || !r.completed) b.notFired[r.order]++;
   else if (why) b.none[r.order]++;
   else b.fired[r.order]++;
-  if (why) b.reasons[why] = (b.reasons[why] || 0) + 1;
+  if (why) {
+    b.reasons[why] = (b.reasons[why] || 0) + 1;
+    if ((b.noEffectEx = b.noEffectEx || []).length < 2) b.noEffectEx.push({ why, seed: r.seed, use: r.use, order: r.order, pre: r.preSummary });
+  }
   if (r.baseline) {
     if (r.baseline.same) b.baseSame++;
     else { b.baseDiff++; if (b.baseDiffEx.length < 3) b.baseDiffEx.push({ seed: r.seed, turn: r.turn, use: r.use, order: r.order, enemy: r.diff, owner: r.baseline.diff }); }
@@ -298,7 +303,9 @@ for (const r of rows) {
   // #115's engine log vs this instrument (only once the engine logs events)
   if (r.called && r.completed) {
     const effect = !!(r.diff && r.diff.length);
-    const ok = r.logStart === 1 && r.logEnd && r.logEnd.effect === effect && r.logEnd.side === CARD[r.card].side && r.logEnd.by === r.player;
+    const askedWho = [...new Set(r.asked.map((a) => a.who))];
+    const ok = r.logStart === 1 && r.logEnd && r.logEnd.effect === effect && r.logEnd.side === CARD[r.card].side && r.logEnd.by === r.player && JSON.stringify(r.logEnd.chose || []) === JSON.stringify(askedWho)
+      && (effect || r.logEnd.why === (r.emptyChoice ? "noTarget" : "noChange"));
     if (!ok) { b.logMismatch++; if (b.logMismatchEx.length < 2) b.logMismatchEx.push({ seed: r.seed, turn: r.turn, use: r.use, order: r.order, logStart: r.logStart, logEnd: r.logEnd, diff: r.diff }); }
   }
 }
@@ -317,6 +324,56 @@ for (const b of summary) {
   for (const e of (b.errors || []).slice(0, 3)) console.log("   ERR", e);
   for (const e of (b.baseDiffEx || []).slice(0, 2)) console.log("   BASEDIFF", JSON.stringify(e));
   for (const e of (b.logMismatchEx || []).slice(0, 1)) console.log("   LOGMISMATCH", JSON.stringify(e));
+  for (const e of b.noEffectEx || []) console.log("   NOEFFECT", JSON.stringify(e));
 }
 if (JSONOUT) writeFileSync(JSONOUT, JSON.stringify({ totals, summary }, null, 1));
+if (MD) writeFileSync(MD, markdown(summary, totals));
 export { summary, totals };
+
+// ---------- the committed table (tests/event-audit/115.md) ----------
+// The verdict column is the auditor's reading of each row against the card's
+// text in the rulebook (五、牌表), not something this script can decide: a
+// no-effect run is rule-legit when the text has nothing to act on (no target,
+// everything at the cap, a track already full, a lasting effect already in
+// play). The bugs found were fixed on this branch and are pinned by their own
+// tests; the table is run on the fixed engine. Any row with an error, a
+// baseline difference, a log disagreement or a wrong order prints BUG.
+function markdown(summary, totals) {
+  const V = {
+    jixia: "OK (was BUG: less room than 3 in the East froze the game; tests/event-cap-room.test.js)",
+    wuqi: "OK (was BUG: less room than 2 in the South froze the game; tests/event-cap-room.test.js)",
+    hufu: "OK (was BUG: less room than 2 in the North froze the game; tests/event-cap-room.test.js)",
+    zhangyi2: "OK (was BUG: +1 with the seal kept; tests/zhangyi2-seal.test.js)",
+  };
+  const legit = {
+    "no legal target": "no-effect runs rule-legit: nothing the text can act on",
+    "no change": "no-effect runs rule-legit: at the cap / nothing to remove / track full / already in play",
+    "game over before the event": "the ops ended the game first",
+    "game over during the event": "the event ended the game",
+  };
+  const cell = (o) => (o ? `${o.opsFirst}/${o.eventFirst}` : "-");
+  const L = [];
+  L.push("# #115 event audit: every sided card, played by the enemy for ops");
+  L.push("");
+  L.push(`Generated by \`node tests/event-audit/audit.js ${SEEDS} --md=tests/event-audit/115.md\` on the fixed engine. ${totals.states} engine-built states (bot games, seeds 1-${SEEDS}; odd seeds easy bots, even seeds normal; one snapshot per turn per seat at a random round), states per turn ${JSON.stringify(totals.coverage)}. ${totals.runs} enemy plays in ${totals.seconds}s.`);
+  L.push("");
+  L.push(`Totals: errors ${totals.errors}; event never called ${totals.notCalled}; event started but never finished ${totals.notFinished}; enemy play's event differs from the owner's own event (same board, same choices) ${totals.baseDiff}; engine log (event / eventEnd: effect, why, owner, player, who chose) disagrees with this script's own state diff ${totals.logMismatch}; ops/event order wrong ${totals.orderBad}.`);
+  L.push("");
+  L.push("Columns. runs: enemy plays (place / campaign / lobby, whichever is legal, times both orders). fired / none / not fired: opsFirst/eventFirst counts of runs where the event ran and changed something / ran and changed nothing / never ran. base: the owner's own event play on the board the enemy's event saw, replaying the same choices: identical outcome / compared (runs that ended the game are not compared). asked: who answered the event's choices. silent: 變法 and 說客's pair, where the text says the event does not fire: plays / plays where it fired (must be 0).");
+  L.push("");
+  L.push("| card | side | text | runs | fired | none | not fired | no-effect reasons | base | asked | silent (reform, pair) | verdict |");
+  L.push("|---|---|---|---|---|---|---|---|---|---|---|---|");
+  for (const b of summary) {
+    const c = CARD[b.card];
+    const reasons = Object.entries(b.reasons || {}).map(([k, n]) => `${k} ${n}`).join("; ") || "-";
+    const why = [...new Set(Object.keys(b.reasons || {}).map((k) => legit[k] || `UNEXPLAINED: ${k}`))];
+    const bad = (b.errors || []).length || b.baseDiff || b.logMismatch || b.orderBad || (b.silent && (b.silent.reform[1] || b.silent.pair[1]))
+      || Object.keys(b.reasons || {}).some((k) => !legit[k]);
+    const verdict = bad ? "BUG (see audit output)" : [V[b.card] || "OK", ...why].join("; ");
+    const sil = b.silent ? `${b.silent.reform[0]}/${b.silent.reform[1]}, ${b.silent.pair[0]}/${b.silent.pair[1]}` : "-";
+    const asked = Object.entries(b.askedWho || {}).map(([k, n]) => `${k === "qin" ? "秦" : "楚"} ${n}`).join(", ") || "no choice";
+    L.push(`| ${b.card} ${c.zh} | ${c.side === QIN ? "秦" : "楚"} | ${c.text} | ${b.runs} | ${cell(b.fired)} | ${cell(b.none)} | ${cell(b.notFired)} | ${reasons} | ${b.baseSame || 0}/${(b.baseSame || 0) + (b.baseDiff || 0)} | ${asked} | ${sil} | ${verdict} |`);
+  }
+  L.push("");
+  return L.join("\n");
+}
