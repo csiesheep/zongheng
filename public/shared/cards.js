@@ -145,7 +145,7 @@ export const CARDS = [
   { id: "zhouzuo", num: 28, zh: "周天子賜胙", en: "The Zhou King's Gift", era: "reform", side: null, ops: 1, remove: false,
     text: "打出者在洛邑放 2。", effect(st, side) { E.place(st, side, "luoyi", 2); } },
   { id: "daji", num: 29, zh: "大饑", en: "Famine", era: "reform", side: null, ops: 2, remove: false,
-    text: "選 1 區,雙方各在自己控制的每個據點移除 1。",
+    text: "選 1 區,雙方各在自己控制的每個據點移除 1(最少留 1,但可能因此失去控制)。",
     effect(st, side, ch) {
       if (!ch.length) return { kind: "option", who: side, options: E.SCORED_REGIONS.map((r) => ({ id: r, label: E.REGIONS[r].zh })) };
       for (const id of ids(ch[0])) { const c = E.controller(st, id); if (c != null) E.remove(st, c, id, 1); }
