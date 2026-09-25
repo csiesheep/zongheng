@@ -165,7 +165,9 @@ export const CARDS = [
       const [t] = ch[0]; if (!t) return;
       const state = E.SPACE[t].state, had = !!st.seals[state];
       E.remove(st, C, t, 2);
-      if (had && E.controller(st, t) !== C) E.vp(st, Q, 1);
+      // A seal is lost only when Qin controls the capital (rulebook 三、滅國與相印;
+      // 四、細則). An uncontrolled capital keeps it -- and earns Qin nothing (#115).
+      if (had && E.controller(st, t) === Q) E.vp(st, Q, 1);
     } },
   { id: "yiyang", num: 31, zh: "宜陽之戰", en: "Battle of Yiyang", era: "alliance", side: Q, ops: 2, remove: true, year: 307,
     text: "秦對三晉任一據點發動免費奇襲,不推進疲敝。",
