@@ -420,7 +420,13 @@ const sess = {
 // #100: `useWarn`/`useWarnPulse` back the "pick a use first" warning (see
 // flashUseWarning() below) -- both false on every fresh card/reset, same as
 // `err`.
-const freshUi = (card = null) => ({ card, use: null, order: null, pair: null, points: [], target: null, picks: [], opsUse: null, err: "", historyOpen: false, useWarn: false, useWarnPulse: false });
+// #117: `noPair` is 說客's own explicit "don't pair" choice -- a THIRD state
+// alongside `pair` (chosen enemy card) and both null (undecided), never
+// folded into `pair` itself (a sentinel string there would reach
+// `E.opsOf(game.st, game.me, game.ui.pair)` a few lines down and blow up on
+// a non-card id). Only ever true for 說客; every other card leaves it false
+// and never reads it.
+const freshUi = (card = null) => ({ card, use: null, order: null, pair: null, noPair: false, points: [], target: null, picks: [], opsUse: null, err: "", historyOpen: false, useWarn: false, useWarnPulse: false });
 
 function startSolo() {
   game.room = false; game.spectator = false;
@@ -2040,6 +2046,16 @@ function renderPromptAndSheet(v) {
   // matter how long the card's own text or the enemy order row runs. Only
   // set when the full card is actually shown; the compact chip path
   // (mapActive) keeps its old flat, unwrapped layout.
+  // #117: 說客's own pairing decision -- `hasPairOptions` is the engine's own
+  // list (shared/engine.js's `actionsFor`, `uses.pair`) of enemy cards in
+  // this side's hand; empty means there's nothing to choose between.
+  // `pairPending` is true only while a decision is genuinely outstanding
+  // (options exist, and neither a pair nor "不搭配" has been chosen yet).
+  // Computed once, here, ahead of both the explanation note (right below,
+  // in `mid`) and the pairing buttons/use-grid gating further down (in
+  // `pinned`) so the two always agree on the same decision.
+  const hasPairOptions = ui.card === "shuoke" && info.uses.pair && info.uses.pair.length > 0;
+  const pairPending = hasPairOptions && ui.pair == null && !ui.noPair;
   let mid = null, pinned = null, chipRow = null;
   if (!showFullCard) {
     chipRow = cardChip(sh, ui.card);
@@ -2047,6 +2063,12 @@ function renderPromptAndSheet(v) {
     cardHeader(sh, ui.card);
     mid = sheetMid(sh);
     cardTextBox(mid, ui.card);
+    // #117: reads right after the card's own text, ahead of the history
+    // section -- not tacked on at the very end of `mid` (round 1 of this
+    // fix put it there, past a long history entry, easy to miss).
+    if (ui.card === "shuoke") {
+      note(mid, t(hasPairOptions ? "sheet.shuoke.explain" : "sheet.shuoke.noEnemy", { enemy: sideName(E.other(me)) }));
+    }
   }
   const target = showFullCard ? mid : sh;
   if (ui.card !== E.JIUDING && E.CARD[ui.card].scoring) scoringPanel(target, v, E.CARD[ui.card].scoring);
@@ -2069,11 +2091,56 @@ function renderPromptAndSheet(v) {
   // other card while the turn's actions are running out must not make the
   // warning disappear. First child of `pinned`, ahead of the use grid.
   if (showFullCard && warnText) note(pinned, warnText, "warn");
+  // #117 (owner: 說客 was "a lone, unexplained button" with the wrong hint
+  // and an advisor that never mentioned it): make pairing the first thing a
+  // player sees on 說客's own page (its explanation now sits right after the
+  // card text, above), and gate the use grid + Confirm behind an actual
+  // decision (pair with a named card, or explicitly "不搭配") instead of
+  // silently defaulting to "alone" the moment a use is tapped.
+  if (showFullCard && hasPairOptions) {
+    const r = row(pinned, "rowb sheet-pair-row");
+    for (const c of info.uses.pair) {
+      const kind = cardSide(c);
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "sheet-pair-card";
+      b.setAttribute("aria-pressed", String(ui.pair === c));
+      b.dataset.pair = c;
+      b.innerHTML = `<span class="ops ${kind}">${esc(opsLabel(c))}</span><span class="nm">${esc(cardName(c))}</span>`;
+      b.onclick = () => { ui.pair = ui.pair === c ? null : c; ui.noPair = false; ui.points = []; ui.target = null; render(); };
+      r.appendChild(b);
+    }
+    const noneBtn = btn(r, t("sheet.shuoke.none"), () => { ui.noPair = !ui.noPair; if (ui.noPair) ui.pair = null; ui.points = []; ui.target = null; render(); }, "", ui.noPair);
+    noneBtn.dataset.pair = "none";
+  }
   const uses = row(pinned, "rowb sheet-grid");
-  const usable = (u) => (u === "event" ? info.uses.event : u === "reform" ? info.uses.reform : !!info.uses[u]);
+  // #117: 說客's own event use is always dead weight -- `effect()` is empty
+  // (shared/cards.js), so playing it alone (or paired: pairing already
+  // spends the OTHER card's ops, never an event) never does anything. Kept
+  // visible rather than hidden (the brief's own wording), just disabled,
+  // same look every other illegal use already has.
+  const usable = (u) => (u === "event" ? (ui.card === "shuoke" ? false : info.uses.event) : u === "reform" ? info.uses.reform : !!info.uses[u]);
   for (const u of ["event", "place", "campaign", "lobby", "reform"]) {
     if (ui.card === E.JIUDING && (u === "event" || u === "reform")) continue;
-    useBtn(uses, u, () => { ui.use = u; ui.points = []; ui.target = null; ui.err = ""; ui.useWarn = false; ui.useWarnPulse = false; render(); }, ui.use === u, !usable(u));
+    const illegal = !usable(u);
+    // #117: while the pair choice is undecided, a legal use button must
+    // still be a real, clickable button (a true `disabled` one would eat
+    // the tap) -- `aria-disabled` gives it the identical greyed look
+    // (#100's own trick, same CSS rule) while the click still reaches
+    // flashUseWarning() instead of picking a use out from under the pending
+    // decision.
+    const b = useBtn(uses, u, () => {
+      if (illegal) return;
+      if (pairPending) { flashUseWarning(); return; }
+      ui.use = u; ui.points = []; ui.target = null; ui.err = ""; ui.useWarn = false; ui.useWarnPulse = false; render();
+    }, ui.use === u, illegal);
+    if (!illegal && pairPending) b.setAttribute("aria-disabled", "true");
+  }
+  if (ui.card === "shuoke" && showFullCard) {
+    // 事件 is disabled above for every 說客 page, paired or not -- this is
+    // the reason, not just a greyed button with no explanation. `mid`, not
+    // `pinned`, same 320x568 budget reasoning as the explain/noEnemy note
+    // above -- it's prose, not a control.
+    note(mid, t("sheet.shuoke.eventReason"));
   }
   // #24 round 2, fix #3 (owner): "their card"'s ops-first/event-first order
   // and 說客's pairing used to only render once a map-needing use was
@@ -2111,28 +2178,32 @@ function renderPromptAndSheet(v) {
       compactHint = t(`advisor.suggestOrder.${ui.order}`);
     }
   }
-  if (ui.card === "shuoke" && info.uses.pair && info.uses.pair.length) {
-    if (showFullCard) {
-      const r = row(pinned);
-      note(pinned, t("uses.pair"));
-      for (const c of info.uses.pair) btn(r, `${cardName(c)} (${E.opsOf(game.st, me, c)})`, () => { ui.pair = ui.pair === c ? null : c; ui.points = []; render(); }, "", ui.pair === c);
-    } else if (ui.pair && !targetPreviewComing) {
-      const pairHint = `${t("uses.pair")} ${cardName(ui.pair)} (${E.opsOf(game.st, me, ui.pair)})`;
-      compactHint = compactHint ? `${compactHint} ${pairHint}` : pairHint;
-    }
+  // #117: the pairing choice itself is now rendered above the use grid (see
+  // `pairPending`/`hasPairOptions` above) -- the full card page needs no
+  // second copy of it here. The compact chip only ever shows once the map is
+  // active, and `mapActive` requires `ui.use` to already be place/campaign/
+  // lobby -- the use grid's own onClick (above) refuses to set `ui.use` at
+  // all while `pairPending` is true, so by the time the chip can show, a
+  // pair decision is already made (same reasoning as `orderPending`, just
+  // enforced at the button instead of folded into the `mapActive` formula).
+  // It still gets its one-line pair summary, same as before.
+  if (ui.card === "shuoke" && ui.pair && !showFullCard && !targetPreviewComing) {
+    const pairHint = `${t("uses.pair")} ${cardName(ui.pair)} (${E.opsOf(game.st, me, ui.pair)})`;
+    compactHint = compactHint ? `${compactHint} ${pairHint}` : pairHint;
   }
   // #29's design: one line naming what KIND of card this is for the player
   // right now — own event, a shared neutral card, the other side's card
-  // (whose event still fires), or a scoring card. Only on the full card
-  // page (the `sheet.hint.*` copy assumes the reader can already see the
-  // use grid/order row above it); the compact chip already has its own
-  // target-preview notes doing the same job in less space. #46: moved into
-  // `pinned` along with the rest of this row — it's part of the "always
-  // reachable" chrome, not the scrolling card text.
+  // (whose event still fires), a scoring card, or (#117) 說客 specifically,
+  // whose "neutral card, event or ops" line was simply wrong for it. Only on
+  // the full card page (the `sheet.hint.*` copy assumes the reader can
+  // already see the use grid/order row above it); the compact chip already
+  // has its own target-preview notes doing the same job in less space. #46:
+  // moved into `pinned` along with the rest of this row — it's part of the
+  // "always reachable" chrome, not the scrolling card text.
   if (showFullCard) {
     const meta = ui.card === E.JIUDING ? null : E.CARD[ui.card];
-    const kind = meta && meta.scoring ? "score" : info.enemy ? "enemy" : meta && meta.side != null ? "own" : "neutral";
-    note(pinned, t("sheet.hint." + kind));
+    const kind = ui.card === "shuoke" ? "shuoke" : meta && meta.scoring ? "score" : info.enemy ? "enemy" : meta && meta.side != null ? "own" : "neutral";
+    note(pinned, t("sheet.hint." + kind, { enemy: sideName(E.other(me)) }));
   }
   const base = { type: "play", card: ui.card, use: ui.use };
   if (ui.pair) base.pair = ui.pair;

@@ -1247,6 +1247,21 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .sheet-chip .chip-nm { flex: 1 1 60px; min-width: 0; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 :root[lang="zh-Hant"] .sheet-chip .chip-nm { font-family: var(--kai); }
 .chip-expand { flex: none; min-height: 32px; padding: 0 10px; font-size: 12px; border-radius: 16px; }
+/* #117: 說客's own pairing row -- each enemy hand card shown as a real
+   card-like button (ops badge + name), not a bare "{name} ({ops})" text
+   button, so it reads as "here is one of your cards" the same way the hand
+   itself does. Its own class (not `.sheet-chip`'s or the hand's `.card`) so
+   this sheet's generic `.sheet button[aria-pressed="true"]` rule (the gold
+   ring #29's five-use buttons get) doesn't flatten its own selected look
+   back down to plain text. */
+.sheet-pair-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+.sheet-pair-card { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--gold-line); border-radius: 10px; background: var(--bg); color: inherit; font: inherit; min-height: 40px; }
+.sheet-pair-card .ops { flex: none; width: 24px; height: 24px; border-radius: 50%; font-family: var(--sans); font-size: 12px; line-height: 24px; text-align: center; font-weight: 700; }
+.sheet-pair-card .ops.q { background: var(--qin-text); color: var(--bg); }
+.sheet-pair-card .ops.c { background: var(--chu-gold); color: #6f120d; }
+.sheet-pair-card .nm { font-size: 14px; font-weight: 700; }
+.sheet-pair-card[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--gold); }
+.sheet-pair-card.adv-pick, .sheet-pair-row button.adv-pick { border-color: var(--accent); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent); }
 .sheet-head { flex: none; display: flex; gap: 14px; padding: 4px 0 0; }
 /* #29's own numbers (C2_CardNeutral.dc.html): 186x248, double ring (a thin
    border plus two concentric box-shadow rings — the sheet's own background
