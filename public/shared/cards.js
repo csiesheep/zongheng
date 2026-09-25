@@ -19,7 +19,13 @@ const withRoom = (st, side, list) => list.filter((id) => E.infOf(st, id)[side] <
 const targets = (st, side, list, ignoreLocks = false) =>
   withEnemy(st, side, list).filter((id) => !E.isProtected(st, id) && (ignoreLocks || !E.campaignLocked(st, id)));
 const pick = (side, options, extra = {}) => ({ kind: "points", who: side, n: 1, min: options.length ? 1 : 0, distinct: true, options, ...extra });
-const pts = (side, n, options, extra = {}) => ({ kind: "points", who: side, n, min: Math.min(n, options.length ? n : 0), side, options, ...extra });
+// "Place n in these spaces": the cap is checked per pick (`side`), so the
+// answer must not be asked to hold more points than the spaces have room for.
+// Rulebook 四、細則:「「放 X 點」超過上限時多的消失。」 With less room than n,
+// the answer fills the room and the rest vanishes (#115: `min` used to be n,
+// which left no legal answer at all and froze the game).
+const roomIn = (st, side, options) => options.reduce((r, id) => r + Math.max(0, E.capOf(st, id) - E.infOf(st, id)[side]), 0);
+const pts = (st, side, n, options, extra = {}) => ({ kind: "points", who: side, n, min: Math.min(n, roomIn(st, side, options)), side, options, ...extra });
 const placeAll = (st, side, points, n = 1) => { for (const id of points) E.place(st, side, id, n); };
 function freeCampaign(st, side, ch, list, ops, { noTire = false, ignoreLocks = false } = {}) {
   if (!ch.length) return pick(side, targets(st, side, list, ignoreLocks));
@@ -86,7 +92,7 @@ export const CARDS = [
   // ---------- 變法期・楚 ----------
   { id: "wuqi", num: 14, zh: "吳起變法", en: "Wu Qi's Reforms", era: "reform", side: C, ops: 2, remove: true, year: 386,
     text: "變法軌前進 1;楚在南方放 2。",
-    effect(st, side, ch) { if (!ch.length) { E.reformAdvance(st, C, 1); return pts(C, 2, withRoom(st, C, ids("south"))); } placeAll(st, C, ch[0]); } },
+    effect(st, side, ch) { if (!ch.length) { E.reformAdvance(st, C, 1); return pts(st, C, 2, withRoom(st, C, ids("south"))); } placeAll(st, C, ch[0]); } },
   { id: "suqin", num: 15, zh: "蘇秦合縱", en: "Su Qin's Vertical", era: "reform", side: C, ops: 4, remove: true, year: 333,
     text: "楚在五個國都各放 1 點影響力,不受相鄰限制。", effect(st) { placeAll(st, C, CAPITALS); } },
   { id: "weiwei", num: 16, zh: "圍魏救趙", en: "Besiege Wei to Save Zhao", era: "reform", side: C, ops: 2, remove: true, year: 354,
@@ -96,7 +102,7 @@ export const CARDS = [
     effect(st, side, ch) { if (!ch.length) return pick(C, withEnemy(st, C, ids("jin"))); if (ch[0][0]) E.remove(st, Q, ch[0][0], 3); } },
   { id: "jixia", num: 18, zh: "稷下學宮", en: "Jixia Academy", era: "reform", side: C, ops: 2, remove: true,
     text: "楚在東方放 3(可分散)。",
-    effect(st, side, ch) { if (!ch.length) return pts(C, 3, withRoom(st, C, ids("east"))); placeAll(st, C, ch[0]); } },
+    effect(st, side, ch) { if (!ch.length) return pts(st, C, 3, withRoom(st, C, ids("east"))); placeAll(st, C, ch[0]); } },
   { id: "wuguo", num: 19, zh: "五國伐秦", en: "Five States Attack Qin", era: "reform", side: C, ops: 3, remove: true, year: 318,
     text: "楚對西土任一非要衝據點發動免費奇襲,行動點 +1,不受疲敝限制;移除「函谷關天險」。",
     // The 318 BC coalition never got past 函谷關: not 關中 (option `wuguo: "any"` is the first draft).
@@ -196,7 +202,7 @@ export const CARDS = [
   // ---------- 縱橫期・楚 ----------
   { id: "hufu", num: 38, zh: "胡服騎射", en: "Nomad Dress and Mounted Archery", era: "alliance", side: C, ops: 3, remove: true, year: 307,
     text: "楚在北疆放 2、邯鄲放 2;變法軌前進 1。",
-    effect(st, side, ch) { if (!ch.length) return pts(C, 2, withRoom(st, C, ids("north"))); placeAll(st, C, ch[0]); E.place(st, C, "handan", 2); E.reformAdvance(st, C, 1); } },
+    effect(st, side, ch) { if (!ch.length) return pts(st, C, 2, withRoom(st, C, ids("north"))); placeAll(st, C, ch[0]); E.place(st, C, "handan", 2); E.reformAdvance(st, C, 1); } },
   { id: "mengchang", num: 39, zh: "孟嘗君", en: "Lord Mengchang", era: "alliance", side: C, ops: 2, remove: false,
     text: "楚抽 1 張;若楚控制薛,改抽 2 張。", effect(st) { E.draw(st, C, E.controller(st, "xue") === C ? 2 : 1, { nonScoring: true }); } },
   { id: "hezong", num: 40, zh: "合縱攻秦", en: "The Alliance Attacks Qin", era: "alliance", side: C, ops: 4, remove: true, year: 296,
