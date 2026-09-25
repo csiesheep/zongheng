@@ -498,8 +498,11 @@ function exec(st, step) {
         return ask(st, step, { ...need, tag: "event", card: step.card });
       }
       step.done = true;
-      checkMarkers(st);
+      // What the event did, then what follows from it (滅, 相印): the log reads
+      // cause before consequence. Markers only follow influence, which
+      // `eventEnd` already counts, so logging it first loses nothing.
       logEventEnd(st, step);
+      checkMarkers(st);
       return true;
     }
     case "score": return scoreRegion(st, step.region), true;

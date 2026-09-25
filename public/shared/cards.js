@@ -212,7 +212,8 @@ export const CARDS = [
     effect(st, side, ch) { dropHanguPass(st); return freeCampaign(st, C, ch, ids("west"), 4 + 2, { ignoreLocks: true }); } },
   { id: "tiandan", num: 41, zh: "田單復國", en: "Tian Dan Restores Qi", era: "alliance", side: C, ops: 3, remove: true, year: 279,
     text: "移除秦在臨淄 2;楚在即墨、莒各放 2;若齊已滅,移除滅國標記。",
-    effect(st) { E.remove(st, Q, "linzi", 2); E.place(st, C, "jimo", 2); E.place(st, C, "ju", 2); delete st.mie.qi; } },
+    // The lifted 滅 is logged like any 復國 (#115: it used to vanish from the board with no line at all).
+    effect(st) { E.remove(st, Q, "linzi", 2); E.place(st, C, "jimo", 2); E.place(st, C, "ju", 2); if (st.mie.qi) { delete st.mie.qi; E.log(st, { type: "restore", state: "qi" }); } } },
   { id: "wanbi", num: 42, zh: "完璧歸趙", en: "The Jade Returns to Zhao", era: "alliance", side: C, ops: 1, remove: true, year: 283,
     text: "查看秦的手牌。", effect(st) { st.revealed[C] = true; } },
   { id: "yuyu", num: 43, zh: "閼與之戰", en: "Battle of Yuyu", era: "alliance", side: C, ops: 2, remove: true, year: 269,

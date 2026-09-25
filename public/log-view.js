@@ -72,9 +72,31 @@ function chipsForSteps(steps, moverSide, lang) {
       chips.push({ text: t(lang, "logPanel.chipDiscard", { side: sideName(st.side, lang), card: cardName(st.card, lang) }), gold: false });
     } else if (st.type === "opsLost") {
       chips.push({ text: t(lang, "logPanel.chipOpsLost", { side: sideName(st.side, lang), ops: st.ops }), gold: false });
+    } else if (st.type === "event") {
+      chips.push({ text: t(lang, "logPanel.chipEvent", { side: sideName(st.side, lang), card: cardName(st.card, lang) }), gold: true });
+    } else if (st.type === "eventEnd") {
+      chips.push(...eventEndChips(st, lang));
     }
   }
   return chips;
+}
+// #115: what an event did, from its `eventEnd` entry -- or, when it did
+// nothing, that it did nothing and why. Mandate, weariness lost, reform,
+// seals and discards have entries of their own (the chips above).
+const signed = (d) => (d > 0 ? `+${d}` : `−${-d}`);
+function eventEndChips(st, lang) {
+  if (!st.effect) return [{ text: t(lang, "logPanel.chipEventNone", { why: t(lang, `logPanel.eventWhy.${st.why}`) }), gold: false }];
+  const out = [];
+  for (const s of st.chose || []) out.push({ text: t(lang, "logPanel.chipChose", { side: sideName(s, lang) }), gold: false });
+  for (const [id, dq, dc] of st.inf || []) {
+    if (dq) out.push({ text: t(lang, "logPanel.chipInf", { space: spaceName(id, lang), side: sideName(E.QIN, lang), d: signed(dq) }), gold: false });
+    if (dc) out.push({ text: t(lang, "logPanel.chipInf", { space: spaceName(id, lang), side: sideName(E.CHU, lang), d: signed(dc) }), gold: false });
+  }
+  for (const c of (st.fx && st.fx.add) || []) out.push({ text: t(lang, "logPanel.chipEffectOn", { card: cardName(c, lang) }), gold: true });
+  for (const c of (st.fx && st.fx.rm) || []) out.push({ text: t(lang, "logPanel.chipEffectOff", { card: cardName(c, lang) }), gold: true });
+  (st.hands || []).forEach((d, s) => { if (d) out.push({ text: t(lang, "logPanel.chipDraw", { side: sideName(s, lang), d: signed(d) }), gold: false }); });
+  if (st.recover) out.push({ text: t(lang, "logPanel.chipTire", { to: t(lang, "weariness." + st.recover) }), gold: true });
+  return out;
 }
 
 // What a tapped row flashes on the map: spaces in step order (numbered), or
@@ -86,6 +108,7 @@ function targetsForSteps(steps) {
   for (const st of steps || []) {
     if (st.type === "place" && Array.isArray(st.spaces)) for (const [id] of st.spaces) spaces.push(id);
     else if ((st.type === "campaign" || st.type === "lobby") && st.target) spaces.push(st.target);
+    else if (st.type === "eventEnd" && Array.isArray(st.inf)) for (const [id] of st.inf) { if (!spaces.includes(id)) spaces.push(id); }
     else if (st.type === "reform") addStat("reform");
     else if (st.type === "vp" || st.type === "score") addStat("mandate");
     else if (st.type === "tire") addStat("weariness");
@@ -108,11 +131,13 @@ function setupRowHtml(row, lang) {
   const txt = (row.spaces || []).map(([id, n]) => `${spaceName(id, lang)} +${n}`).join(sep);
   return `<div class="logrow logrow-setup side-${sideCls}"><b class="logrow-side side-${sideCls}">${sideName(row.side, lang)}</b> ${txt}</div>`;
 }
-function moveRowHtml(row, lang) {
+// `pair`: 說客's paired card, from the move's own `play` entry (#115).
+function moveRowHtml(row, lang, pair) {
   const sideCls = row.side === E.CHU ? "c" : "q";
   const verb = lang === "en" ? "plays" : "打出";
   const use = row.use === "event" ? t(lang, "useNames.event") : `${useLabel(row.use, lang)} ${actualOpsOf(row)}`;
-  const head = `<b class="logrow-side side-${sideCls}">${sideName(row.side, lang)}</b> ${verb} <span class="logrow-card">${cardName(row.card, lang)}</span> <span class="logrow-use">· ${use}</span>`;
+  const pairTxt = pair && E.CARD[pair] ? ` <span class="logrow-card">${t(lang, "logPanel.pairWith", { side: sideName(E.CARD[pair].side, lang), card: cardName(pair, lang) })}</span>` : "";
+  const head = `<b class="logrow-side side-${sideCls}">${sideName(row.side, lang)}</b> ${verb} <span class="logrow-card">${cardName(row.card, lang)}</span>${pairTxt} <span class="logrow-use">· ${use}</span>`;
   const chips = chipsForSteps(row.steps, row.side, lang);
   return (
     `<div class="logrow side-${sideCls}" data-seq="${row.seq}">` +
@@ -175,6 +200,9 @@ export function renderRows(log, opts) {
   const { lang, filter = "all", chat = [], botLine } = opts || {};
   const rows = groupLog(log);
   const out = [];
+  // groupLog's move rows carry no pair; read it from the `play` entry itself.
+  const pairOf = new Map();
+  for (const e of Array.isArray(log) ? log : []) if (e && e.type === "play" && e.pair) pairOf.set(e.i, e.pair);
   if (filter !== "chat") {
     const wantSide = filter === "0" ? E.QIN : filter === "1" ? E.CHU : null;
     let round = null, sawSetupHead = false;
@@ -191,7 +219,7 @@ export function renderRows(log, opts) {
       } else if (row.kind === "move") {
         if (wantSide != null && row.side !== wantSide) continue;
         if (row.round != null && row.round !== round) { out.push(`<div class="logsec-round">${t(lang, "logPanel.round", { round: row.round })}</div>`); round = row.round; }
-        out.push(moveRowHtml(row, lang));
+        out.push(moveRowHtml(row, lang, pairOf.get(row.seq)));
       } else if (row.kind === "other") {
         const html = otherRowHtml(row, lang);
         if (html) out.push(html);

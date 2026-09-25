@@ -149,6 +149,28 @@ function flattenBeats(mv, view, c) {
       out.push({ kind: "stat", stat: "mie", text: t(lang, key, { state: stateName(st.state, lang) }) });
     } else if (st.type === "jiuding") {
       out.push({ kind: "stat", stat: "jiuding", text: t(lang, "oppmove.tickerJiuding", { side: sideName(st.to, lang) }) });
+    } else if (st.type === "event") {
+      // #115: the event gets a beat of its own, so the reveal says it happened.
+      out.push({ kind: "note", text: t(lang, "oppmove.tickerEvent", { side: sideName(st.side, lang), card: cardName(st.card, lang) }) });
+    } else if (st.type === "eventEnd") {
+      if (!st.effect) {
+        out.push({ kind: "note", text: t(lang, "oppmove.tickerEventNone", { side: sideName(st.side, lang), card: cardName(st.card, lang), why: t(lang, `logPanel.eventWhy.${st.why}`) }) });
+        continue;
+      }
+      const signed = (d) => (d > 0 ? `+${d}` : `−${-d}`);
+      for (const s of st.chose || []) out.push({ kind: "note", text: t(lang, "logPanel.chipChose", { side: sideName(s, lang) }) });
+      for (const [id, dq, dc] of st.inf || []) {
+        named.add(id);
+        for (const [s, d] of [[E.QIN, dq], [E.CHU, dc]]) {
+          if (d) out.push({ kind: "ring", spaceId: id, n: d > 0 ? d : null, side: s, text: t(lang, "logPanel.chipInf", { space: spaceName(id, lang), side: sideName(s, lang), d: signed(d) }) });
+        }
+      }
+      for (const c of (st.fx && st.fx.add) || []) out.push({ kind: "note", text: t(lang, "logPanel.chipEffectOn", { card: cardName(c, lang) }) });
+      for (const c of (st.fx && st.fx.rm) || []) out.push({ kind: "note", text: t(lang, "logPanel.chipEffectOff", { card: cardName(c, lang) }) });
+      (st.hands || []).forEach((d, s) => { if (d) out.push({ kind: "note", text: t(lang, "logPanel.chipDraw", { side: sideName(s, lang), d: signed(d) }) }); });
+      if (st.recover) out.push({ kind: "stat", stat: "weariness", text: t(lang, "logPanel.chipTire", { to: t(lang, "weariness." + st.recover) }) });
+    } else if (st.type === "discard") {
+      out.push({ kind: "note", text: t(lang, "logPanel.chipDiscard", { side: sideName(st.side, lang), card: cardName(st.card, lang) }) });
     }
   }
   const marks = c.lastMoveMarks || {};
@@ -165,15 +187,30 @@ function flattenBeats(mv, view, c) {
 // all ("0 點" would be actively wrong).
 function useLineFor(mv, lang) {
   if (mv.use === "event") return cardScoring(mv.card) ? t(lang, "oppmove.useScoringEvent") : t(lang, "oppmove.useEvent");
-  return t(lang, "oppmove.useOps", { use: t(lang, `useNames.${mv.use}`), ops: actualOpsOf(mv) });
+  // #115: event first, the engine writes the use the ops really went to back
+  // into the play entry once they are spent -- often after this move was
+  // taken off the log -- so read it live from the view on every paint.
+  const log = ctx.view && Array.isArray(ctx.view.log) ? ctx.view.log : [];
+  const live = log.find((l) => l.i === mv.seq && l.type === "play");
+  const use = live && live.use ? live.use : mv.use;
+  return t(lang, "oppmove.useOps", { use: t(lang, `useNames.${use}`), ops: actualOpsOf(mv) });
 }
 // ---------- ① the card panel ----------
 // The Nine Cauldrons (its `play` entry names card "jiuding", #81) is action
 // points only -- it has
 // no event, unlike a genuine neutral/enemy card played for ops, so it gets
 // no event line at all, never the "its event also happens" wording.
+// 說客's pair (#115): opponentMoves() keeps no pair, so read it from the
+// move's own `play` entry in the view's log.
+function pairOf(mv) {
+  const log = ctx.view && Array.isArray(ctx.view.log) ? ctx.view.log : [];
+  const e = log.find((l) => l.i === mv.seq && l.type === "play");
+  return e && e.pair && E.CARD[e.pair] ? e.pair : null;
+}
 function eventLineFor(mv, lang) {
   if (mv.card === "jiuding") return "";
+  const pair = pairOf(mv);
+  if (pair) return t(lang, "logPanel.pairWith", { side: sideName(cardSideOf(pair), lang), card: cardName(pair, lang) });
   const owner = cardSideOf(mv.card);
   const text = cardText(mv.card, lang);
   if (mv.use === "headline") return t(lang, "oppmove.eventHeadline", { text });
@@ -195,8 +232,12 @@ function renderCard() {
     d.card.style.cssText = `left:${mr.left + 8}px;top:${mr.top + 8}px;width:${mr.width - 16}px`;
   }
   d.card.className = `opp-card side-${sideCls}`;
+  // 說客 with its pair: both faces, side by side, a little smaller (#115).
+  const pair = pairOf(move);
+  const art = (id, small) => `<img class="opp-card-art"${small ? ' style="width:62px;height:83px"' : ""} src="art/cards/${id}.jpg" alt="${esc(cardName(id, lang))}" onerror="this.style.visibility='hidden'">`;
+  const arts = pair ? `<div style="display:flex;flex-direction:column;gap:6px;flex:none">${art(card, true)}${art(pair, true)}</div>` : art(card, false);
   d.card.innerHTML =
-    `<img class="opp-card-art" src="art/cards/${card}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
+    arts +
     `<div class="opp-card-body">` +
       `<span class="opp-card-tag">${esc(t(lang, "oppmove.playedTag", { side: sideName(side, lang) }))}</span>` +
       `<div class="opp-card-name"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(cardName(card, lang))}</div>` +
