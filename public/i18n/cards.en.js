@@ -29,7 +29,7 @@ export default {
   tiangou: "The other side discards a random card, never a scoring card; if it is one of your own events, it happens.",
   yetie: "Until the end of the turn your raids get +1 op.",
   zhouzuo: "Place 2 in Luoyi.",
-  daji: "Choose a region: each side loses 1 influence in every space it controls there.",
+  daji: "Choose a region: each side loses 1 influence in every space it controls there (at least 1 always remains, but control may be lost).",
   zhangyi2: "Remove 2 Chu influence from one capital; if Chu loses that state's seal, Qin gains 1 Mandate.",
   yiyang: "Qin makes a free raid in the Three Jin that does not tire the realm.",
   huaiwang: "Remove all Chu influence from one South space other than Ying. Weariness falls 1.",
