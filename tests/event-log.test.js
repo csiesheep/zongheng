@@ -92,6 +92,45 @@ test("李信伐楚敗績 played by Qin with no Qin influence in the South at 承
   assert.deepEqual({ card: end.card, side: end.side, by: end.by, effect: end.effect, why: end.why }, { card: "lixin", side: E.CHU, by: E.QIN, effect: false, why: "noChange" });
 });
 
+// The owner's own case (orchestrator, #115): Chu played 連橫使節 (envoy, Qin's:
+// 「移除楚在任一據點 1 點影響力」) for 扶植 1. The log showed 「楚打出連橫使節 · 扶植 1 ·
+// 邯鄲 +1」 and nothing else -- Qin had been asked, had chosen, and a Chu point was
+// gone. Ops first, the removal here is taken from the very space just placed
+// in: the map then looks unchanged, and only the log can say what happened.
+for (const order of ["opsFirst", "eventFirst"]) {
+  test(`連橫使節 played by Chu for 扶植, ${order}: the log names Qin's event, that Qin chose, and the Chu point it removed`, () => {
+    const st = firstAction(3);
+    give(st, E.CHU, "envoy");
+    const seq = st.logSeq;
+    const placeAt = E.opsOptions(st, E.CHU).placeOptions.find((o) => o.cost === 1).id;
+    let s = E.apply(st, { type: "play", side: E.CHU, card: "envoy", use: "place", order, ...(order === "opsFirst" ? { points: [placeAt] } : {}) });
+    let removedAt = null;
+    for (let g = 0; s.pending && g < 5; g++) {
+      const p = s.pending;
+      if (p.tag === "event") {
+        assert.equal(p.card, "envoy");
+        assert.equal(p.who, E.QIN, "Qin answers its own event's choice");
+        removedAt = order === "opsFirst" && p.options.includes(placeAt) ? placeAt : p.options[0];
+        s = E.apply(s, { type: "choose", side: E.QIN, choice: [removedAt] });
+      } else {
+        assert.equal(p.kind, "ops");
+        assert.equal(p.who, E.CHU, "event first: Chu spends the ops after the event");
+        s = E.apply(s, { type: "choose", side: E.CHU, choice: { use: "place", points: [E.opsOptions(s, E.CHU).placeOptions.find((o) => o.cost === 1).id] } });
+      }
+    }
+    assert.ok(removedAt, "Qin was asked where to remove");
+    const L = after(s, seq);
+    const ev = L.find((l) => l.type === "event"), end = L.find((l) => l.type === "eventEnd");
+    assert.ok(ev && end, "the event is logged");
+    assert.deepEqual({ card: ev.card, side: ev.side, by: ev.by }, { card: "envoy", side: E.QIN, by: E.CHU });
+    assert.equal(end.effect, true);
+    assert.deepEqual(end.chose, [E.QIN], "the log says Qin chose");
+    assert.deepEqual(end.inf, [[removedAt, 0, -1]], `Chu −1 in ${removedAt}, nothing else`);
+    const iOps = L.findIndex((l) => l.type === "place" && l.side === E.CHU), iEv = L.indexOf(ev);
+    assert.ok(order === "opsFirst" ? iOps < iEv : iOps > iEv, `${order}: the order in the log is the order played`);
+  });
+}
+
 test("an owner's own event is logged the same way (楚滅越 by Chu: 吳越 +2)", () => {
   const st = firstAction(3);
   st.inf.wuyue = [0, 0];

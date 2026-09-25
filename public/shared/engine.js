@@ -491,6 +491,10 @@ function exec(st, step) {
         if (!need) break;
         // A choice with nothing to choose from resolves itself as "nothing".
         if ((need.kind === "points" || need.kind === "card") && (!need.options.length || need.n === 0) && !(need.min > 0)) { step.empty = true; step.choices.push([]); continue; }
+        // Who answers the event's choices -- the card's owner, not always the
+        // player who played it -- goes into `eventEnd` as `chose`.
+        const who = need.who ?? step.side;
+        if (!(step.asked || []).includes(who)) step.asked = [...(step.asked || []), who];
         return ask(st, step, { ...need, tag: "event", card: step.card });
       }
       step.done = true;
@@ -575,7 +579,8 @@ function eventMark(st) {
 // already in play). What it changed that no other entry reports rides along:
 // influence per space (`inf`: [space, Qin delta, Chu delta]), lasting effects
 // added and removed (`fx`), hand sizes (`hands`: [Qin delta, Chu delta]) and a
-// recovery of the weariness track (`recover`). Mandate, weariness lost,
+// recovery of the weariness track (`recover`), and the seat(s) that answered
+// its choices (`chose`). Mandate, weariness lost,
 // reform, seals, 滅 and discards already log themselves.
 function logEventEnd(st, step) {
   const a = step.pre, b = eventMark(st);
@@ -598,6 +603,7 @@ function logEventEnd(st, step) {
   const effect = inf.length > 0 || rest(a) !== rest(b);
   const entry = { type: "eventEnd", card: step.card, side: step.side, by: step.by ?? step.side, effect };
   if (!effect) entry.why = step.empty ? "noTarget" : "noChange";
+  if (step.asked && step.asked.length) entry.chose = step.asked.slice();
   if (inf.length) entry.inf = inf;
   if (fx.add.length || fx.rm.length) entry.fx = fx;
   const dh = [b.hands[0] - a.hands[0], b.hands[1] - a.hands[1]];
