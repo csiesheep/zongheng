@@ -394,7 +394,10 @@ export function answer(st, p, who, rng) {
   switch (p.kind) {
     case "points": return bestPoints(st, p, who, rng);
     case "card": return bestOf(st, who, [...((p.min ?? 1) === 0 ? [[]] : []), ...p.options.map((c) => [c])], rng);
-    case "option": return bestOf(st, who, p.options.map((o) => o.id), rng);
+    // 收手 (realign-own): go on while the next attempt gains on average, as the
+    // board stands after the last roll (the same expectation that offers a 遊說).
+    case "option": if (p.tag === "realign") return realignExpect(st, who, p.target) > 0 ? "continue" : "stop";
+      return bestOf(st, who, p.options.map((o) => o.id), rng);
     case "ops": return bestOps(st, who, p.ops, p.allowed, rng);
     default: throw new Error(`answer: ${p.kind}`);
   }

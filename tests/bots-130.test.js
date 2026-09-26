@@ -125,3 +125,63 @@ for (const [hf, set] of [["lose-turn", { ying: [4, 1] }], ["lose-majority", { yi
     assert.ok(took >= 7, `took it in ${took}/8:\n${out.map((x) => `seed ${x.seed}: ${x.a}${x.took ? " (took)" : ""}`).join("\n")}`);
   });
 }
+
+// ---------- 收手 (realign-own): continue only while the next attempt gains on average ----------
+// The expected net of one attempt (enemy points removed − own points lost), recomputed here from the rule
+// text -- 1d6 each, +1 per controlled neighbour, +1 for more influence, +1 in or next to home -- over the 36
+// pairs of faces, not read from the bots.
+const HOMES = ["west", "south"];
+function ctlOf(st, id) { const [q, c] = E.infOf(st, id), S = E.SPACE[id].stability; return q >= c + S ? QIN : c >= q + S ? CHU : null; }
+function modOf(st, side, id) {
+  const sp = E.SPACE[id], a = E.infOf(st, id);
+  return sp.adj.filter((x) => ctlOf(st, x) === side).length + (a[side] > a[1 - side] ? 1 : 0)
+    + (sp.region === HOMES[side] || sp.adj.some((x) => E.SPACE[x].region === HOMES[side]) ? 1 : 0);
+}
+function nextNet(st, side, id) {
+  const m = modOf(st, side, id), o = modOf(st, 1 - side, id), [own, foe] = [E.infOf(st, id)[side], E.infOf(st, id)[1 - side]];
+  let t = 0;
+  for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) { const d = a + m - b - o; t += d > 0 ? Math.min(d, foe) : d < 0 ? -Math.min(-d, own) : 0; }
+  return t / 36;
+}
+// A realign-own 遊說 by Qin in 洛邑 with attempts left after the first: find it, then set the neighbours so
+// the next attempt is clearly good (Qin controls both other neighbours) or clearly bad (Chu does).
+function pendingStop(seed, good) {
+  const rng = E.makeRng(seed * 7919);
+  let s = E.createGame(seed, { lobby: "realign-own" });
+  for (let k = 0; s.winner == null && k < 3000; k++) {
+    if (s.phase === "action" && s.actor === QIN && !s.pending && s.turn === 2) break;
+    const who = E.mustAct(s), x = who[rng.int(who.length)];
+    s = E.apply(s, B.randomAction(s, x, rng));
+  }
+  if (s.phase !== "action" || s.turn !== 2) return null;
+  const st = E.clone(s);
+  for (const pile of [st.hands[0], st.hands[1], st.draw, st.discard, st.removed, ...Object.values(st.later)]) { const i = pile.indexOf("mibing"); if (i >= 0) pile.splice(i, 1); }
+  st.hands[QIN].push("mibing"); st.effects = [];
+  Object.assign(st.inf, { luoyi: [4, 4], hangu: [6, 0], yiyang: [4, 0], xinzheng: [4, 0] });
+  for (let i = 1; i < 200; i++) {
+    const t = E.clone(st); t.rngState = (i * 2654435761) >>> 0;
+    const after = E.apply(t, { type: "play", side: QIN, card: "mibing", use: "lobby", target: "luoyi" });
+    if (!after.pending || after.pending.tag !== "realign") continue;
+    const u = E.clone(after);
+    Object.assign(u.inf, good ? { yiyang: [4, 0], xinzheng: [4, 0] } : { yiyang: [0, 4], xinzheng: [0, 4], hangu: [0, 5] });
+    return u;
+  }
+  return null;
+}
+for (const level of ["normal", "hard"]) {
+  test(`收手 (${level}): the bot continues while the next attempt gains on average and stops when it loses`, () => {
+    let n = 0;
+    const bad = [];
+    for (let seed = 1; seed < 40 && n < 6; seed++) {
+      const good = pendingStop(seed, true), poor = pendingStop(seed, false);
+      if (!good || !poor) continue;
+      n++;
+      assert.ok(nextNet(good, QIN, "luoyi") > 0.5 && nextNet(poor, QIN, "luoyi") < -0.5, "the two positions are what they claim");
+      const a = B.decide(E.view(good, QIN), QIN, level, E.makeRng(seed)), b = B.decide(E.view(poor, QIN), QIN, level, E.makeRng(seed));
+      if (a.choice !== "continue") bad.push(`seed ${seed}: good (${nextNet(good, QIN, "luoyi").toFixed(2)}) → ${a.choice}`);
+      if (b.choice !== "stop") bad.push(`seed ${seed}: poor (${nextNet(poor, QIN, "luoyi").toFixed(2)}) → ${b.choice}`);
+    }
+    assert.equal(n, 6, "six positions");
+    assert.deepEqual(bad, []);
+  });
+}

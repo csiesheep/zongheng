@@ -86,8 +86,24 @@ export const USES = ["event", "place", "campaign", "lobby", "reform"];
 //                   enemy influence, one roll per op, both sides can lose;
 //                   `realign` below.
 //   "realign-mild"  the same with 1d3 and a loss of at most 2 per attempt.
+//   "realign-own"   realign, only on a space where the actor ALSO has influence
+//                   of its own (owner's pick, #130: no riskless 遊說); once its
+//                   own influence there is gone the rest of the attempts are lost.
+//                   And 收手: after every attempt that leaves attempts unspent the
+//                   actor chooses to continue or to stop (a pending decision per
+//                   roll, the `realign` plan step; each roll is made as it is
+//                   resolved, so a room shows them one by one and a reload
+//                   resumes at the decision).
 // `homeFall`: absent or "none" = today; see `homeFallCheck` below.
-export const LOBBY = { realign: { die: 6, cap: Infinity }, "realign-mild": { die: 3, cap: 2 } };
+export const LOBBY = { realign: { die: 6, cap: Infinity }, "realign-mild": { die: 3, cap: 2 }, "realign-own": { die: 6, cap: Infinity, own: true, stop: true } };
+// Whether `side` may 遊說 `id` at all (enemy influence there; under realign-own
+// its own too). Protection is read separately (`isProtected`).
+function lobbyEligible(st, side, id) {
+  const a = infOf(st, id);
+  if (a[other(side)] <= 0) return false;
+  const R = LOBBY[st.options.lobby];
+  return !(R && R.own && a[side] <= 0);
+}
 export const HOME_FALL = ["none", "lose", "lose-turn", "lose-majority", "move"];
 export const HOME_REGION = ["west", "south"];
 export const HOME_CAPITAL = ["guanzhong", "ying"];
@@ -549,38 +565,78 @@ export function campaign(st, side, target, ops, { noTire = false, pusher = side 
 // it controls, +1 if it has more influence there than the other side, +1 if
 // the space is in its home region or next to a space of it.
 export function realignMod(st, side, id) {
+  const w = realignWhy(st, side, id);
+  return w.adj.length + (w.more ? 1 : 0) + (w.home ? 1 : 0);
+}
+// The three parts of it, for the log (the UI names them).
+export function realignWhy(st, side, id) {
   const sp = SPACE[id], home = HOME_REGION[side];
-  let m = 0;
-  for (const a of sp.adj) if (controller(st, a) === side) m++;
-  if (infOf(st, id)[side] > infOf(st, id)[other(side)]) m++;
-  if (sp.region === home || sp.adj.some((a) => SPACE[a].region === home)) m++;
-  return m;
+  return {
+    adj: sp.adj.filter((a) => controller(st, a) === side),
+    more: infOf(st, id)[side] > infOf(st, id)[other(side)],
+    home: sp.region === home || sp.adj.some((a) => SPACE[a].region === home),
+  };
 }
 // 遊說 under `lobby: "realign"` / "realign-mild": `ops` attempts on `target`,
 // one at a time; each side rolls a die plus its modifier, the loser removes
 // the difference from its own influence there (never below 0, capped under
 // "mild"), a tie does nothing. Stops once the enemy has nothing left there
 // (the rest are lost) or the game ends; markers are read after every attempt.
+// One attempt: both rolls from the game's RNG now, the loss, the entry, the markers.
+function realignAttempt(st, side, target, k) {
+  const R = LOBBY[st.options.lobby];
+  const why = [realignWhy(st, QIN, target), realignWhy(st, CHU, target)];
+  const mod = why.map((w) => w.adj.length + (w.more ? 1 : 0) + (w.home ? 1 : 0));
+  const roll = withRng(st, (rng) => [1 + rng.int(R.die), 1 + rng.int(R.die)]);
+  const d = roll[QIN] + mod[QIN] - (roll[CHU] + mod[CHU]);
+  const lose = d > 0 ? CHU : d < 0 ? QIN : null;
+  const n = lose == null ? 0 : remove(st, lose, target, Math.min(Math.abs(d), R.cap));
+  log(st, { type: "realign", side, target, k, roll, mod, adj: why.map((w) => w.adj), more: why.map((w) => w.more), home: why.map((w) => w.home), lose, n });
+  checkMarkers(st);
+  return { removed: lose === other(side) ? n : 0, lost: lose === side ? n : 0 };
+}
 function realign(st, side, target, ops) {
-  const R = LOBBY[st.options.lobby], opp = other(side);
+  const R = LOBBY[st.options.lobby];
   log(st, { type: "lobby", side, target, ops, mode: st.options.lobby, own: infOf(st, target)[side] });
   const head = st.log[st.log.length - 1];
+  if (R.stop) {
+    // 收手: the attempts are the `realign` step placed right after this ops step.
+    Object.assign(head, { attempts: 0, removed: 0, lost: 0 });
+    st.plan.splice(1, 0, { do: "realign", side, target, ops, k: 0, head: st.logSeq, choices: [] });
+    return 0;
+  }
   let removed = 0, lost = 0, k = 0;
-  while (k < ops && infOf(st, target)[opp] > 0 && st.winner == null) {
+  while (k < ops && lobbyEligible(st, side, target) && st.winner == null) {
     k++;
-    const mod = [realignMod(st, QIN, target), realignMod(st, CHU, target)];
-    const roll = withRng(st, (rng) => [1 + rng.int(R.die), 1 + rng.int(R.die)]);
-    const d = roll[QIN] + mod[QIN] - (roll[CHU] + mod[CHU]);
-    const lose = d > 0 ? CHU : d < 0 ? QIN : null;
-    const n = lose == null ? 0 : remove(st, lose, target, Math.min(Math.abs(d), R.cap));
-    if (lose === opp) removed += n; else if (lose === side) lost += n;
-    log(st, { type: "realign", side, target, k, roll, mod, lose, n });
-    checkMarkers(st);
+    const r = realignAttempt(st, side, target, k);
+    removed += r.removed; lost += r.lost;
   }
   // The first entry of the 遊說 carries its totals.
   if (head && head.type === "lobby") Object.assign(head, { attempts: k, removed, lost });
   checkMarkers(st);
   return removed;
+}
+// The `realign` plan step (realign-own): roll, then ask continue / stop while
+// attempts are left and both sides still have influence there.
+function realignStep(st, step) {
+  const more = () => step.k < step.ops && lobbyEligible(st, step.side, step.target) && st.winner == null;
+  const head = st.log.find((l) => l.i === step.head && l.type === "lobby");
+  if (step.k > 0) {
+    if (!more()) return true;
+    if (!step.choices.length) {
+      return ask(st, step, { kind: "option", options: [{ id: "continue" }, { id: "stop" }], tag: "realign", target: step.target, k: step.k, ops: step.ops });
+    }
+    if (step.choices.shift() === "stop") {
+      log(st, { type: "lobbyStop", side: step.side, target: step.target, k: step.k, left: step.ops - step.k });
+      return true;
+    }
+  }
+  if (!more()) return true;
+  step.k++;
+  const r = realignAttempt(st, step.side, step.target, step.k);
+  if (head) { head.attempts = step.k; head.removed += r.removed; head.lost += r.lost; }
+  if (st.winner != null) return true;
+  return realignStep(st, step);
 }
 export function lobby(st, side, target, ops) {
   if (st.options.lobby && LOBBY[st.options.lobby]) return realign(st, side, target, ops);
@@ -799,6 +855,7 @@ function exec(st, step) {
       return true;
     }
     case "finishCard": return finishCard(st, step), true;
+    case "realign": return realignStep(st, step);
     case "jiudingPass": {
       st.jiuding = { holder: other(step.side), faceDown: true };
       log(st, { type: "jiuding", to: other(step.side) });
@@ -1035,6 +1092,7 @@ function doOps(st, side, card, ops, choice) {
     if (card === JIUDING && inZhou(choice.target)) ops += 1;
     const t = choice.target;
     if (infOf(st, t)[other(side)] <= 0) fail("lobby: no enemy influence there");
+    if (!lobbyEligible(st, side, t)) fail("lobby: no influence of your own there");
     if (!LOBBY[st.options.lobby] && edge(st, side, t) <= 0) fail("lobby: no edge there");
     if (isProtected(st, t)) fail("lobby: the space is protected this turn");
     lobby(st, side, t, ops);
@@ -1251,7 +1309,7 @@ export function opsOptions(st, side) {
     .map((s) => ({ id: s.id, cost: placeCost(st, side, s.id) }));
   const campaignTargets = SPACES.filter((s) => infOf(st, s.id)[other(side)] > 0 && !campaignLocked(st, s.id) && !isProtected(st, s.id)).map((s) => s.id);
   const realigning = !!LOBBY[st.options.lobby];
-  const lobbyTargets = SPACES.filter((s) => infOf(st, s.id)[other(side)] > 0 && !isProtected(st, s.id))
+  const lobbyTargets = SPACES.filter((s) => lobbyEligible(st, side, s.id) && !isProtected(st, s.id))
     .map((s) => ({ id: s.id, edge: edge(st, side, s.id) })).filter((x) => realigning || x.edge > 0);
   return { placeOptions, campaignTargets, lobbyTargets };
 }

@@ -106,9 +106,21 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
 // marker check, turn of the first, falls retaken before that turn ended, turn
 // ends it was held by the enemy, turn ends the enemy had more influence there
 // than the owner, checks at which the enemy had more, the turn it moved (0 = never).
+// Appended later (rows from earlier builds lack them; the report reads them as 0):
+// 收手 -- 遊說 stopped by the actor, and whether the last roll before the stop
+// was lost / won / tied (by the dice, whatever it cost); and per attempt the
+// modifier difference d = actor's modifiers − the other side's, clamped to
+// −5…+5: attempts, won, tied (by the dice).
+export const MD = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
 export const LC_ROW = ["lbN", "lbOps", "lbAtt", "lbRem", "lbLost", "lbAttLost", "lbAttWon", "lbAttTie", "lbBg", "lbNoRisk", "lbQ", "lbC",
-  ...["g", "y"].flatMap((p) => ["Falls", "First", "Retaken", "HeldEnds", "MajEnds", "MajAny", "Moved"].map((k) => p + k))];
+  ...["g", "y"].flatMap((p) => ["Falls", "First", "Retaken", "HeldEnds", "MajEnds", "MajAny", "Moved"].map((k) => p + k)),
+  "lbStop", "lbStopLost", "lbStopWon", "lbStopTie", "lbEv", "lbEvRem",
+  ...MD.flatMap((d) => [`md${d}n`, `md${d}w`, `md${d}t`])];
 function lobbyStats(lc, l) {
+  // 縱橫家遊說 (youshui) logs its scripted 遊說 as a "lobby" entry too, with no
+  // `edge` and no `mode`: it is an event, not the 遊說 use of ops. Counted apart
+  // (lbEv) since the realign-own cells; the earlier cells' lb* include it.
+  if (l.type === "lobby" && l.edge === undefined && !l.mode) { lc.lbEv++; lc.lbEvRem += l.removed || 0; return; }
   if (l.type === "lobby") {
     lc.lbN++; lc.lbOps += l.ops; lc.lbRem += l.removed || 0; lc.lbLost += l.lost || 0;
     if (E.SPACE[l.target].battleground) lc.lbBg++;
@@ -119,6 +131,12 @@ function lobbyStats(lc, l) {
     if (l.lose == null || !l.n) lc.lbAttTie++;
     else if (l.lose === l.side) lc.lbAttLost++;
     else lc.lbAttWon++;
+    const d = Math.max(-5, Math.min(5, l.mod[l.side] - l.mod[1 - l.side]));
+    lc[`md${d}n`]++;
+    if (l.lose === 1 - l.side) lc[`md${d}w`]++; else if (l.lose == null) lc[`md${d}t`]++;
+    lc.$last = l.lose == null ? "Tie" : l.lose === l.side ? "Lost" : "Won";
+  } else if (l.type === "lobbyStop") {
+    lc.lbStop++; lc[`lbStop${lc.$last || "Tie"}`]++;
   } else if (l.type === "capitalMoves") lc[(l.whose === E.QIN ? "g" : "y") + "Moved"] = l.t;
 }
 const HOME = ["guanzhong", "ying"];
@@ -199,6 +217,8 @@ export const LC_CELLS = [
   ["lose-majority", { homeFall: "lose-majority" }],
   ["move", { homeFall: "move" }],
   ["realign+lose-turn", { lobby: "realign", homeFall: "lose-turn" }],
+  ["realign-own", { lobby: "realign-own" }],
+  ["realign-own+lose-turn", { lobby: "realign-own", homeFall: "lose-turn" }],
 ];
 export const CELLS = [
   ["base", {}],
@@ -604,9 +624,9 @@ export function report130(files) {
   const baseOf = (n) => n.replace(/[^/]+$/, "base");
   const out = [];
   const cnt = (rows, f) => rows.filter(f).length;
-  const sum = (rows, k) => rows.reduce((a, x) => a + x[k], 0);
+  const sum = (rows, k) => rows.reduce((a, x) => a + (x[k] || 0), 0);
   const rate = (k, n) => { const [lo, hi] = wilson(k, n); return n ? `${pc(k / n)} ${ci(lo, hi)}` : "–"; };
-  const mci = (rows, k, d = 2) => { const m = meanCi(rows.map((x) => x[k])); return `${m.m.toFixed(d)} ±${m.h.toFixed(d)}`; };
+  const mci = (rows, k, d = 2) => { const m = meanCi(rows.map((x) => x[k] || 0)); return `${m.m.toFixed(d)} ±${m.h.toFixed(d)}`; };
   const star = (d, h, txt) => (d - h > 0 || d + h < 0 ? `**${txt}**` : txt);
   const dp = (k1, n1, k2, n2) => {
     if (!n1 || !n2) return "–";
@@ -633,29 +653,57 @@ export function report130(files) {
     const { rows, n } = cells[name];
     out.push(`| ${name} | ${LC_REASONS.map((e) => { const k = cnt(rows, (x) => x.reason === e); return k ? rate(k, n) : "0"; }).join(" | ")} |`);
   }
-  out.push("", "國都 wins by side (Qin took 郢 / Chu took 關中), and the turn they came on (turn:games):", "");
-  out.push("| cell | Qin wins by 國都 | Chu wins by 國都 | turn |");
-  out.push("|---|---|---|---|");
+  out.push("", "End reasons by winner: games won by Qin / by Chu for each reason.", "");
+  out.push(`| cell | ${LC_REASONS.map((e) => LC_ZH[e]).join(" | ")} |`);
+  out.push(`|---|${LC_REASONS.map(() => "---").join("|")}|`);
+  for (const name of order) {
+    const { rows } = cells[name];
+    out.push(`| ${name} | ${LC_REASONS.map((e) => { const r = rows.filter((x) => x.reason === e); return r.length ? `${cnt(r, (x) => x.qinWin)} / ${cnt(r, (x) => !x.qinWin)}` : "–"; }).join(" | ")} |`);
+  }
+  out.push("", "國都 wins by side (Qin took 郢 / Chu took 關中), and the turn they came on (turn:games), per side:", "");
+  out.push("| cell | Qin wins by 國都 | turns | Chu wins by 國都 | turns |");
+  out.push("|---|---|---|---|---|");
   const hist = (xs) => { const h = {}; for (const x of xs) h[x] = (h[x] || 0) + 1; return Object.entries(h).sort((a, b) => a[0] - b[0]).map(([k, v]) => `${k}:${v}`).join(" "); };
   for (const name of order) {
     const hf = cells[name].rows.filter((x) => x.reason === "homeFall");
-    out.push(`| ${name} | ${cnt(hf, (x) => x.qinWin)} | ${cnt(hf, (x) => !x.qinWin)} | ${hist(hf.map((x) => x.turn)) || "–"} |`);
+    const q = hf.filter((x) => x.qinWin), c = hf.filter((x) => !x.qinWin);
+    out.push(`| ${name} | ${q.length} | ${hist(q.map((x) => x.turn)) || "–"} | ${c.length} | ${hist(c.map((x) => x.turn)) || "–"} |`);
   }
   out.push("", "How the ops are spent, per game, both sides [95%]: share of the ops put to 扶植 (place) / 奇襲 (campaign) / 遊說 (lobby) / 變法 (reform); face values (九鼎 4). Uses per game, and the change in 奇襲 and 遊說 uses against base.", "");
   out.push("| cell | 扶植 % | 奇襲 % | 遊說 % | 變法 % | 奇襲 uses / game | 奇襲 − base | 遊說 uses / game | 遊說 − base |");
   out.push("|---|---|---|---|---|---|---|---|---|");
   for (const name of order) {
     const { rows } = cells[name], b = cells[baseOf(name)], other = b && name !== baseOf(name);
-    out.push(`| ${name} | ${pc(meanCi(rows.map((x) => x.share_place)).m)} | ${pc(meanCi(rows.map((x) => x.share_campaign)).m)} | ${pc(meanCi(rows.map((x) => x.share_lobby)).m)} | ${pc(meanCi(rows.map((x) => x.share_reform)).m)} | ${mci(rows, "n_campaign")} | ${other ? dm(b.rows, rows, "n_campaign") : ""} | ${mci(rows, "lbN")} | ${other ? dm(b.rows, rows, "lbN") : ""} |`);
+    out.push(`| ${name} | ${pc(meanCi(rows.map((x) => x.share_place)).m)} | ${pc(meanCi(rows.map((x) => x.share_campaign)).m)} | ${pc(meanCi(rows.map((x) => x.share_lobby)).m)} | ${pc(meanCi(rows.map((x) => x.share_reform)).m)} | ${mci(rows, "n_campaign")} | ${other ? dm(b.rows, rows, "n_campaign") : ""} | ${mci(rows, "n_lobby")} | ${other ? dm(b.rows, rows, "n_lobby") : ""} |`);
   }
-  out.push("", "遊說 in detail, all games of the cell pooled. Under base there are no attempts: one 遊說 removes min(ops, 局勢) and never costs the actor. 'net / attempt' = (enemy points removed − own points lost) ÷ attempts; 'actor lost' = attempts in which the actor lost at least one point; 'nothing to lose' = 遊說 aimed where the actor had no influence of its own.", "");
-  out.push("| cell | 遊說 actions | by Qin / Chu | ops / 遊說 | attempts / 遊說 | enemy removed / 遊說 | own lost / 遊說 | net / attempt | net / op | attempts: actor lost % | actor won % | no change % | at 要衝 % | nothing to lose % |");
-  out.push("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+  out.push("", "遊說 in detail, all games of the cell pooled. Under base there are no attempts: one 遊說 removes min(ops, 局勢) and never costs the actor. 'net / attempt' = (enemy points removed − own points lost) ÷ attempts; 'actor lost' = attempts in which the actor lost at least one point; 'nothing to lose' = 遊說 aimed where the actor had no influence of its own. CAVEAT: in the cells run before realign-own (base … realign+lose-turn) the 遊說 counted here include the scripted 遊說 of the event 縱橫家遊說 (removes 2, no dice); from realign-own on it is counted apart ('event 遊說'). Uses per game in the table above come from the plays and never include it.", "");
+  out.push("| cell | 遊說 actions | by Qin / Chu | ops / 遊說 | attempts / 遊說 | enemy removed / 遊說 | own lost / 遊說 | net / attempt | net / op | attempts: actor lost % | actor won % | no change % | at 要衝 % | nothing to lose % | event 遊說 (counted apart) |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
   for (const name of order) {
     const { rows } = cells[name];
     const N = sum(rows, "lbN"), A = sum(rows, "lbAtt"), R = sum(rows, "lbRem"), L = sum(rows, "lbLost"), O = sum(rows, "lbOps");
     const d = (a, b, k = 2) => (b ? (a / b).toFixed(k) : "–");
-    out.push(`| ${name} | ${N} | ${sum(rows, "lbQ")} / ${sum(rows, "lbC")} | ${d(O, N)} | ${d(A, N)} | ${d(R, N)} | ${d(L, N)} | ${A ? f2((R - L) / A) : "–"} | ${O ? f2((R - L) / O) : "–"} | ${A ? pc(sum(rows, "lbAttLost") / A) : "–"} | ${A ? pc(sum(rows, "lbAttWon") / A) : "–"} | ${A ? pc(sum(rows, "lbAttTie") / A) : "–"} | ${N ? pc(sum(rows, "lbBg") / N) : "–"} | ${N ? pc(sum(rows, "lbNoRisk") / N) : "–"} |`);
+    out.push(`| ${name} | ${N} | ${sum(rows, "lbQ")} / ${sum(rows, "lbC")} | ${d(O, N)} | ${d(A, N)} | ${d(R, N)} | ${d(L, N)} | ${A ? f2((R - L) / A) : "–"} | ${O ? f2((R - L) / O) : "–"} | ${A ? pc(sum(rows, "lbAttLost") / A) : "–"} | ${A ? pc(sum(rows, "lbAttWon") / A) : "–"} | ${A ? pc(sum(rows, "lbAttTie") / A) : "–"} | ${N ? pc(sum(rows, "lbBg") / N) : "–"} | ${N ? pc(sum(rows, "lbNoRisk") / N) : "–"} | ${sum(rows, "lbEv") || "(in the counts)"} |`);
+  }
+  out.push("", "收手 (realign-own only asks): 遊說 the actor stopped with attempts left, % of all 遊說, and the result of the roll just before the stop (by the dice: the actor lost it / won it / tied).", "");
+  out.push("| cell | 遊說 | attempts / 遊說 | ops / 遊說 | stopped early, % of 遊說 | after a lost roll | after a won roll | after a tie |");
+  out.push("|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows } = cells[name];
+    const N = sum(rows, "lbN"), A = sum(rows, "lbAtt"), S = sum(rows, "lbStop");
+    if (!A) continue;
+    out.push(`| ${name} | ${N} | ${(A / N).toFixed(2)} | ${(sum(rows, "lbOps") / N).toFixed(2)} | ${pc(S / N)} (${S}) | ${sum(rows, "lbStopLost")} | ${sum(rows, "lbStopWon")} | ${sum(rows, "lbStopTie")} |`);
+  }
+  out.push("", "Per attempt: the modifier difference d = the actor's modifiers − the other side's (clamped to −5…+5), how often each occurs (% of attempts), and how the dice went (actor won / tie / actor lost, %). 'exact' is 1d6 against 1d6 at that d, for comparison. Cells whose rows predate this column show nothing.", "");
+  const exact = (d, die = 6) => { let w = 0, t = 0; for (let a = 1; a <= die; a++) for (let b = 1; b <= die; b++) { const x = a + d - b; if (x > 0) w++; else if (x === 0) t++; } const n = die * die; return `${pc(w / n)} / ${pc(t / n)} / ${pc((n - w - t) / n)}`; };
+  for (const name of order) {
+    const { rows } = cells[name];
+    const tot = MD.reduce((a, d) => a + sum(rows, `md${d}n`), 0);
+    if (!tot) continue;
+    out.push(`- **${name}** (${tot} attempts): ` + MD.filter((d) => sum(rows, `md${d}n`)).map((d) => {
+      const n = sum(rows, `md${d}n`), w = sum(rows, `md${d}w`), t = sum(rows, `md${d}t`);
+      return `d=${d >= 0 ? "+" : ""}${d}: ${pc(n / tot)}% (${n}), ${pc(w / n)} / ${pc(t / n)} / ${pc((n - w - t) / n)}${name.includes("mild") ? "" : ` [exact ${exact(d)}]`}`;
+    }).join("; "));
   }
   out.push("", "The home capitals. 'fell' = became enemy-controlled at some marker check (the moment `lose` reads); games % [95%]. Falls / game; falls retaken before the end of the same turn (the grace `lose-turn` gives); games in which the enemy held it at a turn end (what `lose-turn` / `move` read) and had more influence there at a turn end (what `lose-majority` reads); the turn of the first fall (turn:games); capital moved (`move`), games.", "");
   out.push("| cell | 關中 fell (Chu took it), games % | 郢 fell (Qin took it), games % | falls / game | retaken in the turn / falls | held at a turn end: 關中 / 郢, games | enemy majority at a turn end: 關中 / 郢, games | enemy majority at any check: 關中 / 郢, games | first fall turn, 關中 | first fall turn, 郢 | moved: Qin / Chu, games |");

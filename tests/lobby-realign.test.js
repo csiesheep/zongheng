@@ -11,6 +11,13 @@
 //     region (西土 Qin, 南方 Chu) or next to a space of it;
 //   - the higher total wins; the loser removes the difference from its own influence there (never below
 //     0; mild: at most 2); a tie does nothing; markers are checked after every attempt.
+// And `"realign-own"` (owner's pick, from the orchestrator, #130): realign, but only on a space where the
+// actor ALSO has at least 1 influence of its own; when the actor's own influence there reaches 0 the rest
+// of the attempts are lost too (it no longer qualifies), as they are when the enemy's reaches 0. And 收手
+// (owner, via the orchestrator): under realign-own, after each attempt that leaves attempts unspent the
+// actor chooses `continue` (roll the next) or `stop` (the rest are lost) -- a pending decision after every
+// roll, each roll made from the game's RNG as it is resolved, a `lobbyStop` entry when the actor stops; each
+// attempt's entry names both sides' modifiers (the controlled neighbours, more influence, home).
 // The modifiers and the losses are recomputed here from that text (`ctl`, `mods`, `expectLoss` below), not
 // read from the engine; only the dice faces are read from the log, since the rule does not fix them.
 import { test } from "node:test";
@@ -20,7 +27,8 @@ import * as B from "../public/shared/bots.js";
 
 const { QIN, CHU, SPACE, SPACES } = E;
 const HOME = { [QIN]: "west", [CHU]: "south" };
-const DIE = { realign: 6, "realign-mild": 3 }, MILD_CAP = 2;
+const DIE = { realign: 6, "realign-mild": 3, "realign-own": 6 }, MILD_CAP = 2;
+const OWN = { "realign-own": true };
 
 // Control, straight from the rulebook: a side controls a space when its influence is at least the other
 // side's plus the space's stability.
@@ -62,11 +70,17 @@ function stage(options, side, { inf, card, weariness = 5, effects = [] }) {
   return st;
 }
 const lobbyPlay = (side, card, target) => ({ type: "play", side, card, use: "lobby", target });
-// The same play from many RNG states; returns [state after, its realign entries] for each.
+// Answer every 收手 decision with `choice` (realign-own asks after each attempt that leaves attempts unspent;
+// the other modes never ask).
+function playOut(s, choice = "continue") {
+  for (let k = 0; s.pending && s.pending.tag === "realign" && k < 20; k++) s = E.apply(s, { type: "choose", side: s.pending.who, choice });
+  return s;
+}
+// The same play from many RNG states, every attempt taken; returns [state after, its realign entries, state before].
 function* rolls(st, action, n = 400) {
   for (let i = 1; i <= n; i++) {
     const s = E.clone(st); s.rngState = (i * 2654435761) >>> 0;
-    const after = E.apply(s, action);
+    const after = playOut(E.apply(s, action));
     yield [after, after.log.filter((l) => l.type === "realign"), s];
   }
 }
@@ -81,7 +95,7 @@ const total = (e, s) => e.roll[s] + e.mod[s];
 // Chu 1 (新鄭) + 1 (more influence) + 0 (no 南方 neighbour) = 2.
 const LUOYI = { hangu: [6, 0], xinzheng: [0, 4], luoyi: [2, 3] };
 
-for (const mode of ["realign", "realign-mild"]) {
+for (const mode of ["realign", "realign-mild", "realign-own"]) {
   test(`${mode}: the modifiers are +1 per controlled neighbour, +1 for more influence, +1 in or next to home`, () => {
     const st = stage({ lobby: mode }, QIN, { inf: LUOYI, card: "tiangou" });
     const [, [e]] = rolls(st, lobbyPlay(QIN, "tiangou", "luoyi"), 1).next().value;
@@ -143,7 +157,9 @@ for (const mode of ["realign", "realign-mild"]) {
     for (const [after, es] of rolls(st, lobbyPlay(QIN, "mibing", "luoyi"), 200)) {
       // Replay the attempts by the text, from the logged dice.
       const board = E.clone(inf);
+      const stops = () => board.luoyi[CHU] === 0 || (!!OWN[mode] && board.luoyi[QIN] === 0);
       for (const e of es) {
+        assert.equal(stops(), false, "no attempt after the sequence should have stopped");
         assert.deepEqual(e.mod, [mods(board, QIN, "luoyi"), mods(board, CHU, "luoyi")], "modifiers re-read before each attempt");
         const d = total(e, QIN) - total(e, CHU), cap = mode === "realign-mild" ? MILD_CAP : Infinity;
         if (d > 0) board.luoyi[CHU] = Math.max(0, board.luoyi[CHU] - Math.min(d, cap));
@@ -151,7 +167,7 @@ for (const mode of ["realign", "realign-mild"]) {
       }
       assert.deepEqual(after.inf.luoyi, board.luoyi);
       if (es.length === 3) full++;
-      else { early++; assert.equal(board.luoyi[CHU], 0, "stopped early only because Chu had nothing left"); }
+      else { early++; assert.ok(stops(), `stopped early only because ${OWN[mode] ? "one side" : "Chu"} had nothing left`); }
       assert.ok(es.length >= 1 && es.length <= 3);
       assert.deepEqual(es.map((e) => e.k), es.map((_, i) => i + 1));
       const lob = after.log.find((l) => l.type === "lobby");
@@ -210,4 +226,137 @@ test("without the option 遊說 is today's: 局勢 decides, no dice, the actor n
   assert.deepEqual(after.inf.luoyi, [2, 2]);
   assert.equal(after.log.filter((l) => l.type === "realign").length, 0);
   assert.equal(after.rngState, rng0);
+});
+
+test("realign-own: a space where the actor has no influence of its own is not offered, and apply() refuses it", () => {
+  // Chu has nothing in 函谷關, Qin 3; Chu has 1 in 關中.
+  const inf = { guanzhong: [5, 1], hangu: [3, 0], luoyi: [0, 2] };
+  const st = stage({ lobby: "realign-own" }, CHU, { inf, card: "tiangou" });
+  const targets = E.legal(st, CHU).cards[0].uses.lobby.targets.map((t) => t.id);
+  assert.ok(targets.includes("guanzhong"), "own 1 + enemy 5: offered");
+  assert.equal(targets.includes("hangu"), false, "own 0: not offered");
+  assert.throws(() => E.apply(st, lobbyPlay(CHU, "tiangou", "hangu")), /influence of your own/);
+  // The same space under plain realign is a legal (riskless) target.
+  const plain = stage({ lobby: "realign" }, CHU, { inf, card: "tiangou" });
+  assert.ok(E.legal(plain, CHU).cards[0].uses.lobby.targets.some((t) => t.id === "hangu"));
+  assert.doesNotThrow(() => E.apply(plain, lobbyPlay(CHU, "tiangou", "hangu")));
+});
+
+test("realign-own: when the actor's own influence reaches 0 the rest of the attempts are lost", () => {
+  // Qin 1 in Luoyi against Chu 5 and much better Chu modifiers: a lost first attempt empties Qin there.
+  const inf = { xinzheng: [0, 4], yiyang: [0, 4], hangu: [6, 0], luoyi: [1, 5] };
+  const st = stage({ lobby: "realign-own" }, QIN, { inf, card: "mibing" }); // 3 ops
+  const [after, es, before] = find(st, lobbyPlay(QIN, "mibing", "luoyi"), ([x]) => x && total(x, CHU) > total(x, QIN));
+  assert.equal(es.length, 1, "one attempt, then Qin no longer qualifies");
+  assert.deepEqual(after.inf.luoyi, [0, 5]);
+  const lob = after.log.find((l) => l.type === "lobby");
+  assert.equal(lob.attempts, 1); assert.equal(lob.ops, 3);
+  // Under plain realign the same roll goes on to the second and third attempts.
+  const plain = stage({ lobby: "realign" }, QIN, { inf, card: "mibing" });
+  plain.rngState = before.rngState;
+  assert.equal(E.apply(plain, lobbyPlay(QIN, "mibing", "luoyi")).log.filter((l) => l.type === "realign").length, 3);
+});
+
+// ---------- 收手 (realign-own) ----------
+// Luoyi 3 : 3 with Qin's 3-op card: a first attempt that neither empties Chu nor Qin leaves two unspent.
+const OPEN = { hangu: [6, 0], xinzheng: [0, 4], luoyi: [3, 3] };
+function firstOpen(mode = "realign-own") {
+  const st = stage({ lobby: mode }, QIN, { inf: OPEN, card: "mibing" });
+  for (let i = 1; i < 400; i++) {
+    const s = E.clone(st); s.rngState = (i * 2654435761) >>> 0;
+    const after = E.apply(s, lobbyPlay(QIN, "mibing", "luoyi"));
+    const [q, c] = after.inf.luoyi;
+    if (q > 0 && c > 0) return { before: s, after };
+  }
+  throw new Error("no open first attempt");
+}
+
+test("收手: after an attempt with attempts left the actor is asked continue / stop; that roll is already made", () => {
+  const { before, after } = firstOpen();
+  assert.equal(after.log.filter((l) => l.type === "realign").length, 1, "one attempt rolled, not three");
+  assert.ok(after.pending, "a decision is pending");
+  assert.equal(after.pending.who, QIN);
+  assert.equal(after.pending.kind, "option");
+  assert.deepEqual(after.pending.options.map((o) => o.id).sort(), ["continue", "stop"]);
+  assert.equal(after.pending.target, "luoyi");
+  assert.notEqual(after.rngState, before.rngState, "the first roll came from the game's RNG");
+  assert.equal(after.actor, QIN, "still Qin's action round");
+  // Nothing else of the play has happened yet: the round has not passed to Chu.
+  assert.deepEqual(E.mustAct(after), [QIN]);
+});
+
+test("收手: stop loses the remaining attempts and logs a stop", () => {
+  const { after } = firstOpen();
+  const s = E.apply(after, { type: "choose", side: QIN, choice: "stop" });
+  assert.equal(s.pending, null);
+  assert.equal(s.log.filter((l) => l.type === "realign").length, 1);
+  assert.deepEqual(s.inf.luoyi, after.inf.luoyi, "no more rolls");
+  const stop = s.log.find((l) => l.type === "lobbyStop");
+  assert.ok(stop, "a stop entry");
+  assert.equal(stop.side, QIN); assert.equal(stop.target, "luoyi"); assert.equal(stop.k, 1); assert.equal(stop.left, 2);
+  assert.equal(s.log.find((l) => l.type === "lobby").attempts, 1);
+  assert.equal(s.actor, CHU, "the action round passed on");
+  assert.equal(s.rngState, after.rngState, "stopping rolls nothing");
+});
+
+test("收手: continue rolls exactly once more (from the RNG then), and asks again only while attempts are left", () => {
+  const { after } = firstOpen();
+  const s = E.apply(after, { type: "choose", side: QIN, choice: "continue" });
+  const es = s.log.filter((l) => l.type === "realign");
+  assert.equal(es.length, 2);
+  assert.notEqual(s.rngState, after.rngState, "the second roll is made now, not before");
+  const [q, c] = s.inf.luoyi;
+  if (q > 0 && c > 0) {
+    assert.ok(s.pending && s.pending.tag === "realign", "one attempt left: asked again");
+    const t = E.apply(s, { type: "choose", side: QIN, choice: "continue" });
+    assert.equal(t.log.filter((l) => l.type === "realign").length, 3);
+    assert.equal(t.pending, null, "no attempts left: nothing to ask");
+  } else assert.equal(s.pending, null, "auto-stop: nothing to ask");
+});
+
+test("收手: a save and reload mid-sequence resumes at the decision and plays on identically", () => {
+  const { after } = firstOpen();
+  const saved = JSON.stringify(after), loaded = JSON.parse(saved);
+  assert.deepEqual(loaded.pending, after.pending);
+  const view = E.view(loaded, QIN);
+  assert.equal(view.pending.tag, "realign", "the seat's view shows the decision");
+  for (const choice of ["continue", "stop"]) {
+    const a = E.apply(after, { type: "choose", side: QIN, choice }), b = E.apply(loaded, { type: "choose", side: QIN, choice });
+    assert.equal(JSON.stringify(b), JSON.stringify(a), choice);
+  }
+  assert.throws(() => E.apply(loaded, { type: "choose", side: CHU, choice: "stop" }), /not your choice/);
+});
+
+test("收手: the auto-stops still apply (enemy emptied, own emptied, the last attempt) and ask nothing", () => {
+  const st = stage({ lobby: "realign-own" }, QIN, { inf: { ...OPEN, luoyi: [3, 1] }, card: "mibing" });
+  const [, , before] = find(st, lobbyPlay(QIN, "mibing", "luoyi"), ([x]) => x && total(x, QIN) > total(x, CHU));
+  const won = E.apply(before, lobbyPlay(QIN, "mibing", "luoyi"));
+  assert.equal(won.inf.luoyi[CHU], 0); assert.equal(won.pending, null, "enemy emptied");
+  const st2 = stage({ lobby: "realign-own" }, QIN, { inf: { ...OPEN, xinzheng: [0, 4], yiyang: [0, 4], luoyi: [1, 5] }, card: "mibing" });
+  const [, , before2] = find(st2, lobbyPlay(QIN, "mibing", "luoyi"), ([x]) => x && total(x, CHU) > total(x, QIN));
+  const lost = E.apply(before2, lobbyPlay(QIN, "mibing", "luoyi"));
+  assert.equal(lost.inf.luoyi[QIN], 0); assert.equal(lost.pending, null, "own emptied");
+  const one = stage({ lobby: "realign-own" }, QIN, { inf: OPEN, card: "tiangou" });
+  assert.equal(E.apply(one, lobbyPlay(QIN, "tiangou", "luoyi")).pending, null, "one op, one attempt: nothing to ask");
+});
+
+test("收手 only under realign-own: realign and realign-mild roll every attempt without asking", () => {
+  for (const mode of ["realign", "realign-mild"]) {
+    const st = stage({ lobby: mode }, QIN, { inf: OPEN, card: "mibing" });
+    for (let i = 1; i < 60; i++) {
+      const s = E.clone(st); s.rngState = (i * 2654435761) >>> 0;
+      assert.equal(E.apply(s, lobbyPlay(QIN, "mibing", "luoyi")).pending, null, `${mode} rng ${i}`);
+    }
+  }
+});
+
+test("each attempt's entry names both sides' modifiers: controlled neighbours, more influence, home", () => {
+  for (const mode of ["realign", "realign-mild", "realign-own"]) {
+    const st = stage({ lobby: mode }, QIN, { inf: LUOYI, card: "tiangou" });
+    const e = E.apply(st, lobbyPlay(QIN, "tiangou", "luoyi")).log.find((l) => l.type === "realign");
+    assert.deepEqual(e.adj, [["hangu"], ["xinzheng"]], mode);
+    assert.deepEqual(e.more, [false, true], mode);
+    assert.deepEqual(e.home, [true, false], mode);
+    for (const s of [QIN, CHU]) assert.equal(e.mod[s], e.adj[s].length + (e.more[s] ? 1 : 0) + (e.home[s] ? 1 : 0));
+  }
 });
