@@ -65,7 +65,13 @@ export const CARDS = [
     text: "變法軌前進 1。", effect(st) { E.reformAdvance(st, Q, 1); } },
   { id: "hexi", num: 8, zh: "收復河西", en: "Retaking Hexi", era: "reform", side: Q, ops: 2, remove: true, year: 330,
     text: "秦在河東放 2;若秦因此控制河東,再移除楚在大梁 1。",
-    effect(st) { E.place(st, Q, "hedong", 2); if (E.controller(st, "hedong") === Q) E.remove(st, C, "daliang", 1); } },
+    // 「因此」: only when the 2 are what gave Qin 河東 (owner 裁決 #119: the card
+    // text read literally; it used to fire when Qin already held 河東 too).
+    effect(st) {
+      const had = E.controller(st, "hedong") === Q;
+      E.place(st, Q, "hedong", 2);
+      if (!had && E.controller(st, "hedong") === Q) E.remove(st, C, "daliang", 1);
+    } },
   { id: "zhangyi", num: 9, zh: "張儀連橫", en: "Zhang Yi's Horizontal", era: "reform", side: Q, ops: 3, remove: true, year: 328,
     text: "移除楚在最多 3 個國都各 1 點影響力。",
     effect(st, side, ch) {
