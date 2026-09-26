@@ -214,6 +214,38 @@ export function tire(st, n, pusher) {
 export function recover(st, n) { st.weariness = Math.min(5, st.weariness + n); }
 
 // ---------- #123: collapse risk, decided by simulation, not by card text ----------
+// The UI's own state is always a per-seat VIEW (`E.view()`, app.js: `v = E.view
+// (game.st, game.me)` for solo, `v = game.st` = the server's own view for a
+// room) -- the opponent's hand is `null` there, not an array, on purpose. The
+// real `apply()`/`run()` machinery does not expect that: `eventMark` (used by
+// EVERY event, to log what it changed) reads `st.hands[side].length` for
+// BOTH sides unconditionally and throws on a hidden hand. Found the hard way
+// (#123 round 1): the easy bot's own candidate builder already hands a bare
+// view to `randomAction`, and a caught throw there silently reads as "safe",
+// so the very warning this issue exists to add would have gone dark for
+// every hidden-hand position -- solo and rooms alike, i.e. almost always.
+// `view()` hides three things this way: the opponent's hand (`null`, count in
+// `handCounts`), the draw pile (deleted, count in `drawCount`) and the not-
+// yet-shuffled-in eras (`later`, deleted, counts in `laterCounts`) -- all
+// patched here with placeholder ids of the RIGHT length, never real card
+// ids: enough for every generic length-only check (`eventMark`'s own diff,
+// `handSize` in bots.js's `evaluate`), and no sided card's own `effect()`
+// reads what those hidden piles actually hold to decide whether it tires
+// the realm.
+function withHiddenPilesFilled(st) {
+  const need = !Array.isArray(st.hands[QIN]) || !Array.isArray(st.hands[CHU]) || !Array.isArray(st.draw) || !st.later
+    || Object.values(st.later).some((a) => !Array.isArray(a));
+  if (!need) return st;
+  const s = clone(st);
+  for (const side of [QIN, CHU]) {
+    if (!Array.isArray(s.hands[side])) s.hands[side] = new Array((s.handCounts && s.handCounts[side]) || 0).fill("__hidden__");
+  }
+  if (!Array.isArray(s.draw)) s.draw = new Array(s.drawCount || 0).fill("__hidden__");
+  if (s.later && s.laterCounts) {
+    for (const k of Object.keys(s.laterCounts)) if (!Array.isArray(s.later[k])) s.later[k] = new Array(s.laterCounts[k] || 0).fill("__hidden__");
+  }
+  return s;
+}
 function firstLegalChoice(p) {
   switch (p.kind) {
     case "points": return (p.options || []).slice(0, Math.max(0, p.min || 0));
@@ -239,8 +271,9 @@ function firstLegalChoice(p) {
 // is actually played.
 export function actionWouldCollapse(st, side, action) {
   if (st.winner != null) return false;
+  const probe = withHiddenPilesFilled(st);
   let s;
-  try { s = apply(st, action); } catch { return false; }
+  try { s = apply(probe, action); } catch { return false; }
   try {
     for (let guard = 0; s.pending && s.winner == null && guard < 30; guard++) {
       s = apply(s, { type: "choose", side: s.pending.who, choice: firstLegalChoice(s.pending) });

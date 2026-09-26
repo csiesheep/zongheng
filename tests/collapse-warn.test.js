@@ -77,21 +77,40 @@ test("#123: 變法 on the same card never fires the event, and reads as safe", (
   assert.equal(E.actionWouldCollapse(st, E.CHU, { type: "play", side: E.CHU, card: "huaiwang", use: "reform" }), false);
 });
 
-test("#123: a raid on a battleground that would ALSO push weariness to 土崩 reads as collapsing, even when the card itself is Chu's own (no event involved)", () => {
-  // A Chu-owned card raiding a battleground while already at 民困: locked out
-  // by campaignLocked() as a normal move (the UI would never offer the
-  // target), but the check itself is asked here directly, as a raid
-  // confirm's own preview would -- it must not blindly say "safe" just
-  // because no card event is involved.
-  const st = ownerCase();
-  const ownCard = st.hands[E.CHU].find((c) => E.CARD[c].side === E.CHU);
-  assert.ok(ownCard, "test setup: Chu needs an own card in hand");
-  const bg = E.SPACES.find((s) => s.battleground && E.infOf(st, s.id)[E.QIN] > 0);
-  assert.ok(bg, "test setup: needs a battleground with Qin influence to raid");
+test("#123: a raid on a battleground CAN collapse the realm even when the card's event ALONE would not -- the raid's own tire and the event's own tire add up (opsFirst: the raid is validated and spent at the CURRENT weariness, then the event fires after, at the already-lower weariness left behind)", () => {
+  // 民困 itself locks every battleground from being raided at all
+  // (campaignLocked: w<=2 && battleground) -- the compound risk this guards
+  // is one step earlier, at 禍結 (3): the raid is still legal there, but by
+  // the time the card's OWN event fires afterward (opsFirst), the realm is
+  // already down to 民困 from the raid itself, and the event's own tire
+  // finishes it. `eventWouldCollapse` alone (checked from weariness 3, before
+  // any ops) reads this exact card as safe -- it is only the SPECIFIC raid
+  // target, chosen, that turns out not to be.
+  let st = ownerCase();
+  st.weariness = 3; // 禍結
+  assert.equal(E.eventWouldCollapse(st, E.CHU, "huaiwang"), false, "test setup: the event alone must NOT already collapse at weariness 3");
+  // Any battleground works for a plain campaign (place/campaign/lobby are
+  // generic ops uses, not gated by the card's own text). Not home (west/
+  // south, locked at weariness <= homeLock/4) and not jin/zhou (locked at
+  // weariness <= 3) -- east or north is the only kind still raidable at the
+  // weariness 3 this test needs (rulebook 五's own lock ladder). Qin
+  // influence there is placed directly: this test only needs a legal raid
+  // target, not a realistic board.
+  const bg = E.SPACES.find((s) => s.battleground && ["east", "north"].includes(s.region));
+  assert.ok(bg, "test setup: needs an east/north battleground on the board");
+  st.inf[bg.id] = [1, 0];
   assert.equal(
-    E.actionWouldCollapse(st, E.CHU, { type: "play", side: E.CHU, card: ownCard, use: "campaign", target: bg.id }),
+    E.actionWouldCollapse(st, E.CHU, { type: "play", side: E.CHU, card: "huaiwang", use: "campaign", order: "opsFirst", target: bg.id }),
     true,
   );
+});
+
+test("#123: the check reads the SAME answer from a per-seat view (E.view) as from the real state -- the UI's own `v` (app.js: `E.view(game.st, game.me)` for solo, the room's own view for a room) is never the full state, and the opponent's hidden hand/draw pile used to make apply() throw mid-event and silently read as \"safe\" (found via the easy bot picking this exact play in the very first test run)", () => {
+  const st = ownerCase();
+  const view = E.view(st, E.CHU);
+  assert.equal(Array.isArray(view.hands[E.QIN]), false, "test setup: the opponent's hand must actually be hidden here");
+  assert.equal(E.eventWouldCollapse(view, E.CHU, "huaiwang"), true);
+  assert.equal(E.actionWouldCollapse(view, E.CHU, { type: "play", side: E.CHU, card: "huaiwang", use: "place", order: "eventFirst" }), true);
 });
 
 test("#123: actionWouldCollapse never throws and reads \"safe\" for a bad/illegal action", () => {
