@@ -482,8 +482,9 @@ function exec(st, step) {
       // that never happened. `event` marks the start (before the effect's own
       // entries: vp, tire, campaign, discard ...), `eventEnd` says whether it
       // changed anything and, if not, why.
-      if (step.pre == null) {
-        step.pre = eventMark(st);
+      let pre = step.pre;
+      if (pre == null) {
+        pre = eventMark(st);
         log(st, { type: "event", card: step.card, side: step.side, by: st.phasing });
       }
       for (let guard = 0; guard < 20; guard++) {
@@ -495,13 +496,14 @@ function exec(st, step) {
         // player who played it -- goes into `eventEnd` as `chose`.
         const who = need.who ?? step.side;
         if (!(step.asked || []).includes(who)) step.asked = [...(step.asked || []), who];
+        step.pre = pre; // the mark waits in the plan only while a choice is pending
         return ask(st, step, { ...need, tag: "event", card: step.card });
       }
       step.done = true;
       // What the event did, then what follows from it (滅, 相印): the log reads
       // cause before consequence. Markers only follow influence, which
       // `eventEnd` already counts, so logging it first loses nothing.
-      logEventEnd(st, step);
+      logEventEnd(st, step, pre);
       checkMarkers(st);
       return true;
     }
@@ -565,16 +567,23 @@ function exec(st, step) {
 }
 
 // What an event can change, read before it runs and compared after (#115).
-// Only what both seats may see: it rides in the plan step, and `view` keeps
-// the plan, so a hand is its size and never its cards.
+// When the event asks for a choice the mark waits in the plan step, and
+// `view` keeps the plan, so it holds only what both seats may see: a hand is
+// its size, never its cards. The bots play events out by the thousand while
+// they think, so the mark is plain copies (no JSON round trip for the board)
+// and the comparison does the set work only when something changed.
 function eventMark(st) {
+  const inf = {};
+  for (const k in st.inf) inf[k] = [st.inf[k][0], st.inf[k][1]];
   return {
-    inf: clone(st.inf), mandate: st.mandate, weariness: st.weariness, reform: st.reform.slice(),
+    inf, mandate: st.mandate, weariness: st.weariness, reform: `${st.reform[0]}:${st.reform[1]}`,
     hands: [st.hands[QIN].length, st.hands[CHU].length], draw: st.draw.length, discard: st.discard.length, removed: st.removed.length,
-    effects: st.effects.map((e) => JSON.stringify(e)), seals: Object.keys(st.seals).sort(), mie: Object.keys(st.mie).sort(),
-    jiuding: clone(st.jiuding), revealed: st.revealed.slice(), forced: st.forced.slice(), luoyiYields: st.luoyiYields, winner: st.winner,
+    effects: st.effects.map((e) => JSON.stringify(e)), seals: Object.keys(st.seals).sort().join(), mie: Object.keys(st.mie).sort().join(),
+    jiuding: `${st.jiuding.holder}:${st.jiuding.faceDown}`, revealed: st.revealed.join(), forced: st.forced.join(), luoyiYields: st.luoyiYields, winner: st.winner,
   };
 }
+const MARK_SCALARS = ["mandate", "weariness", "draw", "discard", "removed", "reform", "seals", "mie", "jiuding", "revealed", "forced", "luoyiYields", "winner"];
+const SPACE_ORDER = Object.fromEntries(SPACES.map((s, i) => [s.id, i]));
 // `effect`: did the event change anything at all. When it did not, `why`:
 // "noTarget" -- a choice it needed had nothing to choose from (no space with
 // enemy influence, nothing in the region to hit, an empty discard pile ...);
@@ -582,35 +591,38 @@ function eventMark(st) {
 // the cap, nothing left to remove, a track already full, a lasting effect
 // already in play). What it changed that no other entry reports rides along:
 // influence per space (`inf`: [space, Qin delta, Chu delta]), lasting effects
-// added and removed (`fx`), hand sizes (`hands`: [Qin delta, Chu delta]) and a
+// added and removed (`fx`), hand sizes (`hands`: [Qin delta, Chu delta]), a
 // recovery of the weariness track (`recover`), and the seat(s) that answered
-// its choices (`chose`). Mandate, weariness lost,
-// reform, seals, 滅 and discards already log themselves.
-function logEventEnd(st, step) {
-  const a = step.pre, b = eventMark(st);
+// its choices (`chose`). Mandate, weariness lost, reform, seals, 滅 and
+// discards already log themselves.
+function logEventEnd(st, step, a) {
+  const b = eventMark(st);
   const inf = [];
-  for (const s of SPACES) {
-    const x = a.inf[s.id] || [0, 0], y = b.inf[s.id] || [0, 0];
-    if (x[0] !== y[0] || x[1] !== y[1]) inf.push([s.id, y[0] - x[0], y[1] - x[1]]);
+  for (const k in b.inf) {
+    const x = a.inf[k] || [0, 0], y = b.inf[k];
+    if (x[0] !== y[0] || x[1] !== y[1]) inf.push([k, y[0] - x[0], y[1] - x[1]]);
   }
-  const count = (arr) => arr.reduce((m, k) => ((m[k] = (m[k] || 0) + 1), m), {});
-  const ca = count(a.effects), cb = count(b.effects);
+  for (const k in a.inf) if (!b.inf[k] && (a.inf[k][0] || a.inf[k][1])) inf.push([k, -a.inf[k][0], -a.inf[k][1]]);
+  inf.sort((p, q) => SPACE_ORDER[p[0]] - SPACE_ORDER[q[0]]);
+  // Lasting effects as a multiset (函谷關天險 re-played is removed and pushed
+  // back: the same set, no change).
   const fx = { add: [], rm: [] };
-  for (const k of new Set([...a.effects, ...b.effects])) {
-    const d = (cb[k] || 0) - (ca[k] || 0), card = JSON.parse(k).card;
-    for (let i = 0; i < d; i++) fx.add.push(card);
-    for (let i = 0; i < -d; i++) fx.rm.push(card);
+  if (a.effects.join("\n") !== b.effects.join("\n")) {
+    const count = (arr) => arr.reduce((m, k) => ((m[k] = (m[k] || 0) + 1), m), {});
+    const ca = count(a.effects), cb = count(b.effects);
+    for (const k of new Set([...a.effects, ...b.effects])) {
+      const d = (cb[k] || 0) - (ca[k] || 0), card = JSON.parse(k).card;
+      for (let i = 0; i < d; i++) fx.add.push(card);
+      for (let i = 0; i < -d; i++) fx.rm.push(card);
+    }
   }
-  // Influence by value (a space first touched shows up as [0, 0]), lasting
-  // effects as a set (函谷關天險 re-played is removed and pushed back: same set).
-  const rest = (m) => JSON.stringify({ ...m, inf: null, effects: m.effects.slice().sort() });
-  const effect = inf.length > 0 || rest(a) !== rest(b);
+  const dh = [b.hands[0] - a.hands[0], b.hands[1] - a.hands[1]];
+  const effect = inf.length > 0 || fx.add.length > 0 || fx.rm.length > 0 || dh[0] !== 0 || dh[1] !== 0 || MARK_SCALARS.some((k) => a[k] !== b[k]);
   const entry = { type: "eventEnd", card: step.card, side: step.side, by: step.by ?? step.side, effect };
   if (!effect) entry.why = step.empty ? "noTarget" : "noChange";
   if (step.asked && step.asked.length) entry.chose = step.asked.slice();
   if (inf.length) entry.inf = inf;
   if (fx.add.length || fx.rm.length) entry.fx = fx;
-  const dh = [b.hands[0] - a.hands[0], b.hands[1] - a.hands[1]];
   if (dh[0] || dh[1]) entry.hands = dh;
   if (b.weariness > a.weariness) entry.recover = b.weariness;
   log(st, entry);
