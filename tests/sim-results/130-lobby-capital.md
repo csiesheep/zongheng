@@ -1,6 +1,6 @@
 # #130 — 遊說 as a realignment roll, and losing (or moving) the home capital
 
-**Status: PARTIAL — cells are still running. The tables below are regenerated as each cell finishes; the reading comes at the end.**
+**Status: PARTIAL — one cell (lc/hh/realign+lose-turn) is still running; the tables are regenerated as cells finish.**
 
 Engine options (none is a key of `DEFAULT_OPTIONS`; an absent option plays as today, byte for byte — `tests/defaults-130.test.js`):
 
@@ -28,6 +28,58 @@ node tests/sim.js --report-130=tests/sim-results/130-base.txt.state.json,tests/s
 
 <!-- below: the output of --report-130, unedited -->
 
+## Reading
+
+All cells: 500 games, seeds 1…500, no errors, no stuck games. "±" and [ ] are 95 % intervals; a difference from `base` marked ** leaves 0 out. Differences are computed as independent samples although the seeds are shared, so they are conservative. The owner has since picked `realign-own` (with 收手) and `homeFall: lose-turn`; those two, alone and together, are read first.
+
+### What the owner picked
+
+| cell | Qin win % nn | − base | Qin win % hh | − base | 國都 ends nn / hh (won by Qin / Chu) |
+|---|---|---|---|---|---|
+| base | 51.0 [46.6, 55.4] | | 54.2 [49.8, 58.5] | | – |
+| realign-own | 49.6 | −1.4 | 49.0 | −5.2 | – |
+| lose-turn | 49.6 | −1.4 | 48.4 | −5.8 | 5.6 % (8 / 20) / 9.6 % (12 / 36) |
+| realign-own + lose-turn | 47.4 | −3.6 | 46.0 | **−8.2 [−14.4, −2.0]** | 9.8 % (10 / 39) / 11.2 % (13 / 43) |
+
+- **Every new rule leans to Chu, and the pick together does so measurably at the hard level** (54.2 → 46.0 %, −8.2 pp). Measured from 50 % rather than from `base`, the hard bots go from Qin +4 to Chu +4; the normal bots from Qin +1 to Chu +3.
+- **The lean comes from the capitals, and the capitals are not symmetric: 關中 is exposed, 郢 is not.** Already today (base) Chu controls 關中 at some moment in 8.0 % of games (both levels; mostly turns 4–5, the start of the alliance era), Qin controls 郢 in 1.6 % (nn) / 1.4 % (hh); at a turn end 關中 is Chu-held in 29 (nn) / 30 (hh) games, 郢 in 2 / 3. Under lose-turn Chu takes 關中 in 16.6 % (nn) / 26.4 % (hh) of games and Qin takes 郢 in 7.6 / 11.4 %; the capital wins go 20 : 8 and 36 : 12 to Chu. With realign-own on top, 39 : 10 and 43 : 13.
+- **lose-turn does what it says.** Of the falls the grace let the owner retake, 163 of 203 (nn) and 214 of 281 (hh) were retaken before the turn ended; the game ends by the capital in 5.6 / 9.6 % of games, and it barely changes anything else (games 0.1–0.2 turns shorter; 奇襲 −0.5 / −0.8 a game, fewer raids into the home region the bots now guard). Compare `lose` (instant): 32.6 / 40.6 % of games end by the capital, 0.5–0.7 turns shorter — the capital becomes the main way to win.
+- **realign-own is 遊說 with a price.** Per game the 遊說 use of ops falls (nn 6.64 → 5.53, hh 7.30 → 6.37 uses), because the target must hold your own influence; the actor now loses points in 22.8 % (nn) / 20.3 % (hh) of attempts (under plain realign 11.3 / 8.8 %, since 36–42 % of those 遊說 had nothing to lose). Per attempt the actor nets +0.83 (nn) / +0.88 (hh) points; per op +0.67 / +0.69 against today's deterministic +0.78 / +0.81 (event 遊說 taken out). 奇襲 barely moves (nn +0.25, hh +0.85 a game). 66–70 % of 遊說 still aim at 要衝.
+- **收手 is rarely used by the bots:** 1.6 % (nn) / 1.2 % (hh) of 遊說 stop early, always right after a lost roll; 1.30 / 1.28 attempts are rolled per 遊說 on 1.61 / 1.65 ops — most of the unspent ops are lost to the auto-stops (the enemy emptied, or the actor emptied), not to 收手. The bot stops when the next attempt's expected net is ≤ 0, and since it only starts a 遊說 where one attempt gains on average, the board rarely turns bad in one roll. A human who stops on a bad first roll will stop more often.
+
+### The modifier difference, for the odds screen
+
+Per attempt, d = the actor's modifiers − the defender's. Under realign-own the bots only ever rolled at d ≥ 0 (they skip a target where one attempt loses on average), so the measured distribution is the bots' taste, not what a player will see; the measured win / tie / lose rates match 1d6 against 1d6 within noise (tables below). The exact odds a player needs for any d (1d6 each):
+
+| d | −3 | −2 | −1 | 0 | +1 | +2 | +3 | +4 |
+|---|---|---|---|---|---|---|---|---|
+| actor wins % | 8.3 | 16.7 | 27.8 | 41.7 | 58.3 | 72.2 | 83.3 | 91.7 |
+| tie % | 8.3 | 11.1 | 13.9 | 16.7 | 13.9 | 11.1 | 8.3 | 5.6 |
+| actor loses % | 83.3 | 72.2 | 58.3 | 41.7 | 27.8 | 16.7 | 8.3 | 2.8 |
+
+How often each d came up in the bots' games (realign-own nn / hh): d = 0: 13.9 / 11.6 %; +1: 34.5 / 31.5 %; +2: 30.3 / 31.8 %; +3: 15.5 / 17.3 %; +4: 4.8 / 6.5 %; +5: 1.1 / 1.3 %. The engine gives the page one attempt's odds directly: `E.realignOdds(st, side, space)` → both modifiers and their parts, win / tie / lose, and the expected net at the current influence.
+
+### The other values
+
+- **realign (plain) and realign-mild** move Qin −1.6 / −2.6 pp (nn) and −6.4 / −8.8 pp (hh, both outside the interval). 遊說 is used more (+1.7 / +1.0 uses a game nn, +3.3 / +1.6 hh) and 36–42 % (realign) / 17–23 % (mild) of it is aimed where the actor has nothing to lose — the riskless case realign-own closes. Mild makes a lost roll cheap (actor loses points in 4.4 / 3.6 % of attempts) and nets +0.99 / +0.96 per op, more than today's rule: a stronger 遊說, not a riskier one. Both raise 記分 ends (see the caveat below).
+- **move (遷都)** changes little: a capital moves in 46 (nn) / 47 (hh) games — Qin's in 40 of them at both levels — the moved capital then falls for good in 4 / 9 games (國都 ends 0.8 / 1.8 %), Qin −1.0 / −3.2 pp. It adds colour and a +3.
+- **lose-majority** ends games early (4.2 / 3.8 turns on average, −1.3 / −2.2) and makes the capital the main event (國都 42.8 / 43.4 % of games) — a majority in a stability-4 capital is cheap. See the next section for its Qin %.
+- **lose** (instant) is balanced (Qin +0.2 / −5.4) but turns the game into a capital race (32.6 / 40.6 % of games end there; 相印 and 天命 ends fall).
+
+### Why lose-majority came out at Qin 60 % (nn)
+
+It is not the capital rule favouring Qin. By the capital itself **Chu wins more**: 130 games against Qin's 84 (nn; Chu's wins on turns 4–5: 101, Qin's spread over turns 1–8). What gives Qin its 60 % is **記分 — Chu losing by holding a scoring card at a turn end: 123 games (base 59)**, and the collapse of Chu's usual wins as games end at turn 4.2: 相印 83 → 20 games, Chu's 天命 81 → 24. Of the 123 記分 losses, 42 came at a turn end where Qin also held the majority in 郢 (the scoring check runs first, so a capital loss is reported as 記分); the other ~81 are the bot keeping its scoring card at its last action (89 of the 123 on turns 1–3; in 60 probe games under lose-majority the bots kept a scoring card at a last-round action 16 times of 241, base 10 of 201). At the hard level the same rule is +2.4 pp (inside the interval), with 國都 121 : 96 for Qin and 記分 104 : 55.
+
+### Caveats (read before trusting a small difference)
+
+- **記分 ends and the bots.** In every cell most 記分 ends are Chu's losses (base nn 59 : 13). Only Chu's last action is the last of a turn (Qin acts first in a round), so only Chu's one-ply search reaches the turn-end check, where its single guess of Qin's hidden hand sometimes holds a scoring card too — both holding one means 記分2, a Chu win — and it then keeps its own card and loses. Rules that make other moves look valuable at that moment (realign's dice, the capital races) raise it: realign 記分 22.2 % vs 14.4 % (nn). This is a bot weakness predating #130 and it tilts every cell toward Qin by the same mechanism; I did not change it (it would move the default game).
+- **The bots' capital terms are chosen by reasoning, not tuned** (a capital one point from falling is worth up to 60 × a road share that depends on who acts next; the first fall under `move` 3 × a steep road). No sensitivity run.
+- **"遊說 in detail" for the cells run before realign-own** counts the event 縱橫家遊說 (≈ 2 a game, removes 2, no dice) as 遊說; the corrected table ("with the event's scripted 遊說 taken out") estimates it out. Uses per game come from the plays and are exact everywhere.
+- The bots never 遊說 at d < 0 under realign-own and rarely 收手, so the 遊說 numbers describe careful players.
+
+### Recommendation (the owner decides; no default changed)
+
+The picks are sound rules — lose-turn gives the capital a real, bounded role (5–11 % of games) with a turn to answer, and realign-own makes 遊說 a gamble with a floor (you must have something to lose) — but **together they tilt the game about 4 pp toward Chu at both levels (−3.6 nn, −8.2 hh from base), and the tilt is 關中's exposure**, visible already in today's game (Chu holds 關中 at some moment in 8 % of games, Qin holds 郢 in 1.5 %). Before switching the defaults I would look at one compensating lever for Qin's capital — e.g. 關中's starting influence (Qin starts with 4 there; 5 would leave Chu needing one more point) — and measure it the same way. I have not traced which Chu plays take 關中 on turns 4–5; that is the first thing to look at. I would not adopt `lose-majority` (cheap early majorities, games at turn 4, and a Qin % carried by a bot weakness), `lose` (the capital becomes the game), `realign` (riskless 遊說 in 36–42 % of uses) or `realign-mild` (a stronger 遊說, not a riskier one). `move` is harmless and nearly unused.
 | cell | n | errors / stuck | Qin win % [95%] | Qin win − base, pp [95%] | avg end turn [95%] | end turn − base |
 |---|---|---|---|---|---|---|
 | lc/nn/base | 500 | 0 / 0 | 51.0 [46.6, 55.4] |  | 5.54 ±0.18 |  |
@@ -47,7 +99,7 @@ node tests/sim.js --report-130=tests/sim-results/130-base.txt.state.json,tests/s
 | lc/hh/lose-turn | 500 | 0 / 0 | 48.4 [44.0, 52.8] | -5.8 [-12.0, 0.4] | 5.80 ±0.16 | -0.21 [-0.43, +0.01] |
 | lc/hh/lose-majority | 500 | 0 / 0 | 56.6 [52.2, 60.9] | +2.4 [-3.8, 8.6] | 3.77 ±0.16 | **-2.24 [-2.46, -2.02]** |
 | lc/hh/move | 500 | 0 / 0 | 51.0 [46.6, 55.4] | -3.2 [-9.4, 3.0] | 6.01 ±0.16 | -0.00 [-0.22, +0.22] |
-| lc/hh/realign+lose-turn | 225 | 0 / 0 | 51.1 [44.6, 57.6] | -3.1 [-10.9, 4.8] | 5.58 ±0.24 | **-0.43 [-0.72, -0.15]** |
+| lc/hh/realign+lose-turn | 260 | 0 / 0 | 50.4 [44.3, 56.4] | -3.8 [-11.3, 3.7] | 5.60 ±0.23 | **-0.41 [-0.68, -0.13]** |
 | lc/hh/realign-own | 500 | 0 / 0 | 49.0 [44.6, 53.4] | -5.2 [-11.4, 1.0] | 5.95 ±0.15 | -0.06 [-0.28, +0.15] |
 | lc/hh/realign-own+lose-turn | 500 | 0 / 0 | 46.0 [41.7, 50.4] | **-8.2 [-14.4, -2.0]** | 5.70 ±0.15 | **-0.31 [-0.53, -0.09]** |
 
@@ -72,7 +124,7 @@ End reasons, % of games [Wilson 95%]; 國都 = the new end reason `homeFall`:
 | lc/hh/lose-turn | 24.4 [20.8, 28.4] | 1.0 [0.4, 2.3] | 12.4 [9.8, 15.6] | 1.8 [0.9, 3.4] | 14.8 [12.0, 18.2] | 0.2 [0.0, 1.1] | 8.2 [6.1, 10.9] | 0.8 [0.3, 2.0] | 26.8 [23.1, 30.8] | 9.6 [7.3, 12.5] |
 | lc/hh/lose-majority | 13.0 [10.3, 16.2] | 0.2 [0.0, 1.1] | 4.6 [3.1, 6.8] | 0.4 [0.1, 1.4] | 31.8 [27.9, 36.0] | 0.6 [0.2, 1.7] | 0.6 [0.2, 1.7] | 0.2 [0.0, 1.1] | 5.2 [3.6, 7.5] | 43.4 [39.1, 47.8] |
 | lc/hh/move | 28.2 [24.4, 32.3] | 0.8 [0.3, 2.0] | 12.8 [10.2, 16.0] | 2.2 [1.2, 3.9] | 10.2 [7.8, 13.2] | 0 | 11.2 [8.7, 14.3] | 1.0 [0.4, 2.3] | 31.8 [27.9, 36.0] | 1.8 [0.9, 3.4] |
-| lc/hh/realign+lose-turn | 29.8 [24.2, 36.1] | 1.3 [0.5, 3.8] | 9.3 [6.2, 13.8] | 1.8 [0.7, 4.5] | 16.0 [11.8, 21.4] | 0.9 [0.2, 3.2] | 9.8 [6.5, 14.4] | 0.9 [0.2, 3.2] | 24.9 [19.7, 30.9] | 5.3 [3.1, 9.1] |
+| lc/hh/realign+lose-turn | 30.8 [25.5, 36.6] | 1.2 [0.4, 3.3] | 10.4 [7.2, 14.7] | 1.5 [0.6, 3.9] | 15.4 [11.5, 20.3] | 0.8 [0.2, 2.8] | 10.0 [6.9, 14.2] | 0.8 [0.2, 2.8] | 23.8 [19.1, 29.4] | 5.4 [3.2, 8.8] |
 | lc/hh/realign-own | 22.4 [19.0, 26.3] | 1.2 [0.6, 2.6] | 15.4 [12.5, 18.8] | 2.2 [1.2, 3.9] | 13.2 [10.5, 16.4] | 0.2 [0.0, 1.1] | 10.6 [8.2, 13.6] | 0.6 [0.2, 1.7] | 34.2 [30.2, 38.5] | 0 |
 | lc/hh/realign-own+lose-turn | 21.8 [18.4, 25.6] | 1.4 [0.7, 2.9] | 13.0 [10.3, 16.2] | 4.0 [2.6, 6.1] | 12.8 [10.2, 16.0] | 0.4 [0.1, 1.4] | 7.0 [5.1, 9.6] | 0.6 [0.2, 1.7] | 27.8 [24.1, 31.9] | 11.2 [8.7, 14.3] |
 
@@ -97,7 +149,7 @@ End reasons by winner: games won by Qin / by Chu for each reason.
 | lc/hh/lose-turn | 62 / 60 | 5 / 0 | 0 / 62 | 5 / 4 | 49 / 25 | 0 / 1 | 14 / 27 | 0 / 4 | 95 / 39 | 12 / 36 |
 | lc/hh/lose-majority | 36 / 29 | 1 / 0 | 0 / 23 | 2 / 0 | 104 / 55 | 0 / 3 | 0 / 3 | 0 / 1 | 19 / 7 | 121 / 96 |
 | lc/hh/move | 76 / 65 | 4 / 0 | 0 / 64 | 5 / 6 | 39 / 12 | – | 19 / 37 | 0 / 5 | 111 / 48 | 1 / 8 |
-| lc/hh/realign+lose-turn | 33 / 34 | 3 / 0 | 0 / 21 | 2 / 2 | 25 / 11 | 0 / 2 | 6 / 16 | 0 / 2 | 43 / 13 | 3 / 9 |
+| lc/hh/realign+lose-turn | 39 / 41 | 3 / 0 | 0 / 27 | 2 / 2 | 28 / 12 | 0 / 2 | 7 / 19 | 0 / 2 | 48 / 14 | 4 / 10 |
 | lc/hh/realign-own | 52 / 60 | 6 / 0 | 0 / 77 | 6 / 5 | 39 / 27 | 0 / 1 | 23 / 30 | 0 / 3 | 119 / 52 | – |
 | lc/hh/realign-own+lose-turn | 51 / 58 | 7 / 0 | 0 / 65 | 5 / 15 | 38 / 26 | 0 / 2 | 15 / 20 | 0 / 3 | 101 / 38 | 13 / 43 |
 
@@ -122,7 +174,7 @@ End reasons by winner: games won by Qin / by Chu for each reason.
 | lc/hh/lose-turn | 12 | 2:1 4:2 6:3 7:6 | 36 | 4:6 5:19 6:7 7:1 8:3 |
 | lc/hh/lose-majority | 121 | 1:22 2:35 3:5 4:38 5:8 6:8 7:4 8:1 | 96 | 1:1 2:3 3:9 4:43 5:35 6:4 8:1 |
 | lc/hh/move | 1 | 7:1 | 8 | 5:3 6:2 7:3 |
-| lc/hh/realign+lose-turn | 3 | 4:1 5:1 6:1 | 9 | 4:1 5:5 7:2 8:1 |
+| lc/hh/realign+lose-turn | 4 | 4:1 5:1 6:2 | 10 | 4:1 5:6 7:2 8:1 |
 | lc/hh/realign-own | 0 | – | 0 | – |
 | lc/hh/realign-own+lose-turn | 13 | 2:1 3:1 4:3 5:3 6:4 7:1 | 43 | 3:1 4:17 5:17 6:5 7:2 8:1 |
 
@@ -147,7 +199,7 @@ How the ops are spent, per game, both sides [95%]: share of the ops put to 扶�
 | lc/hh/lose-turn | 62.0 | 21.6 | 8.6 | 7.8 | 9.87 ±0.32 | **-0.76 [-1.24, -0.28]** | 7.18 ±0.40 | -0.12 [-0.68, +0.44] |
 | lc/hh/lose-majority | 64.3 | 21.6 | 10.7 | 3.3 | 6.23 ±0.22 | **-4.40 [-4.82, -3.97]** | 6.44 ±0.52 | **-0.86 [-1.51, -0.21]** |
 | lc/hh/move | 60.4 | 22.3 | 8.8 | 8.4 | 10.68 ±0.36 | +0.05 [-0.46, +0.56] | 7.51 ±0.40 | +0.21 [-0.35, +0.77] |
-| lc/hh/realign+lose-turn | 58.1 | 21.8 | 13.5 | 6.6 | 9.77 ±0.48 | **-0.85 [-1.46, -0.25]** | 9.71 ±0.70 | **+2.41 [+1.61, +3.21]** |
+| lc/hh/realign+lose-turn | 58.2 | 21.7 | 13.4 | 6.6 | 9.76 ±0.45 | **-0.87 [-1.44, -0.30]** | 9.76 ±0.66 | **+2.46 [+1.70, +3.22]** |
 | lc/hh/realign-own | 60.1 | 23.6 | 7.7 | 8.7 | 11.48 ±0.40 | **+0.85 [+0.32, +1.39]** | 6.37 ±0.33 | **-0.92 [-1.43, -0.42]** |
 | lc/hh/realign-own+lose-turn | 61.8 | 22.4 | 7.8 | 7.9 | 10.40 ±0.35 | -0.23 [-0.73, +0.27] | 6.19 ±0.32 | **-1.11 [-1.61, -0.61]** |
 
@@ -172,7 +224,7 @@ How the ops are spent, per game, both sides [95%]: share of the ops put to 扶�
 | lc/hh/lose-turn | 4725 | 2719 / 2006 | 1.69 | 0.00 | 1.45 | 0.00 | – | +0.86 | – | – | – | 69.4 | 0.0 | (in the counts) |
 | lc/hh/lose-majority | 4122 | 1777 / 2345 | 1.79 | 0.00 | 1.35 | 0.00 | – | +0.75 | – | – | – | 84.0 | 0.0 | (in the counts) |
 | lc/hh/move | 4915 | 2885 / 2030 | 1.70 | 0.00 | 1.45 | 0.00 | – | +0.86 | – | – | – | 64.8 | 0.0 | (in the counts) |
-| lc/hh/realign+lose-turn | 2670 | 1327 / 1343 | 1.81 | 1.27 | 1.67 | 0.18 | +1.17 | +0.82 | 9.2 | 51.1 | 39.7 | 73.9 | 41.3 | (in the counts) |
+| lc/hh/realign+lose-turn | 3097 | 1539 / 1558 | 1.81 | 1.28 | 1.66 | 0.18 | +1.16 | +0.82 | 9.3 | 50.9 | 39.8 | 73.7 | 41.0 | (in the counts) |
 | lc/hh/realign-own | 3238 | 1524 / 1714 | 1.65 | 1.28 | 1.44 | 0.31 | +0.88 | +0.69 | 20.3 | 67.7 | 11.9 | 66.1 | 0.0 | 1080 |
 | lc/hh/realign-own+lose-turn | 3146 | 1504 / 1642 | 1.66 | 1.31 | 1.43 | 0.34 | +0.84 | +0.66 | 22.1 | 66.1 | 11.8 | 70.8 | 0.0 | 1050 |
 
@@ -197,7 +249,7 @@ The same with the event's scripted 遊說 taken out (the 遊說 use of ops only)
 | lc/hh/lose-turn | ≈ 2.27 | ≈ 3589 | ≈ 1.29 | – | ≈ +0.81 |
 | lc/hh/lose-majority | ≈ 1.81 | ≈ 3218 | ≈ 1.17 | – | ≈ +0.68 |
 | lc/hh/move | ≈ 2.32 | ≈ 3754 | ≈ 1.30 | – | ≈ +0.81 |
-| lc/hh/realign+lose-turn | ≈ 2.16 | ≈ 2184 | ≈ 1.60 | ≈ +0.89 | ≈ +0.78 |
+| lc/hh/realign+lose-turn | ≈ 2.15 | ≈ 2537 | ≈ 1.59 | ≈ +0.88 | ≈ +0.78 |
 | lc/hh/realign-own | 2.16 | 3238 | 1.44 | +0.88 | +0.69 |
 | lc/hh/realign-own+lose-turn | 2.10 | 3146 | 1.43 | +0.84 | +0.66 |
 
@@ -212,7 +264,7 @@ The same with the event's scripted 遊說 taken out (the 遊說 use of ops only)
 | lc/nn/realign-own+lose-turn | 2784 | 1.33 | 1.63 | 1.5 (41) | 41 | 0 | 0 |
 | lc/hh/realign | 6426 | 1.27 | 1.78 | 0.0 (0) | 0 | 0 | 0 |
 | lc/hh/realign-mild | 5629 | 1.25 | 1.78 | 0.0 (0) | 0 | 0 | 0 |
-| lc/hh/realign+lose-turn | 2670 | 1.27 | 1.81 | 0.0 (0) | 0 | 0 | 0 |
+| lc/hh/realign+lose-turn | 3097 | 1.28 | 1.81 | 0.0 (0) | 0 | 0 | 0 |
 | lc/hh/realign-own | 3238 | 1.28 | 1.65 | 1.2 (38) | 38 | 0 | 0 |
 | lc/hh/realign-own+lose-turn | 3146 | 1.31 | 1.66 | 1.6 (50) | 50 | 0 | 0 |
 
@@ -244,7 +296,7 @@ The home capitals. 'fell' = became enemy-controlled at some marker check (the mo
 | lc/hh/lose-turn | 26.4 [22.7, 30.4] | 11.4 [8.9, 14.5] | 0.562 | 214 / 281 | 42 / 15 | 141 / 76 | 251 / 134 | 2:1 3:1 4:52 5:56 6:15 7:2 8:5 | 2:4 4:11 5:7 6:9 7:21 8:5 | 0 / 0 |
 | lc/hh/lose-majority | 16.2 [13.2, 19.7] | 6.4 [4.6, 8.9] | 0.268 | 56 / 134 | 53 / 19 | 141 / 187 | 223 / 369 | 4:33 5:40 6:5 7:3 | 2:10 3:1 4:11 5:3 7:6 8:1 | 0 / 0 |
 | lc/hh/move | 15.6 [12.7, 19.0] | 5.0 [3.4, 7.3] | 0.474 | 164 / 237 | 42 / 7 | 100 / 27 | 107 / 41 | 4:22 5:33 6:10 7:6 8:7 | 4:2 5:4 6:1 7:12 8:6 | 40 / 7 |
-| lc/hh/realign+lose-turn | 19.6 [14.9, 25.2] | 10.2 [6.9, 14.9] | 0.751 | 144 / 169 | 12 / 5 | 43 / 27 | 90 / 45 | 4:16 5:20 6:4 7:3 8:1 | 3:3 4:3 5:6 6:5 7:5 8:1 | 0 / 0 |
+| lc/hh/realign+lose-turn | 19.6 [15.2, 24.9] | 10.8 [7.6, 15.1] | 0.781 | 174 / 203 | 13 / 6 | 48 / 32 | 103 / 58 | 4:18 5:25 6:4 7:3 8:1 | 3:3 4:3 5:7 6:7 7:7 8:1 | 0 / 0 |
 | lc/hh/realign-own | 8.0 [5.9, 10.7] | 0.6 [0.2, 1.7] | 0.170 | 39 / 85 | 28 / 1 | 79 / 17 | 100 / 21 | 4:21 5:12 6:6 7:1 | 4:1 7:1 8:1 | 0 / 0 |
 | lc/hh/realign-own+lose-turn | 23.4 [19.9, 27.3] | 10.8 [8.4, 13.8] | 0.522 | 179 / 261 | 46 / 17 | 108 / 70 | 231 / 118 | 3:3 4:56 5:46 6:11 7:1 | 2:3 3:3 4:9 5:10 6:8 7:15 8:6 | 0 / 0 |
 
@@ -267,6 +319,6 @@ Distributions per cell: end turn (turn:games); final Mandate min / p5 / p25 / me
 - **lc/hh/lose-turn**: end turn 1:10 2:13 3:38 4:51 5:103 6:72 7:107 8:106; mandate -26 / -21 / -11 / 0 / 10 / 21 / 27; 遊說/game 0:2 1:12 2:20 3:23 4:37 5:40 6:35 7:35 8:30 9:34 10:37 11:26 12:32 13:30 14:28 15:12 16:13 17:8 18:13 19:10 20:10 21:7 22:3 23:1 24:1 25:1; most 遊說 seed 193 (25, homeFall), seed 162 (24, alliance), seed 437 (23, mandate); 國都 seeds 16 18 21 10 38 44 1 73 56 111 66 76 …
 - **lc/hh/lose-majority**: end turn 1:74 2:61 3:54 4:159 5:80 6:34 7:18 8:20; mandate -27 / -20 / -7 / 1 / 7 / 20 / 28; 遊說/game 0:14 1:51 2:38 3:38 4:34 5:29 6:29 7:34 8:31 9:29 10:23 11:21 12:17 13:20 14:20 15:10 16:12 17:13 18:4 19:3 20:2 21:4 22:3 23:1 24:2 25:1 26:1 27:3 28:4 29:3 30:2 31:1 32:1 33:1 34:1; most 遊說 seed 233 (34, mandate), seed 115 (33, alliance), seed 244 (32, mandate); 國都 seeds 32 34 22 24 25 1 2 5 26 30 42 45 …
 - **lc/hh/move**: end turn 1:10 2:8 3:36 4:43 5:87 6:71 7:123 8:122; mandate -28 / -21 / -11 / 0 / 12 / 22 / 29; 遊說/game 0:2 1:12 2:18 3:22 4:32 5:36 6:18 7:39 8:22 9:48 10:36 11:31 12:34 13:35 14:22 15:26 16:14 17:17 18:7 19:10 20:6 21:6 22:2 23:2 24:1 25:1 28:1; most 遊說 seed 379 (28, final), seed 298 (25, tie), seed 482 (24, final); 國都 seeds 96 131 187 181 179 297 325 451 432
-- **lc/hh/realign+lose-turn**: end turn 1:7 2:6 3:19 4:28 5:46 6:38 7:39 8:42; mandate -26 / -23 / -13 / -1 / 13 / 22 / 30; 遊說/game 1:6 2:1 3:7 4:7 5:13 6:7 7:16 8:21 9:13 10:14 11:13 12:11 13:9 14:13 15:17 16:9 17:7 18:9 19:5 20:5 21:4 22:6 23:3 24:1 25:2 26:2 27:3 28:1; most 遊說 seed 12 (28, final), seed 98 (27, final), seed 50 (27, mandate); 國都 seeds 20 22 25 26 10 158 140 103 155 181 161 231
+- **lc/hh/realign+lose-turn**: end turn 1:8 2:7 3:23 4:30 5:53 6:43 7:45 8:51; mandate -27 / -23 / -14 / -1 / 12 / 21 / 30; 遊說/game 1:7 2:1 3:9 4:7 5:17 6:7 7:16 8:22 9:18 10:14 11:15 12:15 13:11 14:15 15:19 16:11 17:9 18:10 19:5 20:7 21:6 22:6 23:3 24:1 25:2 26:2 27:4 28:1; most 遊說 seed 12 (28, final), seed 98 (27, final), seed 50 (27, mandate); 國都 seeds 20 22 25 26 10 158 140 103 155 181 161 231 …
 - **lc/hh/realign-own**: end turn 1:9 2:11 3:33 4:43 5:93 6:86 7:110 8:115; mandate -27 / -21 / -11 / 0 / 10 / 21 / 30; 遊說/game 0:14 1:41 2:37 3:33 4:48 5:43 6:43 7:50 8:37 9:41 10:30 11:27 12:23 13:11 14:10 15:5 16:6 17:1; most 遊說 seed 99 (17, mandate), seed 80 (16, mandate), seed 109 (16, final); 國都 seeds none
 - **lc/hh/realign-own+lose-turn**: end turn 1:9 2:12 3:34 4:67 5:105 6:77 7:108 8:88; mandate -27 / -21 / -11 / 0 / 10 / 21 / 27; 遊說/game 0:14 1:36 2:40 3:32 4:55 5:43 6:58 7:42 8:41 9:43 10:30 11:21 12:16 13:11 14:5 15:5 16:6 17:1 18:1; most 遊說 seed 439 (18, homeFall), seed 332 (17, final), seed 11 (16, unification); 國都 seeds 22 18 31 32 35 9 36 64 82 89 106 121 …
