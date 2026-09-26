@@ -353,6 +353,12 @@ export default {
     // no order is chosen yet on an opponent's card (place/campaign/lobby);
     // sheet.hint.enemy itself stays put further down once an order is picked.
     chooseOrder: "Choose the order first: ops first, or event first.",
+    // #124: shown instead of the map/target picker once event-first is
+    // chosen on an opponent's card, for all three ops uses (foster/raid/
+    // lobby) -- the engine only asks how to spend the ops once the event has
+    // resolved (the board it's read against may have just changed), so no
+    // target is offered here yet; picking one now would just be dropped.
+    eventFirstPending: "Event first: choose how to spend the ops after the event resolves.",
     // #100 (owner, UX audit item 4): a Confirm tap or a map tap with no use
     // chosen yet used to do nothing at all -- app.js's flashUseWarning()
     // shows this under the use row until a use is actually picked.

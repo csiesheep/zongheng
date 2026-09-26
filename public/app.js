@@ -1192,10 +1192,11 @@ function wantsCardOverlay(v) {
   // chosen yet -- keep the full-screen overlay (map stays inactive) until
   // the player picks 先行動點/先事件, same as before any use is picked.
   if (info && info.enemy && !ui.pair && ui.order == null) return true;
-  if (ui.use === "place") {
-    return !!(info && info.enemy && ui.order === "eventFirst" && !ui.pair); // the pre-order step, before tapping the map
-  }
-  return false; // campaign/lobby target picking, or place once ops are known: the map is in play
+  // #124: event-first defers the use/target to after the event for place,
+  // campaign AND lobby alike (see the matching comment by `eventFirstPending`
+  // and by the Confirm wiring) -- not just place.
+  if (info && info.enemy && ui.order === "eventFirst" && !ui.pair) return true;
+  return false; // campaign/lobby target picking, or place once ops are known (ops-first): the map is in play
 }
 
 // Above the map: the turn line and the Mandate tug-of-war bar (C2_Game's
@@ -1359,7 +1360,10 @@ function currentMode(v) {
   // #71: no order chosen yet on an opponent's card -- no map tap (place,
   // campaign or lobby) until the player picks one.
   if (info.enemy && !ui.pair && ui.order == null) return none;
-  if (ui.use === "place" && !(info.enemy && ui.order === "eventFirst")) return placing(info.ops, ui.points);
+  // #124: event-first -- no map tap (place, campaign or lobby) until the
+  // event has resolved and the engine asks for the use/target again.
+  if (info.enemy && ui.order === "eventFirst" && !ui.pair) return none;
+  if (ui.use === "place") return placing(info.ops, ui.points);
   if (ui.use === "campaign" || ui.use === "lobby") {
     const u = info.uses[ui.use];
     const ids = u ? (ui.use === "campaign" ? u.targets : u.targets.map((x) => x.id)) : [];
@@ -2205,7 +2209,11 @@ function renderPromptAndSheet(v) {
   // the player picks 先行動點/先事件 (choosing the use and the order may
   // happen in either order; this only gates the map once a use IS picked).
   const orderPending = info.enemy && !ui.pair && ui.order == null;
-  const mapActive = !orderPending && (ui.use === "campaign" || ui.use === "lobby" || (ui.use === "place" && !(info.enemy && ui.order === "eventFirst" && !ui.pair)));
+  // #124: event-first defers the target/points to after the event for all
+  // three map-needing uses, not just place -- see the matching comment
+  // further down where Confirm is wired up.
+  const eventFirstPending = info.enemy && ui.order === "eventFirst" && !ui.pair;
+  const mapActive = !orderPending && !eventFirstPending && (ui.use === "campaign" || ui.use === "lobby" || ui.use === "place");
   game.givesWay = mapActive;
   // #24 round 2, fix #3: whenever the CHIP is shown (map active) the
   // order/pair choice is already made — the interactive rows move to
@@ -2453,12 +2461,21 @@ function renderPromptAndSheet(v) {
     footer(sh, confirmPhrase(), () => {}, true, cancelToFresh, true);
     return;
   }
+  // #124: event-first on an opponent's card only decides the ORDER here --
+  // the engine (play(), the `eventFirst` branch) pushes the event step and
+  // then an ops step with `payload: null`, asking for the use and target
+  // again only once the event has resolved (the board it's read against may
+  // have just changed). Whatever use/target/points were picked on this page
+  // before Confirm would be silently dropped, so all three map-needing uses
+  // (place/campaign/lobby) defer here alike -- not just place (#71's
+  // original fix, which only covered place because #117 already deferred
+  // the map for it; 奇襲/遊說 were missed).
+  if (info.enemy && ui.order === "eventFirst" && !ui.pair) {
+    setPrompt(t("sheet.eventFirstPending"));
+    footer(sh, confirmPhrase(), () => humanAct(base), false, cancelToFresh, true);
+    return;
+  }
   if (ui.use === "place") {
-    if (info.enemy && ui.order === "eventFirst" && !ui.pair) {
-      setPrompt(t("uses.eventFirst"));
-      footer(sh, confirmPhrase(), () => humanAct(base), false, cancelToFresh, true);
-      return;
-    }
     const { spent } = placementTrial(v, me, ui.points);
     setPrompt(t("prompt.place", { ops: info.ops, left: info.ops - spent }));
     // #94: this used to pass its own onCancel (`() => { ui.points = []; render(); }`),
