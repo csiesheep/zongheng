@@ -24,7 +24,7 @@ const pick = (side, options, extra = {}) => ({ kind: "points", who: side, n: 1, 
 // Rulebook 四、細則:「「放 X 點」超過上限時多的消失。」 With less room than n,
 // the answer fills the room and the rest vanishes (#115: `min` used to be n,
 // which left no legal answer at all and froze the game).
-const roomIn = (st, side, options) => options.reduce((r, id) => r + Math.max(0, E.capOf(st, id) - E.infOf(st, id)[side]), 0);
+const roomIn = (st, side, options, maxPer = Infinity) => options.reduce((r, id) => r + Math.min(maxPer, Math.max(0, E.capOf(st, id) - E.infOf(st, id)[side])), 0);
 const pts = (st, side, n, options, extra = {}) => ({ kind: "points", who: side, n, min: Math.min(n, roomIn(st, side, options)), side, options, ...extra });
 const placeAll = (st, side, points, n = 1) => { for (const id of points) E.place(st, side, id, n); };
 function freeCampaign(st, side, ch, list, ops, { noTire = false, ignoreLocks = false } = {}) {
@@ -266,7 +266,14 @@ export const CARDS = [
       const total = mine.reduce((n, id) => n + E.infOf(st, id)[side], 0);
       const k = Math.min(4, total);
       if (ch.length === 0) return { kind: "points", who: side, n: k, min: k, options: mine, maxOf: Object.fromEntries(mine.map((id) => [id, E.infOf(st, id)[side]])) };
-      if (ch.length === 1) { for (const id of ch[0]) E.remove(st, side, id, 1); return { kind: "points", who: side, side, n: ch[0].length, min: ch[0].length, maxPer: 2, options: withRoom(st, side, all()) }; }
+      // Stage 2 is a 「放 X 點」 too (#119, owner 裁決「5 修」): with less room
+      // than the points removed (2 per space at most, the cap per pick), the
+      // answer fills the room and the rest vanishes, as in `pts` above.
+      if (ch.length === 1) {
+        for (const id of ch[0]) E.remove(st, side, id, 1);
+        const options = withRoom(st, side, all());
+        return { kind: "points", who: side, side, n: ch[0].length, min: Math.min(ch[0].length, roomIn(st, side, options, 2)), maxPer: 2, options };
+      }
       placeAll(st, side, ch[1]);
     } },
 
