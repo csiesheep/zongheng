@@ -1217,3 +1217,31 @@ lc/hh/lose-turn        n=500  Qin  48%  turn 5.8  mandate -0.1  滅 1.10 相印 
 # 2026-09-26T22:02:34.184Z lc/hh/lose-majority 420/500
 # 2026-09-26T22:02:35.864Z lc/hh/lose-majority 425/500
 # 2026-09-26T22:02:38.121Z lc/hh/lose-majority 430/500
+# 2026-09-26T22:02:43.410Z lc/hh/lose-majority 435/500
+# 2026-09-26T22:02:46.566Z lc/hh/lose-majority 440/500
+# 2026-09-26T22:02:50.096Z lc/hh/lose-majority 445/500
+# 2026-09-26T22:02:53.860Z lc/hh/lose-majority 450/500
+# 2026-09-26T22:02:55.357Z lc/hh/lose-majority 455/500
+# 2026-09-26T22:03:02.942Z lc/hh/lose-majority 460/500
+# 2026-09-26T22:03:06.255Z lc/hh/lose-majority 465/500
+# 2026-09-26T22:03:07.692Z lc/hh/lose-majority 470/500
+# 2026-09-26T22:03:20.195Z lc/hh/lose-majority 475/500
+# 2026-09-26T22:03:22.554Z lc/hh/lose-majority 480/500
+# 2026-09-26T22:03:23.922Z lc/hh/move 5/500
+# 2026-09-26T22:03:27.950Z lc/hh/lose-majority 485/500
+# 2026-09-26T22:03:31.278Z lc/hh/lose-majority 490/500
+# 2026-09-26T22:03:44.942Z lc/hh/move 10/500
+# 2026-09-26T22:03:48.258Z lc/hh/move 15/500
+# 2026-09-26T22:03:57.284Z lc/hh/move 20/500
+# 2026-09-26T22:04:00.924Z lc/hh/lose-majority 495/500
+# 2026-09-26T22:04:03.662Z lc/hh/lose-majority 500/500
+lc/hh/lose-majority    n=500  Qin  57%  turn 3.8  mandate +0.7  滅 0.64 相印 1.25  12.8s/game
+                       一統 0% 合縱 5% 天命 13% 土崩 0% 記分 32% 記分2 1% 終局 1% 平手 0% 稱帝 5% 國都 43%
+                       west 1.8x 4.3:0.6 jin 1.7x 4.5:4.6 south 1.8x 0.0:2.8 east 0.5x 1.6:2.8 north 0.5x 0.4:1.4
+# 2026-09-26T22:04:06.888Z lc/hh/move 25/500
+# 2026-09-26T22:04:08.258Z lc/hh/move 30/500
+# 2026-09-26T22:04:27.968Z lc/hh/move 35/500
+# 2026-09-26T22:04:28.681Z lc/hh/move 40/500
+# 2026-09-26T22:04:29.344Z lc/hh/move 45/500
+# 2026-09-26T22:04:32.416Z lc/hh/move 50/500
+# 2026-09-26T22:04:43.676Z lc/hh/move 55/500
