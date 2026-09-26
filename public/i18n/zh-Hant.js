@@ -46,7 +46,7 @@ export default {
   },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },
   sys: { joined: "{name} 進來了。", left: "{name} 離開了。", leftGame: "{name} 離開了,由電腦代打。", dealt: "發牌了。", timeout: "{name} 逾時,由桌面代為決定。", over: "{side}({name})獲勝:{reason}。", fallback: "對手這一手出了問題,已改用保底動作:{action}。", stuck: "對手無法行動,這一局無法繼續。" },
-  ends: { unification: "三國同滅", alliance: "四國相印", mandate: "天命達 20", collapse: "對方把天下推到土崩", scoring: "對方回合結束時手上還有記分卡", scoringBoth: "雙方都留著記分卡,依平手規則", final: "終局結算後的天命", tie: "天命平手,依平手規則" },
+  ends: { unification: "三國同滅", alliance: "四國相印", mandate: "天命達 20", collapse: "對方把天下推到土崩", scoring: "對方回合結束時手上還有記分卡", scoringBoth: "雙方都留著記分卡,依平手規則", final: "終局結算後的天命", tie: "天命平手,依平手規則", emperor: "天命領先時率先稱帝" },
   errors: { noRoom: "沒有這個房號。", full: "房間已滿。", needMore: "需要兩個座位。", notReady: "對方尚未就緒。", notYet: "牌桌還沒蓋好。", notYourTurn: "現在不是你決定。" },
   landing: { backToRoom: "回到房間 {code}", resume: "繼續上一局", play: "與電腦對弈", create: "多人遊戲", join: "加入", code: "房號", codePlaceholder: "CODE", rulesLink: "規則與七十二張牌", rulesShort: "規則", name: "你的名字" },
   side: {
@@ -118,6 +118,9 @@ export default {
       scoringBoth: { title: "記分兩不清", body: "雙方回合結束時都還握著記分卡,結算仍歸{winner}。", win: "你贏了。雙方都還握著記分卡,結算仍算你贏。", lose: "你輸了。雙方都還握著記分卡,結算算你輸。", watch: "雙方都還握著記分卡,結算歸{winner}。" },
       final: { title: "終局論定", body: "第八回合終了,天命偏向{winner}。", win: "你贏了。終局時天命在你這邊。", lose: "你輸了。終局時天命偏向{winner}。", watch: "終局時天命偏向{winner}。" },
       tie: { title: "天命持平,歸{winner}", body: "天命持平,依規則判給{winner}。", win: "你贏了。天命持平,依規則判你勝。", lose: "你輸了。天命持平,依規則判{winner}勝。", watch: "天命持平,依規則判{winner}勝。" },
+      // #125(owner:先抵達稱帝、且當時天命領先,即獲勝):贏家可以是秦也可以是楚,
+      // 所以用 {winner}王,不寫死秦王。
+      emperor: { title: "稱帝", body: "{winner}率先變法到稱帝,當時天命領先,天下歸心。", win: "你贏了。{winner}王稱帝,天下歸心。", lose: "你輸了。{winner}王搶先稱帝,天命已定。", watch: "{winner}王稱帝,天命已定。" },
     },
   },
   log: {
@@ -289,6 +292,7 @@ export default {
       bogDiscard: "頓兵堅城只能棄牌。棄{card},它的事件不會發生。",
       mustPlayScoring: "記分卡留到回合結束會輸,現在打出來。",
       avoidCollapse: "疲敝已經很高,這一手不會讓它更糟。",
+      emperor: "抵達稱帝,天命領先,即勝。",
       best: "目前最划算的一手。",
     },
   },
@@ -318,6 +322,9 @@ export default {
     collapseWarn: "這張牌的事件會把疲敝推到土崩——你正在行動,你會立刻輸。",
     collapseSafe: "{uses}不會觸發事件,是安全的。",
     collapsePairSafe: "跟{shuoke}搭配",
+    // #125:差一格就到稱帝、而這張牌能變法時,牌頁的一行提示——抵達時天命領先
+    // 即勝,否則只得天命 +3(app.js 依 E.emperorWins 判斷)。
+    emperor: { lead: "變法到稱帝:你現在天命領先,抵達即勝。", notLead: "變法到稱帝:你現在天命未領先,抵達只得天命 +3。" },
     // #117:說客這張牌的搭配選擇——選一張手上對手陣營的牌一起打出,或明確
     // 選不搭配。{enemy} 是對手陣營的名字(秦/楚),打楚的說客時填秦,反之
     // 亦然。none/noEnemy/eventReason 是三種狀況各自的說明:選了不搭配、

@@ -57,7 +57,7 @@ export default {
   },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },
   sys: { joined: "{name} joined.", left: "{name} left.", leftGame: "{name} left; the bot plays the seat.", dealt: "The cards are dealt.", timeout: "{name} ran out of time; the table decided.", over: "{side} ({name}) wins: {reason}.", fallback: "The opponent's move failed; a fallback was played instead: {action}.", stuck: "The opponent cannot move; this game cannot continue." },
-  ends: { unification: "three states destroyed", alliance: "four seals held", mandate: "the Mandate reached 20", collapse: "the realm collapsed on the other side", scoring: "the other side held a scoring card at the turn's end", scoringBoth: "both held scoring cards; the tie rule", final: "the Mandate after the final scoring", tie: "a level Mandate; the tie rule" },
+  ends: { unification: "three states destroyed", alliance: "four seals held", mandate: "the Mandate reached 20", collapse: "the realm collapsed on the other side", scoring: "the other side held a scoring card at the turn's end", scoringBoth: "both held scoring cards; the tie rule", final: "the Mandate after the final scoring", tie: "a level Mandate; the tie rule", emperor: "first to Emperor while leading the Mandate" },
   errors: { noRoom: "No room with that code.", full: "That room is full.", needMore: "Two seats are needed.", notReady: "The other seat is not ready.", notYet: "The table is not built yet.", notYourTurn: "It is not your decision right now." },
   landing: { backToRoom: "Back to room {code}", resume: "Resume your game", play: "Play vs bot", create: "Multiplayer", join: "Join", code: "Room code", codePlaceholder: "CODE", rulesLink: "Rules and the 72 cards", rulesShort: "Rules", name: "Your name" },
   side: {
@@ -153,6 +153,9 @@ export default {
       scoringBoth: { title: "Both still holding", body: "Both sides were still holding a scoring card; the tally falls to {winner} regardless.", win: "You win. Both of you were still holding a scoring card, and the tally favours you.", lose: "You lose. Both of you were still holding a scoring card, and the tally favours {winner}.", watch: "Both sides were still holding a scoring card; the tally favours {winner}." },
       final: { title: "The tally closes", body: "Turn eight closed with the Mandate favouring {winner}.", win: "You win. The Mandate favoured you at the end.", lose: "You lose. The Mandate favoured {winner} at the end.", watch: "The Mandate favoured {winner} at the end." },
       tie: { title: "Level Mandate, {winner}'s tie", body: "The Mandate was level; the tie rule favours {winner}.", win: "You win. The Mandate was level, and the tie favours you.", lose: "You lose. The Mandate was level, and the tie favours {winner}.", watch: "The Mandate was level, and the tie favours {winner}." },
+      // #125 (owner: the first to 稱帝 wins if it leads the Mandate then):
+      // either side can win this way, so the king is {winner}'s, not Qin's.
+      emperor: { title: "The Emperor", body: "{winner} reached Emperor, the last box of the reform track, first and while ahead on the Mandate; the realm bows.", win: "You win. The King of {winner} takes the title of emperor, and the realm bows.", lose: "You lose. The King of {winner} took the title of emperor first.", watch: "The King of {winner} takes the title of emperor; the Mandate is settled." },
     },
   },
   log: {
@@ -340,6 +343,7 @@ export default {
       bogDiscard: "Bogged down, you must discard. Drop {card}: its event won't happen.",
       mustPlayScoring: "A scoring card held at the turn's end loses. Play it now.",
       avoidCollapse: "Weariness is already high. This move won't push it further.",
+      emperor: "This reaches Emperor while you lead the Mandate: you win.",
       best: "The best available move right now.",
     },
   },
@@ -375,6 +379,10 @@ export default {
     collapseWarn: "This card's event would push the realm to Collapse on your action — you would lose at once.",
     collapseSafe: "{uses} would not trigger it — safe.",
     collapsePairSafe: "pairing it with {shuoke}",
+    // #125: one line on a card's page when this card can take the last step
+    // of reform: arriving while ahead on the Mandate wins, otherwise +3
+    // (app.js reads E.emperorWins).
+    emperor: { lead: "Reform to Emperor: you lead the Mandate now, so arriving wins.", notLead: "Reform to Emperor: you don't lead the Mandate now, so arriving gives only +3." },
     // #117: The Lobbyist's pairing choice -- pick an enemy card from hand to
     // play with it, or explicitly choose not to. {enemy} is the other side's
     // name (Qin/Chu). none/noEnemy/eventReason cover the three states: chose
