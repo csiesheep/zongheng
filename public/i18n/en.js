@@ -132,7 +132,10 @@ export default {
   // #97: the always-on "must play" tag on a scoring card in hand -- a
   // separate short label (badge) and a longer sentence (its `title`), never
   // the prompt-area/pinned-area line above (that one adds the count).
-  hand: { mustPlay: "Must play", mustPlayTitle: "A scoring card held at the turn's end loses" },
+  // #126: see zh-Hant.js's own comment on this pair -- the round badge shows
+  // what a card is worth right now, marked in colour when an effect changed
+  // it; these carry the printed value back off the badge itself.
+  hand: { mustPlay: "Must play", mustPlayTitle: "A scoring card held at the turn's end loses", opsChanged: "Printed {printed}, now {now}", opsPrinted: "Printed {printed}" },
   preview: { campaign: "Removes {removed} of theirs, places {placed} of yours; weariness {w}.", lobby: "Edge {edge}: removes up to {n}.", locked: "Locked by weariness.", enemyEvent: "This is their card: its event will happen too." },
   // The result screen's colour and art always follow the WINNER, not your
   // own seat, so each ending's line and body read as fact from the table,

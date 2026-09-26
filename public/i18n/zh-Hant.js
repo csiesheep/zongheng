@@ -102,7 +102,11 @@ export default {
   // #97: the always-on "must play" tag on a scoring card in hand -- a
   // separate short label (badge) and a longer sentence (its `title`), never
   // the prompt-area/pinned-area line above (that one adds the count).
-  hand: { mustPlay: "必打", mustPlayTitle: "記分卡留到回合結束會輸" },
+  // #126: the round badge shows what a card is worth to play right now (owner
+  // 裁決 B), marked in colour when an effect changed it -- these two carry
+  // the printed value back, off the badge itself (aria-label/title on the
+  // hand tile and compact chip, a small visible line on the full card page).
+  hand: { mustPlay: "必打", mustPlayTitle: "記分卡留到回合結束會輸", opsChanged: "印刷 {printed}，目前 {now}", opsPrinted: "印刷 {printed}" },
   preview: { campaign: "移除對方 {removed},放置己方 {placed};疲敝 {w}。", lobby: "局勢 {edge}:最多移除 {n}。", locked: "疲敝封鎖中。", enemyEvent: "這是對方的牌:事件也會觸發。" },
   over: {
     winner: "{side}獲勝", mandate: "終局天命",

@@ -1769,6 +1769,41 @@ function appendPromptNote(text) {
 const cardZh = (id) => (id === E.JIUDING ? "九鼎" : E.CARD[id].zh);
 const cardEn = (id) => (id === E.JIUDING ? "The Nine Cauldrons" : E.CARD[id].en);
 const opsLabel = (id) => (id === E.JIUDING ? "4" : E.CARD[id].scoring ? "S" : String(E.CARD[id].ops));
+// #126 owner 裁決 B: every PLAYABLE card page (hand tile, this card's own
+// header, the map-active compact chip) shows what the card is worth to play
+// RIGHT NOW -- `eff`, the caller's own E.opsOf()/cardInfo().ops (already
+// order/pair-aware per #122) -- not the printed value `opsLabel()` above
+// still is. Untouched, on purpose: 九鼎 (always "4", never marked — its real
+// 4-or-5 is use-dependent, not an effect, and the existing hint already
+// explains it) and a scoring card (its badge is "S"/計, no ops number to
+// mark). Every REFERENCE view (card-view.js's own cardHeader/opsLabel, used
+// only by the read-only 看牌/log peek and the rules page) is a separate
+// module and stays on the printed value untouched by this file.
+function opsText(id, eff) {
+  return id === E.JIUDING ? "4" : E.CARD[id].scoring ? "S" : String(eff);
+}
+// null when the badge should NOT be marked (九鼎, scoring, or eff === printed)
+// -- otherwise { printed, dir }: "down" (lower, vermilion --bad) or "up"
+// (higher, gold --gold -- not --advisor, which is reserved for the advisor's
+// own UI so this mark reads the same whether the advisor is on or off).
+function opsMark(id, eff) {
+  if (id === E.JIUDING || E.CARD[id].scoring) return null;
+  const printed = E.CARD[id].ops;
+  return eff === printed ? null : { printed, dir: eff < printed ? "down" : "up" };
+}
+// The shared colour-class + aria-label/title bits for an ops badge, built
+// once here so the hand tile, the card header and the compact chip (below)
+// never drift from each other. The printed value stays reachable off the
+// badge itself via aria-label (screen readers) and title (desktop hover) --
+// #126 explicitly allows aria-label/title alone, no visible struck-through
+// number required (cardHeader() adds one anyway, below, since it has the
+// room and a hover never reaches a phone).
+function opsMarkBits(id, eff) {
+  const mark = opsMark(id, eff);
+  if (!mark) return { cls: "", attrs: "", mark: null };
+  const label = t("hand.opsChanged", { printed: mark.printed, now: eff });
+  return { cls: ` ops-${mark.dir}`, attrs: ` aria-label="${esc(label)}" title="${esc(label)}"`, mark };
+}
 // #97: a scoring card left in hand when the turn ends loses outright
 // (rulebook) -- the advisor already says so in its own reasons, but only
 // while it's on. These two are the plain arithmetic behind an ALWAYS-ON
@@ -1924,22 +1959,35 @@ function sheetPinned(sh) {
 // colour (sheet-q/c/n/s, set by the caller) tells its owner apart. Text-only
 // (see cardTextBox below); always appended straight to `sh`, never into the
 // scrollable sheetMid(), so it never scrolls out of view either.
-function cardHeader(sh, id) {
+// #126: `eff` is this card's ops right now (E.opsOf, or cardInfo().ops for
+// the browsing/order-pending states below, already order/pair-aware per
+// #122) — every caller in this file now passes one; card-view.js's own,
+// separate cardHeader() (the read-only peek/rules page) is untouched and
+// still shows the printed value only.
+function cardHeader(sh, id, eff) {
   const meta = id === E.JIUDING ? null : E.CARD[id];
   const info = meta ? `${t("eras." + meta.era)}${meta.num ? ` · No. ${meta.num}` : ""}${meta.year ? ` · ${lang === "en" ? meta.year + " BC" : "前" + meta.year + "年"}` : ""}` : "";
   // The round badge reads the scoring region's own "計" in zh (issue #29's
   // design: a scoring card's badge is not the hand tile's plain "S") — a
-  // header-only override, opsLabel() itself (shared with the hand tile) is
-  // untouched. #46: "計" is Chinese-only, so en falls back to the same "S"
-  // the hand tile already uses, matching the one-language ruling.
-  const badge = meta && meta.scoring ? (lang === "en" ? "S" : "計") : opsLabel(id);
+  // header-only override, opsLabel()/opsText() themselves (shared with the
+  // hand tile) are untouched. #46: "計" is Chinese-only, so en falls back to
+  // the same "S" the hand tile already uses, matching the one-language
+  // ruling.
+  const badge = meta && meta.scoring ? (lang === "en" ? "S" : "計") : opsText(id, eff);
+  const { cls: markCls, attrs: markAttrs, mark } = opsMarkBits(id, eff);
+  // #126 "keep the printed value discoverable": the badge's own aria-label/
+  // title (markAttrs, above) already carry it, but a hover never reaches a
+  // phone and this header has the room a 22px hand-tile circle doesn't --
+  // one more small line, visible without any interaction, right under the
+  // name/era line.
+  const printedNote = mark ? `<div class="sheet-ops-was">${esc(t("hand.opsPrinted", { printed: mark.printed }))}</div>` : "";
   const name = lang === "en" ? cardEn(id) : cardZh(id);
   const head = document.createElement("div"); head.className = "sheet-head";
   head.innerHTML =
     `<img class="sheet-img" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
-    `<div class="sheet-meta"><span class="sheet-badge">${esc(badge)}</span>` +
+    `<div class="sheet-meta"><span class="sheet-badge${markCls}"${markAttrs}>${esc(badge)}</span>` +
     `<div class="sheet-name"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(name)}</div>` +
-    (info ? `<div class="sheet-info">${esc(info)}</div>` : "") + `</div>`;
+    (info ? `<div class="sheet-info">${esc(info)}</div>` : "") + printedNote + `</div>`;
   sh.appendChild(head);
 }
 // The card-text box (#46: one language only, was bilingual per #29 until
@@ -1970,13 +2018,15 @@ function cardTextBox(parent, id) {
 // target-picked state, to close the last few px at 390x669/375x667) can
 // append onto it directly, instead of the row footer() would otherwise
 // build on its own.
-function cardChip(sh, id) {
+// #126: `eff` — see cardHeader()'s own comment just above.
+function cardChip(sh, id, eff) {
   const wrap = document.createElement("div"); wrap.className = "sheet-chip";
   const name = lang === "en" ? cardEn(id) : cardZh(id);
+  const { cls: markCls, attrs: markAttrs } = opsMarkBits(id, eff);
   // #46: one language only, same ruling as the full card page — the chip's
   // own aria-label carries the other one (below), same convention as the
   // hand tile's tile().
-  wrap.innerHTML = `<span class="ops ${cardSide(id)}">${esc(opsLabel(id))}</span>` +
+  wrap.innerHTML = `<span class="ops ${cardSide(id)}${markCls}"${markAttrs}>${esc(opsText(id, eff))}</span>` +
     `<span class="chip-nm"${lang === "en" ? "" : ' lang="zh-Hant"'}>${esc(name)}</span>`;
   wrap.setAttribute("aria-label", `${cardZh(id)} / ${cardEn(id)}`);
   const expand = document.createElement("button");
@@ -2171,7 +2221,7 @@ function renderPromptAndSheet(v) {
   if (L.kind === "headline") {
     setPrompt(t("prompt.headline"));
     if (ui.card) {
-      cardHeader(sh, ui.card);
+      cardHeader(sh, ui.card, E.opsOf(game.st, me, ui.card));
       const mid = sheetMid(sh);
       cardTextBox(mid, ui.card);
       if (ui.card !== E.JIUDING && E.CARD[ui.card].scoring) scoringPanel(mid, v, E.CARD[ui.card].scoring);
@@ -2189,7 +2239,7 @@ function renderPromptAndSheet(v) {
   if (!ui.card) { setPrompt(t("prompt.yourAction")); return; }
   if (L.bog && L.bog.length) {
     setPrompt(t("uses.bog"));
-    cardHeader(sh, ui.card);
+    cardHeader(sh, ui.card, E.opsOf(game.st, me, ui.card));
     const bogMid = sheetMid(sh);
     cardTextBox(bogMid, ui.card);
     if (!Tut.active()) historyBox(bogMid, ui.card, lang, histState());
@@ -2242,9 +2292,9 @@ function renderPromptAndSheet(v) {
   const pairPending = hasPairOptions && ui.pair == null && !ui.noPair;
   let mid = null, pinned = null, chipRow = null;
   if (!showFullCard) {
-    chipRow = cardChip(sh, ui.card);
+    chipRow = cardChip(sh, ui.card, info.ops);
   } else {
-    cardHeader(sh, ui.card);
+    cardHeader(sh, ui.card, info.ops);
     mid = sheetMid(sh);
     cardTextBox(mid, ui.card);
     // #118 round 3 (orchestrator, real render: a real pinned advisor banner
@@ -2674,6 +2724,12 @@ function renderHand(v, mode) {
     // the moment it's dealt, not only once the round is actually tight (that
     // narrower condition is the separate prompt-area/pinned-area line, above).
     const mustPlay = id !== E.JIUDING && !!E.CARD[id].scoring;
+    // #126: this is always the player's own hand (renderHand only ever draws
+    // `v.hands[me]`/`E.JIUDING`, never an opponent's) -- E.opsOf() is exactly
+    // "what this card is worth right now", the same call already driving the
+    // ops prompt/preview (#122's B.opsForOrder builds on the same function).
+    const eff = E.opsOf(game.st, me, id);
+    const { cls: markCls, attrs: markAttrs, mark } = opsMarkBits(id, eff);
     const b = document.createElement("button");
     b.type = "button"; b.className = `card ${chip ? "chip " : ""}${mustPlay ? "must-play " : ""}${cls}`.trim();
     b.setAttribute("aria-pressed", String(ui.card === id));
@@ -2681,8 +2737,12 @@ function renderHand(v, mode) {
     // other .nm-zh/.nm-en span off :root[lang]) -- the other language stays
     // reachable here as the button's own aria-label, and on the full card
     // page (renderCardView/cardHeader, untouched) which still shows both.
-    b.setAttribute("aria-label", `${cardZh(id)} / ${cardEn(id)}${mustPlay ? " · " + t("hand.mustPlay") : ""}`);
-    const ci = `<span class="ci"><span class="ops ${kind}">${esc(opsLabel(id))}</span><span class="nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span></span>`;
+    // #126: a button's own aria-label overrides every descendant's for the
+    // accessible name, so the ops-changed phrase (also on the inner .ops
+    // span's own aria-label/title, for a desktop hover) is folded in here
+    // too, or a screen reader would never hear it.
+    b.setAttribute("aria-label", `${cardZh(id)} / ${cardEn(id)}${mustPlay ? " · " + t("hand.mustPlay") : ""}${mark ? " · " + t("hand.opsChanged", { printed: mark.printed, now: eff }) : ""}`);
+    const ci = `<span class="ci"><span class="ops ${kind}${markCls}"${markAttrs}>${esc(opsText(id, eff))}</span><span class="nm"><span class="nm-zh" lang="zh-Hant">${esc(cardZh(id))}</span><span class="nm-en">${esc(cardEn(id))}</span></span></span>`;
     const badge = mustPlay ? `<span class="must-badge" title="${esc(t("hand.mustPlayTitle"))}">${esc(t("hand.mustPlay"))}</span>` : "";
     b.innerHTML = (chip ? ci : `<img class="cardimg" src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` + ci) + badge;
     b.disabled = !canPick;
