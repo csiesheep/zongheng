@@ -213,6 +213,86 @@ export function tire(st, n, pusher) {
 }
 export function recover(st, n) { st.weariness = Math.min(5, st.weariness + n); }
 
+// ---------- #123: collapse risk, decided by simulation, not by card text ----------
+// The UI's own state is always a per-seat VIEW (`E.view()`, app.js: `v = E.view
+// (game.st, game.me)` for solo, `v = game.st` = the server's own view for a
+// room) -- the opponent's hand is `null` there, not an array, on purpose. The
+// real `apply()`/`run()` machinery does not expect that: `eventMark` (used by
+// EVERY event, to log what it changed) reads `st.hands[side].length` for
+// BOTH sides unconditionally and throws on a hidden hand. Found the hard way
+// (#123 round 1): the easy bot's own candidate builder already hands a bare
+// view to `randomAction`, and a caught throw there silently reads as "safe",
+// so the very warning this issue exists to add would have gone dark for
+// every hidden-hand position -- solo and rooms alike, i.e. almost always.
+// `view()` hides three things this way: the opponent's hand (`null`, count in
+// `handCounts`), the draw pile (deleted, count in `drawCount`) and the not-
+// yet-shuffled-in eras (`later`, deleted, counts in `laterCounts`) -- all
+// patched here with placeholder ids of the RIGHT length, never real card
+// ids: enough for every generic length-only check (`eventMark`'s own diff,
+// `handSize` in bots.js's `evaluate`), and no sided card's own `effect()`
+// reads what those hidden piles actually hold to decide whether it tires
+// the realm.
+function withHiddenPilesFilled(st) {
+  const need = !Array.isArray(st.hands[QIN]) || !Array.isArray(st.hands[CHU]) || !Array.isArray(st.draw) || !st.later
+    || Object.values(st.later).some((a) => !Array.isArray(a));
+  if (!need) return st;
+  const s = clone(st);
+  for (const side of [QIN, CHU]) {
+    if (!Array.isArray(s.hands[side])) s.hands[side] = new Array((s.handCounts && s.handCounts[side]) || 0).fill("__hidden__");
+  }
+  if (!Array.isArray(s.draw)) s.draw = new Array(s.drawCount || 0).fill("__hidden__");
+  if (s.later && s.laterCounts) {
+    for (const k of Object.keys(s.laterCounts)) if (!Array.isArray(s.later[k])) s.later[k] = new Array(s.laterCounts[k] || 0).fill("__hidden__");
+  }
+  return s;
+}
+function firstLegalChoice(p) {
+  switch (p.kind) {
+    case "points": return (p.options || []).slice(0, Math.max(0, p.min || 0));
+    case "card": return (p.min ?? 1) === 0 ? [] : (p.options || []).slice(0, 1);
+    case "option": return (p.options || [])[0]?.id ?? null;
+    default: return null; // "ops" never arises mid-event; treated as unanswerable
+  }
+}
+// Would COMMITTING `action`, right now, end the game by pushing weariness to
+// 土崩 against `side`? (rulebook 五 / TS 8.1.3: the acting player is
+// responsible for weariness even through the opponent's event.) A pure,
+// side-effect-free look at a clone, for the UI (and the advisor/bots below)
+// to call BEFORE the player or bot actually commits. `action` is exactly the
+// shape `apply()` takes -- the same object a click or a bot's own candidate
+// would send. Any choice the play stops on along the way (an event's own
+// pick of a target, say) is answered with its first legal option: the tire
+// every sided card applies here is never conditioned on which option is
+// picked (the #115 event-audit harness established that shape for all of
+// them), so a future card that starts tiring the realm needs no second,
+// hand-written rule added to this function. Never throws: an action that
+// cannot even be tried from this state (a bad shape, a game already over)
+// reads as "safe" -- a genuinely illegal action fails again, loudly, when it
+// is actually played.
+export function actionWouldCollapse(st, side, action) {
+  if (st.winner != null) return false;
+  const probe = withHiddenPilesFilled(st);
+  let s;
+  try { s = apply(probe, action); } catch { return false; }
+  try {
+    for (let guard = 0; s.pending && s.winner == null && guard < 30; guard++) {
+      s = apply(s, { type: "choose", side: s.pending.who, choice: firstLegalChoice(s.pending) });
+    }
+  } catch { return false; }
+  return s.winner != null && s.winner !== side && s.reason === "collapse";
+}
+// The same question for just a card's event (own or the opponent's), without
+// yet knowing which ops use (if any) will ride along with it -- the event's
+// own tire never depends on that (`play()`'s own "event" step is identical
+// whichever ops use it is bundled with, or none at all). The card page opens
+// before place/campaign/lobby/order is chosen, so this is what it calls to
+// decide whether to warn at all, and the advisor/bots call it the same way
+// before ranking "event" as a candidate.
+export function eventWouldCollapse(st, side, cardId) {
+  if (!CARD[cardId]) return false;
+  return actionWouldCollapse(st, side, { type: "play", side, card: cardId, use: "event" });
+}
+
 // ---------- mandate, markers, scoring, reform ----------
 export function win(st, side, reason) {
   if (st.winner != null) return;

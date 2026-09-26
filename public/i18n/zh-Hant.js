@@ -304,6 +304,15 @@ export default {
     // chosen yet used to do nothing at all -- app.js's flashUseWarning()
     // shows this under the use row until a use is actually picked.
     pickUseFirst: "先選一個用法才能確認",
+    // #123(owner:楚懷王入秦在民困為扶植打出,事件把疲敝推到土崩,沒有任何
+    // 警告就輸了):事件會不會把疲敝推到土崩,由 E.eventWouldCollapse(shared/
+    // engine.js)在一份複本上實際跑一次事件決定,不是憑牌面文字猜——凡是會
+    // 觸發事件的用法(事件本身,或對手的牌用來扶植/奇襲/遊說,先後皆同)都
+    // 算,變法與說客配對這兩個不觸發事件的用法不算。{uses} 是 collapseSafe
+    // 用來列出安全用法的清單(見 app.js safeUsesFor())。
+    collapseWarn: "這張牌的事件會把疲敝推到土崩——你正在行動,你會立刻輸。",
+    collapseSafe: "{uses}不會觸發事件,是安全的。",
+    collapsePairSafe: "跟{shuoke}搭配",
     // #117:說客這張牌的搭配選擇——選一張手上對手陣營的牌一起打出,或明確
     // 選不搭配。{enemy} 是對手陣營的名字(秦/楚),打楚的說客時填秦,反之
     // 亦然。none/noEnemy/eventReason 是三種狀況各自的說明:選了不搭配、
