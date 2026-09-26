@@ -94,6 +94,42 @@ export const HOME_CAPITAL = ["guanzhong", "ying"];
 // Under "move", where a fallen capital goes (遷都: Chu moved to 陳 in 278 BC).
 export const MOVED_CAPITAL = ["hanzhong", "chencai"];
 export function homeCapital(st, side) { return (st.capital && st.capital[side]) || HOME_CAPITAL[side]; }
+export const MOVE_VP = 3;
+// `homeFall` (#130; owner: 「設計一下 如果國都被控制就輸了呢？」, and 「pls simulate them all」):
+//   "lose"           the enemy controlling your home capital loses you the game at
+//                    once (read with the markers, `checkMarkers`)
+//   "lose-turn"      ... if it still does at the end of a turn (`endTurnChecks`)
+//   "lose-majority"  the enemy having MORE influence than you there at the end of a turn
+//   "move"           遷都: the first time the enemy controls it at the end of a turn
+//                    it gains MOVE_VP and your capital moves (關中 → 漢中, 郢 → 陳蔡;
+//                    `st.capital`); the enemy controlling the new one at the end of a
+//                    LATER turn loses you the game. The old capital is an ordinary
+//                    space; the home region and homeLock do not change.
+// End reason "homeFall". Qin's capital is read first, so on the (never measured)
+// turn end where both fall at once, Chu wins.
+function homeFallAtTurnEnd(st) {
+  const hf = st.options.homeFall;
+  if (hf !== "lose-turn" && hf !== "lose-majority" && hf !== "move") return;
+  const moved = [];
+  for (const side of [QIN, CHU]) {
+    const cap = homeCapital(st, side), opp = other(side);
+    if (hf === "lose-majority") {
+      if (infOf(st, cap)[opp] > infOf(st, cap)[side]) return win(st, opp, "homeFall");
+      continue;
+    }
+    if (controller(st, cap) !== opp) continue;
+    if (hf === "lose-turn" || cap !== HOME_CAPITAL[side]) return win(st, opp, "homeFall");
+    moved.push(side);
+  }
+  for (const side of moved) {
+    const opp = other(side);
+    if (!st.capital) st.capital = HOME_CAPITAL.slice();
+    st.capital[side] = MOVED_CAPITAL[side];
+    log(st, { type: "capitalMoves", whose: side, from: HOME_CAPITAL[side], to: MOVED_CAPITAL[side], by: opp, vp: MOVE_VP });
+    vp(st, opp, MOVE_VP);
+    if (st.winner != null) return;
+  }
+}
 
 // ---------- RNG (mulberry32) ----------
 export function makeRng(seed) {
@@ -391,6 +427,9 @@ export function checkMarkers(st) {
   }
   if (st.winner == null && Object.keys(st.mie).length >= st.options.mie) win(st, QIN, "unification");
   if (st.winner == null && Object.keys(st.seals).length >= st.options.seals) win(st, CHU, "alliance");
+  if (st.winner == null && st.options.homeFall === "lose") {
+    for (const side of [QIN, CHU]) if (controller(st, HOME_CAPITAL[side]) === other(side)) { win(st, other(side), "homeFall"); break; }
+  }
   if (probe.home) probe.home(st, "check");
 }
 export function regionTally(st, region) {
@@ -636,6 +675,7 @@ export function createGame(seed, options = {}) {
     for (const [id, n] of Object.entries(SETUP[SIDES[side]].fixed)) ensure(st, id)[side] = n;
   }
   ensure(st, "hangu")[QIN] = st.options.hangu;
+  if (st.options.homeFall === "move") st.capital = HOME_CAPITAL.slice();
   const decks = { reform: ERA_DECKS.reform.slice(), alliance: ERA_DECKS.alliance.slice(), conquest: ERA_DECKS.conquest.slice() };
   if (st.options.scoringSplit === "v2") {
     decks.reform = decks.reform.filter((c) => c !== "score_west").concat("score_east");
@@ -939,6 +979,8 @@ function endTurnChecks(st) {
   const holding = [QIN, CHU].filter((s) => st.hands[s].some((c) => CARD[c].scoring));
   if (holding.length === 2) return win(st, CHU, "scoringBoth");
   if (holding.length === 1) return win(st, other(holding[0]), "scoring");
+  homeFallAtTurnEnd(st);
+  if (st.winner != null) return;
   recover(st, 1);
   if (st.luoyiYields) {
     const ctl = controller(st, "luoyi");
