@@ -26,6 +26,20 @@ function gauss(rng) {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
+// ---------- 滅國 after a restore ----------
+// The engine's own condition (E.checkMarkers, owner 裁決 #119): after 田單復國
+// lifts a 滅, `st.mieHold[id]` lists the spaces of that state Qin still
+// controlled then; a space leaves the list once Qin loses it, and the state
+// falls again only when Qin holds all of it with at least one space NOT on the
+// list. So while every space of the state is on the list and still Qin's, no
+// move of Qin's can destroy it: Qin must first lose one. True in exactly that
+// case, for the advisor (advisor.js) and the evaluation below.
+export function heldSinceRestore(st, id) {
+  const held = st.mieHold && st.mieHold[id];
+  if (!held || st.mie[id]) return false;
+  return E.spacesOfState(id).every((x) => held.includes(x) && E.controller(st, x) === QIN);
+}
+
 // ---------- evaluation: how good is this position for `side` ----------
 // `terms`, when an object is passed, collects the same number split into named
 // buckets from `side`'s point of view: the advisor (advisor.js) subtracts the
@@ -77,11 +91,14 @@ export function evaluate(st, side, terms = null) {
   for (const [id, s] of Object.entries(STATES)) {
     const sp = E.spacesOfState(id);
     if (!st.mie[id]) {
+      // A state held whole since 田單復國 lifted its 滅 cannot fall until Qin
+      // first loses a space of it (heldSinceRestore above): as far as this road goes.
+      const blocked = heldSinceRestore(st, id);
       let need = 0;
       for (const x of sp) { const [q, c] = E.infOf(st, x), S = SPACE[x].stability; if (q < c + S) need += c + S - q; }
-      const road = mieScale * (need <= 2 ? 2.5 : need <= 4 ? 1.2 : need <= 6 ? 0.5 : 0.1);
+      const road = mieScale * (blocked ? 0.1 : need <= 2 ? 2.5 : need <= 4 ? 1.2 : need <= 6 ? 0.5 : 0.1);
       vq += road;
-      if (T) { T(`mieRoad:${id}`, road); terms[`$mieNeed:${id}`] = need; }
+      if (T) { T(`mieRoad:${id}`, road); terms[`$mieNeed:${id}`] = blocked ? null : need; }
     } else if (T) terms[`$mieNeed:${id}`] = 0;
     if (!st.seals[id]) {
       const [q, c] = E.infOf(st, s.capital), S = SPACE[s.capital].stability;

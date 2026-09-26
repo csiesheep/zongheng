@@ -24,7 +24,7 @@
 // points the bot was maximising, and `best` is what is left when nothing moved
 // enough to name.
 import * as E from "./engine.js";
-import { decide, determinize, evaluate, simulate } from "./bots.js";
+import { decide, determinize, evaluate, heldSinceRestore, simulate } from "./bots.js";
 
 const { QIN, CHU, SPACE, SPACES, STATES, SCORED_REGIONS, CARD, JIUDING, REFORM } = E;
 
@@ -215,10 +215,13 @@ function reasonFor(st, action, side, rng, targets, L) {
     if (fresh.length) {
       add("destroyState", d("mie"), { state: fresh[0], n: Object.keys(st1.mie).length, need: 0 });
     }
+    // A state held whole since 田單復國 lifted its 滅 is on no road at all: it
+    // falls again only to a new conquest (bots.js heldSinceRestore, the engine's own
+    // condition), so it is never "{n} away from falling" (#122).
     let state = null, top = 0, sum = 0;
     for (const id of Object.keys(STATES)) {
       const dv = d(`mieRoad:${id}`);
-      if (dv > 0 && !st1.mie[id]) { sum += dv; if (dv > top) { top = dv; state = id; } }
+      if (dv > 0 && !st1.mie[id] && !heldSinceRestore(st1, id)) { sum += dv; if (dv > top) { top = dv; state = id; } }
     }
     // 滅國 is every space of the state under Qin, so the distance the copy
     // reads out ("{state} is {n} away from falling") is spaces, not points;
