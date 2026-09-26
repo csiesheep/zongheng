@@ -17,6 +17,10 @@ const RATE = { jin: 3.0, west: 2.8, south: 2.8, east: 1.5, north: 1.5 };
 // Enemy events that tire the realm when spent for ops: deadly at 民困.
 const TIRING = new Set(["changping", "wangjian", "huaiwang"]);
 const REFORM_PERK = [0, 0.5, 1.5, 3, 4, 6, 7];
+// #121, only under a win by 稱帝: the road by box (0…5), and a card of 4 face
+// ops in hand at box 5 (half of it at box 4). Box 5 is one step from the win,
+// as a third 滅 or a fourth 相印 is one marker away, and weighs the same 8.
+const EMPEROR_ROAD = [0, 0, 0.5, 1.5, 4, 8], EMPEROR_CARD = E.MANDATE_TO_WIN;
 const NOISE = { easy: 0, normal: 0.6, hard: 0.2 };
 const pickOne = (arr, rng) => arr[rng.int(arr.length)];
 function gauss(rng) {
@@ -98,6 +102,21 @@ export function evaluate(st, side, terms = null) {
   const reformPerk = REFORM_PERK[st.reform[QIN]] - REFORM_PERK[st.reform[CHU]];
   vq += reformPerk;
   if (T) T("reform", reformPerk);
+  // #121: under emperor "win" / "win-late" the first to box 6 wins the game,
+  // so the track is a road to a win like 滅 and 相印 are: worth more the
+  // closer it gets, and the 4-op card that takes the last step is worth
+  // keeping. Only while box 6 is still open; never under the default rule.
+  const emp = st.options.emperor;
+  if ((emp === "win" || emp === "win-late") && st.reformFirst[6] == null) {
+    const race = (s) => {
+      const box = st.reform[s];
+      const card = box >= 4 && st.hands[s].some((c) => c !== JIUDING && CARD[c].ops >= 4) ? (box === 5 ? EMPEROR_CARD : EMPEROR_CARD / 2) : 0;
+      return EMPEROR_ROAD[box] + card;
+    };
+    const road = race(QIN) - race(CHU);
+    vq += road;
+    if (T) T("reform", road);
+  }
   const enemyCards = (s) => st.hands[s].filter((c) => CARD[c].side === 1 - s).length;
   const enemyHeld = 0.4 * (enemyCards(QIN) - enemyCards(CHU));
   vq -= enemyHeld;

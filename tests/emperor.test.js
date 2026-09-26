@@ -142,3 +142,94 @@ test(`win-late: from turn ${LATE_FROM} on, the first to box 6 wins, reason emper
     assert.equal(st.reason, "emperor");
   }
 });
+
+// ---------- the bots under a win by reform ----------
+// A bot that ignores a winning condition makes a simulation of it meaningless (#121 brief). Positions: random play
+// to Qin's action round on turn 7, then Qin is put at `box` with `used` reform advances spent this turn and 長平之戰
+// (4 ops, the card that takes box 6) in hand, the Mandate level, Chu at box 1. Any other 4-op card in Qin's hand goes
+// back to the draw pile, so 長平 is the only card that can take the last step; `extra` cards are added to the hand.
+function racePositions(options, box, used, extra = []) {
+  const out = [];
+  for (let seed = 1; out.length < 12 && seed <= 40; seed++) {
+    let st;
+    try { st = E.clone(actionRoundFrom(seed, options, QIN, 7)); } catch { continue; }
+    st.log = [];
+    for (const c of ["changping", ...extra]) for (const pile of [st.hands[0], st.hands[1], st.draw, st.discard, st.removed, ...Object.values(st.later)]) {
+      const i = pile.indexOf(c); if (i >= 0) pile.splice(i, 1);
+    }
+    for (const c of st.hands[QIN].filter((c) => c !== E.JIUDING && E.CARD[c].ops >= 4)) {
+      st.hands[QIN].splice(st.hands[QIN].indexOf(c), 1); st.draw.push(c);
+    }
+    st.hands[QIN].push("changping", ...extra);
+    st.reform = [box, 1]; st.reformUsed = [used, 0];
+    st.reformFirst = { 1: QIN }; for (let b = 2; b <= box; b++) st.reformFirst[b] = QIN;
+    st.mandate = 0;
+    out.push({ seed, st });
+  }
+  return out;
+}
+function actionRoundFrom(seed, options, side, turn) {
+  const rng = E.makeRng(seed * 7919);
+  let st = E.createGame(seed, options);
+  for (let steps = 0; st.winner == null && steps < 3000 && st.turn <= turn; steps++) {
+    if (st.phase === "action" && st.turn === turn && st.actor === side && !st.pending && E.mustAct(st).includes(side)) return st;
+    const who = E.mustAct(st), s = who[rng.int(who.length)];
+    st = E.apply(st, B.randomAction(st, s, rng));
+  }
+  throw new Error("not reached");
+}
+
+test("bots, win: at box 5 with an advance left and a 4-op card in hand, normal and hard take the win", () => {
+  const pos = racePositions({ emperor: "win" }, 5, 0);
+  assert.ok(pos.length >= 8, `only ${pos.length} positions`);
+  for (const level of ["normal", "hard"]) for (const { seed, st } of pos) {
+    const a = B.decide(E.view(st, QIN), QIN, level, E.makeRng(seed));
+    const after = B.simulate(st, a, E.makeRng(seed));
+    assert.equal(after.reason, "emperor", `${level} seed ${seed}: played ${a.card} as ${a.use}`);
+  }
+});
+
+test("bots, win: at box 5 with no advance left this turn, normal and hard keep the 4-op card for the win", () => {
+  const pos = racePositions({ emperor: "win" }, 5, 2);
+  assert.ok(pos.length >= 8, `only ${pos.length} positions`);
+  const spent = [];
+  for (const level of ["normal", "hard"]) for (const { seed, st } of pos) {
+    const a = B.decide(E.view(st, QIN), QIN, level, E.makeRng(seed));
+    if (a.card === "changping" || a.pair === "changping") spent.push(`${level} seed ${seed}: ${a.use}`);
+  }
+  assert.deepEqual(spent, []);
+});
+
+test("bots, win: at box 4 with 長平 in hand, normal and hard do not spend it on anything but the track", () => {
+  const pos = racePositions({ emperor: "win" }, 4, 0);
+  assert.ok(pos.length >= 8, `only ${pos.length} positions`);
+  const spent = [];
+  for (const level of ["normal", "hard"]) for (const { seed, st } of pos) {
+    const a = B.decide(E.view(st, QIN), QIN, level, E.makeRng(seed));
+    if ((a.card === "changping" || a.pair === "changping") && a.use !== "reform") spent.push(`${level} seed ${seed}: ${a.use}`);
+  }
+  assert.deepEqual(spent, []);
+});
+
+test("bots, win: at box 4 with two advances left, a 3-op card and 長平, hard climbs to box 5 and keeps 長平 (or wins now)", () => {
+  // Box 5's threshold is 3 and box 6's is 4 (rulebook): 白起破郢 (3) now, 長平 (4) next round wins within the turn.
+  // An event that moves the track (韓非入秦 +1, 鄭國渠 +2) climbs as well.
+  const pos = racePositions({ emperor: "win" }, 4, 0, ["poying"]);
+  assert.ok(pos.length >= 8, `only ${pos.length} positions`);
+  const other = [];
+  for (const { seed, st } of pos) {
+    const a = B.decide(E.view(st, QIN), QIN, "hard", E.makeRng(seed));
+    const after = B.simulate(st, a, E.makeRng(seed));
+    const climbed = after.reason === "emperor" || (after.reform[QIN] === 5 && after.hands[QIN].includes("changping"));
+    if (!climbed) other.push(`seed ${seed}: ${a.card} ${a.use} -> box ${after.reform[QIN]}`);
+  }
+  assert.deepEqual(other, []);
+});
+
+test("bots, default: the evaluation of a position is the same with the option absent and with emperor=vp", () => {
+  for (const { st } of racePositions({}, 5, 0)) {
+    const v = { ...st, options: { ...st.options, emperor: "vp" } };
+    assert.equal(B.evaluate(st, QIN), B.evaluate(v, QIN));
+    assert.equal(B.evaluate(st, E.CHU), B.evaluate(v, E.CHU));
+  }
+});
