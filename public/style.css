@@ -1802,7 +1802,15 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    side-coloured circle, not a background swap, so the q/c/n/s colouring
    underneath (still what tells the card's own side apart) is untouched. */
 .ops.ops-down, .sheet-badge.ops-down { box-shadow: 0 0 0 2px var(--bad); }
-.ops.ops-up, .sheet-badge.ops-up { box-shadow: 0 0 0 2px var(--gold); }
+/* orchestrator's checker (#126): a neutral badge's own fill IS `--gold` --
+   a plain `--gold` ring on it read as nothing more than a slightly bigger
+   circle. Two-tone instead of one: a dark separator ring first (fixed
+   rgba(0,0,0,.55), not a theme token -- its job is contrast against
+   whatever colour the badge itself is filled with, q/c/n alike, not to
+   match the page), THEN the gold ring outside that gap -- so there is
+   always a visible boundary between the badge's own fill and the mark,
+   even when they'd otherwise be the identical colour. */
+.ops.ops-up, .sheet-badge.ops-up { box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.55), 0 0 0 4px var(--gold); }
 /* The printed value, still discoverable without a hover (the badge's own
    aria-label/title already carry it for a screen reader/desktop pointer) --
    only on the full card page, which has the room; the hand tile and the

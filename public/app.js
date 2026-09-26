@@ -2373,6 +2373,14 @@ function renderPromptAndSheet(v) {
   // visible rather than hidden (the brief's own wording), just disabled,
   // same look every other illegal use already has.
   const usable = (u) => (u === "event" ? (ui.card === "shuoke" ? false : info.uses.event) : u === "reform" ? info.uses.reform : !!info.uses[u]);
+  // #126 (orchestrator's checker): 變法's own threshold reads the printed
+  // ops (engine.js's legal()/apply() both check `card.ops`, never opsOf) --
+  // when this card's badge (info.ops) differs from that printed value, the
+  // Reform button itself says so (title for a desktop hover, aria-label
+  // folded into its accessible name so it doesn't just vanish behind the
+  // plain "Reform"/"變法" text), so the mark up on the header never reads as
+  // "Reform judges this differently too".
+  const reformMark = ui.card !== E.JIUDING ? opsMark(ui.card, info.ops) : null;
   for (const u of ["event", "place", "campaign", "lobby", "reform"]) {
     if (ui.card === E.JIUDING && (u === "event" || u === "reform")) continue;
     const illegal = !usable(u);
@@ -2388,6 +2396,11 @@ function renderPromptAndSheet(v) {
       ui.use = u; ui.points = []; ui.target = null; ui.err = ""; ui.useWarn = false; ui.useWarnPulse = false; render();
     }, ui.use === u, illegal);
     if (!illegal && pairPending) b.setAttribute("aria-disabled", "true");
+    if (u === "reform" && reformMark) {
+      const label = t("sheet.hint.reformPrinted", { printed: reformMark.printed });
+      b.title = label;
+      b.setAttribute("aria-label", `${b.textContent} — ${label}`);
+    }
   }
   if (ui.card === "shuoke" && showFullCard) {
     // 事件 is disabled above for every 說客 page, paired or not -- this is

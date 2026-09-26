@@ -421,6 +421,13 @@ export default {
         one: "An enemy card, event first: once its event resolves, this card has only {ops} op.",
         other: "An enemy card, event first: once its event resolves, this card has only {ops} ops.",
       },
+      // #126 (orchestrator's checker): the round badge shows what a card is
+      // worth right now, but Reform's own threshold reads the printed ops
+      // (engine.js: legal()/apply() both check `card.ops`, never opsOf) — so
+      // when the two differ, this goes on the Reform button itself
+      // (title/aria-label; see app.js's `usable`/useBtn loop) so the mark
+      // never reads as "Reform sees this number too".
+      reformPrinted: "Reform counts the printed ops ({printed})",
     },
     // #35: the read-only card view's own extra facts (side/removal, shown on
     // the header's second line by card-view.js) and the history section

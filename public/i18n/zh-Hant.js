@@ -356,6 +356,11 @@ export default {
         one: "對手的牌,先事件:事件結算後,這張牌只剩 {ops} 點行動點。",
         other: "對手的牌,先事件:事件結算後,這張牌只剩 {ops} 點行動點。",
       },
+      // #126(orchestrator 驗收):圓形徽章顯示現在打出去的點數,但變法的門檻讀
+      // 印刷點數(engine.js 的 legal()/apply() 都判 card.ops,不是 opsOf)——兩者
+      // 不同時,這句掛在變法按鈕本身(title/aria-label;見 app.js 的
+      // usable()/useBtn 迴圈),不讓徽章的標記看起來像變法也看得懂它。
+      reformPrinted: "變法以印刷點數計({printed})",
     },
     // #35:唯讀牌頁自己多出的兩行——牌頭第二行的陣營/是否移除(card-view.js),
     // 以及牌文下方的史事區塊(只有 stories.js 有這張牌的資料時才顯示)。
