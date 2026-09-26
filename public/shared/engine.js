@@ -1184,7 +1184,9 @@ export function view(st, side) {
   // The plan stays: it names only cards already face up and choices already
   // made, and a bot answering a pending needs it to simulate.
   const v = clone(st);
-  delete v.rngState;
+  // The seed goes with the rng state (#131): the game replays from seed +
+  // moves and the decks are public, so a seed rebuilds both hands and the draw.
+  delete v.seed; delete v.rngState;
   v.drawCount = st.draw.length; delete v.draw;
   v.laterCounts = Object.fromEntries(Object.entries(st.later).map(([k, a]) => [k, a.length])); delete v.later;
   v.handCounts = [st.hands[QIN].length, st.hands[CHU].length];
