@@ -1202,5 +1202,12 @@ export function view(st, side) {
     if (st.phase === "headline" && st.headline[side] == null && !hasPerk(st, side, "peek")) v.headline[opp] = st.headline[opp] == null ? null : "hidden";
     if (st.phase === "headline" && st.headline[opp] == null) v.headline[opp] = null;
   }
+  // A card choice someone else is answering may list cards of a hand this
+  // viewer cannot see (明法令's discard, 春申君, 韓非入秦): those options are
+  // dropped (#131). The side that answers keeps them all.
+  if (v.pending && v.pending.who !== side && v.pending.kind === "card") {
+    const hidden = new Set([QIN, CHU].filter((s) => v.hands[s] == null).flatMap((s) => st.hands[s]));
+    v.pending.options = v.pending.options.filter((c) => !hidden.has(c));
+  }
   return v;
 }
