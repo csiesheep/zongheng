@@ -232,9 +232,20 @@ export function checkMarkers(st) {
     const capCtl = controller(st, s.capital);
     if (st.mie[id] && capCtl === CHU) { delete st.mie[id]; log(st, { type: "restore", state: id }); }
     if (st.seals[id] && capCtl === QIN) { delete st.seals[id]; log(st, { type: "unseal", state: id }); }
-    const all = spacesOfState(id).every((x) => controller(st, x) === QIN);
+    // After 田單復國 lifts 滅 (owner 裁決 #119), `mieHold[id]` lists the spaces
+    // of the state Qin still controlled at that moment; a space leaves the list
+    // once Qin loses it. The state falls again only to a new conquest: all of
+    // it held, and at least one space not on the list. No list, as always.
+    const sp = spacesOfState(id);
+    let held = st.mieHold && st.mieHold[id];
+    if (held) {
+      held = held.filter((x) => controller(st, x) === QIN);
+      if (held.length) st.mieHold[id] = held; else { delete st.mieHold[id]; held = null; }
+    }
+    const all = sp.every((x) => controller(st, x) === QIN) && !(held && held.length === sp.length);
     if (all && !st.mie[id]) {
       st.mie[id] = true; log(st, { type: "mie", state: id });
+      if (st.mieHold) delete st.mieHold[id];
       if (!st.mieVp[id]) { st.mieVp[id] = true; vp(st, QIN, s.vp); }
     }
     const sealed = capCtl === CHU && (st.options.sealAt !== "cap" || infOf(st, s.capital)[CHU] >= capOf(st, s.capital));
