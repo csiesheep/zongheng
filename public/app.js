@@ -1308,6 +1308,27 @@ function placeTapSound(arr, id) {
   Audio.play("sfx.map.place", { rate: 1 + placeTapStreak * 0.06, isPress: true }); // #66 S5 follow-up
   placeTapStreak++;
 }
+// #129: which unlit spaces are unlit ONLY because `side` is already at the
+// cap there (SPACE[id].stability + v.options.cap, E.capOf). #107 already
+// pins the rule that app.js must never carry its own copy of the reach/cost
+// check (grepped by tests/reach-default.test.js) -- so this does not
+// re-derive canPlaceAt/reachFrom at all. Instead it asks E.placeTargets()
+// the SAME question twice: once for real (already done by the caller, `lit`)
+// and once on a clone whose cap option is raised so far that no space could
+// ever hit it. Reach/cost/points-so-far are identical between the two calls
+// -- only the cap constraint can differ -- so anything lit in the second
+// call but not the first is unlit for exactly one reason: the cap.
+function capBlockedSpaces(v, side, ops, points, lit) {
+  const noCap = E.clone(v);
+  noCap.options = { ...v.options, cap: 1e9 };
+  const { lit: litIgnoringCap } = E.placeTargets(noCap, side, ops, points);
+  const out = {};
+  for (const id of litIgnoringCap) {
+    if (lit.has(id)) continue;
+    out[id] = { stability: E.SPACE[id].stability, add: v.options.cap, cap: E.capOf(v, id) };
+  }
+  return out;
+}
 function currentMode(v) {
   const none = { lit: new Set(), picked: {}, costs: null, side: E.QIN, onTap() {} };
   const me = game.me, ui = game.ui;
@@ -1324,7 +1345,16 @@ function currentMode(v) {
   const placing = (ops, points) => {
     const { lit, costs } = E.placeTargets(v, me, ops, points);
     const picked = {}; for (const id of points) picked[id] = (picked[id] || 0) + 1;
-    return { lit, picked, costs, side: me, onTap: (id) => { placeTapSound(points, id); points.push(id); render(); } };
+    // #129: everywhere else `lit` (above) is the one truth for "can this
+    // space take a point right now" -- capBlocked below is NOT a second copy
+    // of that rule, it only tells renderMap() WHY a handful of the unlit
+    // spaces are unlit, so a tap on one of them can say so instead of doing
+    // nothing. It re-derives the same trial board placeTargets() built
+    // internally (reach fixed at `v`, points-so-far applied) because that
+    // trial isn't exposed -- if canPlaceAt/placeCost/capOf's rules ever
+    // change, this must move with them.
+    const capBlocked = capBlockedSpaces(v, me, ops, points, lit);
+    return { lit, picked, costs, side: me, capBlocked, onTap: (id) => { placeTapSound(points, id); points.push(id); render(); } };
   };
   if (L.kind === "pending") {
     const p = L.pending;
@@ -1565,16 +1595,21 @@ function clearLastMoveMarks() {
 // .ctl/.ctl-q/.ctl-c, --qin-inf/--chu-inf); this only says which classes and
 // how many numerals. Numerals stay `<i>` elements (the sweep's `.disc i`
 // selector, #49's hand-over item 4) whether there are one or two.
+// #129: `atCap` -> an extra `atcap` class on that numeral's own <i> --
+// style.css draws the bar as that element's ::before in `currentColor`, so
+// it's automatically the number's own colour (white/dark/etc, whatever the
+// tone rules above already set) with no new colour and no new element to
+// size against the disc.
 function discHTML(parts, cap) {
   const base = "disc" + (cap ? " sq" : "");
   if (parts.kind === "empty") return `<span class="${base}"></span>`;
   if (parts.kind === "lone") {
     const side = parts.side === E.QIN ? "q" : "c";
     const cls = `${base} lone-${side}${parts.controlled ? " ctl" : ""}`;
-    return `<span class="${cls}"><i>${parts.n}</i></span>`;
+    return `<span class="${cls}"><i${parts.atCap ? ` class="atcap"` : ""}>${parts.n}</i></span>`;
   }
   const cls = `${base} split${parts.qin.controlled ? " ctl-q" : ""}${parts.chu.controlled ? " ctl-c" : ""}`;
-  return `<span class="${cls}"><i class="q">${parts.qin.n}</i><i class="c">${parts.chu.n}</i></span>`;
+  return `<span class="${cls}"><i class="q${parts.qin.atCap ? " atcap" : ""}">${parts.qin.n}</i><i class="c${parts.chu.atCap ? " atcap" : ""}">${parts.chu.n}</i></span>`;
 }
 function renderMap(v) {
   const el = $("mapInner");
@@ -1618,7 +1653,7 @@ function renderMap(v) {
     // the owner's V2 滿盤 decision drops the outer black/red control ring
     // this used to draw (.node.ctlq/.ctlc .disc, style.css), so control now
     // only shows as the disc's OWN tone (dark = controlled), computed below.
-    const parts = discParts(q, c, ctl);
+    const parts = discParts(q, c, ctl, E.capOf(v, sp.id));
     // #90 round 2: the sealed 「印」 mark (design A 朱印角章, owner's pick),
     // only for a capital (sp.state names the state a capital belongs to;
     // seal-progress.js keys its output by that same state id). sp.state is
@@ -1663,12 +1698,11 @@ function renderMap(v) {
     hb.type = "button";
     hb.className = "hit";
     hb.style.cssText = `left:${x}px;top:${y}px`;
-    // #100: `mode.warnTap` (currentMode()'s own `!ui.use` case) keeps every
-    // hit button real-clickable even while none are lit, so the tap reaches
-    // `mode.onTap` (flashUseWarning()) instead of being swallowed by a real
-    // `disabled` attribute -- `.hit` has no visual state of its own either
-    // way (style.css), so nothing on screen changes.
-    hb.disabled = !lit && !mode.warnTap;
+    // #129: same trick as #100's warnTap below -- a cap-blocked space during
+    // fostering must stay real-clickable (not `disabled`) so the tap reaches
+    // the one-line explanation instead of being swallowed silently.
+    const capInfo = mode.capBlocked && mode.capBlocked[sp.id];
+    hb.disabled = !lit && !mode.warnTap && !capInfo;
     // #51: the outer control ring is gone -- tone (dark vs grey/pink) is now
     // the ONLY visual sign of who controls a space, so the accessible name
     // spells out both counts and the controller instead of leaving it to be
@@ -1676,7 +1710,7 @@ function renderMap(v) {
     // controls are new (public/i18n/*.js).
     hb.title = t("map.hitTitle", { space: spaceName(sp.id), stability: sp.stability }) +
       (empty ? "" : ` · ${t("map.hitInf", { qin: q, chu: c })}` + (ctl != null ? ` · ${t("map.controls", { side: sideName(ctl) })}` : ""));
-    hb.onclick = () => mode.onTap(sp.id);
+    hb.onclick = capInfo ? () => showCapBlockedNote(sp, mode.side, capInfo) : () => mode.onTap(sp.id);
     hitEl.appendChild(hb);
   }
   // layoutTable() (the caller's caller) sizes and scales the map once every
@@ -1763,6 +1797,25 @@ function flashUseWarning() {
 function appendPromptNote(text) {
   const p = $("promptText");
   if (p) p.insertAdjacentHTML("beforeend", `<div class="prompt-note">${esc(text)}</div>`);
+}
+// #129: the "why is this space unlit" line for the ONE case that has a real
+// answer -- a foster tap on a space where `side` already sits at its cap
+// (renderMap()'s capInfo, from capBlockedSpaces() above). This goes through
+// `game.ui.err` + a real render() -- the SAME slot humanAct()'s own refusal
+// catch uses (line ~518) -- rather than writing #promptText directly the way
+// sealHelp's click handler does (further below): #promptText's own
+// container (#promptScroll) is exactly what layoutTable()'s "sheet-compact"
+// give-way HIDES on a short/narrow viewport once the map-active sheet
+// already overflows its budget (#68 round 2) -- found live at 390x669 while
+// checking this issue: a note appended there after the fact stayed in the
+// DOM but off-screen. `.err` renders inside the SHEET's own title area (see
+// setPrompt() below), which is never part of that give-way, so it survives
+// every viewport this issue is checked at.
+function showCapBlockedNote(sp, side, capInfo) {
+  game.ui.err = t("map.capBlocked", {
+    space: spaceName(sp.id), side: sideName(side), stability: capInfo.stability, add: capInfo.add, cap: capInfo.cap,
+  });
+  render();
 }
 // Card names are the one place bilingual text is wanted regardless of the
 // page's language (see TEAM.md's language-mixing exception list).

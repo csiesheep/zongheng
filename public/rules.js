@@ -50,9 +50,12 @@ const T = {
     board: "棋盤",
     boardText: "26 個據點,分五個記分區(三晉、西土、南方、東方、北疆)與周。五個「國」畫在區域之內,各有一個國都:韓(新鄭)、魏(大梁)、趙(邯鄲)、齊(臨淄)、燕(薊)。★ 為要衝,共八個。每據點有安定值 2 到 4。",
     mapAlt: "地圖:26 個據點分屬五個記分區與周,每個據點旁的小方籤標著它的安定值,★ 是要衝,方形圓盤是國都;屬於五國之一的 14 個據點,還帶著一個彩色小方籤,籤上一字標著所屬國(韓、魏、趙、齊、燕)。",
-    mapLegend: "★ 要衝　▢ 國都　籤上的數字 = 安定值　色塊 = 記分區　小方籤:所屬國(韓 魏 趙 齊 燕)",
+    mapLegend: "★ 要衝　▢ 國都　籤上的數字 = 安定值　色塊 = 記分區　小方籤:所屬國(韓 魏 趙 齊 燕)　數字上一橫 = 這一方已達上限(安定值 + 2)",
     control: "影響力與控制",
     controlText: "控制 = 我方影響力 ≥ 對方影響力 + 安定值。任一方在任一據點最多安定值 + 2 點,多的消失。",
+    // #129:地圖上「數字上一橫」的意思——設計 D(owner's cap_design_D.png)。
+    // 放在控制小節,也放進地圖圖例(mapLegend)。
+    capBarLine: "數字上一橫 = 這一方已達上限(安定值 + 2),不能再扶植。",
     uses: "一張牌的五種用法",
     usesRows: [["事件", "照牌面做。用行動點打出對手陣營的牌時,對手的事件仍然觸發,你決定事件先或行動點先。"], ["扶植", "每 1 點行動點放 1 點影響力,只能放在已有自己影響力的據點,或與自己有影響力的據點相鄰處;能放哪裡在這次行動開始時就決定,這次放下的點不會再開出新的相鄰處。目標由對手控制時每點花 2,逐點判定。"], ["奇襲", "花 X 點對一個有對手影響力的據點:先移除對手 min(X, 其影響力),剩下的放為自己的(不受相鄰限制)。目標是要衝則疲敝軌前進 1。受疲敝封鎖。"], ["遊說", "局勢 = 我方控制的相鄰據點數 − 對方控制的相鄰據點數。移除對手 min(X, 局勢) 點。不動疲敝、不受封鎖。"], ["變法", "棄掉行動點 ≥ 門檻的牌,變法軌前進 1;每回合 1 次(到第 2 格後 2 次)。"]],
     tracks: "疲敝軌與變法軌",
@@ -92,9 +95,12 @@ const T = {
     board: "The map",
     boardText: "26 spaces in five scoring regions (Three Jin, West, South, East, North) and Zhou. Five states sit inside the regions, each with a capital: Han (Xinzheng), Wei (Daliang), Zhao (Handan), Qi (Linzi), Yan (Ji). ★ marks the eight battlegrounds. Each space has a stability of 2 to 4.",
     mapAlt: "A map of the 26 spaces across five scoring regions and Zhou; a small tag beside each space's disc carries its stability number, a star marks a battleground, and a square disc marks a state capital. The 14 spaces belonging to one of the five states also carry a small coloured square tag naming that state (Han, Wei, Zhao, Qi, Yan).",
-    mapLegend: "★ battleground　▢ capital　the tag's number = stability　colour = scoring region　small square tag = the state it belongs to (Han/Wei/Zhao/Qi/Yan)",
+    mapLegend: "★ battleground　▢ capital　the tag's number = stability　colour = scoring region　small square tag = the state it belongs to (Han/Wei/Zhao/Qi/Yan)　a bar over a number = that side is at its cap (stability + 2)",
     control: "Influence and control",
     controlText: "Control = your influence ≥ theirs + stability. Nobody holds more than stability + 2 in a space; the excess is lost.",
+    // #129: what the bar over a number on the map means (design D, owner's
+    // cap_design_D.png). Also folded into the map legend.
+    capBarLine: "A bar over a number: that side is at its cap (stability + 2) and cannot foster there.",
     uses: "A card's five uses",
     usesRows: [["Event", "Do what it says. When you spend an enemy card for ops its event happens too; you choose event first or ops first."], ["Foster", "1 op per point, where you already have influence or next to any space where you have influence; the choice is fixed when the action starts, so a point you place this action opens nothing new. 2 per point into a space the enemy controls, re-priced point by point."], ["Raid", "Spend X ops on a space with enemy influence: remove up to X of theirs, place the rest of yours (no adjacency needed). A battleground tires the realm by one. Locked by weariness."], ["Lobby", "Edge = your controlled neighbours minus theirs. Remove min(X, edge) enemy points. Never tires, never locked."], ["Reform", "Discard a card of at least the threshold to climb one box; once a turn (twice from box 2)."]],
     tracks: "Weariness and reform",
@@ -1012,7 +1018,7 @@ function textSectionsHTML(S, opts = {}) {
   return `<h1>${esc(S.title)}</h1><p>${esc(S.intro)}</p>` +
     `<h2 id="sec-ends">${esc(S.ends)}</h2>${table([], S.endsRows.map(([a, b]) => [`<b>${esc(a)}</b>`, esc(b)]))}` +
     `<h2 id="sec-board">${esc(S.board)}</h2><p>${esc(S.boardText)}</p>${opts.inlineMap ? mapSectionHTML(S) : ""}` +
-    `<h2 id="sec-control">${esc(S.control)}</h2><p>${esc(S.controlText)}</p>` +
+    `<h2 id="sec-control">${esc(S.control)}</h2><p>${esc(S.controlText)}</p><p>${esc(S.capBarLine)}</p>` +
     `<h2 id="sec-uses">${esc(S.uses)}</h2>${table([], S.usesRows.map(([a, b]) => [`<b>${esc(a)}</b>`, esc(b)]))}${usesExamplesHTML(lang)}` +
     `<h2 id="sec-tracks">${esc(S.tracks)}</h2><p>${esc(S.weariness)}</p><p>${esc(S.reformText)}</p>${table(S.reformHead, S.reformRows.map((r) => r.map(esc)))}` +
     `<h2 id="sec-special">${esc(S.special)}</h2><p>${esc(S.specialText)}</p>${specialExtrasHTML(lang)}` +

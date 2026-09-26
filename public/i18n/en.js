@@ -54,6 +54,11 @@ export default {
     // key is the one-line explanation shown in the prompt area when the
     // status line's Seals value is tapped.
     sealHelp: "A seal needs Chu's control of the capital AND a full stack there (stability + 2)",
+    // #129: tapping an unlit space during a foster whose ONLY reason it isn't
+    // lit is that `side` is already at its cap there (E.capOf, stability +
+    // the cap option) -- every other unlit reason keeps today's silent
+    // disabled button.
+    capBlocked: "{space}: {side} is at its cap (stability {stability} + {add} = {cap})",
   },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },
   sys: { joined: "{name} joined.", left: "{name} left.", leftGame: "{name} left; the bot plays the seat.", dealt: "The cards are dealt.", timeout: "{name} ran out of time; the table decided.", over: "{side} ({name}) wins: {reason}.", fallback: "The opponent's move failed; a fallback was played instead: {action}.", stuck: "The opponent cannot move; this game cannot continue." },
@@ -238,7 +243,11 @@ export default {
       map: { title: "The map", text: "26 spaces in five regions plus Zhou; a star marks a battleground. A disc's colour is influence: black is Qin, red is Chu; grey and pink mean influence without control.", do: "Tap {space}" },
       control: { title: "Control", text: "Control needs yours at least theirs plus stability; the cap is stability + 2. {space}: {qin} is at least {chu} plus {stability}, so it's yours.", do: "Tap {space}" },
       hand: { title: "Your hand", text: "The round badge is the card's points. Black carries Qin's event, red Chu's, white nobody's. A card has five uses; start with the simplest, foster.", do: "Tap the lit card" },
-      place: { title: "Foster", text: "1 op places 1 point, where you already stand or next to any space where you have influence, fixed when the action starts; 2 ops per point into enemy control. {n} into {space}: {qin} is at least {chu} plus {stability}, so it's yours.", do: "Tap {space} {n} times" },
+      // #129: no lesson ever fills a space to its cap, so this line is a
+      // heads-up for later play, not something that happens in this step
+      // (orchestrator's ruling: add the line to the foster lesson's text
+      // instead of a lesson that doesn't exist).
+      place: { title: "Foster", text: "1 op places 1 point, where you already stand or next to any space where you have influence, fixed when the action starts; 2 ops per point into enemy control. {n} into {space}: {qin} is at least {chu} plus {stability}, so it's yours. Later, a bar over a side's number there means that side is already at its cap (stability + 2) and can't be fostered further.", do: "Tap {space} {n} times" },
       event: { title: "Event", text: "Play your own card for its event: {card}, reform +1. First to arrive scores, but the unlock matters more.", do: "Choose Event" },
       enemyCard: { title: "An enemy card", text: "Spend the other side's card for ops; its event still happens. You choose which goes first.", do: "Choose ops first" },
       campaign: { title: "Raid", text: "Remove up to {n} of theirs, place the rest as yours. A battleground tires the realm by one; pushing it to {to} loses.", do: "Confirm the raid on {space}" },
