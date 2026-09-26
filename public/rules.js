@@ -488,10 +488,13 @@ function mieSectionHTML(l) {
   const rulesP = zh
     ? [`<b>滅國(秦):</b> 控制某國<b>全部</b>據點,不只國都。秦得該國天命一次(韓、魏、燕 2,趙、齊 3)。`,
        `<b>復國:</b> 楚拿回國都時解除滅國,可再滅一次,但第二次不再得分。秦同時滅三國即勝。`,
+       // #122: owner 裁決 #119 (田單復國 read literally; the engine's mieHold).
+       `<b>田單復國:</b> 不必拿回國都;之後秦要<b>新拿下</b>一處齊地(復國時不在秦手上,或之後丟過)並控制齊全境,齊才再滅。`,
        `<b>相印(楚):</b> 控制某國<b>國都</b>且影響力達到上限(安定值 + 2)。每國一次,天命 +1。秦拿下該國都即解除。楚同時持四國相印即勝。`,
        `相印一旦取得,楚的影響力被削減、甚至掉到沒有人控制,也不會失去——只有<b>秦控制該國都</b>才會失印;滅國/復國同理,只有<b>楚控制該國都</b>才會復國,丟掉國都以外的據點不會復國。`]
     : [`<b>Destruction (Qin):</b> control <b>every</b> space of a state, not just its capital. Qin scores that state's value once (2 for Han, Wei, Yan; 3 for Zhao, Qi).`,
        `<b>Restoration:</b> Chu retaking the capital lifts the destroyed mark; it can be destroyed again, but scores nothing the second time. Qin wins on three destroyed at once.`,
+       `<b>Tian Dan Restores Qi</b> needs no capital; Qi then falls again only when Qin <b>newly takes</b> a Qi space (not Qin's at the restore, or lost since) and holds all of Qi.`,
        `<b>Seals (Chu):</b> control a state's <b>capital</b> with influence there at the cap (stability + 2). Once per state, +1 Mandate. Qin taking that capital removes it. Chu wins on four seals at once.`,
        `Once held, a seal survives Chu's influence there dropping, even to where nobody controls the capital — only <b>Qin controlling that capital</b> removes it. The same is true the other way for destruction/restoration: only <b>Chu controlling the capital</b> restores it; losing any other space does not.`];
   const p = rulesP.map((t) => `<p>${t}</p>`).join("");
@@ -674,6 +677,11 @@ function cardList(S, N, cardEn, opts = {}) {
       ? (lang === "en" ? `Scores ${E.REGIONS[c.scoring].en}.` : `結算${E.REGIONS[c.scoring].zh}。`)
       : esc(lang === "en" ? cardEn[c.id] ?? c.text : c.text);
     const year = c.year ? ` <small>(${lang === "en" ? "" : "前"}${c.year}${lang === "en" ? " BC" : ""})</small>` : "";
+    // #122: a ruling on how the card's text reads (N.sheet.rulings, owner 裁決
+    // #119 -- the same copy card-view.js puts on the card's detail view), on
+    // its own line under the text.
+    const rulingText = N.sheet.rulings && N.sheet.rulings[c.id];
+    const ruling = rulingText ? `<br><small>${esc(rulingText)}</small>` : "";
     const enLine = `${c.en} · ${S.era[c.era]} · ${c.scoring ? S.scoringCard : S.side[c.side]}`;
     // #45 round 1 / #47 item 4: the desktop tile's own line 2 is never empty
     // (the design never shows the name alone) — the year when there is one,
@@ -685,7 +693,7 @@ function cardList(S, N, cardEn, opts = {}) {
     // the design board's own form, not "(前356)" / "(356 BC)".
     const tileYear = c.year ? (lang === "en" ? `${c.year} BC` : `前 ${c.year} 年`) : "";
     const tileLine2 = tileYear || (c.scoring ? esc(S.era[c.era]) : esc(N.rules.undated));
-    return cardRow(side, c.id, zhName, enLine, c.scoring ? "–" : c.ops, text + year, c.era, filterSideKeyOf(c), `${c.zh} ${c.en}`, tileLine2);
+    return cardRow(side, c.id, zhName, enLine, c.scoring ? "–" : c.ops, text + year + ruling, c.era, filterSideKeyOf(c), `${c.zh} ${c.en}`, tileLine2);
   });
   // Name is bilingual regardless of the active language, same as every
   // other card row (names are the exception to the no-mixing rule); the

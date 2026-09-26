@@ -26,6 +26,20 @@ function gauss(rng) {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
+// ---------- 滅國 after a restore ----------
+// The engine's own condition (E.checkMarkers, owner 裁決 #119): after 田單復國
+// lifts a 滅, `st.mieHold[id]` lists the spaces of that state Qin still
+// controlled then; a space leaves the list once Qin loses it, and the state
+// falls again only when Qin holds all of it with at least one space NOT on the
+// list. So while every space of the state is on the list and still Qin's, no
+// move of Qin's can destroy it: Qin must first lose one. True in exactly that
+// case, for the advisor (advisor.js) and the evaluation below.
+export function heldSinceRestore(st, id) {
+  const held = st.mieHold && st.mieHold[id];
+  if (!held || st.mie[id]) return false;
+  return E.spacesOfState(id).every((x) => held.includes(x) && E.controller(st, x) === QIN);
+}
+
 // ---------- evaluation: how good is this position for `side` ----------
 // `terms`, when an object is passed, collects the same number split into named
 // buckets from `side`'s point of view: the advisor (advisor.js) subtracts the
@@ -77,11 +91,14 @@ export function evaluate(st, side, terms = null) {
   for (const [id, s] of Object.entries(STATES)) {
     const sp = E.spacesOfState(id);
     if (!st.mie[id]) {
+      // A state held whole since 田單復國 lifted its 滅 cannot fall until Qin
+      // first loses a space of it (heldSinceRestore above): as far as this road goes.
+      const blocked = heldSinceRestore(st, id);
       let need = 0;
       for (const x of sp) { const [q, c] = E.infOf(st, x), S = SPACE[x].stability; if (q < c + S) need += c + S - q; }
-      const road = mieScale * (need <= 2 ? 2.5 : need <= 4 ? 1.2 : need <= 6 ? 0.5 : 0.1);
+      const road = mieScale * (blocked ? 0.1 : need <= 2 ? 2.5 : need <= 4 ? 1.2 : need <= 6 ? 0.5 : 0.1);
       vq += road;
-      if (T) { T(`mieRoad:${id}`, road); terms[`$mieNeed:${id}`] = need; }
+      if (T) { T(`mieRoad:${id}`, road); terms[`$mieNeed:${id}`] = blocked ? null : need; }
     } else if (T) terms[`$mieNeed:${id}`] = 0;
     if (!st.seals[id]) {
       const [q, c] = E.infOf(st, s.capital), S = SPACE[s.capital].stability;
@@ -169,6 +186,29 @@ export function simulate(st, action, rng) {
     s = E.apply(s, { type: "choose", side: who, choice: answer(s, s.pending, who, rng) });
   }
   return s;
+}
+// ---------- the ops a play will really have, for the card page ----------
+// An enemy card played for its ops EVENT FIRST has its ops read after the
+// event (engine.js, the "ops" step's `afterEvent`, owner 裁決 #119): 荊軻刺秦王
+// played by Qin lowers its own ops. So the page cannot print `opsOf` at play
+// time for that order (#122). This plays the event out on a guess of the
+// hidden cards -- the event's choices answered as the bot would, since no
+// event's ops effect depends on them -- and reads the ops the engine then
+// asks for. Ops first, own cards, 說客's pair: `opsOf` now, as always.
+// `view` is left untouched.
+export function opsForOrder(view, side, card, order) {
+  const now = E.opsOf(view, side, card);
+  const c = CARD[card];
+  if (order !== "eventFirst" || !c || c.side == null || c.side === side) return now;
+  try {
+    const rng = E.makeRng(0);
+    let s = E.apply(determinize(view, side, rng), { type: "play", side, card, use: "place", order: "eventFirst" });
+    for (let guard = 0; s.pending && s.pending.tag !== "ops" && s.winner == null && guard < 16; guard++) {
+      const who = s.pending.who;
+      s = E.apply(s, { type: "choose", side: who, choice: answer(s, s.pending, who, rng) });
+    }
+    return s.pending && s.pending.tag === "ops" && s.pending.card === card ? s.pending.ops : now;
+  } catch { return now; }
 }
 function evalAction(st, action, side, rng) {
   try { return evaluate(simulate(st, action, rng), side); } catch { return -Infinity; }

@@ -210,6 +210,19 @@ export function renderCardView(container, id, lang, opts = {}) {
   cardHeader(container, id, lang);
   const mid = document.createElement("div"); mid.className = "sheet-mid"; container.appendChild(mid);
   cardTextBox(mid, id, lang);
+  // #122: a ruling on how this card's text reads (sheet.rulings, owner 裁決
+  // #119), as a second line inside the same text box -- so it shows wherever
+  // a card's details do: the rules page's phone overlay and desktop panel,
+  // and the table's read-only peek. Not on the playable in-hand card page
+  // (app.js calls cardTextBox directly, never this view).
+  const ruling = I18N[lang]?.sheet?.rulings?.[id];
+  if (ruling) {
+    const p = document.createElement("p");
+    p.className = "sheet-text sheet-ruling";
+    if (lang !== "en") p.lang = "zh-Hant";
+    p.textContent = ruling;
+    mid.lastElementChild.appendChild(p);
+  }
   // #92/#96: `opts.historyState` is passed by app.js's peek (both the 看牌
   // peek and the log's card peek go through this same renderCardView — see
   // openPeek() there) and, since #96, by rules.js's own card detail view too
