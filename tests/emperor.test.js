@@ -2,7 +2,7 @@
 //
 // Expected values are copied from the rulebook (Projects/zongheng/zongheng - rulebook.md, 變法軌):
 // box 6 稱帝, threshold 4, first / second = 3 / 1, "到達時疲敝軌立即後退 1 格"; and from the brief of #121:
-//   vp        today: first +3, second +1 (the default; an absent option plays as vp)
+//   vp        first +3, second +1 (the default until #125; an absent option -- a save from before #125 -- plays as vp)
 //   vp5       first +5, second +1
 //   win       the first to reach box 6 wins at once, end reason "emperor"
 //   win-late  as win from turn 5 on; before turn 5 it is +3 as today
@@ -46,17 +46,22 @@ function atBox5(options, side, turn, otherBox = 0) {
 const reform = (st, side) => E.apply(st, { type: "play", side, card: "changping", use: "reform" });
 const signed = (side, n) => (side === QIN ? n : -n);
 
-test("default: no `emperor` key is added to a new game's options, so a default game state is what it was", () => {
-  assert.equal("emperor" in E.DEFAULT_OPTIONS, false);
-  assert.equal("emperor" in E.createGame(1).options, false);
-  assert.equal(JSON.stringify(E.createGame(7)), JSON.stringify(E.createGame(7, {})));
+// #125 made win-lead the default (tests/emperor-default.test.js). What stays from #121's first two tests: a state
+// with no `emperor` key (a save from before #125) plays exactly as emperor=vp, and apart from that one key a new
+// game's state is what it was.
+const noEmperor = (options) => { const o = { ...options }; delete o.emperor; return o; };
+test("default: apart from the `emperor` key, a new game's state is what it was", () => {
+  const { options: a, ...restA } = E.createGame(7), { options: b, ...restB } = E.createGame(7, { emperor: "vp" });
+  assert.equal(JSON.stringify(restA), JSON.stringify(restB));
+  assert.deepEqual(noEmperor(a), noEmperor(b));
 });
 
-test("default: an absent option and emperor=vp play the same game, move for move", () => {
+test("default: an absent option (an old save) and emperor=vp play the same game, move for move", () => {
   for (const seed of [3, 11]) {
     const play = (options) => {
       const rng = E.makeRng(seed);
       let st = E.createGame(seed, options);
+      if (!("emperor" in options)) st = { ...st, options: noEmperor(st.options) };
       for (let steps = 0; st.winner == null && steps < 3000; steps++) {
         const who = E.mustAct(st), s = who[rng.int(who.length)];
         st = E.apply(st, B.randomAction(st, s, rng));
@@ -70,10 +75,12 @@ test("default: an absent option and emperor=vp play the same game, move for move
   }
 });
 
-for (const [label, options] of [["absent (today)", {}], ["vp", { emperor: "vp" }]]) {
+for (const [label, options, old] of [["absent (an old save)", {}, true], ["vp", { emperor: "vp" }, false]]) {
   test(`${label}: reaching box 6 first gives +${FIRST_VP}, relieves weariness by 1, and the game goes on`, () => {
     for (const side of [QIN, CHU]) {
-      const st = reform(atBox5(options, side, 3), side);
+      const at = atBox5(options, side, 3);
+      if (old) at.options = noEmperor(at.options);
+      const st = reform(at, side);
       assert.equal(st.reform[side], 6);
       assert.equal(st.winner, null);
       assert.equal(st.mandate, signed(side, FIRST_VP));
@@ -269,8 +276,9 @@ test("bots, win-lead: leading the Mandate at box 5 with no advance left, normal 
   assert.deepEqual(bad, []);
 });
 
-test("bots, default: the evaluation of a position is the same with the option absent and with emperor=vp", () => {
-  for (const { st } of racePositions({}, 5, 0)) {
+test("bots, old save: the evaluation of a position is the same with the option absent and with emperor=vp", () => {
+  for (const { st: s0 } of racePositions({}, 5, 0)) {
+    const st = { ...s0, options: noEmperor(s0.options) };
     const v = { ...st, options: { ...st.options, emperor: "vp" } };
     assert.equal(B.evaluate(st, QIN), B.evaluate(v, QIN));
     assert.equal(B.evaluate(st, E.CHU), B.evaluate(v, E.CHU));
