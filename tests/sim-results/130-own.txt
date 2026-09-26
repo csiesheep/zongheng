@@ -149,3 +149,7 @@ lc/nn/realign-own      n=500  Qin  50%  turn 5.6  mandate -0.2  滅 1.21 相印 
 # 2026-09-26T21:23:25.489Z lc/nn/realign-own+lose-turn 230/500
 # 2026-09-26T21:23:28.408Z lc/nn/realign-own+lose-turn 235/500
 # 2026-09-26T21:23:31.326Z lc/nn/realign-own+lose-turn 240/500
+# 2026-09-26T21:23:45.893Z lc/nn/realign-own+lose-turn 245/500
+# 2026-09-26T21:23:47.524Z lc/nn/realign-own+lose-turn 250/500
+# 2026-09-26T21:23:47.747Z lc/nn/realign-own+lose-turn 255/500
+# 2026-09-26T21:23:53.878Z lc/nn/realign-own+lose-turn 260/500

@@ -838,3 +838,6 @@ lc/nn/realign+lose-turn n=500  Qin  47%  turn 5.3  mandate -1.4  滅 1.06 相印
 lc/hh/realign          n=500  Qin  48%  turn 6.0  mandate -1.2  滅 1.18 相印 2.40  74.4s/game
                        一統 1% 合縱 13% 天命 26% 土崩 2% 記分 15% 記分2 1% 終局 9% 平手 1% 稱帝 32%
                        west 2.6x 4.1:0.6 south 2.6x 0.1:4.0 jin 2.6x 5.3:4.8 east 1.2x 1.7:2.8 north 1.2x 0.6:1.4
+# 2026-09-26T21:23:42.595Z lc/hh/realign-mild 85/500
+# 2026-09-26T21:23:43.093Z lc/hh/realign-mild 90/500
+# 2026-09-26T21:23:51.078Z lc/hh/realign-mild 95/500
