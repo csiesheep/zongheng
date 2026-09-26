@@ -182,6 +182,10 @@ export default {
     chipPlace: "{space} +{n}", chipRemove: "{target}: removes {n} {side}",
     chipReform: "Reform → box {box}", chipTire: "Weariness → {to}",
     chipDiscard: "{side} discards {card}", chipOpsLost: "{side} has nowhere to spend {ops} ops",
+    // #127: the "ended it" chip on the move (or headline) that ended the
+    // game -- just the loser named, same short shape as every chip here;
+    // the winner and the full reason are the panel's own final row instead.
+    chipOver: "{side} loses",
     // #115: an event's own entries. An enemy card spent for ops used to show
     // only its ops, whether its event happened or had nothing to do. {side}
     // is the event's owner, not the player who played the card.

@@ -146,6 +146,9 @@ export default {
     chipPlace: "{space} +{n}", chipRemove: "{target}:移除{side} {n}",
     chipReform: "變法 → 第 {box} 格", chipTire: "疲敝 → {to}",
     chipDiscard: "{side}棄掉{card}", chipOpsLost: "{side}的 {ops} 點行動點無處可用",
+    // #127:結束這局的那手牌(或標題)身上的「就是這手」小標,只點出誰輸;
+    // 誰贏、完整的理由留給面板最下面那一列自己說。
+    chipOver: "{side}敗",
     // #115:事件自己的紀錄。以前敵方的牌拿來用行動點時,紀錄裡只有行動點,
     // 事件發生了(或沒有可做的事)都看不到。{side} 是事件的主人,不是打牌的人。
     chipEvent: "{side}的事件:{card}", chipEventNone: "沒有效果:{why}",

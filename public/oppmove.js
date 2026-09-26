@@ -123,6 +123,21 @@ export function groupLog(log) {
         rows.push({ kind: "other", seq, entry: e });
         continue;
       }
+      // #127: an `over` entry used to fall through to the generic "attach
+      // to the open move" branch below with no case anywhere to render it
+      // (log-view.js's chipsForSteps had no "over" type, so it just
+      // vanished). It still gets attached as a step of the move/headline
+      // that ended the game -- chipsForSteps' new "over" case turns that
+      // into the "ended it" chip on that very row -- but it ALSO gets its
+      // own top-level row here, so the panel ends with a line naming the
+      // winner and the reason even when nothing was open (e.g. a turn-end
+      // scoring after endTurn already cleared `current`).
+      if (e.type === "over") {
+        if (current) current.steps.push(e);
+        rows.push({ kind: "over", seq, winner: e.winner, reason: e.reason });
+        current = null;
+        continue;
+      }
       if (current) {
         const step = e.type === "place" && Array.isArray(e.points) ? { ...e, spaces: collapseSpaces(e.points) } : e;
         current.steps.push(step);

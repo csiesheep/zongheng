@@ -107,6 +107,11 @@ function chipsForSteps(steps, moverSide, lang) {
       chips.push({ text: tCard(lang, "logPanel.chipEvent", { side: sideName(st.side, lang) }, "card", st.card, st.side), gold: true });
     } else if (st.type === "eventEnd") {
       chips.push(...eventEndChips(st, lang));
+    } else if (st.type === "over") {
+      // #127: marks the move (or headline) that ended the game -- the loser
+      // named, same "{side}敗"/"{side} loses" shape as every other chip
+      // here, never the full reason sentence (that's the final row below).
+      chips.push({ text: t(lang, "logPanel.chipOver", { side: sideName(E.other(st.winner), lang) }), gold: true });
     }
   }
   return chips;
@@ -217,6 +222,20 @@ function otherRowHtml(row, lang) {
   if (text === key || !text) return "";
   return `<div class="logrow logrow-other">${text}</div>`;
 }
+// #127: the panel's own last line once the game is over -- winner (over.
+// winner, the same "{side} wins" the end screen's own line uses) and the
+// reason, via `over.reasons.<r>.title`. `title` (not win/lose) on purpose:
+// the log panel is one shared record, read by either seat or a spectator,
+// and title already reads the same as the spectator-only `watch` line for
+// every reason (neither ever says "you") -- so it's the one string in that
+// table that's already correct for every reader, not just a stand-in.
+function overRowHtml(row, lang) {
+  const winner = sideName(row.winner, lang);
+  const loser = sideName(E.other(row.winner), lang);
+  let title;
+  try { title = t(lang, `over.reasons.${row.reason}.title`, { winner, loser }); } catch { title = ""; }
+  return `<div class="logrow logrow-over"><b class="logrow-over-winner">${t(lang, "over.winner", { side: winner })}</b> · ${title}</div>`;
+}
 // The room's chat / the bot's remarks arrive as ready-made "{name}: {text}"
 // strings (app.js already builds them that way for the old flat list) --
 // untrusted player text, so both parts go through esc().
@@ -259,6 +278,11 @@ export function renderRows(log, opts) {
       } else if (row.kind === "other") {
         const html = otherRowHtml(row, lang);
         if (html) out.push(html);
+      } else if (row.kind === "over") {
+        // #127: same as the headline row above -- always shown, never
+        // hidden by a side filter (it's the whole game's own outcome, not
+        // one side's move).
+        out.push(overRowHtml(row, lang));
       }
     }
   }

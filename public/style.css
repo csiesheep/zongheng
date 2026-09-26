@@ -1879,6 +1879,11 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .logrow-setup { display: block; padding: 6px 14px; font: 400 13px/1.5 var(--serif); }
 .logrow-headline .logrow-body { padding-left: 14px; }
 .logrow-other { padding: 5px 14px; font: 400 12.5px/1.5 var(--serif); color: var(--text-dim); }
+/* #127: the panel's own last line once the game is over -- the whole
+   game's own outcome, not one more move, so it gets its own block instead
+   of matching .logrow-headline's inline "card name" look. */
+.logrow-over { padding: 10px 14px; font: 400 13px/1.5 var(--serif); color: var(--gold); background: rgba(216, 181, 106, 0.1); border-top: 1px solid rgba(216, 181, 106, 0.35); }
+.logrow-over-winner { font: 700 13.5px/1.2 var(--serif); color: var(--gold); }
 /* Chat/bot lines, styled as speech (the brief's own words: name in gold,
    text in italics) -- app.js hands these over as ready-made "{name}: {text}"
    strings, same as the old flat log already did. */
