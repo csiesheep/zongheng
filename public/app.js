@@ -1808,9 +1808,9 @@ function appendPromptNote(text) {
 // give-way HIDES on a short/narrow viewport once the map-active sheet
 // already overflows its budget (#68 round 2) -- found live at 390x669 while
 // checking this issue: a note appended there after the fact stayed in the
-// DOM but off-screen. `.err` renders inside the SHEET itself (renderPending's
-// `sheet-rest`), which is never part of that give-way, so it survives every
-// viewport this issue is checked at.
+// DOM but off-screen. `.err` renders inside the SHEET's own title area (see
+// setPrompt() below), which is never part of that give-way, so it survives
+// every viewport this issue is checked at.
 function showCapBlockedNote(sp, side, capInfo) {
   game.ui.err = t("map.capBlocked", {
     space: spaceName(sp.id), side: sideName(side), stability: capInfo.stability, add: capInfo.add, cap: capInfo.cap,
