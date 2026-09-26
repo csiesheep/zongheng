@@ -902,6 +902,20 @@ function layoutTableDesktop() {
 // (see mapOverflow below), which would turn this from "two rare states
 // scroll a little" into "every state scrolls a little."
 const LOWER_BLOCK_H = 172;
+// #118 (orchestrator: 320x568 must fit, page scroll 0, without moving
+// 375/390's own map rect): 320 has ~100px less real height than 375/667 to
+// give the SAME 172px lower block and still leave the map its floor -- some
+// of that has to come out of the lower block's own budget too, not just the
+// map (see `narrowTable`/`lowerBlockH` at layoutTable()'s own step 1 below).
+// A FLOOR only, not the narrow budget itself any more (round 1 of this fix
+// used it as a flat constant and missed a 3-line English advisor sentence at
+// 320 -- the orchestrator's own catch: "measure the banner's real height, do
+// not guess a constant"). `lowerBlockH` at narrow widths is
+// `max(LOWER_BLOCK_H_NARROW, lowerBlock.scrollHeight)` — this floor only
+// matters for a genuinely short state (no banner, empty sheet), so the map
+// never gets MORE room than the old, walked floor gave it just because
+// nothing happens to be showing below it this render.
+const LOWER_BLOCK_H_NARROW = 140;
 function layoutTable() {
   const table = $("table");
   if (table.hidden) return;
@@ -960,39 +974,6 @@ function layoutTable() {
   sheetEl.classList.remove("sheet-compact");
   if (sheetTitle) sheetTitle.hidden = true;
 
-  // 1) The map: a pure function of the viewport and the two rows above it
-  // (topbar/statline, live-measured but state-invariant) minus the lower
-  // block's own fixed budget — never of #prompt/#advisorBanner/#sheet/#hand,
-  // which all live below it and are sized in step 2, entirely separately.
-  const topbarH = $("topbar").getBoundingClientRect().height;
-  const statlineH = $("statline").getBoundingClientRect().height;
-  const tcs = getComputedStyle(table);
-  const visibleKids = [...table.children].filter((c) => getComputedStyle(c).display !== "none").length;
-  const gapsAndPadding = parseFloat(tcs.paddingTop) + parseFloat(tcs.paddingBottom) + Math.max(0, visibleKids - 1) * parseFloat(tcs.rowGap || 0);
-  const spaceForMapAndLower = availH - topbarH - statlineH - gapsAndPadding;
-  const spaceForMap = spaceForMapAndLower - LOWER_BLOCK_H;
-  // Never below FLOOR_SCALE (the map's own spec), never above widthScale
-  // (that would overflow sideways) — same floor/width clamp #68 inherited
-  // from the old budget, just against a fixed target instead of a measured
-  // one.
-  const scale = Math.min(widthScale, Math.max(FLOOR_SCALE, spaceForMap / DESIGN_H));
-  const mapH = Math.round(DESIGN_H * scale);
-  // #68 point 3: a viewport that can't give the map its FLOOR_SCALE spec
-  // alongside this fixed lower block (375x553 is the known case) keeps the
-  // pre-#68 scroll fallback rather than shrink the map, or the lower block,
-  // below their own specs. Same sub-pixel tolerance the old code carried
-  // (#24 round 3) for a near-exact fit's rounding.
-  const mapOverflow = mapH > spaceForMap + 1;
-  $("map").style.flex = `0 0 ${mapH}px`;
-  fitMap(scale);
-  lowerBlock.style.flex = `0 0 ${LOWER_BLOCK_H}px`;
-
-  // 2) Everything that varies negotiates INSIDE the lower block's own fixed
-  // height — #promptScroll (flex:1, min-height:0) already shrinks and
-  // scrolls on its own for any ordinary overflow; the give-way stages below
-  // only fire once even THAT isn't enough (mapActive states, where the
-  // sheet's own compact/pending rows can still outgrow the budget).
-  //
   // #prompt's own flex-shrink (flex:1 1 auto) could otherwise squeeze it
   // BELOW the advisor banner's own natural height — a flex item's automatic
   // minimum size (the "don't shrink below your content" default) resolves
@@ -1018,6 +999,12 @@ function layoutTable() {
   // remains flex:1 1 auto so it still grows past this floor whenever the
   // budget allows, and lowerOverflow's existing table-overflow fallback
   // (below) still catches the rare state where even this floor doesn't fit.
+  //
+  // #118: moved ahead of the map's own budget (step 1, below) — narrowTable
+  // there needs #prompt's min-height to already reflect THIS render's real
+  // banner (a 3-line English advisor sentence measures taller than a
+  // 2-line one) before it measures the lower block's own natural height,
+  // not the previous render's leftover value.
   const advBanner = document.getElementById("advisorBanner");
   const bannerShown = advBanner && !advBanner.hidden && advBanner.parentElement === promptEl;
   const promptCS = getComputedStyle(promptEl);
@@ -1025,7 +1012,81 @@ function layoutTable() {
   promptEl.style.minHeight = bannerShown
     ? Math.ceil(advBanner.getBoundingClientRect().height + promptPad) + "px"
     : Math.ceil((parseFloat(promptCS.lineHeight) || 18) * 2 + promptPad) + "px";
-  const fits = () => lowerBlock.scrollHeight <= LOWER_BLOCK_H + 1;
+
+  // 1) The map: a pure function of the viewport and the two rows above it
+  // (topbar/statline, live-measured but state-invariant) minus the lower
+  // block's own fixed budget — never of #prompt/#advisorBanner/#sheet/#hand,
+  // which all live below it and are sized in step 2, entirely separately.
+  const topbarH = $("topbar").getBoundingClientRect().height;
+  const statlineH = $("statline").getBoundingClientRect().height;
+  const tcs = getComputedStyle(table);
+  const visibleKids = [...table.children].filter((c) => getComputedStyle(c).display !== "none").length;
+  const gapsAndPadding = parseFloat(tcs.paddingTop) + parseFloat(tcs.paddingBottom) + Math.max(0, visibleKids - 1) * parseFloat(tcs.rowGap || 0);
+  // #118 (orchestrator: 320x568 must fit, without moving 375/390's map rect
+  // at all): 320 is narrower than the two viewports LOWER_BLOCK_H was picked
+  // against (the comment above it names 390x669 zh as the tighter of the
+  // two, with 375x667 en landing 1px inside FLOOR_SCALE's own floor -- see
+  // the #118 table walk) -- there is no LOWER_BLOCK_H narrow enough to give
+  // 320 the map's full FLOOR_SCALE spec too without shrinking it below
+  // spaceForMap's own real number, which is exactly what used to force
+  // table-overflow's page-scroll fallback here. `narrowTable` is true only
+  // below 375 (checked against the map's own measured width, same one
+  // `widthScale` already reads) — 375/390 both sit at or above FLOOR_SCALE
+  // already (spaceForMap/DESIGN_H computed at 375x667 en: 0.848, 1px under
+  // 0.8511 -- `Math.max` picks the higher FLOOR_SCALE there today and
+  // mapOverflow's own +1 tolerance already absorbs that 1px, so this branch
+  // must never fire there), so their own `Math.max(FLOOR_SCALE, ...)` path
+  // is untouched below. Only 320 falls through to the plain `spaceForMap /
+  // DESIGN_H` -- a smaller map, exactly the concession the issue itself
+  // offers, sized to fit whatever's actually left rather than forcing an
+  // overflow the floor can't back down from.
+  const narrowTable = availW < 360;
+  // #118 round 2 (orchestrator: a 3-line English advisor sentence at 320
+  // still overflowed 140 -- "measure the banner's real height, do not guess
+  // a constant"): LOWER_BLOCK_H_NARROW is only the FLOOR now, not the whole
+  // answer -- `lowerBlock.scrollHeight`, measured with its flex-basis
+  // released for one reflow, is #prompt (min-height already set above to
+  // the CURRENT banner's real height, however many lines it wrapped to) +
+  // the sheet (however this render already left it, chip/full/empty) + the
+  // hand row, i.e. the actual content this exact render needs — not a
+  // number picked against a different render entirely. Only measured below
+  // 375 (`narrowTable`): 375/390 keep the plain constant, same as before,
+  // so this can never move their own map rect.
+  let lowerBlockH = LOWER_BLOCK_H;
+  if (narrowTable) {
+    const prevFlex = lowerBlock.style.flex;
+    lowerBlock.style.flex = "none";
+    lowerBlockH = Math.max(LOWER_BLOCK_H_NARROW, lowerBlock.scrollHeight);
+    lowerBlock.style.flex = prevFlex;
+  }
+  const spaceForMapAndLower = availH - topbarH - statlineH - gapsAndPadding;
+  const spaceForMap = spaceForMapAndLower - lowerBlockH;
+  // Never below FLOOR_SCALE (the map's own spec), never above widthScale
+  // (that would overflow sideways) — same floor/width clamp #68 inherited
+  // from the old budget, just against a fixed target instead of a measured
+  // one.
+  const scale = narrowTable
+    ? Math.min(widthScale, spaceForMap / DESIGN_H)
+    : Math.min(widthScale, Math.max(FLOOR_SCALE, spaceForMap / DESIGN_H));
+  const mapH = Math.round(DESIGN_H * scale);
+  // #68 point 3: a viewport that can't give the map its FLOOR_SCALE spec
+  // alongside this fixed lower block (375x553 is the known case) keeps the
+  // pre-#68 scroll fallback rather than shrink the map, or the lower block,
+  // below their own specs. Same sub-pixel tolerance the old code carried
+  // (#24 round 3) for a near-exact fit's rounding.
+  const mapOverflow = mapH > spaceForMap + 1;
+  $("map").style.flex = `0 0 ${mapH}px`;
+  fitMap(scale);
+  lowerBlock.style.flex = `0 0 ${lowerBlockH}px`;
+
+  // 2) Everything that varies negotiates INSIDE the lower block's own fixed
+  // height — #promptScroll (flex:1, min-height:0) already shrinks and
+  // scrolls on its own for any ordinary overflow; the give-way stages below
+  // only fire once even THAT isn't enough (mapActive states, where the
+  // sheet's own compact/pending rows can still outgrow the budget).
+  // #prompt's own min-height (bannerShown et al.) was already set above,
+  // ahead of step 1's own map budget — see the #118 comment there.
+  const fits = () => lowerBlock.scrollHeight <= lowerBlockH + 1;
   if (mapActive && !hand.hidden && !fits()) {
     // Stage 1: the hand row gives way first — its cards (if it holds any)
     // aren't needed while the map itself is what's being tapped (target
@@ -1757,6 +1818,61 @@ const useEn = (u) => en.uses[u];
 function sheetMid(sh) {
   const d = document.createElement("div"); d.className = "sheet-mid"; sh.appendChild(d); return d;
 }
+// #118 round 3 (orchestrator, real 說客 page with a real pinned advisor
+// banner AND all three of a hand's Chu cards offered as pairs): the card's
+// OWN rule text (cardTextBox, first thing in `mid`) must always stay fully
+// visible at 375/390 -- it's the one thing here that's never optional. The
+// (collapsed, one-line) history toggle is the one piece of `mid` allowed to
+// go first when there isn't room for both; nothing else lives in `mid` any
+// more (the long shuoke.explain paragraph moved into the pinned hint, see
+// the #118 round 3 comment by `hasPairOptions` below) so this is normally
+// enough on its own. Deferred one frame (see the requestAnimationFrame call
+// above) so `mid`'s real, final height is known -- it depends on
+// `.sheet-pinned`/the footer too, both fixed siblings built AFTER this
+// point in the same render.
+//
+// Order: reset first (undo a previous PASS's hide -- a render can go from
+// cramped to roomy, e.g. the advisor switching off), measure, hide history
+// if that alone doesn't already fit, measure again, then fade whatever's
+// STILL left over (a fold landing mid-line reads as "more below, scroll"
+// rather than a slice through its own glyphs). Works the same whether the
+// advisor is on or off -- it never reads `advisor-banner`/`sheet-pair-row`
+// directly, only `mid`'s own real, measured height.
+function syncMidFade(mid) {
+  if (!mid.isConnected) return; // #118: a later render may have replaced it before this frame runs
+  const sh = mid.parentElement;
+  const overflow = () => mid.scrollHeight - mid.clientHeight > 1;
+  const history = mid.querySelector(":scope > .sheet-history");
+  // #118 round 4 (orchestrator: a history the reader opened used to vanish,
+  // toggle included, the moment ANY later render made `mid` overflow again --
+  // e.g. tapping a use button after reading 長平之戰's own history). The
+  // fitter may only hide a history nobody opened; once it's open it stays,
+  // however long that makes `mid`, and the reader scrolls to it instead (the
+  // fade below already paints for exactly this case). `sheet-history-open`
+  // is card-view.js's own class for this (histState()'s `open`, app.js) --
+  // read here, never written, so this stays in sync with whatever the
+  // reader's own last tap left it at.
+  const historyOpen = history && history.classList.contains("sheet-history-open");
+  if (history) history.hidden = false;
+  sh.classList.remove("sheet-art-collapsed");
+  if (history && !historyOpen && overflow()) history.hidden = true;
+  // #118 round 3 (orchestrator, real render: a real pinned advisor banner
+  // (unclamped, #74's own "never cut this sentence" ruling) plus 說客's own
+  // full pair grid can leave `.sheet-mid` shorter than even its OWN card
+  // text box, the one thing in here that must never be optional -- measured
+  // on the real save: 44-46px of `mid` at 375/390 en, advisor on, against a
+  // ~70-90px two-line text box). Hiding the (already-collapsed) history
+  // first is never enough on its own in that combination, so this is the
+  // next thing to give, and the last: the art was already at its #118
+  // round-1 floor (90px, style.css's `:has()` rules above) -- collapsing it
+  // the rest of the way to 0 is strictly a fallback, only applied once
+  // measurement (not a guess at which cards/language/advisor combination
+  // needs it) says the text box still wouldn't fit otherwise. Every other
+  // card, and 說客 itself whenever this much room isn't actually needed,
+  // never sets this class at all.
+  if (overflow()) sh.classList.add("sheet-art-collapsed");
+  mid.classList.toggle("has-more", overflow());
+}
 // #46 (owner: "看手牌沒有卡牌歷史" + a player must never scroll to reach a
 // button): a fixed (non-scrolling) sibling of sheetMid(), between the
 // scrollable text/history and the pinned Cancel/Confirm footer. The use
@@ -2078,11 +2194,18 @@ function renderPromptAndSheet(v) {
     cardHeader(sh, ui.card);
     mid = sheetMid(sh);
     cardTextBox(mid, ui.card);
-    // #117: reads right after the card's own text, ahead of the history
-    // section -- not tacked on at the very end of `mid` (round 1 of this
-    // fix put it there, past a long history entry, easy to miss).
-    if (ui.card === "shuoke") {
-      note(mid, t(hasPairOptions ? "sheet.shuoke.explain" : "sheet.shuoke.noEnemy", { enemy: sideName(E.other(me)) }));
+    // #118 round 3 (orchestrator, real render: a real pinned advisor banner
+    // plus all 3 of a hand's Chu cards offered as pairs pushed this note
+    // entirely below .sheet-mid's own fold at 375/390 en): the full
+    // sheet.shuoke.explain paragraph moved out of `mid` into `sheet.hint.
+    // shuoke` instead -- the pinned, never-scrolling one-line hint already
+    // shown for every 說客 page below (`note(pinned, t("sheet.hint." + kind,
+    // ...))`), now carrying the whole rule instead of just a summary, so
+    // nothing about how to play the card depends on `mid` having room. Only
+    // sheet.shuoke.noEnemy stays here -- one short line, shown only when
+    // there's genuinely no pair option to explain in the first place.
+    if (ui.card === "shuoke" && !hasPairOptions) {
+      note(mid, t("sheet.shuoke.noEnemy", { enemy: sideName(E.other(me)) }));
     }
   }
   const target = showFullCard ? mid : sh;
@@ -2093,6 +2216,18 @@ function renderPromptAndSheet(v) {
   // (the coach panel needs the room) and never for the compact chip (no
   // `mid` at all there).
   if (showFullCard && !Tut.active()) historyBox(mid, ui.card, lang, histState());
+  // #118 item 2 (orchestrator, screenshot card_chuPair_390zh_advOff.png): a
+  // long note right after the card text (说客's own pairing explanation,
+  // #117) could land exactly on `mid`'s own fold and get sliced mid-line --
+  // no visible scrollbar on a phone to hint that anything was cut. `mid`'s
+  // final height depends on `pinned`/the footer too (both fixed siblings in
+  // the same flex column, built further down, after this point) -- deferred
+  // one frame so the measurement below sees the SAME box the player does,
+  // not a mid-layout guess. Real content only (never in the tutorial, which
+  // never gets a `mid` at all -- see showFullCard/Tut.active() above), so
+  // this never fires on a `mid` that's already been thrown away by the next
+  // render.
+  if (mid) requestAnimationFrame(() => syncMidFade(mid));
   // #46 (owner: a player must never scroll to reach a button): the use
   // grid, the enemy order row, 說客's pairing and the hint below all move
   // to `pinned` — a fixed sibling of `mid`, not `mid` itself — so growing
@@ -2152,10 +2287,13 @@ function renderPromptAndSheet(v) {
   }
   if (ui.card === "shuoke" && showFullCard) {
     // 事件 is disabled above for every 說客 page, paired or not -- this is
-    // the reason, not just a greyed button with no explanation. `mid`, not
-    // `pinned`, same 320x568 budget reasoning as the explain/noEnemy note
-    // above -- it's prose, not a control.
-    note(mid, t("sheet.shuoke.eventReason"));
+    // the reason, not just a greyed button with no explanation. #118 round
+    // 3: moved from `mid` into `pinned` (right after the use grid it's
+    // explaining) -- same reasoning as the explain note's own move just
+    // above: one short, pinned line the player can always read costs
+    // `mid` nothing, where the same line used to be one more thing that
+    // could push the card's own rule text below the fold.
+    note(pinned, t("sheet.shuoke.eventReason"));
   }
   // #24 round 2, fix #3 (owner): "their card"'s ops-first/event-first order
   // and 說客's pairing used to only render once a map-needing use was

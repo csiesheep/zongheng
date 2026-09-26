@@ -1254,12 +1254,34 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    this sheet's generic `.sheet button[aria-pressed="true"]` rule (the gold
    ring #29's five-use buttons get) doesn't flatten its own selected look
    back down to plain text. */
-.sheet-pair-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
-.sheet-pair-card { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--gold-line); border-radius: 10px; background: var(--bg); color: inherit; font: inherit; min-height: 40px; }
-.sheet-pair-card .ops { flex: none; width: 24px; height: 24px; border-radius: 50%; font-family: var(--sans); font-size: 12px; line-height: 24px; text-align: center; font-weight: 700; }
+/* #118 round 3 (orchestrator, real render: English card names ran long
+   enough that each pair option effectively filled its own full-width row --
+   三張楚牌 + 不搭配 stacked to ~200px on their own, the real reason 說客's own
+   explain note never had room, not just the advisor's banner). A fixed
+   two-column grid instead of a wrapping flex row: 「不搭配」 is appended as a
+   plain `.sheet button` (app.js's `btn()`) into this same row, so it needs
+   its own overflow/ellipsis rule below, not just `.sheet-pair-card`'s. */
+/* `.sheet .rowb` above (a descendant selector, two classes) otherwise beats
+   a plain one-class `.sheet-pair-row` on specificity alone (same trap
+   #sheet-qualified's own comment on `.sheet-grid` describes further down)
+   and silently keeps this a wrapping flex row -- confirmed on the real
+   render (#118 round 3, checker's screenshot): "Besiege Wei to Save Zhao"
+   and "Don't pair" each landed on their OWN row instead of sharing the
+   second one, because `display: grid` here was never actually winning.
+   `.sheet .rowb.sheet-pair-row` matches three classes/one ancestor, high
+   enough to win outright regardless of source order. */
+.sheet .rowb.sheet-pair-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 4px 0 10px; }
+.sheet-pair-card { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--gold-line); border-radius: 10px; background: var(--bg); color: inherit; font: inherit; min-height: 40px; min-width: 0; }
+.sheet-pair-card .ops { flex: none; width: 22px; height: 22px; border-radius: 50%; font-family: var(--sans); font-size: 11px; line-height: 22px; text-align: center; font-weight: 700; }
 .sheet-pair-card .ops.q { background: var(--qin-text); color: var(--bg); }
 .sheet-pair-card .ops.c { background: var(--chu-gold); color: #6f120d; }
-.sheet-pair-card .nm { font-size: 14px; font-weight: 700; }
+/* `min-width: 0` lets a grid/flex child shrink below its text's own natural
+   width in the first place -- without it neither `overflow` nor
+   `text-overflow` ever gets a chance to fire, and a long English name (e.g.
+   "Besiege Wei to Save Zhao") just pushes the column wider instead of
+   eliding. */
+.sheet-pair-card .nm { flex: 1 1 auto; min-width: 0; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sheet-pair-row > button:not(.sheet-pair-card) { min-width: 0; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sheet-pair-card[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--gold); }
 .sheet-pair-card.adv-pick, .sheet-pair-row button.adv-pick { border-color: var(--accent); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent); }
 .sheet-head { flex: none; display: flex; gap: 14px; padding: 4px 0 0; }
@@ -1290,6 +1312,53 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    -- advisor off or no suggestion leaves the head exactly as it is today. */
 .sheet:has(> .sheet-pinned > .advisor-banner:not([hidden])) .sheet-img {
   width: 90px;
+}
+/* #118 item 2 (orchestrator, screenshot card_chuPair_390zh_advOff.png):
+   說客's own explain note (sheet.shuoke.explain, right after the card text in
+   .sheet-mid -- see the #117 comment above app.js's `note(mid, ...)` call)
+   got sliced mid-line by .sheet-mid's own fold at 390x669 zh, advisor OFF --
+   the advisor-banner rule above never fires there, so the art stayed full
+   width and left .sheet-mid too short for the card text box + the new note
+   to both fit. Same fix, same reasoning, a second trigger: shrink the art
+   whenever 說客's own pairing row (.sheet-pair-row, always in .sheet-pinned
+   whenever a pairing decision exists -- see hasPairOptions in app.js) is on
+   screen, regardless of the advisor. Table walk at 390x669 zh (#118): the
+   explain note and the (collapsed) history toggle both now sit fully above
+   .sheet-mid's own edge at rest -- nothing left to slice. */
+.sheet:has(> .sheet-pinned > .sheet-pair-row) .sheet-img {
+  width: 90px;
+}
+/* #118 round 3 (orchestrator, real render: a real pinned advisor banner
+   plus 說客's own full pair grid can still leave `.sheet-mid` shorter than
+   its own card text box even at the 90px floor above -- app.js's
+   syncMidFade() adds this class ONLY once it's measured that the text box
+   genuinely doesn't fit otherwise, never as a guess keyed off which cards or
+   language are on screen. Collapsing the art the rest of the way (not just
+   shrinking it) is the last thing `mid` is allowed to take room from --
+   .sheet-head's own `display: flex` sizes to whichever child is tallest, so
+   removing the image from that comparison entirely (`display: none`, not
+   `width: 0` -- a 0-width flex item still keeps its own top/bottom border
+   sizing from `object-fit`/`aspect-ratio`) lets the row shrink to `.sheet-
+   meta`'s own natural height instead. */
+.sheet.sheet-art-collapsed .sheet-img {
+  display: none;
+}
+/* #118 round 3 (orchestrator, real render with all 3 of a hand's Chu cards
+   offered as pairs + a real pinned advisor banner): round 2's `.sheet-cramped`
+   heuristic (BOTH the pairing row AND a pinned banner on screen) still wasn't
+   the real question -- the real question is just whether `.sheet-mid`'s own
+   content fits, which depends on how many pair options there are and how
+   long the advisor's own sentence turned out to be, not just whether either
+   exists at all. app.js's syncMidFade() now measures `mid` directly and
+   hides history (the one piece of `mid` that's allowed to give way -- real
+   history, but strictly supplementary reading the peek/rules pages already
+   carry, unlike the card's own rule text above it) only when it's actually
+   needed, on every card, advisor on or off -- this plain `[hidden]` rule is
+   just what makes that stick: `.sheet-history` is also `.sheet-textbox`
+   (`display: flex`, same specificity as a bare class), so the attribute
+   alone wouldn't otherwise beat it. */
+.sheet-history[hidden] {
+  display: none;
 }
 .sheet-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .sheet-badge { flex: none; width: 36px; height: 36px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 18px; line-height: 36px; text-align: center; }
@@ -1380,6 +1449,24 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    of the viewport. Only present while the full card (not the compact chip)
    is on screen. */
 .sheet-mid { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
+/* #118 item 2 (orchestrator, card_chuPair_390zh_advOff.png): the same
+   `has-more` name #68 already gave .prompt-scroll's own fade above, same
+   reasoning -- app.js's syncMidFade() toggles it on `mid` once its real
+   height is known, true exactly when its content overflows it, so whatever
+   line lands on the fold reads as "more below, scroll" instead of getting
+   sliced clean through its own glyphs (no scrollbar is visible on a phone to
+   explain a hard cut otherwise). A `mask-image` here rather than
+   .prompt-scroll's solid-colour gradient: .sheet-mid sits inside one of four
+   differently-coloured skins (.sheet-n/q/c/s, all above) and a mask fades to
+   transparent regardless of what's underneath, so one rule covers all four
+   without matching each background by hand. No visible effect at all when
+   `mid` isn't scrollable -- the mask only ever erases pixels inside `mid`'s
+   own box, and a `mid` shorter than its container has nothing sitting in
+   that bottom strip to erase. */
+.sheet-mid.has-more {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
+}
 /* #71 (owner, iPhone screenshot): the advisor's own suggestion banner
    (.advisor-banner.adv-slot-sheet, public/advisor.css) sits in .sheet-mid
    above, whose own comment already says "it scrolls on its own" -- but the

@@ -364,7 +364,16 @@ export default {
     // turned off (playing The Lobbyist alone has an empty effect() --
     // shared/cards.js).
     shuoke: {
-      explain: "The Lobbyist: pick a {enemy} card from your hand to play with it — you use that card's ops, its event doesn't fire, and both go to the discard pile.",
+      // #118 round 3 (orchestrator, real render: a real pinned advisor
+      // banner plus all 3 of a hand's Chu cards offered as pairs pushed this
+      // sentence below .sheet-mid's own fold at 375/390 en even after round
+      // 2's shortening and the shrink-the-art concession) -- moved out of
+      // `mid` entirely; `hint.shuoke` below (the pinned, never-scrolling
+      // one-line hint every 說客 page already showed) now carries the whole
+      // rule instead, so nothing about how to play the card depends on
+      // `mid` having room for it at all. This key is unused now (kept, not
+      // deleted, in case a future layout has room to restate it).
+      explain: "The Lobbyist: pick a {enemy} card to pair with — use its ops instead of the event; both are discarded.",
       none: "Don't pair — play alone",
       noEnemy: "No {enemy} card in hand: The Lobbyist can only be played alone, for 1 op.",
       eventReason: "The Lobbyist alone has no event.",
@@ -373,10 +382,11 @@ export default {
       own: "Your own event: it happens when you play it.",
       neutral: "A neutral card: the event or the ops, never both.",
       // #117: The Lobbyist is neutral, but "the event or the ops" is wrong
-      // for it -- its real play is pairing with an enemy card (see
-      // shuoke.explain above, already shown right above the pairing choice
-      // on the card page; this is just the short classification line).
-      shuoke: "The Lobbyist: paired with a {enemy} card, using its ops.",
+      // for it -- its real play is pairing with an enemy card. #118 round 3:
+      // this pinned line is now the ONLY place that rule is stated (the
+      // longer shuoke.explain note above used to restate it in `mid`, which
+      // doesn't always have room) -- one line, always on screen.
+      shuoke: "The Lobbyist: pair a {enemy} card — use its ops; its event does not fire.",
       enemy: "An enemy card: you use the ops, and its event still happens; you choose the order.",
       score: "A scoring card: it must be played this turn.",
       // #34: the read-only peek sheet's own one-line hint (owner-authorised
