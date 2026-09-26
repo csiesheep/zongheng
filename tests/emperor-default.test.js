@@ -155,20 +155,22 @@ for (const [lang, L] of [["zh-Hant", ZH], ["en", EN]]) {
   });
 }
 
-// The log panel (log-view.js renderRows): the over row names the winner and the reason (ends.<r>), whether the game
-// ended inside a move (稱帝 always does: the reform or the event that reached box 6) or after one (終局).
-test("log panel: the over row names the winner and the reason, inside a move (稱帝) and after the turn's end (終局)", async () => {
+// The log panel (log-view.js renderRows, #127's over row): a game won by 稱帝 -- always inside a move, the reform or
+// the event that reached box 6 -- ends the panel with exactly one over row naming the winner and the emperor title.
+test("log panel: a 稱帝 win ends with one over row naming the winner and 稱帝, both languages, either winner", async () => {
   const LV = await import("../public/log-view.js");
-  const st = reform(atBox5(actionRound({}, QIN, 6), QIN, LEAD), QIN);
-  assert.equal(st.reason, "emperor");
-  const tail = [{ i: 1, type: "endTurn", turn: 8, weariness: 4 }, { i: 2, type: "over", winner: CHU, reason: "final" }];
-  for (const [lang, L] of [["zh-Hant", ZH], ["en", EN]]) {
-    for (const [what, log, side, r] of [["emperor", st.log, "qin", "emperor"], ["final", tail, "chu", "final"]]) {
-      const html = LV.renderRows(log, { lang }).html;
-      const rows = html.split("</div>").filter((h) => h.includes(L.ends[r]));
-      assert.equal(rows.length, 1, `${lang} ${what}: one row names ${L.ends[r]}`);
-      assert.ok(rows[0].includes(L.sides[side]), `${lang} ${what}: the row names the winner: ${rows[0]}`);
-      assert.doesNotMatch(html, /\{\w+\}/, `${lang} ${what}: a placeholder is left`);
+  for (const side of [QIN, CHU]) {
+    const st = reform(atBox5(actionRound({}, side, 6), side, LEAD), side);
+    assert.equal(st.reason, "emperor");
+    for (const [lang, L] of [["zh-Hant", ZH], ["en", EN]]) {
+      const html = LV.renderRows(st.log, { lang }).html;
+      const winner = side === QIN ? L.sides.qin : L.sides.chu, loser = side === QIN ? L.sides.chu : L.sides.qin;
+      const title = fill(L.over.reasons.emperor.title, { winner, loser });
+      assert.ok(title.trim(), `${lang}: over.reasons.emperor.title is empty`);
+      const rows = html.split("</div>").filter((h) => h.includes("logrow-over"));
+      assert.equal(rows.length, 1, `${lang} side ${side}: over rows ${rows.length}`);
+      assert.ok(rows[0].includes(fill(L.over.winner, { side: winner })) && rows[0].includes(title), `${lang} side ${side}: ${rows[0]}`);
+      assert.doesNotMatch(html, /\{\w+\}/, `${lang} side ${side}: a placeholder is left`);
     }
   }
 });
