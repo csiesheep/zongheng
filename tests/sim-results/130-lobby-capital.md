@@ -42,8 +42,9 @@ node tests/sim.js --report-130=tests/sim-results/130-base.txt.state.json,tests/s
 | lc/nn/realign-own+lose-turn | 500 | 0 / 0 | 47.4 [43.1, 51.8] | -3.6 [-9.8, 2.6] | 5.34 ±0.17 | -0.20 [-0.45, +0.05] |
 | lc/hh/base | 500 | 0 / 0 | 54.2 [49.8, 58.5] |  | 6.01 ±0.15 |  |
 | lc/hh/realign | 500 | 0 / 0 | 47.8 [43.5, 52.2] | **-6.4 [-12.6, -0.2]** | 5.97 ±0.16 | -0.04 [-0.26, +0.18] |
-| lc/hh/realign-mild | 255 | 0 / 0 | 48.6 [42.6, 54.7] | -5.6 [-13.1, 2.0] | 5.92 ±0.22 | -0.09 [-0.36, +0.18] |
-| lc/hh/realign-own | 5 | 0 / 0 | 60.0 [23.1, 88.2] | +5.8 [-37.4, 49.0] | 4.40 ±2.02 | -1.61 [-3.63, +0.41] |
+| lc/hh/realign-mild | 500 | 0 / 0 | 45.4 [41.1, 49.8] | **-8.8 [-15.0, -2.6]** | 5.99 ±0.16 | -0.02 [-0.24, +0.21] |
+| lc/hh/lose | 205 | 0 / 0 | 46.8 [40.1, 53.7] | -7.4 [-15.5, 0.7] | 5.21 ±0.24 | **-0.80 [-1.08, -0.52]** |
+| lc/hh/realign-own | 230 | 0 / 0 | 46.5 [40.2, 53.0] | -7.7 [-15.5, 0.1] | 5.87 ±0.23 | -0.14 [-0.42, +0.14] |
 
 End reasons, % of games [Wilson 95%]; 國都 = the new end reason `homeFall`:
 
@@ -61,8 +62,9 @@ End reasons, % of games [Wilson 95%]; 國都 = the new end reason `homeFall`:
 | lc/nn/realign-own+lose-turn | 31.6 [27.7, 35.8] | 1.6 [0.8, 3.1] | 17.4 [14.3, 21.0] | 1.6 [0.8, 3.1] | 14.4 [11.6, 17.7] | 0.2 [0.0, 1.1] | 4.2 [2.8, 6.3] | 0.4 [0.1, 1.4] | 18.8 [15.6, 22.5] | 9.8 [7.5, 12.7] |
 | lc/hh/base | 27.2 [23.5, 31.3] | 1.4 [0.7, 2.9] | 13.8 [11.1, 17.1] | 2.8 [1.7, 4.6] | 10.6 [8.2, 13.6] | 0 | 7.8 [5.8, 10.5] | 0.8 [0.3, 2.0] | 35.6 [31.5, 39.9] | 0 |
 | lc/hh/realign | 26.4 [22.7, 30.4] | 1.2 [0.6, 2.6] | 12.6 [10.0, 15.8] | 2.4 [1.4, 4.1] | 15.4 [12.5, 18.8] | 0.8 [0.3, 2.0] | 9.0 [6.8, 11.8] | 0.6 [0.2, 1.7] | 31.6 [27.7, 35.8] | 0 |
-| lc/hh/realign-mild | 27.5 [22.3, 33.2] | 2.4 [1.1, 5.0] | 13.3 [9.7, 18.1] | 2.7 [1.3, 5.6] | 14.5 [10.7, 19.4] | 0 | 6.7 [4.2, 10.4] | 0 | 32.9 [27.5, 38.9] | 0 |
-| lc/hh/realign-own | 40.0 [11.8, 76.9] | 0 | 0 | 0 | 40.0 [11.8, 76.9] | 0 | 20.0 [3.6, 62.4] | 0 | 0 | 0 |
+| lc/hh/realign-mild | 26.4 [22.7, 30.4] | 1.8 [0.9, 3.4] | 14.0 [11.2, 17.3] | 4.0 [2.6, 6.1] | 13.0 [10.3, 16.2] | 0 | 10.0 [7.7, 12.9] | 0.2 [0.0, 1.1] | 30.6 [26.7, 34.8] | 0 |
+| lc/hh/lose | 21.5 [16.4, 27.6] | 1.0 [0.3, 3.5] | 9.8 [6.4, 14.6] | 0 | 10.7 [7.2, 15.7] | 0 | 3.9 [2.0, 7.5] | 0 | 13.7 [9.6, 19.0] | 39.5 [33.1, 46.3] |
+| lc/hh/realign-own | 25.7 [20.4, 31.7] | 0.4 [0.1, 2.4] | 18.3 [13.8, 23.8] | 2.6 [1.2, 5.6] | 11.7 [8.2, 16.5] | 0.4 [0.1, 2.4] | 10.0 [6.8, 14.6] | 0 | 30.9 [25.3, 37.1] | 0 |
 
 End reasons by winner: games won by Qin / by Chu for each reason.
 
@@ -80,8 +82,9 @@ End reasons by winner: games won by Qin / by Chu for each reason.
 | lc/nn/realign-own+lose-turn | 84 / 74 | 8 / 0 | 0 / 87 | 3 / 5 | 58 / 14 | 0 / 1 | 3 / 18 | 0 / 2 | 71 / 23 | 10 / 39 |
 | lc/hh/base | 72 / 64 | 7 / 0 | 0 / 69 | 9 / 5 | 42 / 11 | – | 17 / 22 | 0 / 4 | 124 / 54 | – |
 | lc/hh/realign | 59 / 73 | 6 / 0 | 0 / 63 | 8 / 4 | 59 / 18 | 0 / 4 | 11 / 34 | 0 / 3 | 96 / 62 | – |
-| lc/hh/realign-mild | 30 / 40 | 6 / 0 | 0 / 34 | 3 / 4 | 27 / 10 | – | 3 / 14 | – | 55 / 29 | – |
-| lc/hh/realign-own | 1 / 1 | – | – | – | 2 / 0 | – | 0 / 1 | – | – | – |
+| lc/hh/realign-mild | 54 / 78 | 9 / 0 | 0 / 70 | 11 / 9 | 46 / 19 | – | 13 / 37 | 0 / 1 | 94 / 59 | – |
+| lc/hh/lose | 25 / 19 | 2 / 0 | 0 / 20 | – | 16 / 6 | – | 3 / 5 | – | 19 / 9 | 31 / 50 |
+| lc/hh/realign-own | 29 / 30 | 1 / 0 | 0 / 42 | 3 / 3 | 17 / 10 | 0 / 1 | 8 / 15 | – | 49 / 22 | – |
 
 國都 wins by side (Qin took 郢 / Chu took 關中), and the turn they came on (turn:games), per side:
 
@@ -100,6 +103,7 @@ End reasons by winner: games won by Qin / by Chu for each reason.
 | lc/hh/base | 0 | – | 0 | – |
 | lc/hh/realign | 0 | – | 0 | – |
 | lc/hh/realign-mild | 0 | – | 0 | – |
+| lc/hh/lose | 31 | 2:2 4:3 5:1 6:3 7:18 8:4 | 50 | 4:18 5:23 6:7 8:2 |
 | lc/hh/realign-own | 0 | – | 0 | – |
 
 How the ops are spent, per game, both sides [95%]: share of the ops put to 扶植 (place) / 奇襲 (campaign) / 遊說 (lobby) / 變法 (reform); face values (九鼎 4). Uses per game, and the change in 奇襲 and 遊說 uses against base.
@@ -118,8 +122,9 @@ How the ops are spent, per game, both sides [95%]: share of the ops put to 扶�
 | lc/nn/realign-own+lose-turn | 68.1 | 19.9 | 7.0 | 5.1 | 8.64 ±0.31 | -0.38 [-0.85, +0.09] | 5.48 ±0.34 | **-1.16 [-1.70, -0.62]** |
 | lc/hh/base | 60.4 | 22.4 | 8.7 | 8.6 | 10.63 ±0.36 |  | 7.30 ±0.39 |  |
 | lc/hh/realign | 56.6 | 22.7 | 13.6 | 7.1 | 10.79 ±0.35 | +0.16 [-0.34, +0.67] | 10.56 ±0.47 | **+3.26 [+2.66, +3.87]** |
-| lc/hh/realign-mild | 57.5 | 23.5 | 11.0 | 8.1 | 11.15 ±0.52 | +0.52 [-0.11, +1.15] | 8.71 ±0.60 | **+1.42 [+0.70, +2.13]** |
-| lc/hh/realign-own | 61.7 | 27.6 | 5.7 | 5.0 | 11.60 ±8.28 | +0.97 [-7.32, +9.26] | 4.20 ±3.58 | -3.10 [-6.70, +0.50] |
+| lc/hh/realign-mild | 57.5 | 23.3 | 11.1 | 8.0 | 11.39 ±0.40 | **+0.77 [+0.23, +1.30]** | 8.92 ±0.44 | **+1.62 [+1.03, +2.20]** |
+| lc/hh/lose | 62.9 | 22.7 | 7.3 | 7.2 | 8.61 ±0.46 | **-2.02 [-2.60, -1.43]** | 5.32 ±0.51 | **-1.98 [-2.62, -1.34]** |
+| lc/hh/realign-own | 60.1 | 24.0 | 7.5 | 8.4 | 11.36 ±0.59 | **+0.73 [+0.04, +1.43]** | 6.22 ±0.51 | **-1.08 [-1.72, -0.43]** |
 
 遊說 in detail, all games of the cell pooled. Under base there are no attempts: one 遊說 removes min(ops, 局勢) and never costs the actor. 'net / attempt' = (enemy points removed − own points lost) ÷ attempts; 'actor lost' = attempts in which the actor lost at least one point; 'nothing to lose' = 遊說 aimed where the actor had no influence of its own. CAVEAT: in the cells run before realign-own (base … realign+lose-turn) the 遊說 counted here include the scripted 遊說 of the event 縱橫家遊說 (removes 2, no dice); from realign-own on it is counted apart ('event 遊說'). Uses per game in the table above come from the plays and never include it.
 
@@ -137,8 +142,9 @@ How the ops are spent, per game, both sides [95%]: share of the ops put to 扶�
 | lc/nn/realign-own+lose-turn | 2784 | 1243 / 1541 | 1.63 | 1.33 | 1.44 | 0.35 | +0.82 | +0.67 | 22.1 | 64.1 | 13.8 | 73.9 | 0.0 | 948 |
 | lc/hh/base | 4804 | 2825 / 1979 | 1.70 | 0.00 | 1.45 | 0.00 | – | +0.86 | – | – | – | 65.8 | 0.0 | (in the counts) |
 | lc/hh/realign | 6426 | 3230 / 3196 | 1.78 | 1.27 | 1.60 | 0.17 | +1.12 | +0.80 | 8.8 | 49.8 | 41.4 | 70.9 | 41.5 | (in the counts) |
-| lc/hh/realign-mild | 2821 | 1374 / 1447 | 1.78 | 1.24 | 1.77 | 0.04 | +1.39 | +0.97 | 3.4 | 73.4 | 23.2 | 68.8 | 23.3 | (in the counts) |
-| lc/hh/realign-own | 22 | 12 / 10 | 1.55 | 1.27 | 1.32 | 0.14 | +0.93 | +0.76 | 10.7 | 75.0 | 14.3 | 63.6 | 0.0 | 8 |
+| lc/hh/realign-mild | 5629 | 2772 / 2857 | 1.78 | 1.25 | 1.77 | 0.05 | +1.38 | +0.97 | 3.6 | 74.0 | 22.4 | 68.1 | 23.4 | (in the counts) |
+| lc/hh/lose | 1516 | 845 / 671 | 1.69 | 0.00 | 1.48 | 0.00 | – | +0.87 | – | – | – | 69.3 | 0.0 | (in the counts) |
+| lc/hh/realign-own | 1450 | 677 / 773 | 1.64 | 1.29 | 1.42 | 0.31 | +0.86 | +0.68 | 19.7 | 67.5 | 12.8 | 63.4 | 0.0 | 487 |
 
 The same with the event's scripted 遊說 taken out (the 遊說 use of ops only). Exact where it was counted apart; for the earlier cells estimated: event 遊說 ≈ lobby entries − 遊說 plays (a slight overestimate: an event that grants ops, 商旅通賈, also logs a 遊說 without a play; 0.12 a game in lc/nn/realign-own), each removing 1.97 (as measured in lc/nn/realign-own) for 2 ops.
 
@@ -156,8 +162,9 @@ The same with the event's scripted 遊說 taken out (the 遊說 use of ops only)
 | lc/nn/realign-own+lose-turn | 1.90 | 2784 | 1.44 | +0.82 | +0.67 |
 | lc/hh/base | ≈ 2.31 | ≈ 3649 | ≈ 1.29 | – | ≈ +0.81 |
 | lc/hh/realign | ≈ 2.29 | ≈ 5280 | ≈ 1.52 | ≈ +0.85 | ≈ +0.75 |
-| lc/hh/realign-mild | ≈ 2.35 | ≈ 2222 | ≈ 1.71 | ≈ +1.05 | ≈ +0.96 |
-| lc/hh/realign-own | 1.60 | 22 | 1.32 | +0.93 | +0.76 |
+| lc/hh/realign-mild | ≈ 2.34 | ≈ 4458 | ≈ 1.72 | ≈ +1.05 | ≈ +0.96 |
+| lc/hh/lose | ≈ 2.08 | ≈ 1090 | ≈ 1.29 | – | ≈ +0.82 |
+| lc/hh/realign-own | 2.12 | 1450 | 1.42 | +0.86 | +0.68 |
 
 收手 (realign-own only asks): 遊說 the actor stopped with attempts left, % of all 遊說, and the result of the roll just before the stop (by the dice: the actor lost it / won it / tied).
 
@@ -169,14 +176,14 @@ The same with the event's scripted 遊說 taken out (the 遊說 use of ops only)
 | lc/nn/realign-own | 2824 | 1.30 | 1.61 | 1.6 (44) | 44 | 0 | 0 |
 | lc/nn/realign-own+lose-turn | 2784 | 1.33 | 1.63 | 1.5 (41) | 41 | 0 | 0 |
 | lc/hh/realign | 6426 | 1.27 | 1.78 | 0.0 (0) | 0 | 0 | 0 |
-| lc/hh/realign-mild | 2821 | 1.24 | 1.78 | 0.0 (0) | 0 | 0 | 0 |
-| lc/hh/realign-own | 22 | 1.27 | 1.55 | 0.0 (0) | 0 | 0 | 0 |
+| lc/hh/realign-mild | 5629 | 1.25 | 1.78 | 0.0 (0) | 0 | 0 | 0 |
+| lc/hh/realign-own | 1450 | 1.29 | 1.64 | 1.2 (17) | 17 | 0 | 0 |
 
 Per attempt: the modifier difference d = the actor's modifiers − the other side's (clamped to −5…+5), how often each occurs (% of attempts), and how the dice went (actor won / tie / actor lost, %). 'exact' is 1d6 against 1d6 at that d, for comparison. Cells whose rows predate this column show nothing.
 
 - **lc/nn/realign-own** (3662 attempts): d=+0: 13.9% (508), 39.6 / 16.9 / 43.5 [exact 41.7 / 16.7 / 41.7]; d=+1: 34.5% (1264), 57.0 / 13.4 / 29.7 [exact 58.3 / 13.9 / 27.8]; d=+2: 30.3% (1110), 72.5 / 10.9 / 16.6 [exact 72.2 / 11.1 / 16.7]; d=+3: 15.5% (566), 83.6 / 8.1 / 8.3 [exact 83.3 / 8.3 / 8.3]; d=+4: 4.8% (174), 90.2 / 5.7 / 4.0 [exact 91.7 / 5.6 / 2.8]; d=+5: 1.1% (40), 97.5 / 2.5 / 0.0 [exact 97.2 / 2.8 / 0.0]
 - **lc/nn/realign-own+lose-turn** (3715 attempts): d=+0: 14.6% (541), 39.4 / 18.3 / 42.3 [exact 41.7 / 16.7 / 41.7]; d=+1: 35.1% (1304), 57.2 / 15.0 / 27.8 [exact 58.3 / 13.9 / 27.8]; d=+2: 29.5% (1097), 70.8 / 12.7 / 16.5 [exact 72.2 / 11.1 / 16.7]; d=+3: 15.5% (577), 80.9 / 11.1 / 8.0 [exact 83.3 / 8.3 / 8.3]; d=+4: 4.5% (167), 90.4 / 7.2 / 2.4 [exact 91.7 / 5.6 / 2.8]; d=+5: 0.8% (29), 96.6 / 3.4 / 0.0 [exact 97.2 / 2.8 / 0.0]
-- **lc/hh/realign-own** (28 attempts): d=+0: 3.6% (1), 100.0 / 0.0 / 0.0 [exact 41.7 / 16.7 / 41.7]; d=+1: 28.6% (8), 50.0 / 37.5 / 12.5 [exact 58.3 / 13.9 / 27.8]; d=+2: 35.7% (10), 80.0 / 0.0 / 20.0 [exact 72.2 / 11.1 / 16.7]; d=+3: 17.9% (5), 80.0 / 20.0 / 0.0 [exact 83.3 / 8.3 / 8.3]; d=+4: 7.1% (2), 100.0 / 0.0 / 0.0 [exact 91.7 / 5.6 / 2.8]; d=+5: 7.1% (2), 100.0 / 0.0 / 0.0 [exact 97.2 / 2.8 / 0.0]
+- **lc/hh/realign-own** (1870 attempts): d=+0: 10.9% (204), 38.2 / 14.7 / 47.1 [exact 41.7 / 16.7 / 41.7]; d=+1: 31.5% (589), 60.1 / 14.9 / 25.0 [exact 58.3 / 13.9 / 27.8]; d=+2: 31.8% (594), 70.7 / 13.3 / 16.0 [exact 72.2 / 11.1 / 16.7]; d=+3: 17.4% (326), 80.1 / 10.7 / 9.2 [exact 83.3 / 8.3 / 8.3]; d=+4: 7.2% (135), 94.8 / 4.4 / 0.7 [exact 91.7 / 5.6 / 2.8]; d=+5: 1.2% (22), 95.5 / 4.5 / 0.0 [exact 97.2 / 2.8 / 0.0]
 
 The home capitals. 'fell' = became enemy-controlled at some marker check (the moment `lose` reads); games % [95%]. Falls / game; falls retaken before the end of the same turn (the grace `lose-turn` gives); games in which the enemy held it at a turn end (what `lose-turn` / `move` read) and had more influence there at a turn end (what `lose-majority` reads); the turn of the first fall (turn:games); capital moved (`move`), games.
 
@@ -194,8 +201,9 @@ The home capitals. 'fell' = became enemy-controlled at some marker check (the mo
 | lc/nn/realign-own+lose-turn | 20.2 [16.9, 23.9] | 7.8 [5.8, 10.5] | 0.508 | 186 / 254 | 44 / 14 | 80 / 36 | 179 / 70 | 4:42 5:41 6:9 7:8 8:1 | 1:1 4:5 5:10 6:9 7:13 8:1 | 0 / 0 |
 | lc/hh/base | 8.0 [5.9, 10.7] | 1.4 [0.7, 2.9] | 0.188 | 40 / 94 | 30 / 3 | 98 / 13 | 110 / 17 | 4:12 5:17 6:8 8:3 | 5:1 7:4 8:2 | 0 / 0 |
 | lc/hh/realign | 5.2 [3.6, 7.5] | 1.2 [0.6, 2.6] | 0.144 | 42 / 72 | 16 / 5 | 69 / 14 | 82 / 17 | 4:13 5:12 6:1 | 6:2 7:3 8:1 | 0 / 0 |
-| lc/hh/realign-mild | 6.7 [4.2, 10.4] | 1.2 [0.4, 3.4] | 0.149 | 19 / 38 | 13 / 1 | 36 / 4 | 44 / 7 | 4:8 5:6 6:3 | 7:3 | 0 / 0 |
-| lc/hh/realign-own | 0.0 [-0.0, 43.4] | 0.0 [-0.0, 43.4] | 0.000 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | – | – | 0 / 0 |
+| lc/hh/realign-mild | 9.0 [6.8, 11.8] | 1.6 [0.8, 3.1] | 0.232 | 72 / 116 | 30 / 2 | 82 / 8 | 99 / 15 | 4:18 5:20 6:6 8:1 | 7:8 | 0 / 0 |
+| lc/hh/lose | 24.4 [19.0, 30.7] | 15.1 [10.9, 20.7] | 0.395 | 0 / 81 | 0 / 0 | 31 / 19 | 91 / 55 | 4:18 5:23 6:7 8:2 | 2:2 4:3 5:1 6:3 7:18 8:4 | 0 / 0 |
+| lc/hh/realign-own | 7.4 [4.7, 11.5] | 0.4 [0.1, 2.4] | 0.161 | 17 / 37 | 10 / 0 | 35 / 9 | 46 / 12 | 4:9 5:6 6:2 | 7:1 | 0 / 0 |
 
 Distributions per cell: end turn (turn:games); final Mandate min / p5 / p25 / median / p75 / p95 / max; 遊說 actions per game (count:games); the seeds with the most 遊說 and the seeds of the 國都 ends.
 
@@ -211,5 +219,6 @@ Distributions per cell: end turn (turn:games); final Mandate min / p5 / p25 / me
 - **lc/nn/realign-own+lose-turn**: end turn 1:16 2:21 3:57 4:70 5:96 6:80 7:81 8:79; mandate -29 / -22 / -12 / 0 / 12 / 22 / 29; 遊說/game 0:43 1:51 2:44 3:45 4:45 5:38 6:40 7:32 8:37 9:37 10:25 11:17 12:13 13:20 14:6 15:4 16:1 17:2; most 遊說 seed 215 (17, alliance), seed 245 (17, emperor), seed 290 (16, final); 國都 seeds 1 15 16 52 55 68 56 57 81 77 80 98 …
 - **lc/hh/base**: end turn 1:10 2:8 3:36 4:41 5:80 6:84 7:125 8:116; mandate -28 / -21 / -11 / 2 / 12 / 22 / 29; 遊說/game 0:2 1:12 2:18 3:21 4:32 5:36 6:23 7:37 8:33 9:39 10:33 11:39 12:42 13:27 14:21 15:28 16:17 17:12 18:5 19:7 20:6 21:4 22:3 23:1 25:1 28:1; most 遊說 seed 379 (28, final), seed 298 (25, tie), seed 443 (23, mandate); 國都 seeds none
 - **lc/hh/realign**: end turn 1:12 2:10 3:35 4:43 5:74 6:101 7:102 8:123; mandate -27 / -22 / -12 / -2 / 11 / 21 / 26; 遊說/game 0:1 1:10 2:8 3:9 4:12 5:19 6:16 7:24 8:26 9:26 10:27 11:33 12:31 13:32 14:27 15:40 16:23 17:21 18:21 19:21 20:20 21:14 22:12 23:11 24:6 25:4 26:1 28:3 29:2; most 遊說 seed 176 (29, final), seed 429 (29, final), seed 22 (28, emperor); 國都 seeds none
-- **lc/hh/realign-mild**: end turn 1:3 2:8 3:22 4:23 5:45 6:32 7:61 8:61; mandate -27 / -22 / -12 / 0 / 10 / 21 / 27; 遊說/game 0:1 1:7 2:10 3:7 4:9 5:14 6:13 7:8 8:15 9:14 10:15 11:18 12:19 13:18 14:21 15:17 16:7 17:11 18:4 19:9 20:7 21:5 22:2 23:1 24:2 26:1; most 遊說 seed 175 (26, mandate), seed 77 (24, mandate), seed 125 (24, final); 國都 seeds none
-- **lc/hh/realign-own**: end turn 2:1 3:1 4:1 5:1 8:1; mandate -20 / -20 / -6 / 14 / 15 / 21 / 21; 遊說/game 1:1 2:2 5:1 12:1; most 遊說 seed 5 (12, final), seed 1 (5, mandate), seed 3 (2, scoring); 國都 seeds none
+- **lc/hh/realign-mild**: end turn 1:9 2:12 3:41 4:39 5:84 6:71 7:113 8:131; mandate -27 / -22 / -13 / -2 / 9 / 20 / 29; 遊說/game 0:3 1:13 2:17 3:11 4:24 5:27 6:21 7:17 8:25 9:29 10:30 11:42 12:30 13:32 14:40 15:31 16:17 17:23 18:12 19:16 20:14 21:10 22:5 23:3 24:5 25:1 26:2; most 遊說 seed 175 (26, mandate), seed 450 (26, mandate), seed 437 (25, final); 國都 seeds none
+- **lc/hh/lose**: end turn 1:4 2:9 3:20 4:35 5:53 6:27 7:37 8:20; mandate -25 / -20 / -9 / 1 / 9 / 21 / 24; 遊說/game 0:1 1:10 2:14 3:16 4:24 5:19 6:14 7:12 8:13 9:16 10:15 11:11 12:15 13:7 14:6 15:4 16:3 17:3 18:1 20:1; most 遊說 seed 186 (20, final), seed 126 (18, final), seed 62 (17, homeFall); 國都 seeds 12 7 10 1 2 16 18 21 38 39 40 31 …
+- **lc/hh/realign-own**: end turn 1:4 2:6 3:18 4:21 5:39 6:42 7:51 8:49; mandate -27 / -21 / -12 / -1 / 11 / 22 / 30; 遊說/game 0:9 1:17 2:23 3:14 4:26 5:21 6:16 7:25 8:13 9:12 10:12 11:12 12:14 13:4 14:5 15:2 16:4 17:1; most 遊說 seed 99 (17, mandate), seed 80 (16, mandate), seed 109 (16, final); 國都 seeds none
