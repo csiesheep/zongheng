@@ -300,6 +300,11 @@ export default {
     // no order is chosen yet on an opponent's card (place/campaign/lobby);
     // sheet.hint.enemy itself stays put further down once an order is picked.
     chooseOrder: "先選順序:先行動點,或先事件",
+    // #124: shown instead of the map/target picker once 先事件 is chosen on
+    // an opponent's card, for all three行動點用法(扶植/奇襲/遊說)——引擎要等
+    // 事件結算完才問怎麼用行動點,現在選的目標事件後board可能已經變了,所以
+    // 這裡先不讓玩家點目標,免得選了也被丟掉。
+    eventFirstPending: "先事件:事件結算後再選怎麼用行動點",
     // #100 (owner, UX audit item 4): a Confirm tap or a map tap with no use
     // chosen yet used to do nothing at all -- app.js's flashUseWarning()
     // shows this under the use row until a use is actually picked.
