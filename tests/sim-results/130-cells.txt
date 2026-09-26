@@ -695,3 +695,28 @@ lc/nn/move             n=500  Qin  50%  turn 5.5  mandate +0.0  滅 1.15 相印 
 # 2026-09-26T20:46:30.061Z lc/nn/realign+lose-turn 385/500
 # 2026-09-26T20:46:33.656Z lc/nn/realign+lose-turn 390/500
 # 2026-09-26T20:46:34.286Z lc/nn/realign+lose-turn 395/500
+# 2026-09-26T20:46:40.398Z lc/nn/realign+lose-turn 400/500
+# 2026-09-26T20:46:40.761Z lc/nn/realign+lose-turn 405/500
+# 2026-09-26T20:46:43.934Z lc/nn/realign+lose-turn 410/500
+# 2026-09-26T20:46:44.993Z lc/nn/realign+lose-turn 415/500
+# 2026-09-26T20:47:02.776Z lc/nn/realign+lose-turn 420/500
+# 2026-09-26T20:47:05.265Z lc/nn/realign+lose-turn 425/500
+# 2026-09-26T20:47:08.294Z lc/nn/realign+lose-turn 430/500
+# 2026-09-26T20:47:20.779Z lc/nn/realign+lose-turn 435/500
+# 2026-09-26T20:47:26.715Z lc/nn/realign+lose-turn 440/500
+# 2026-09-26T20:47:30.955Z lc/nn/realign+lose-turn 445/500
+# 2026-09-26T20:47:35.121Z lc/nn/realign+lose-turn 450/500
+# 2026-09-26T20:47:37.158Z lc/nn/realign+lose-turn 455/500
+# 2026-09-26T20:47:44.581Z lc/nn/realign+lose-turn 460/500
+# 2026-09-26T20:47:45.649Z lc/nn/realign+lose-turn 465/500
+# 2026-09-26T20:47:46.410Z lc/nn/realign+lose-turn 470/500
+# 2026-09-26T20:47:47.786Z lc/nn/realign+lose-turn 475/500
+# 2026-09-26T20:47:49.255Z lc/nn/realign+lose-turn 480/500
+# 2026-09-26T20:48:04.174Z lc/nn/realign+lose-turn 485/500
+# 2026-09-26T20:48:11.158Z lc/nn/realign+lose-turn 490/500
+# 2026-09-26T20:48:32.696Z lc/nn/realign+lose-turn 495/500
+# 2026-09-26T20:48:44.055Z lc/nn/realign+lose-turn 500/500
+lc/nn/realign+lose-turn n=500  Qin  47%  turn 5.3  mandate -1.4  滅 1.06 相印 2.25  18.6s/game
+                       一統 1% 合縱 12% 天命 32% 土崩 3% 記分 22% 記分2 0% 終局 8% 稱帝 14% 國都 7%
+                       west 2.3x 4.4:0.7 jin 2.4x 5.2:4.5 south 2.3x 0.1:4.1 north 1.0x 0.6:1.8 east 1.0x 1.7:3.0
+# 2026-09-26T20:49:43.405Z lc/hh/realign 5/500
