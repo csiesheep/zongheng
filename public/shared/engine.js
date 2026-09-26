@@ -514,6 +514,7 @@ function exec(st, step) {
       let choice = step.payload;
       if (!choice) {
         if (!step.choices.length) {
+          if (step.afterEvent) step.ops = opsOf(st, step.side, step.card);
           const o = opsOptions(st, step.side);
           const allowed = [];
           if (o.placeOptions.length) allowed.push("place");
@@ -944,7 +945,11 @@ function play(st, action) {
       steps.push({ do: "finishCard", card: c, side, triggered: false }, { do: "finishCard", card: action.pair, side, triggered: false }, { do: "endAction" });
     } else if (enemy && action.order === "eventFirst") {
       steps.push({ do: "event", card: c, side: card.side, by: side, choices: [] });
-      steps.push({ do: "ops", side, card: c, ops, payload: null, choices: [] });
+      // The event resolves before this card's ops are spent, so the ops are
+      // read after it (`afterEvent`): an event that changes the player's ops
+      // this turn counts for this card too (荊軻刺秦王 played by Qin, owner
+      // 裁決 #119: the card text literally; it used to keep the play-time ops).
+      steps.push({ do: "ops", side, card: c, ops, payload: null, choices: [], afterEvent: true });
       steps.push({ do: "finishCard", card: c, side, triggered: true }, { do: "endAction" });
     } else {
       validateOps(st, side, c, ops, payload);
