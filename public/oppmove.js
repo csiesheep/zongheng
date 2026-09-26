@@ -62,8 +62,11 @@ export function opponentMoves(log, sinceSeq, me) {
 
 // Collapse a raw per-influence-point list into [spaceId, count] pairs, in
 // the order each space FIRST appears. Shared by opponentMoves' step.spaces
-// (above) and groupLog's setup/place rows (below).
-function collapseSpaces(points) {
+// (above), groupLog's setup/place rows (below), and log-view.js's
+// otherRowHtml() (#127 follow-up: a `place` entry orphaned by the engine's
+// 400-entry log cap needs the same [id,count] shape setupRowHtml already
+// builds its text from, to fill log.place's `{spaces}`).
+export function collapseSpaces(points) {
   if (!Array.isArray(points)) return [];
   const order = [];
   const counts = new Map();

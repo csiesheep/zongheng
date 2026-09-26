@@ -10,7 +10,7 @@
 import * as E from "./shared/engine.js";
 import en from "./i18n/en.js";
 import zh from "./i18n/zh-Hant.js";
-import { groupLog } from "./oppmove.js";
+import { groupLog, collapseSpaces } from "./oppmove.js";
 
 const I18N = { en, "zh-Hant": zh };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -161,10 +161,16 @@ function chipsHtml(chips) {
   if (!chips.length) return "";
   return `<span class="logrow-chips">${chips.map((c) => `<span class="logchip${c.gold ? " gold" : ""}">${c.text}</span>`).join("")}</span>`;
 }
+// Shared by setupRowHtml below and otherRowHtml's `place` case (#127
+// follow-up): the same "{space} +{n}, {space} +{n}" join, from [id,count]
+// pairs (collapseSpaces()'s own shape).
+const spacesText = (spaces, lang) => {
+  const sep = lang === "en" ? ", " : "、";
+  return (spaces || []).map(([id, n]) => `${spaceName(id, lang)} +${n}`).join(sep);
+};
 function setupRowHtml(row, lang) {
   const sideCls = row.side === E.CHU ? "c" : "q";
-  const sep = lang === "en" ? ", " : "、";
-  const txt = (row.spaces || []).map(([id, n]) => `${spaceName(id, lang)} +${n}`).join(sep);
+  const txt = spacesText(row.spaces, lang);
   return `<div class="logrow logrow-setup side-${sideCls}"><b class="logrow-side side-${sideCls}">${sideName(row.side, lang)}</b> ${txt}</div>`;
 }
 // `pair`: 說客's paired card, from the move's own `play` entry (#115).
@@ -206,12 +212,44 @@ function headlineRowHtml(row, lang) {
 // the brief never asked to shorten.
 function otherRowHtml(row, lang) {
   const e = row.entry || {};
+  // #127 follow-up: a `score`/`vp` entry logged with no move open (every
+  // turn-end tally, most visibly the four regions of the final scoring)
+  // used to fall through to the generic path below, whose `P` object never
+  // had `q`/`c`/`mandate` -- so the panel printed the raw `{q}`/`{c}`/
+  // `{mandate}` braces themselves. chipsForSteps() above already renders
+  // the SAME two entry types correctly when they happen inside a move
+  // (oppmove.tickerScore/tickerMandate); reusing those exact templates
+  // here, rather than patching the generic `log.score`/`log.vp` sentences
+  // with their own new params, keeps a region's tally reading identically
+  // whether it lands inside a move or loose after one.
+  if (e.type === "score") {
+    return `<div class="logrow logrow-other">${t(lang, "oppmove.tickerScore", { region: regionName(e.region, lang), q: e.qin && e.qin.total, c: e.chu && e.chu.total })}</div>`;
+  }
+  if (e.type === "vp") {
+    const gainer = e.n >= 0 ? e.side : 1 - e.side;
+    return `<div class="logrow logrow-other">${t(lang, "oppmove.tickerMandate", { side: sideName(gainer, lang), n: Math.abs(e.n) })}</div>`;
+  }
   const key = `log.${e.type}`;
   const P = {
     side: e.side != null ? sideName(e.side, lang) : "", turn: e.turn, era: e.era ? t(lang, "eras." + e.era) : "",
     weariness: e.weariness ? t(lang, "weariness." + e.weariness) : "", to: e.to ? t(lang, "weariness." + e.to) : "",
     region: e.region ? regionName(e.region, lang) : "", state: e.state ? stateName(e.state, lang) : "",
     card: e.card ? cardName(e.card, lang) : "", ops: e.ops, box: e.box,
+    // #127 follow-up: `campaign`/`lobby` (log.campaign/log.lobby) are the
+    // other two entry types this generic path can reach with no move open
+    // -- found by a full-sim sweep after the score/vp fix above turned up
+    // the same "{q}"-shaped bug one level deeper, on a game long enough
+    // that the engine's own 400-entry log cap (public/shared/engine.js,
+    // BE's file) drops the `play` that would have opened the move, leaving
+    // its `campaign`/`lobby` step orphaned. Filling target/removed/placed
+    // here fixes what the player sees; the truncation itself is reported
+    // to the orchestrator, not fixed here.
+    target: e.target ? spaceName(e.target, lang) : "", removed: e.removed, placed: e.placed,
+    // same story, a third entry type deep: a standalone `place` (log.place
+    // wants `{spaces}`) needs the raw `points` list collapsed into
+    // [id,count] pairs first, same shape setupRowHtml already builds its
+    // own text from.
+    spaces: Array.isArray(e.points) ? spacesText(collapseSpaces(e.points), lang) : "",
   };
   // #120: this table's own templates (log.play/log.discard/log.bog/
   // log.headlineOne) can name a card too -- same tCard() splice as every
