@@ -118,6 +118,35 @@ test("lose-turn: Qin taking 郢 in the last round wins at that turn's end, not b
   assert.equal(s.reason, "homeFall");
 });
 
+// For the UI (orchestrator, after the owner picked lose-turn): the view says which home capital is enemy-held
+// right now, and every turn end logs one check per capital, safe or fallen.
+test("lose-turn: the view says which home capital the enemy holds right now; no such key without homeFall", () => {
+  const st = stage({ homeFall: "lose-turn" }, CHU, { inf: BOARD, round: "early" });
+  const before = E.view(st, QIN).homeCapitals;
+  assert.deepEqual(before, [{ side: QIN, capital: "guanzhong", heldBy: null }, { side: CHU, capital: "ying", heldBy: null }]);
+  const s = E.apply(st, place(CHU, "tiangou", "guanzhong"));
+  for (const seat of [QIN, CHU, null]) {
+    assert.deepEqual(E.view(s, seat).homeCapitals, [{ side: QIN, capital: "guanzhong", heldBy: CHU }, { side: CHU, capital: "ying", heldBy: null }], `seat ${seat}`);
+  }
+  assert.equal("homeCapitals" in E.view(stage({}, CHU, { inf: BOARD }), QIN), false);
+});
+
+test("lose-turn: every turn end logs one check per capital -- safe, or fallen (and then the game is over)", () => {
+  const quiet = toTurnEnd(stage({ homeFall: "lose-turn" }, CHU, { inf: BOARD }));
+  assert.equal(quiet.winner, null);
+  const checks = quiet.log.filter((l) => l.type === "capitalCheck");
+  assert.deepEqual(checks.map((l) => [l.whose, l.capital, l.result]), [[QIN, "guanzhong", "safe"], [CHU, "ying", "safe"]]);
+  assert.ok(checks.every((l) => l.t === 2), "logged at the end of turn 2");
+  const fell = E.apply(stage({ homeFall: "lose-turn" }, CHU, { inf: BOARD }), place(CHU, "tiangou", "guanzhong"));
+  const c2 = fell.log.filter((l) => l.type === "capitalCheck");
+  assert.deepEqual(c2.map((l) => [l.whose, l.capital, l.result, l.heldBy]), [[QIN, "guanzhong", "fallen", CHU], [CHU, "ying", "safe", null]]);
+  const over = fell.log.findIndex((l) => l.type === "over");
+  assert.ok(over > fell.log.indexOf(c2[1]), "the checks come before the end of the game");
+  assert.equal(fell.reason, "homeFall");
+  // Without homeFall no such entry.
+  assert.equal(toTurnEnd(stage({}, CHU, { inf: BOARD })).log.some((l) => l.type === "capitalCheck"), false);
+});
+
 test("lose-majority: more enemy influence than yours at the end of a turn loses; level does not", () => {
   const inf = { ...BOARD, guanzhong: [3, 3], ying: [1, 4] }; // Qin no longer ahead in 郢
   const st = stage({ homeFall: "lose-majority" }, CHU, { inf });

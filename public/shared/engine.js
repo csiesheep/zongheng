@@ -110,6 +110,17 @@ export const HOME_CAPITAL = ["guanzhong", "ying"];
 // Under "move", where a fallen capital goes (遷都: Chu moved to 陳 in 278 BC).
 export const MOVED_CAPITAL = ["hanzhong", "chencai"];
 export function homeCapital(st, side) { return (st.capital && st.capital[side]) || HOME_CAPITAL[side]; }
+// Each side's home capital now and who holds it against its owner (control; under
+// lose-majority also `aheadBy`, the enemy when it has more influence there).
+// `view` carries it as `homeCapitals` whenever a homeFall value is set.
+export function homeCapitalStatus(st) {
+  return [QIN, CHU].map((side) => {
+    const capital = homeCapital(st, side), opp = other(side);
+    const out = { side, capital, heldBy: controller(st, capital) === opp ? opp : null };
+    if (st.options.homeFall === "lose-majority") out.aheadBy = infOf(st, capital)[opp] > infOf(st, capital)[side] ? opp : null;
+    return out;
+  });
+}
 export const MOVE_VP = 3;
 // `homeFall` (#130; owner: 「設計一下 如果國都被控制就輸了呢？」, and 「pls simulate them all」):
 //   "lose"           the enemy controlling your home capital loses you the game at
@@ -135,13 +146,12 @@ function homeFallAtTurnEnd(st) {
   const moved = [], losers = [];
   for (const side of [QIN, CHU]) {
     const cap = homeCapital(st, side), opp = other(side);
-    if (hf === "lose-majority") {
-      if (infOf(st, cap)[opp] > infOf(st, cap)[side]) losers.push(side);
-      continue;
-    }
-    if (controller(st, cap) !== opp) continue;
-    if (hf === "lose-turn" || cap !== HOME_CAPITAL[side]) losers.push(side);
-    else moved.push(side);
+    // One entry per capital per turn end, safe or not (the UI reads them).
+    const held = hf === "lose-majority" ? infOf(st, cap)[opp] > infOf(st, cap)[side] : controller(st, cap) === opp;
+    const result = !held ? "safe" : hf === "move" && cap === HOME_CAPITAL[side] ? "moved" : "fallen";
+    log(st, { type: "capitalCheck", whose: side, capital: cap, heldBy: held ? opp : null, result });
+    if (result === "fallen") losers.push(side);
+    else if (result === "moved") moved.push(side);
   }
   if (losers.length) return homeFallWin(st, losers);
   for (const side of moved) {
@@ -1358,6 +1368,7 @@ export function view(st, side) {
   v.drawCount = st.draw.length; delete v.draw;
   v.laterCounts = Object.fromEntries(Object.entries(st.later).map(([k, a]) => [k, a.length])); delete v.later;
   v.handCounts = [st.hands[QIN].length, st.hands[CHU].length];
+  if (st.options.homeFall && st.options.homeFall !== "none") v.homeCapitals = homeCapitalStatus(st);
   if (side == null) {
     // A spectator sees the table and neither hand.
     v.hands = [null, null];
