@@ -344,6 +344,10 @@ function markdown(summary, totals) {
     wuqi: "OK (was BUG: less room than 2 in the South froze the game; tests/event-cap-room.test.js)",
     hufu: "OK (was BUG: less room than 2 in the North froze the game; tests/event-cap-room.test.js)",
     zhangyi2: "OK (was BUG: +1 with the seal kept; tests/zhangyi2-seal.test.js)",
+    // #119, owner 裁決「其他照牌文字面改」.
+    hexi: "OK (#119: 「因此」 read literally -- a no-change run is Qin already at the cap in 河東: nothing placed, so the 2 gave no control and 大梁 is untouched; tests/hexi-thereby.test.js)",
+    tiandan: "OK (#119: the lifted 滅 stays lifted until a new conquest -- after the event, outside what this table compares; tests/tiandan-restore.test.js)",
+    jingke: "OK (#119: Qin playing it event first spends its own ops at −1, min 1 -- the ops step, outside what this table compares; tests/jingke-own-ops.test.js)",
   };
   const legit = {
     "no legal target": "no-effect runs rule-legit: nothing the text can act on",

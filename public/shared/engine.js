@@ -232,9 +232,20 @@ export function checkMarkers(st) {
     const capCtl = controller(st, s.capital);
     if (st.mie[id] && capCtl === CHU) { delete st.mie[id]; log(st, { type: "restore", state: id }); }
     if (st.seals[id] && capCtl === QIN) { delete st.seals[id]; log(st, { type: "unseal", state: id }); }
-    const all = spacesOfState(id).every((x) => controller(st, x) === QIN);
+    // After 田單復國 lifts 滅 (owner 裁決 #119), `mieHold[id]` lists the spaces
+    // of the state Qin still controlled at that moment; a space leaves the list
+    // once Qin loses it. The state falls again only to a new conquest: all of
+    // it held, and at least one space not on the list. No list, as always.
+    const sp = spacesOfState(id);
+    let held = st.mieHold && st.mieHold[id];
+    if (held) {
+      held = held.filter((x) => controller(st, x) === QIN);
+      if (held.length) st.mieHold[id] = held; else { delete st.mieHold[id]; held = null; }
+    }
+    const all = sp.every((x) => controller(st, x) === QIN) && !(held && held.length === sp.length);
     if (all && !st.mie[id]) {
       st.mie[id] = true; log(st, { type: "mie", state: id });
+      if (st.mieHold) delete st.mieHold[id];
       if (!st.mieVp[id]) { st.mieVp[id] = true; vp(st, QIN, s.vp); }
     }
     const sealed = capCtl === CHU && (st.options.sealAt !== "cap" || infOf(st, s.capital)[CHU] >= capOf(st, s.capital));
@@ -514,6 +525,7 @@ function exec(st, step) {
       let choice = step.payload;
       if (!choice) {
         if (!step.choices.length) {
+          if (step.afterEvent) step.ops = opsOf(st, step.side, step.card);
           const o = opsOptions(st, step.side);
           const allowed = [];
           if (o.placeOptions.length) allowed.push("place");
@@ -944,7 +956,11 @@ function play(st, action) {
       steps.push({ do: "finishCard", card: c, side, triggered: false }, { do: "finishCard", card: action.pair, side, triggered: false }, { do: "endAction" });
     } else if (enemy && action.order === "eventFirst") {
       steps.push({ do: "event", card: c, side: card.side, by: side, choices: [] });
-      steps.push({ do: "ops", side, card: c, ops, payload: null, choices: [] });
+      // The event resolves before this card's ops are spent, so the ops are
+      // read after it (`afterEvent`): an event that changes the player's ops
+      // this turn counts for this card too (荊軻刺秦王 played by Qin, owner
+      // 裁決 #119: the card text literally; it used to keep the play-time ops).
+      steps.push({ do: "ops", side, card: c, ops, payload: null, choices: [], afterEvent: true });
       steps.push({ do: "finishCard", card: c, side, triggered: true }, { do: "endAction" });
     } else {
       validateOps(st, side, c, ops, payload);

@@ -24,7 +24,7 @@ const pick = (side, options, extra = {}) => ({ kind: "points", who: side, n: 1, 
 // Rulebook 四、細則:「「放 X 點」超過上限時多的消失。」 With less room than n,
 // the answer fills the room and the rest vanishes (#115: `min` used to be n,
 // which left no legal answer at all and froze the game).
-const roomIn = (st, side, options) => options.reduce((r, id) => r + Math.max(0, E.capOf(st, id) - E.infOf(st, id)[side]), 0);
+const roomIn = (st, side, options, maxPer = Infinity) => options.reduce((r, id) => r + Math.min(maxPer, Math.max(0, E.capOf(st, id) - E.infOf(st, id)[side])), 0);
 const pts = (st, side, n, options, extra = {}) => ({ kind: "points", who: side, n, min: Math.min(n, roomIn(st, side, options)), side, options, ...extra });
 const placeAll = (st, side, points, n = 1) => { for (const id of points) E.place(st, side, id, n); };
 function freeCampaign(st, side, ch, list, ops, { noTire = false, ignoreLocks = false } = {}) {
@@ -65,7 +65,13 @@ export const CARDS = [
     text: "變法軌前進 1。", effect(st) { E.reformAdvance(st, Q, 1); } },
   { id: "hexi", num: 8, zh: "收復河西", en: "Retaking Hexi", era: "reform", side: Q, ops: 2, remove: true, year: 330,
     text: "秦在河東放 2;若秦因此控制河東,再移除楚在大梁 1。",
-    effect(st) { E.place(st, Q, "hedong", 2); if (E.controller(st, "hedong") === Q) E.remove(st, C, "daliang", 1); } },
+    // 「因此」: only when the 2 are what gave Qin 河東 (owner 裁決 #119: the card
+    // text read literally; it used to fire when Qin already held 河東 too).
+    effect(st) {
+      const had = E.controller(st, "hedong") === Q;
+      E.place(st, Q, "hedong", 2);
+      if (!had && E.controller(st, "hedong") === Q) E.remove(st, C, "daliang", 1);
+    } },
   { id: "zhangyi", num: 9, zh: "張儀連橫", en: "Zhang Yi's Horizontal", era: "reform", side: Q, ops: 3, remove: true, year: 328,
     text: "移除楚在最多 3 個國都各 1 點影響力。",
     effect(st, side, ch) {
@@ -213,7 +219,18 @@ export const CARDS = [
   { id: "tiandan", num: 41, zh: "田單復國", en: "Tian Dan Restores Qi", era: "alliance", side: C, ops: 3, remove: true, year: 279,
     text: "移除秦在臨淄 2;楚在即墨、莒各放 2;若齊已滅,移除滅國標記。",
     // The lifted 滅 is logged like any 復國 (#115: it used to vanish from the board with no line at all).
-    effect(st) { E.remove(st, Q, "linzi", 2); E.place(st, C, "jimo", 2); E.place(st, C, "ju", 2); if (st.mie.qi) { delete st.mie.qi; E.log(st, { type: "restore", state: "qi" }); } } },
+    // owner 裁決 #119: the lifted 滅 is not undone by the board it was lifted
+    // on. The Qi spaces Qin still controls now go into `mieHold.qi`; Qi falls
+    // again only once Qin holds all of it with a space taken after this
+    // (E.checkMarkers). It used to be re-destroyed by the very next check.
+    effect(st) {
+      E.remove(st, Q, "linzi", 2); E.place(st, C, "jimo", 2); E.place(st, C, "ju", 2);
+      if (st.mie.qi) {
+        delete st.mie.qi; E.log(st, { type: "restore", state: "qi" });
+        const held = E.spacesOfState("qi").filter((id) => E.controller(st, id) === Q);
+        if (held.length) st.mieHold = { ...(st.mieHold || {}), qi: held };
+      }
+    } },
   { id: "wanbi", num: 42, zh: "完璧歸趙", en: "The Jade Returns to Zhao", era: "alliance", side: C, ops: 1, remove: true, year: 283,
     text: "查看秦的手牌。", effect(st) { st.revealed[C] = true; } },
   { id: "yuyu", num: 43, zh: "閼與之戰", en: "Battle of Yuyu", era: "alliance", side: C, ops: 2, remove: true, year: 269,
@@ -260,7 +277,14 @@ export const CARDS = [
       const total = mine.reduce((n, id) => n + E.infOf(st, id)[side], 0);
       const k = Math.min(4, total);
       if (ch.length === 0) return { kind: "points", who: side, n: k, min: k, options: mine, maxOf: Object.fromEntries(mine.map((id) => [id, E.infOf(st, id)[side]])) };
-      if (ch.length === 1) { for (const id of ch[0]) E.remove(st, side, id, 1); return { kind: "points", who: side, side, n: ch[0].length, min: ch[0].length, maxPer: 2, options: withRoom(st, side, all()) }; }
+      // Stage 2 is a 「放 X 點」 too (#119, owner 裁決「5 修」): with less room
+      // than the points removed (2 per space at most, the cap per pick), the
+      // answer fills the room and the rest vanishes, as in `pts` above.
+      if (ch.length === 1) {
+        for (const id of ch[0]) E.remove(st, side, id, 1);
+        const options = withRoom(st, side, all());
+        return { kind: "points", who: side, side, n: ch[0].length, min: Math.min(ch[0].length, roomIn(st, side, options, 2)), maxPer: 2, options };
+      }
       placeAll(st, side, ch[1]);
     } },
 
