@@ -274,16 +274,8 @@ function realigning(st) { return !!E.LOBBY[st.options.lobby]; }
 // `side` on `id` as the board stands: every pair of faces, the loss capped by
 // the option and by what the loser has there.
 export function realignExpect(st, side, id) {
-  const R = E.LOBBY[st.options.lobby];
-  if (!R) return 0;
-  const opp = 1 - side, mine = E.realignMod(st, side, id) , theirs = E.realignMod(st, opp, id);
-  const own = E.infOf(st, id)[side], enemy = E.infOf(st, id)[opp];
-  let t = 0;
-  for (let a = 1; a <= R.die; a++) for (let b = 1; b <= R.die; b++) {
-    const d = a + mine - (b + theirs);
-    if (d > 0) t += Math.min(d, R.cap, enemy); else if (d < 0) t -= Math.min(-d, R.cap, own);
-  }
-  return t / (R.die * R.die);
+  const o = E.realignOdds(st, side, id);
+  return o ? o.net : 0;
 }
 function isLobby(action) { return action.type === "choose" ? !!action.choice && action.choice.use === "lobby" : action.use === "lobby"; }
 function rollsFor(st, action, k = DICE_K) { return realigning(st) && isLobby(action) ? k : 1; }

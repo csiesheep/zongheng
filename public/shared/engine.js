@@ -592,6 +592,24 @@ export function realignWhy(st, side, id) {
 // the difference from its own influence there (never below 0, capped under
 // "mild"), a tie does nothing. Stops once the enemy has nothing left there
 // (the rest are lost) or the game ends; markers are read after every attempt.
+// The odds of ONE attempt by `side` on `id` as the board stands (the pick screen,
+// the preview and the bots read this, so nobody keeps a copy of the rule): both
+// modifiers and their parts, win / tie / lose by the dice, and the expected net
+// (enemy points removed − own points lost, each capped by the option and by what
+// the loser has there). null when no realign value is in play.
+export function realignOdds(st, side, id) {
+  const R = LOBBY[st.options.lobby];
+  if (!R) return null;
+  const opp = other(side), why = [realignWhy(st, QIN, id), realignWhy(st, CHU, id)];
+  const mod = why.map((w) => w.adj.length + (w.more ? 1 : 0) + (w.home ? 1 : 0));
+  const own = infOf(st, id)[side], enemy = infOf(st, id)[opp], n = R.die * R.die;
+  let win = 0, tie = 0, net = 0;
+  for (let a = 1; a <= R.die; a++) for (let b = 1; b <= R.die; b++) {
+    const d = a + mod[side] - (b + mod[opp]);
+    if (d > 0) { win++; net += Math.min(d, R.cap, enemy); } else if (d < 0) net -= Math.min(-d, R.cap, own); else tie++;
+  }
+  return { mod, why, win: win / n, tie: tie / n, lose: (n - win - tie) / n, net: net / n };
+}
 // One attempt: both rolls from the game's RNG now, the loss, the entry, the markers.
 function realignAttempt(st, side, target, k) {
   const R = LOBBY[st.options.lobby];

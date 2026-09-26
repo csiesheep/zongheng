@@ -360,3 +360,23 @@ test("each attempt's entry names both sides' modifiers: controlled neighbours, m
     for (const s of [QIN, CHU]) assert.equal(e.mod[s], e.adj[s].length + (e.more[s] ? 1 : 0) + (e.home[s] ? 1 : 0));
   }
 });
+
+// For the pick screen and the preview (owner's display B): the odds of ONE attempt as the board stands, from
+// the engine, so the page never keeps its own copy of the rule. Luoyi (LUOYI): modifiers 2 : 2, so d = 0 and
+// 1d6 − 1d6 decides: win 15/36, tie 6/36, lose 15/36. Net, by hand: the actor (Qin, 2 there) against Chu (3):
+// a − b = 1…5 occurs 5, 4, 3, 2, 1 times; a win removes min(diff, 3) = 5·1 + 4·2 + 3·3 + 2·3 + 1·3 = 31, a loss
+// costs min(diff, 2) = 5·1 + 4·2 + 3·2 + 2·2 + 1·2 = 25, so the expected net is (31 − 25) / 36 = 1/6.
+test("realignOdds: one attempt's modifiers, win / tie / lose and expected net, as the board stands", () => {
+  const st = stage({ lobby: "realign-own" }, QIN, { inf: LUOYI, card: "tiangou" });
+  const o = E.realignOdds(st, QIN, "luoyi");
+  assert.deepEqual(o.mod, [2, 2]);
+  assert.deepEqual(o.why[QIN], { adj: ["hangu"], more: false, home: true });
+  assert.deepEqual(o.why[CHU], { adj: ["xinzheng"], more: true, home: false });
+  assert.ok(Math.abs(o.win - 15 / 36) < 1e-12 && Math.abs(o.tie - 6 / 36) < 1e-12 && Math.abs(o.lose - 15 / 36) < 1e-12);
+  assert.ok(Math.abs(o.net - 6 / 36) < 1e-12, `net ${o.net}`);
+  // Without a realign value there are no odds to show.
+  assert.equal(E.realignOdds(stage({}, QIN, { inf: LUOYI, card: "tiangou" }), QIN, "luoyi"), null);
+  // Mild caps the loss at 2 and rolls 1d3: modifiers 2 : 2, faces 1…3: win 3/9, tie 3/9, lose 3/9.
+  const m = E.realignOdds(stage({ lobby: "realign-mild" }, QIN, { inf: LUOYI, card: "tiangou" }), QIN, "luoyi");
+  assert.ok(Math.abs(m.win - 3 / 9) < 1e-12 && Math.abs(m.tie - 3 / 9) < 1e-12);
+});
