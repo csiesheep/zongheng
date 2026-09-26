@@ -219,8 +219,11 @@ export function placeTargets(st, side, ops, points = []) {
   }
   return { lit, costs, spent, left };
 }
-// Set by the balance harness (tests/sim.js) to watch placements; null in play.
-export const probe = { place: null };
+// Set by the balance harness (tests/sim.js) to watch placements (`place`) and
+// the two home capitals (`home`, #130: called with (st, "check") at the end of
+// every `checkMarkers` and (st, "turnEnd") where the turn-end checks start);
+// null in play.
+export const probe = { place: null, home: null };
 export function placeCost(st, side, id) { return controller(st, id) === other(side) ? 2 : 1; }
 // 局勢 for 遊說: my controlled neighbours minus theirs.
 export function edge(st, side, id) {
@@ -372,6 +375,7 @@ export function checkMarkers(st) {
   }
   if (st.winner == null && Object.keys(st.mie).length >= st.options.mie) win(st, QIN, "unification");
   if (st.winner == null && Object.keys(st.seals).length >= st.options.seals) win(st, CHU, "alliance");
+  if (probe.home) probe.home(st, "check");
 }
 export function regionTally(st, region) {
   const ids = spacesOf(region), R = REGIONS[region];
@@ -877,6 +881,7 @@ function endAction(st) {
   st.plan.push({ do: "beginAction" });
 }
 function endTurnChecks(st) {
+  if (probe.home) probe.home(st, "turnEnd");
   const holding = [QIN, CHU].filter((s) => st.hands[s].some((c) => CARD[c].scoring));
   if (holding.length === 2) return win(st, CHU, "scoringBoth");
   if (holding.length === 1) return win(st, other(holding[0]), "scoring");
