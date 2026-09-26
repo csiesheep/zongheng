@@ -29,11 +29,12 @@ import { decide, determinize, evaluate, heldSinceRestore, simulate } from "./bot
 const { QIN, CHU, SPACE, SPACES, STATES, SCORED_REGIONS, CARD, JIUDING, REFORM } = E;
 
 // The fixed set the copy is written against (issue #17; `bogDiscard` added
-// 2026-09-19). `best` is the floor and is always available.
+// 2026-09-19; `emperor` by #125, the win by 稱帝). `best` is the floor and is
+// always available.
 export const REASON_KEYS = [
   "takeControl", "breakControl", "battleground", "scoringSoon", "destroyState",
   "nearDestroy", "seal", "denySeal", "mandate", "reform", "dumpEnemyEvent",
-  "mustPlayScoring", "avoidCollapse", "bogDiscard", "best",
+  "mustPlayScoring", "avoidCollapse", "bogDiscard", "emperor", "best",
 ];
 // `params` vocabulary, per key:
 //   space    a board space id                  takeControl breakControl battleground best
@@ -51,6 +52,7 @@ export const REASON_KEYS = [
 const WIN_KEY = {
   unification: "destroyState", alliance: "seal", mandate: "mandate", final: "mandate",
   tie: "mandate", collapse: "avoidCollapse", scoring: "mustPlayScoring", scoringBoth: "mustPlayScoring",
+  emperor: "emperor",
 };
 
 export function advise(view, side, rng) {

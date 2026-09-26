@@ -6,7 +6,7 @@ import * as E from "../public/shared/engine.js";
 import { playRandomGame } from "./driver.js";
 
 const GAMES = Number(process.env.FUZZ_GAMES || 60);
-const REASONS = new Set(["unification", "alliance", "mandate", "collapse", "scoring", "scoringBoth", "final", "tie"]);
+const REASONS = new Set(["unification", "alliance", "mandate", "collapse", "scoring", "scoringBoth", "final", "tie", "emperor"]);
 const ALL = E.CARDS.map((c) => c.id).sort();
 
 function checkInvariants(st, seed) {
@@ -35,6 +35,12 @@ test(`fuzz: ${GAMES} random games end legally and keep every invariant`, () => {
     const { st, actions } = playRandomGame(seed, {}, { onStep: (s) => checkInvariants(s, seed) });
     assert.ok(REASONS.has(st.reason), `${seed}: odd reason ${st.reason}`);
     assert.ok(st.winner === 0 || st.winner === 1, `${seed}: no winner`);
+    // #125: 稱帝 wins only for a side that got there first while leading the Mandate (no +3 is added on a win).
+    if (st.reason === "emperor") {
+      assert.equal(st.reform[st.winner], 6, `${seed}: emperor without box 6`);
+      assert.equal(st.reformFirst[6], st.winner, `${seed}: emperor for the second to box 6`);
+      assert.ok(st.winner === E.QIN ? st.mandate > 0 : st.mandate < 0, `${seed}: emperor without the lead (${st.mandate})`);
+    }
     ends[st.reason] = (ends[st.reason] || 0) + 1;
     turns.push(st.turn);
     if (st.winner === E.QIN) qinWins++;
