@@ -419,11 +419,16 @@ function report(files) {
 // `emp/<lvl>/vp` (today's rule) on the same seeds; ** = the 95% interval of the
 // difference leaves out 0.
 const EMP_REASONS = ["emperor", "mandate", "unification", "alliance", "collapse", "scoring", "scoringBoth", "final", "tie"];
+// A file given as `path@label` names its cells `<cell>@<label>` (the same cell
+// run on another build, e.g. `@unaware-bot`); they are listed after the cell
+// and compared with the plain `vp` of their level.
 function reportEmperor(files) {
   const cells = {};
-  for (const f of files) {
+  for (const spec of files) {
+    const [f, label] = spec.split("@");
     const st = JSON.parse(readFileSync(f, "utf8"));
-    for (const [name, v] of Object.entries(st)) {
+    for (const [cell, v] of Object.entries(st)) {
+      const name = label ? `${cell}@${label}` : cell;
       if (!v.result || !name.startsWith("emp/")) continue;
       const cols = [...ROW, ...EMP_ROW];
       const rows = v.result.rows.map((x) => Object.fromEntries(cols.map((k, i) => [k, x[i]])));
@@ -438,9 +443,10 @@ function reportEmperor(files) {
       cells[name] = { rows, n: rows.length, errors: v.result.errors.length, stuck: v.result.stuck || 0 };
     }
   }
-  const order = CELLS.map(([n]) => n).filter((n) => cells[n]);
+  const order = CELLS.map(([n]) => n).flatMap((n) => Object.keys(cells).filter((k) => k === n || k.startsWith(n + "@")));
+  const vpOf = (n) => n.split("@")[0].replace(/[^/]+$/, "vp");
   const out = [];
-  const rate = (k, n) => { const [lo, hi] = wilson(k, n); return n ? `${pc(k / n)} ${ci(lo, hi)}` : "–"; };
+  const rate =(k, n) => { const [lo, hi] = wilson(k, n); return n ? `${pc(k / n)} ${ci(lo, hi)}` : "–"; };
   const cnt = (rows, f) => rows.filter(f).length;
   const mean = (rows, k) => meanCi(rows.map((x) => x[k]));
   const mci = (m) => `${m.m.toFixed(2)} ±${m.h.toFixed(2)}`;
@@ -472,7 +478,7 @@ function reportEmperor(files) {
     const top = rows.slice().sort((a, b) => b.uses - a.uses).slice(0, 3);
     out.push(`- **${name}**: first reach turn ${hist(rows.filter((x) => x.reached).map((x) => x.firstTurn)) || "none"}; final box Qin ${hist(rows.map((x) => x.qBox))}, Chu ${hist(rows.map((x) => x.cBox))}; end turn ${hist(rows.map((x) => x.turn))}; most reform uses ${top.map((x) => `seed ${x.seed} (${x.uses}, ${x.reason})`).join(", ")}`);
   }
-  const pairs = order.filter((n) => !n.endsWith("/vp") && cells[n.replace(/[^/]+$/, "vp")]);
+  const pairs = order.filter((n) => n !== vpOf(n) && cells[vpOf(n)]);
   if (pairs.length) {
     out.push("", "Difference from `vp` at the same level [95%]; ** = the interval leaves out 0:", "");
     out.push("| cell − vp | Qin win pp | end turn | box 6 reached pp | first-there won pp | reform uses / game | reform share pp | 天命 end pp | 相印 end pp | 終局 end pp |");
@@ -489,7 +495,7 @@ function reportEmperor(files) {
       return star(d, h, `${f2(d)} [${f2(d - h)}, ${f2(d + h)}]`);
     };
     for (const name of pairs) {
-      const a = cells[name.replace(/[^/]+$/, "vp")].rows, b = cells[name].rows;
+      const a = cells[vpOf(name)].rows, b = cells[name].rows;
       const ra = a.filter((x) => x.reached), rb = b.filter((x) => x.reached);
       const e = (rows, r) => cnt(rows, (x) => x.reason === r);
       out.push(`| ${name} | ${dp(cnt(a, (x) => x.qinWin), a.length, cnt(b, (x) => x.qinWin), b.length)} | ${dm(a, b, "turn")} | ${dp(ra.length, a.length, rb.length, b.length)} | ${dp(cnt(ra, (x) => x.firstWon), ra.length, cnt(rb, (x) => x.firstWon), rb.length)} | ${dm(a, b, "uses")} | ${dm(a, b, "reformShare", 100)} | ${dp(e(a, "mandate"), a.length, e(b, "mandate"), b.length)} | ${dp(e(a, "alliance"), a.length, e(b, "alliance"), b.length)} | ${dp(e(a, "final"), a.length, e(b, "final"), b.length)} |`);
