@@ -283,12 +283,31 @@ export function scoreRegion(st, region) {
 export function reformThreshold(st, side) { return st.reform[side] >= 6 ? Infinity : REFORM[st.reform[side]].ops; }
 export function reformUsesLeft(st, side) { return (st.reform[side] >= 2 ? 2 : 1) - st.reformUsed[side]; }
 export function hasPerk(st, side, perk) { return REFORM.some((r) => r.perk === perk && st.reform[side] >= r.box); }
+// #121 `emperor`: what reaching box 6 (稱帝) FIRST is worth. Not a key of
+// DEFAULT_OPTIONS: an absent option plays as "vp", so a default game's state is
+// byte for byte what it was before the option existed.
+//   "vp"       the rulebook: first +3, second +1
+//   "vp5"      first +5, second +1
+//   "win"      the first to reach it wins at once (end reason "emperor")
+//   "win-late" as "win" from turn 5 on; before that +3 as "vp", and the first
+//              place is then taken, so no one can win by it afterwards
+// The second to arrive always gets +1; nobody wins by arriving second.
+export const EMPEROR = ["vp", "vp5", "win", "win-late"];
+export const EMPEROR_LATE_FROM = 5;
+export function emperorWins(st) {
+  const e = st.options.emperor;
+  return e === "win" || (e === "win-late" && st.turn >= EMPEROR_LATE_FROM);
+}
 export function reformAdvance(st, side, n = 1) {
   for (let i = 0; i < n; i++) {
     if (st.reform[side] >= 6) return;
     const box = ++st.reform[side], R = REFORM[box - 1];
     log(st, { type: "reform", side, box });
-    if (st.reformFirst[box] == null) { st.reformFirst[box] = side; vp(st, side, R.first); } else vp(st, side, R.second);
+    if (st.reformFirst[box] == null) {
+      st.reformFirst[box] = side;
+      if (R.perk === "emperor" && emperorWins(st)) { win(st, side, "emperor"); return; }
+      vp(st, side, R.perk === "emperor" && st.options.emperor === "vp5" ? 5 : R.first);
+    } else vp(st, side, R.second);
     if (R.perk === "emperor") recover(st, 1);
   }
 }

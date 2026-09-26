@@ -54,6 +54,12 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
     if (outC) { pl.chained++; pl.chainedPts += outC; }
     if (outT) { pl.beyondTs++; pl.beyondTsPts += outT; }
   };
+  // #121: the reform track. Box 6 (稱帝) reach turn per side from the "reform"
+  // log entries; every card play from the "play" entries, kept by log number
+  // and re-read while still in the log, because an event-first enemy card
+  // writes its real ops use back into its entry only when the ops are chosen.
+  const rf = { reach6: [0, 0], advances: [0, 0] };
+  const plays = new Map();
   for (let steps = 0; st.winner == null; steps++) {
     if (steps > 6000) throw new Error(`seed ${seed}: no end after ${steps} actions`);
     const who = E.mustAct(st);
@@ -64,10 +70,33 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
     try { st = E.apply(st, a); } finally { E.probe.place = null; }
     for (const l of st.log) if (l.i > seen && l.type === "score") scores.push(l);
     for (const l of st.log) if (l.i > seen && l.type === "place") { pl.logged++; if (!seqs.has(l.i)) pl.unmatched++; }
+    for (const l of st.log) {
+      if (l.type === "play" && (l.i > seen || plays.has(l.i))) plays.set(l.i, { side: l.side, card: l.card, pair: l.pair, use: l.use });
+      if (l.i > seen && l.type === "reform") { rf.advances[l.side]++; if (l.box === 6) rf.reach6[l.side] = l.t; }
+    }
     seen = st.logSeq || seen;
   }
-  return { st, scores, pl };
+  const byUse = {};
+  const reformUses = [0, 0];
+  for (const p of plays.values()) {
+    const ops = p.card === E.JIUDING ? 4 : E.CARD[p.pair || p.card].ops;
+    const u = byUse[p.use] || (byUse[p.use] = { n: 0, ops: 0 });
+    u.n++; u.ops += ops;
+    if (p.use === "reform") reformUses[p.side]++;
+  }
+  const first6 = st.reformFirst[6] ?? -1;
+  // Appended to the row in EMP_ROW order.
+  const emp = [rf.reach6[0], rf.reach6[1], first6, st.reform[0], st.reform[1], reformUses[0], reformUses[1],
+    rf.advances[0] + rf.advances[1] - reformUses[0] - reformUses[1],
+    ...EMP_USES.flatMap((u) => [byUse[u]?.n || 0, byUse[u]?.ops || 0])];
+  return { st, scores, pl, emp };
 }
+// #121: per-game reform columns, appended after ROW. Reach turns are 0 when the
+// side never reached box 6; first6 is -1 when nobody did. Ops are face values
+// (九鼎 4; 說客's pair: the paired card's), both sides together.
+export const EMP_USES = ["event", "place", "campaign", "lobby", "reform", "bog"];
+export const EMP_ROW = ["q6turn", "c6turn", "first6", "qBox", "cBox", "qReformUses", "cReformUses", "eventAdvances",
+  ...EMP_USES.flatMap((u) => [`n_${u}`, `ops_${u}`])];
 
 export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal", options = {} } = {}) {
   const t0 = Date.now();
@@ -80,7 +109,7 @@ export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal"
       if (/no end after|no action for/.test(e.message)) out.stuck++;
       continue;
     }
-    const { st, scores, pl } = res;
+    const { st, scores, pl, emp } = res;
     for (const k of ["places", "placedPts", "chained", "chainedPts", "beyondTs", "beyondTsPts"]) out[k] += pl[k];
     if (pl.logged !== pl.places || pl.unmatched) out.probeMiss++;
     if (st.winner === E.QIN) out.qinWins++;
@@ -90,7 +119,7 @@ export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal"
     // One row per game (ROW names the columns), so `--report` can give intervals,
     // distributions and the outlying seeds, not only the means.
     out.rows.push([seed + g, st.winner === E.QIN ? 1 : 0, st.reason, st.turn, st.mandate, Object.keys(st.mieVp).length, Object.keys(st.sealVp).length,
-      pl.places, pl.placedPts, pl.chained, pl.chainedPts, pl.beyondTs]);
+      pl.places, pl.placedPts, pl.chained, pl.chainedPts, pl.beyondTs, ...emp]);
     for (const l of scores) {
       const r = out.regions[l.region] || (out.regions[l.region] = { n: 0, net: 0, q: 0, c: 0 });
       r.n++; r.net += l.qin.total - l.chu.total; r.q += l.qin.total; r.c += l.chu.total;
@@ -101,8 +130,8 @@ export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal"
   return out;
 }
 
-const ENDS = ["unification", "alliance", "mandate", "collapse", "scoring", "scoringBoth", "final", "tie"];
-const SHORT = { unification: "一統", alliance: "合縱", mandate: "天命", collapse: "土崩", scoring: "記分", scoringBoth: "記分2", final: "終局", tie: "平手" };
+const ENDS = ["unification", "alliance", "mandate", "collapse", "scoring", "scoringBoth", "final", "tie", "emperor"];
+const SHORT = { unification: "一統", alliance: "合縱", mandate: "天命", collapse: "土崩", scoring: "記分", scoringBoth: "記分2", final: "終局", tie: "平手", emperor: "稱帝" };
 function line(name, r) {
   const n = r.played || 1;
   const ends = ENDS.filter((e) => r.ends[e]).map((e) => `${SHORT[e]} ${(100 * r.ends[e] / n).toFixed(0)}%`).join(" ");
@@ -151,6 +180,8 @@ export const CELLS = [
   ["hqnc/ts", { qin: "hard", chu: "normal", options: { reach: "ts" } }],
   ["nqhc/control", { qin: "normal", chu: "hard", options: { reach: "control" } }],
   ["nqhc/ts", { qin: "normal", chu: "hard", options: { reach: "ts" } }],
+  // #121: what reaching reform box 6 (稱帝) first is worth. emp/<lvl>/vp is today's rule.
+  ...["nn", "hh"].flatMap((lv) => E.EMPEROR.map((v) => [`emp/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options: { emperor: v } }])),
 ];
 
 function parseArgs(argv) {
@@ -382,9 +413,96 @@ function report(files) {
   return out.join("\n");
 }
 
+// ---------- report (#121) ----------
+//   node tests/sim.js --report-emperor=f.txt.state.json > table.md
+// The reform track per `emp/<lvl>/<value>` cell, and every value against
+// `emp/<lvl>/vp` (today's rule) on the same seeds; ** = the 95% interval of the
+// difference leaves out 0.
+const EMP_REASONS = ["emperor", "mandate", "unification", "alliance", "collapse", "scoring", "scoringBoth", "final", "tie"];
+function reportEmperor(files) {
+  const cells = {};
+  for (const f of files) {
+    const st = JSON.parse(readFileSync(f, "utf8"));
+    for (const [name, v] of Object.entries(st)) {
+      if (!v.result || !name.startsWith("emp/")) continue;
+      const cols = [...ROW, ...EMP_ROW];
+      const rows = v.result.rows.map((x) => Object.fromEntries(cols.map((k, i) => [k, x[i]])));
+      for (const x of rows) {
+        x.reached = x.first6 >= 0 ? 1 : 0;
+        x.firstTurn = x.first6 === 0 ? x.q6turn : x.first6 === 1 ? x.c6turn : 0;
+        x.firstWon = x.first6 < 0 ? null : (x.first6 === 0) === (x.qinWin === 1) ? 1 : 0;
+        x.uses = x.qReformUses + x.cReformUses;
+        const opsAll = EMP_USES.filter((u) => u !== "event" && u !== "bog").reduce((a, u) => a + x[`ops_${u}`], 0);
+        x.reformShare = opsAll ? x.ops_reform / opsAll : 0;
+      }
+      cells[name] = { rows, n: rows.length, errors: v.result.errors.length, stuck: v.result.stuck || 0 };
+    }
+  }
+  const order = CELLS.map(([n]) => n).filter((n) => cells[n]);
+  const out = [];
+  const rate = (k, n) => { const [lo, hi] = wilson(k, n); return n ? `${pc(k / n)} ${ci(lo, hi)}` : "–"; };
+  const cnt = (rows, f) => rows.filter(f).length;
+  const mean = (rows, k) => meanCi(rows.map((x) => x[k]));
+  const mci = (m) => `${m.m.toFixed(2)} ±${m.h.toFixed(2)}`;
+  out.push("| cell | n | errors / stuck | Qin win % [95%] | avg end turn | box 6 reached by anyone, % [95%] | by Qin % | by Chu % | first there: Qin / Chu | first-there side won, % [95%] (of games reached) |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows, n, errors, stuck } = cells[name];
+    const reached = rows.filter((x) => x.reached);
+    out.push(`| ${name} | ${n} | ${errors} / ${stuck} | ${rate(cnt(rows, (x) => x.qinWin), n)} | ${mci(mean(rows, "turn"))} | ${rate(reached.length, n)} | ${pc(cnt(rows, (x) => x.q6turn > 0) / n)} | ${pc(cnt(rows, (x) => x.c6turn > 0) / n)} | ${cnt(rows, (x) => x.first6 === 0)} / ${cnt(rows, (x) => x.first6 === 1)} | ${rate(cnt(reached, (x) => x.firstWon), reached.length)} (${cnt(reached, (x) => x.firstWon)}/${reached.length}) |`);
+  }
+  out.push("", "End reasons, % of games [Wilson 95%]:", "");
+  out.push(`| cell | ${EMP_REASONS.map((e) => REASON_ZH[e] || "稱帝").join(" | ")} |`);
+  out.push(`|---|${EMP_REASONS.map(() => "---").join("|")}|`);
+  for (const name of order) {
+    const { rows, n } = cells[name];
+    out.push(`| ${name} | ${EMP_REASONS.map((e) => { const k = cnt(rows, (x) => x.reason === e); return k ? rate(k, n) : "0"; }).join(" | ")} |`);
+  }
+  out.push("", "Is it a reform race? Per game, both sides together [95%]; ops are face values; 'reform share' = ops discarded to reform ÷ ops spent on place + campaign + lobby + reform.", "");
+  out.push("| cell | reform uses / game | Qin uses | Chu uses | advances by event | final box Qin | final box Chu | ops: place | ops: campaign | ops: lobby | ops: reform | reform share of ops, % |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows } = cells[name];
+    out.push(`| ${name} | ${mci(mean(rows, "uses"))} | ${mean(rows, "qReformUses").m.toFixed(2)} | ${mean(rows, "cReformUses").m.toFixed(2)} | ${mean(rows, "eventAdvances").m.toFixed(2)} | ${mci(mean(rows, "qBox"))} | ${mci(mean(rows, "cBox"))} | ${mean(rows, "ops_place").m.toFixed(1)} | ${mean(rows, "ops_campaign").m.toFixed(1)} | ${mean(rows, "ops_lobby").m.toFixed(1)} | ${mci(mean(rows, "ops_reform"))} | ${pc(mean(rows, "reformShare").m)} |`);
+  }
+  out.push("", "Distributions: turn the first side reached box 6 (turn:games); final box per side (box:games, 0…6); end turn (turn:games); the highest reform-use games.", "");
+  const hist = (xs) => { const h = {}; for (const x of xs) h[x] = (h[x] || 0) + 1; return Object.entries(h).sort((a, b) => a[0] - b[0]).map(([k, v]) => `${k}:${v}`).join(" "); };
+  for (const name of order) {
+    const { rows } = cells[name];
+    const top = rows.slice().sort((a, b) => b.uses - a.uses).slice(0, 3);
+    out.push(`- **${name}**: first reach turn ${hist(rows.filter((x) => x.reached).map((x) => x.firstTurn)) || "none"}; final box Qin ${hist(rows.map((x) => x.qBox))}, Chu ${hist(rows.map((x) => x.cBox))}; end turn ${hist(rows.map((x) => x.turn))}; most reform uses ${top.map((x) => `seed ${x.seed} (${x.uses}, ${x.reason})`).join(", ")}`);
+  }
+  const pairs = order.filter((n) => !n.endsWith("/vp") && cells[n.replace(/[^/]+$/, "vp")]);
+  if (pairs.length) {
+    out.push("", "Difference from `vp` at the same level [95%]; ** = the interval leaves out 0:", "");
+    out.push("| cell − vp | Qin win pp | end turn | box 6 reached pp | first-there won pp | reform uses / game | reform share pp | 天命 end pp | 相印 end pp | 終局 end pp |");
+    out.push("|---|---|---|---|---|---|---|---|---|---|");
+    const star = (d, h, s) => (d - h > 0 || d + h < 0 ? `**${s}**` : s);
+    const dp = (k1, n1, k2, n2) => {
+      if (!n1 || !n2) return "–";
+      const p1 = k1 / n1, p2 = k2 / n2, d = p2 - p1, h = Z * Math.sqrt(p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2);
+      return star(d, h, `${(100 * d >= 0 ? "+" : "") + (100 * d).toFixed(1)} [${(100 * (d - h)).toFixed(1)}, ${(100 * (d + h)).toFixed(1)}]`);
+    };
+    const dm = (a, b, k, scale = 1) => {
+      const A = meanCi(a.map((x) => x[k])), Bm = meanCi(b.map((x) => x[k]));
+      const d = (Bm.m - A.m) * scale, h = Z * Math.sqrt(A.v / A.n + Bm.v / Bm.n) * scale;
+      return star(d, h, `${f2(d)} [${f2(d - h)}, ${f2(d + h)}]`);
+    };
+    for (const name of pairs) {
+      const a = cells[name.replace(/[^/]+$/, "vp")].rows, b = cells[name].rows;
+      const ra = a.filter((x) => x.reached), rb = b.filter((x) => x.reached);
+      const e = (rows, r) => cnt(rows, (x) => x.reason === r);
+      out.push(`| ${name} | ${dp(cnt(a, (x) => x.qinWin), a.length, cnt(b, (x) => x.qinWin), b.length)} | ${dm(a, b, "turn")} | ${dp(ra.length, a.length, rb.length, b.length)} | ${dp(cnt(ra, (x) => x.firstWon), ra.length, cnt(rb, (x) => x.firstWon), rb.length)} | ${dm(a, b, "uses")} | ${dm(a, b, "reformShare", 100)} | ${dp(e(a, "mandate"), a.length, e(b, "mandate"), b.length)} | ${dp(e(a, "alliance"), a.length, e(b, "alliance"), b.length)} | ${dp(e(a, "final"), a.length, e(b, "final"), b.length)} |`);
+    }
+  }
+  return out.join("\n");
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const rep = process.argv.find((a) => a.startsWith("--report="));
   if (rep) { console.log(report(rep.slice(9).split(","))); process.exit(0); }
+  const repE = process.argv.find((a) => a.startsWith("--report-emperor="));
+  if (repE) { console.log(reportEmperor(repE.slice(17).split(","))); process.exit(0); }
   const cfg = parseArgs(process.argv.slice(2));
   if (cfg.cells) await runCells(cfg);
   else {
