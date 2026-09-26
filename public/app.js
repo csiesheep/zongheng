@@ -2815,8 +2815,12 @@ let logRows = [];
 let logFilter = LogView.loadFilter();
 let logJustOpened = false;
 let activeLogSeq = null;
+// #120 fix: #logLines (.logbody-content) is the element that actually
+// scrolls now -- #logBody (.logbody) is a column flexbox whose header is a
+// plain, non-scrolling flex item (style.css), so #logBody itself no longer
+// has any scroll position of its own.
 function isLogAtBottom() {
-  const el = $("logBody");
+  const el = $("logLines");
   return el.scrollHeight - el.scrollTop - el.clientHeight < 40;
 }
 function syncLogFilters(chatAvailable) {
@@ -2840,7 +2844,7 @@ function renderLogPanel(v) {
     const el = $("logLines").querySelector(`.logrow[data-seq="${activeLogSeq}"]`);
     if (el) el.classList.add("active");
   }
-  if (wasAtBottom) $("logBody").scrollTop = $("logBody").scrollHeight;
+  if (wasAtBottom) $("logLines").scrollTop = $("logLines").scrollHeight;
   logJustOpened = false;
 }
 $("logFilters").querySelectorAll(".logf").forEach((b) => {

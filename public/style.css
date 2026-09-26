@@ -1708,14 +1708,35 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    pushing the fixed table layout around and forcing it to scroll. #27: the
    panel used to have no way to close itself once its own content grew tall
    enough to cover #logToggle in the prompt row underneath it — it now
-   carries a sticky header (title + a >=44px close button) that stays put
-   while .logbody-content scrolls, plus a full-viewport scrim that closes it
-   on click. */
-.logbody { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; max-height: 60svh; overflow-y: auto; padding: 0 0 calc(10px + env(safe-area-inset-bottom));
+   carries a header (title + a >=44px close button) that stays put while
+   .logbody-content scrolls, plus a full-viewport scrim that closes it on
+   click.
+   #120 fix (owner: the checker found the header sitting on top of the
+   first row -- reported at 390/375/320 en and 320 zh, passing only at
+   390 zh/1280 "only because the header is shorter there"): the header used
+   to be a `position: sticky` child INSIDE .logbody's own scrolling box,
+   and .logsec-turn (below) stuck at a hardcoded `top: 60px` guessed from
+   one language's header height. Any language/width whose header renders
+   taller than that guess (English's longer "All/Qin/Chu/Chat/Hide" labels,
+   or a wrapped title) breaks the guess, and .logsec-turn -- stuck too high
+   -- drags the very next row (the row right after it, e.g. turn 1's own
+   headline, the first row in a fresh game) up under the real, taller
+   header. A hardcoded number can never cover every language at every
+   width, so this removes the number instead of correcting it: .logbody is
+   now a column flexbox, the header is a plain (non-sticky, non-scrolling)
+   flex item sized by its own real content in that render, and
+   .logbody-content is the ONLY scrolling box, sized to whatever height is
+   actually left over. There is no assumed header height left anywhere, so
+   no row can ever end up under it, in any language, at any width, at rest
+   or scrolled -- app.js's isLogAtBottom()/scroll-to-bottom (renderLogPanel())
+   were repointed from #logBody to #logLines (the same element as
+   .logbody-content below) to match, since that's the element that now
+   actually scrolls. */
+.logbody { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; max-height: 60svh; display: flex; flex-direction: column;
   background: #15130f; border-top: 1px solid var(--gold-line); border-radius: 14px 14px 0 0; box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.5); font-size: 12px; color: var(--text-dim); line-height: 1.6; }
-.logbody-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 12px; background: #15130f; border-bottom: 1px solid var(--gold-line); border-radius: 14px 14px 0 0; }
+.logbody-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 12px; background: #15130f; border-bottom: 1px solid var(--gold-line); border-radius: 14px 14px 0 0; }
 .logbody-title { flex: 1 1 auto; min-width: 0; font-family: var(--serif); font-weight: 700; font-size: 13px; color: var(--gold); }
-.logbody-content { padding: 0 0 10px; }
+.logbody-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 0 calc(10px + env(safe-area-inset-bottom)); }
 .logscrim { position: fixed; inset: 0; z-index: 44; background: rgba(0, 0, 0, 0.45); }
 /* #88 (design A 逐手卷軸): 全部/秦/楚/對話 -- the 對話 tab is hidden by
    app.js's syncLogFilters() whenever there is no chat/bot line yet. */
@@ -1730,11 +1751,14 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 @media (max-width: 1023.98px) {
   .logbody-shrunk { max-height: 34svh; }
 }
-/* #88: section headers -- a sticky "Turn N · era" per turn (top offset is
-   .logbody-head's own height: 44px button + 8px top/bottom padding = 60),
-   a quiet "佈局"/Setup label over the two starting rows, and a small
-   "Move N" wherever the round changes within a turn. */
-.logsec-turn { position: sticky; top: 60px; z-index: 1; padding: 5px 14px; background: #1b1712; color: var(--text-dim); font: 700 11.5px/1 var(--sans); letter-spacing: 1px; border-bottom: 1px solid #2c261d; }
+/* #88: section headers -- a sticky "Turn N · era" per turn, a quiet
+   "佈局"/Setup label over the two starting rows, and a small "Move N"
+   wherever the round changes within a turn. #120 fix: `top: 0`, not a
+   guessed pixel offset -- .logbody-content (above) is this element's own
+   scrolling ancestor now that the panel's real header lives outside it, so
+   0 always means "right at the top of the scrollable rows" regardless of
+   the header's own height in any language/width. */
+.logsec-turn { position: sticky; top: 0; z-index: 1; padding: 5px 14px; background: #1b1712; color: var(--text-dim); font: 700 11.5px/1 var(--sans); letter-spacing: 1px; border-bottom: 1px solid #2c261d; }
 .logsec-head, .logsec-round { padding: 6px 14px 2px; color: #8d8474; font: 600 11px/1 var(--sans); }
 /* One row per move: a 4px side-colour bar, the ~30x40 thumbnail (its own
    nested <button> so tapping it opens the peek instead of flashing the
