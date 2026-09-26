@@ -182,6 +182,14 @@ export default {
     chipPlace: "{space} +{n}", chipRemove: "{target}: removes {n} {side}",
     chipReform: "Reform → box {box}", chipTire: "Weariness → {to}",
     chipDiscard: "{side} discards {card}", chipOpsLost: "{side} has nowhere to spend {ops} ops",
+    // #115: an event's own entries. An enemy card spent for ops used to show
+    // only its ops, whether its event happened or had nothing to do. {side}
+    // is the event's owner, not the player who played the card.
+    chipEvent: "{side}'s event: {card}", chipEventNone: "no effect: {why}",
+    eventWhy: { noTarget: "nothing it could target", noChange: "nothing changed (at the cap, nothing to remove, or already in play)" },
+    chipChose: "chosen by {side}", chipInf: "{space} {side} {d}", chipEffectOn: "In play: {card}", chipEffectOff: "Ends: {card}", chipDraw: "{side} hand {d}",
+    // #115: the card paired with The Lobbyist (its ops are spent, its event does not fire).
+    pairWith: "with {side}'s {card} (its event does not fire)",
     close: "Hide",
   },
   // #79/#87: the opponent's-move reveal -- the card panel (①, which waits
@@ -205,6 +213,8 @@ export default {
     tickerTire: "Weariness falls to {to}", tickerSeal: "Chu gains {state}'s seal",
     tickerUnseal: "Chu loses {state}'s seal", tickerMie: "Qin destroys {state}", tickerRestore: "{state} is restored",
     tickerJiuding: "The Cauldrons pass face down to {side}", tickerFinal: "Changes from the event",
+    // #115: an event starting, and an event with no effect. What it changed reuses logPanel's chipInf etc.
+    tickerEvent: "{side}'s event: {card}", tickerEventNone: "{side}'s event {card} has no effect: {why}",
   },
   useNames: { event: "event", place: "foster", campaign: "raid", lobby: "lobby", reform: "reform", bog: "bog" },
   scoringLevel: { none: "None", presence: "Presence", domination: "Domination", control: "Control" },

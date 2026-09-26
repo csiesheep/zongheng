@@ -476,14 +476,34 @@ function exec(st, step) {
     case "headline": return resolveHeadlines(st), true;
     case "event": {
       st.phasing = step.by ?? step.side;
+      // #115: an event used to leave no trace of its own in the log -- an
+      // enemy card spent for ops showed its ops and nothing else, so an event
+      // the opponent resolved (or one with nothing to do) looked like one
+      // that never happened. `event` marks the start (before the effect's own
+      // entries: vp, tire, campaign, discard ...), `eventEnd` says whether it
+      // changed anything and, if not, why.
+      let pre = step.pre;
+      if (pre == null) {
+        pre = eventMark(st);
+        log(st, { type: "event", card: step.card, side: step.side, by: st.phasing });
+      }
       for (let guard = 0; guard < 20; guard++) {
         const need = CARD[step.card].effect(st, step.side, step.choices, step);
         if (!need) break;
         // A choice with nothing to choose from resolves itself as "nothing".
-        if ((need.kind === "points" || need.kind === "card") && (!need.options.length || need.n === 0) && !(need.min > 0)) { step.choices.push([]); continue; }
+        if ((need.kind === "points" || need.kind === "card") && (!need.options.length || need.n === 0) && !(need.min > 0)) { step.empty = true; step.choices.push([]); continue; }
+        // Who answers the event's choices -- the card's owner, not always the
+        // player who played it -- goes into `eventEnd` as `chose`.
+        const who = need.who ?? step.side;
+        if (!(step.asked || []).includes(who)) step.asked = [...(step.asked || []), who];
+        step.pre = pre; // the mark waits in the plan only while a choice is pending
         return ask(st, step, { ...need, tag: "event", card: step.card });
       }
       step.done = true;
+      // What the event did, then what follows from it (滅, 相印): the log reads
+      // cause before consequence. Markers only follow influence, which
+      // `eventEnd` already counts, so logging it first loses nothing.
+      logEventEnd(st, step, pre);
       checkMarkers(st);
       return true;
     }
@@ -503,6 +523,7 @@ function exec(st, step) {
           return ask(st, step, { kind: "ops", ops: step.ops, card: step.card, allowed, options: o, tag: "ops" });
         }
         choice = step.choices[0];
+        if (step.playSeq) { const e = st.log.find((l) => l.i === step.playSeq && l.type === "play"); if (e) e.use = choice.use; }
       }
       doOps(st, step.side, step.card, step.ops, choice);
       return true;
@@ -543,6 +564,72 @@ function exec(st, step) {
     }
     default: fail(`exec: unknown step ${step.do}`);
   }
+}
+
+// What an event can change, read before it runs and compared after (#115).
+// When the event asks for a choice the mark waits in the plan step, and
+// `view` keeps the plan, so it holds only what both seats may see: a hand is
+// its size, never its cards. The bots play events out by the thousand while
+// they think, so the mark is plain copies (no JSON round trip for the board)
+// and the comparison does the set work only when something changed.
+function eventMark(st) {
+  const inf = {};
+  for (const k in st.inf) inf[k] = [st.inf[k][0], st.inf[k][1]];
+  return {
+    inf, mandate: st.mandate, weariness: st.weariness, reform: `${st.reform[0]}:${st.reform[1]}`,
+    hands: [st.hands[QIN].length, st.hands[CHU].length], draw: st.draw.length, discard: st.discard.length, removed: st.removed.length,
+    effects: st.effects.slice(), seals: Object.keys(st.seals).sort().join(), mie: Object.keys(st.mie).sort().join(),
+    jiuding: `${st.jiuding.holder}:${st.jiuding.faceDown}`, revealed: st.revealed.join(), forced: st.forced.join(), luoyiYields: st.luoyiYields, winner: st.winner,
+  };
+}
+const MARK_SCALARS = ["mandate", "weariness", "draw", "discard", "removed", "reform", "seals", "mie", "jiuding", "revealed", "forced", "luoyiYields", "winner"];
+const SPACE_ORDER = Object.fromEntries(SPACES.map((s, i) => [s.id, i]));
+// `effect`: did the event change anything at all. When it did not, `why`:
+// "noTarget" -- a choice it needed had nothing to choose from (no space with
+// enemy influence, nothing in the region to hit, an empty discard pile ...);
+// "noChange" -- it ran, but the board came out as it went in (every space at
+// the cap, nothing left to remove, a track already full, a lasting effect
+// already in play). What it changed that no other entry reports rides along:
+// influence per space (`inf`: [space, Qin delta, Chu delta]), lasting effects
+// added and removed (`fx`), hand sizes (`hands`: [Qin delta, Chu delta]), a
+// recovery of the weariness track (`recover`), and the seat(s) that answered
+// its choices (`chose`). Mandate, weariness lost, reform, seals, 滅 and
+// discards already log themselves.
+function logEventEnd(st, step, a) {
+  const b = eventMark(st);
+  const inf = [];
+  for (const k in b.inf) {
+    const x = a.inf[k] || [0, 0], y = b.inf[k];
+    if (x[0] !== y[0] || x[1] !== y[1]) inf.push([k, y[0] - x[0], y[1] - x[1]]);
+  }
+  for (const k in a.inf) if (!b.inf[k] && (a.inf[k][0] || a.inf[k][1])) inf.push([k, -a.inf[k][0], -a.inf[k][1]]);
+  inf.sort((p, q) => SPACE_ORDER[p[0]] - SPACE_ORDER[q[0]]);
+  // Lasting effects as a multiset (函谷關天險 re-played is removed and pushed
+  // back: the same set, no change).
+  const fx = { add: [], rm: [] };
+  // Same objects in the same order (no choice was asked, so no clone came
+  // between the marks): nothing to compare. Otherwise compare by content.
+  const same = a.effects.length === b.effects.length && a.effects.every((e, i) => e === b.effects[i]);
+  if (!same) {
+    const ea = a.effects.map((e) => JSON.stringify(e)), eb = b.effects.map((e) => JSON.stringify(e));
+    const count = (arr) => arr.reduce((m, k) => ((m[k] = (m[k] || 0) + 1), m), {});
+    const ca = count(ea), cb = count(eb);
+    for (const k of new Set([...ea, ...eb])) {
+      const d = (cb[k] || 0) - (ca[k] || 0), card = JSON.parse(k).card;
+      for (let i = 0; i < d; i++) fx.add.push(card);
+      for (let i = 0; i < -d; i++) fx.rm.push(card);
+    }
+  }
+  const dh = [b.hands[0] - a.hands[0], b.hands[1] - a.hands[1]];
+  const effect = inf.length > 0 || fx.add.length > 0 || fx.rm.length > 0 || dh[0] !== 0 || dh[1] !== 0 || MARK_SCALARS.some((k) => a[k] !== b[k]);
+  const entry = { type: "eventEnd", card: step.card, side: step.side, by: step.by ?? step.side, effect };
+  if (!effect) entry.why = step.empty ? "noTarget" : "noChange";
+  if (step.asked && step.asked.length) entry.chose = step.asked.slice();
+  if (inf.length) entry.inf = inf;
+  if (fx.add.length || fx.rm.length) entry.fx = fx;
+  if (dh[0] || dh[1]) entry.hands = dh;
+  if (b.weariness > a.weariness) entry.recover = b.weariness;
+  log(st, entry);
 }
 
 function startTurn(st) {
@@ -866,7 +953,13 @@ function play(st, action) {
       steps.push({ do: "finishCard", card: c, side, triggered: enemy }, { do: "endAction" });
     }
   } else fail(`play: bad use ${use}`);
-  log(st, { type: "play", side, card: c, use });
+  // 說客's pair is named (#115): its ops are the move's ops and it goes to the
+  // discard pile, so a log without it read as 說客 played alone.
+  log(st, { type: "play", side, card: c, use, ...(c === "shuoke" && action.pair ? { pair: action.pair } : {}) });
+  // Event first, the ops are chosen only after the event, and may go to any
+  // use then: the `use` above is only what the play said. The ops step writes
+  // the real one back into this entry (#115: the log read 「扶植 4」 for a raid).
+  for (const s of steps) if (s.do === "ops" && !s.payload) s.playSeq = st.logSeq;
   st.plan.unshift(...steps);
   return run(st);
 }

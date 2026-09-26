@@ -274,9 +274,13 @@ export function answer(st, p, who, rng) {
 function actionCandidates(st, side, L) {
   const out = [];
   if (L.bog && L.bog.length) return L.bog.map((c) => ({ type: "play", side, card: c, use: "bog" }));
+  let dead = null;
   for (const c of L.cards) {
     const u = c.uses, id = c.id;
-    out.push({ type: "play", side, card: id, use: "event" });
+    // 說客 alone as its event does nothing (its effect is empty): a dead play,
+    // offered only when nothing else is legal (#115).
+    if (id === "shuoke") dead = { type: "play", side, card: id, use: "event" };
+    else out.push({ type: "play", side, card: id, use: "event" });
     if (u.reform) out.push({ type: "play", side, card: id, use: "reform" });
     if (u.place) { const points = greedyPlacement(st, side, u.place.ops); if (points.length) out.push({ type: "play", side, card: id, use: "place", order: "opsFirst", points }); }
     if (u.campaign) for (const t of u.campaign.targets) out.push({ type: "play", side, card: id, use: "campaign", order: "opsFirst", target: t });
@@ -300,6 +304,7 @@ function actionCandidates(st, side, L) {
     if (j.campaign) for (const t of j.campaign.targets) out.push({ type: "play", side, card: JIUDING, use: "campaign", target: t });
     if (j.lobby) for (const t of j.lobby.targets) out.push({ type: "play", side, card: JIUDING, use: "lobby", target: t.id });
   }
+  if (!out.length && dead) out.push(dead);
   return out;
 }
 
@@ -413,9 +418,11 @@ export function randomAction(st, side, rng) {
       const scoring = L.cards.find((c) => CARD[c.id].scoring);
       if (scoring) return { type: "play", side, card: scoring.id, use: "event" };
       const opts = [];
+      // 說客 alone as its event is a dead play (#115): only when nothing else is legal.
+      const dead = L.cards.some((c) => c.id === "shuoke") ? { type: "play", side, card: "shuoke", use: "event" } : null;
       for (const c of L.cards) {
         const u = c.uses;
-        opts.push({ type: "play", side, card: c.id, use: "event" });
+        if (c.id !== "shuoke") opts.push({ type: "play", side, card: c.id, use: "event" });
         if (u.reform) opts.push({ type: "play", side, card: c.id, use: "reform" });
         const order = () => (u.enemy ? (rng.next() < 0.5 ? "eventFirst" : "opsFirst") : undefined);
         if (u.place) opts.push(() => { const o = order(); return { type: "play", side, card: c.id, use: "place", order: o, points: o === "eventFirst" ? undefined : randomPoints(st, side, u.place.ops, rng) }; });
@@ -424,7 +431,7 @@ export function randomAction(st, side, rng) {
         if (u.pair && u.pair.length) opts.push(() => {
           const pair = pickOne(u.pair, rng);
           const ops = randomOps(st, side, E.opsOf(st, side, pair), ["place", "campaign", "lobby"], rng);
-          return ops ? { type: "play", side, card: c.id, pair, ...ops } : { type: "play", side, card: c.id, use: "event" };
+          return ops ? { type: "play", side, card: c.id, pair, ...ops } : null;
         });
       }
       if (L.jiuding) {
@@ -433,9 +440,14 @@ export function randomAction(st, side, rng) {
         if (j.campaign) opts.push(() => ({ type: "play", side, card: JIUDING, use: "campaign", target: pickOne(j.campaign.targets, rng) }));
         if (j.lobby) opts.push(() => ({ type: "play", side, card: JIUDING, use: "lobby", target: pickOne(j.lobby.targets, rng).id }));
       }
-      if (!opts.length) return null;
-      const o = pickOne(opts, rng);
-      return typeof o === "function" ? o() : o;
+      // A pair with no ops to spend comes back null: draw again from the rest.
+      while (opts.length) {
+        const i = rng.int(opts.length), o = opts[i];
+        const a = typeof o === "function" ? o() : o;
+        if (a) return a;
+        opts.splice(i, 1);
+      }
+      return dead;
     }
     default: return null;
   }

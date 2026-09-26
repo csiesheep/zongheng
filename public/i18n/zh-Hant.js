@@ -146,6 +146,13 @@ export default {
     chipPlace: "{space} +{n}", chipRemove: "{target}:移除{side} {n}",
     chipReform: "變法 → 第 {box} 格", chipTire: "疲敝 → {to}",
     chipDiscard: "{side}棄掉{card}", chipOpsLost: "{side}的 {ops} 點行動點無處可用",
+    // #115:事件自己的紀錄。以前敵方的牌拿來用行動點時,紀錄裡只有行動點,
+    // 事件發生了(或沒有可做的事)都看不到。{side} 是事件的主人,不是打牌的人。
+    chipEvent: "{side}的事件:{card}", chipEventNone: "沒有效果:{why}",
+    eventWhy: { noTarget: "沒有可以執行的目標", noChange: "局面沒有改變(已達上限、無可移除或已在場)" },
+    chipChose: "{side}選擇", chipInf: "{space} {side} {d}", chipEffectOn: "持續:{card}", chipEffectOff: "移除:{card}", chipDraw: "{side}手牌 {d}",
+    // #115:說客搭配的那張牌(它的行動點被使用,事件不觸發)。
+    pairWith: "搭配{side}的「{card}」(不觸發事件)",
     close: "收起",
   },
   // #79/#87:對手的一手亮牌——卡牌面板(①,等待一次點按)與地圖演出(②)。
@@ -166,6 +173,8 @@ export default {
     tickerTire: "疲敝降至{to}", tickerSeal: "楚取得{state}相印",
     tickerUnseal: "楚失去{state}相印", tickerMie: "秦滅{state}", tickerRestore: "{state}復國",
     tickerJiuding: "九鼎蓋著交給{side}", tickerFinal: "事件造成的改變",
+    // #115:事件的開始與「沒有效果」。事件改變了什麼,沿用 logPanel 的 chipInf 等。
+    tickerEvent: "{side}的事件「{card}」", tickerEventNone: "{side}的事件「{card}」沒有效果:{why}",
   },
   useNames: { event: "事件", place: "扶植", campaign: "奇襲", lobby: "遊說", reform: "變法", bog: "頓兵" },
   scoringLevel: { none: "無", presence: "存在", domination: "優勢", control: "獨佔" },
