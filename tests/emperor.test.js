@@ -143,6 +143,31 @@ test(`win-late: from turn ${LATE_FROM} on, the first to box 6 wins, reason emper
   }
 });
 
+// win-lead (#121's one extra, from the numbers: under `win` 75 of 187 games won by 稱帝 went to the side behind on the
+// Mandate): the first to box 6 wins only when it leads the Mandate at that moment (Qin above 0, Chu below 0); otherwise
+// it is +3 as today and the first place is taken.
+const LEAD = 4;
+function withMandate(st, m) { const s = E.clone(st); s.mandate = m; return s; }
+test("win-lead: the first to box 6 while leading the Mandate wins, reason emperor", () => {
+  for (const side of [QIN, CHU]) {
+    const st = reform(withMandate(atBox5({ emperor: "win-lead" }, side, 3), signed(side, LEAD)), side);
+    assert.equal(st.winner, side);
+    assert.equal(st.reason, "emperor");
+  }
+});
+test(`win-lead: the first to box 6 while level or behind gets +${FIRST_VP}, the game goes on, and the second cannot win by it`, () => {
+  for (const side of [QIN, CHU]) for (const m of [0, -LEAD]) {
+    const st = reform(withMandate(atBox5({ emperor: "win-lead" }, side, 6), signed(side, m)), side);
+    assert.equal(st.winner, null, `side ${side} mandate ${m}`);
+    assert.equal(st.mandate, signed(side, m + FIRST_VP));
+    assert.equal(st.reformFirst[6], side);
+  }
+  // The other side, leading, arrives second: +1, no win.
+  const second = reform(withMandate(atBox5({ emperor: "win-lead" }, CHU, 7, 6), signed(CHU, LEAD)), CHU);
+  assert.equal(second.winner, null);
+  assert.equal(second.mandate, signed(CHU, LEAD + SECOND_VP));
+});
+
 // ---------- the bots under a win by reform ----------
 // A bot that ignores a winning condition makes a simulation of it meaningless (#121 brief). Positions: random play
 // to Qin's action round on turn 7, then Qin is put at `box` with `used` reform advances spent this turn and 長平之戰
@@ -224,6 +249,24 @@ test("bots, win: at box 4 with two advances left, a 3-op card and 長平, hard c
     if (!climbed) other.push(`seed ${seed}: ${a.card} ${a.use} -> box ${after.reform[QIN]}`);
   }
   assert.deepEqual(other, []);
+});
+
+test("bots, win-lead: leading the Mandate at box 5 with no advance left, normal and hard keep 長平; with an advance, they win", () => {
+  const keep = racePositions({ emperor: "win-lead" }, 5, 2).map((p) => ({ ...p, st: withMandate(p.st, LEAD) }));
+  const now = racePositions({ emperor: "win-lead" }, 5, 0).map((p) => ({ ...p, st: withMandate(p.st, LEAD) }));
+  assert.ok(keep.length >= 8 && now.length >= 8);
+  const bad = [];
+  for (const level of ["normal", "hard"]) {
+    for (const { seed, st } of keep) {
+      const a = B.decide(E.view(st, QIN), QIN, level, E.makeRng(seed));
+      if (a.card === "changping" || a.pair === "changping") bad.push(`${level} seed ${seed}: spent it on ${a.use}`);
+    }
+    for (const { seed, st } of now) {
+      const a = B.decide(E.view(st, QIN), QIN, level, E.makeRng(seed));
+      if (B.simulate(st, a, E.makeRng(seed)).reason !== "emperor") bad.push(`${level} seed ${seed}: ${a.card} ${a.use}, no win`);
+    }
+  }
+  assert.deepEqual(bad, []);
 });
 
 test("bots, default: the evaluation of a position is the same with the option absent and with emperor=vp", () => {

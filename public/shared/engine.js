@@ -291,12 +291,23 @@ export function hasPerk(st, side, perk) { return REFORM.some((r) => r.perk === p
 //   "win"      the first to reach it wins at once (end reason "emperor")
 //   "win-late" as "win" from turn 5 on; before that +3 as "vp", and the first
 //              place is then taken, so no one can win by it afterwards
+//   "win-lead" as "win", but only for a side that leads the Mandate at that
+//              moment (Qin above 0, Chu below 0); level or behind it is +3 as
+//              "vp" and the first place is taken
 // The second to arrive always gets +1; nobody wins by arriving second.
-export const EMPEROR = ["vp", "vp5", "win", "win-late"];
+export const EMPEROR = ["vp", "vp5", "win", "win-late", "win-lead"];
 export const EMPEROR_LATE_FROM = 5;
-export function emperorWins(st) {
+// Whether `side` still has a win by 稱帝 to race for (box 6 open, and under
+// win-lead only while it leads), whatever the turn; the bots read this.
+export function emperorLive(st, side) {
   const e = st.options.emperor;
-  return e === "win" || (e === "win-late" && st.turn >= EMPEROR_LATE_FROM);
+  if (st.reformFirst[6] != null) return false;
+  if (e === "win" || e === "win-late") return true;
+  return e === "win-lead" && (side === QIN ? st.mandate > 0 : st.mandate < 0);
+}
+// Whether `side` reaching box 6 first right now wins the game.
+export function emperorWins(st, side) {
+  return emperorLive(st, side) && (st.options.emperor !== "win-late" || st.turn >= EMPEROR_LATE_FROM);
 }
 export function reformAdvance(st, side, n = 1) {
   for (let i = 0; i < n; i++) {
@@ -304,8 +315,9 @@ export function reformAdvance(st, side, n = 1) {
     const box = ++st.reform[side], R = REFORM[box - 1];
     log(st, { type: "reform", side, box });
     if (st.reformFirst[box] == null) {
+      const wins = R.perk === "emperor" && emperorWins(st, side);
       st.reformFirst[box] = side;
-      if (R.perk === "emperor" && emperorWins(st)) { win(st, side, "emperor"); return; }
+      if (wins) { win(st, side, "emperor"); return; }
       vp(st, side, R.perk === "emperor" && st.options.emperor === "vp5" ? 5 : R.first);
     } else vp(st, side, R.second);
     if (R.perk === "emperor") recover(st, 1);

@@ -102,13 +102,16 @@ export function evaluate(st, side, terms = null) {
   const reformPerk = REFORM_PERK[st.reform[QIN]] - REFORM_PERK[st.reform[CHU]];
   vq += reformPerk;
   if (T) T("reform", reformPerk);
-  // #121: under emperor "win" / "win-late" the first to box 6 wins the game,
-  // so the track is a road to a win like 滅 and 相印 are: worth more the
-  // closer it gets, and the 4-op card that takes the last step is worth
-  // keeping. Only while box 6 is still open; never under the default rule.
+  // #121: under emperor "win" / "win-late" / "win-lead" the first to box 6
+  // wins the game, so the track is a road to a win like 滅 and 相印 are: worth
+  // more the closer it gets, and the 4-op card that takes the last step is
+  // worth keeping. Only for a side that can still win by it (E.emperorLive:
+  // box 6 open, and under win-lead only while that side leads the Mandate);
+  // never under the default rule.
   const emp = st.options.emperor;
-  if ((emp === "win" || emp === "win-late") && st.reformFirst[6] == null) {
+  if (emp === "win" || emp === "win-late" || emp === "win-lead") {
     const race = (s) => {
+      if (!E.emperorLive(st, s)) return 0;
       const box = st.reform[s];
       const card = box >= 4 && st.hands[s].some((c) => c !== JIUDING && CARD[c].ops >= 4) ? (box === 5 ? EMPEROR_CARD : EMPEROR_CARD / 2) : 0;
       return EMPEROR_ROAD[box] + card;
