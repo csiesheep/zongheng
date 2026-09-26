@@ -12,15 +12,33 @@
 // `controlled` on a lone/split part is exactly `ctl === that side`, which is
 // what decides light tone (uncontrolled: grey/pink) vs dark tone (in
 // control: black/red) -- see the owner's table in issue #51.
+//
+// #129: `atCap` adds a FOURTH, optional argument and a per-numeral flag --
+// design D from the owner's cap_design_D.png (top row): a short bar over a
+// side's own number once that side's influence there equals its cap
+// (stability + 2, E.capOf). It is computed here (not passed in as a class) so
+// the same rule that decides shape/tone also decides the bar, and the "only
+// the full side's number gets it in a split disc" rule falls out for free --
+// a side only gets `atCap: true` when ITS OWN count reached ITS OWN cap, so
+// the other half of a split disc is untouched even if it happens to be the
+// one under a different rule (e.g. controlled) at the same time.
+//
+// `capOf` is OPTIONAL and left out of the returned parts entirely when
+// omitted (not even `atCap: false`) -- tests/disc-view.test.js (orchestrator,
+// #51, predates this issue) calls discParts() with the old 3-arg signature
+// and asserts deepEqual against objects with no `atCap` key at all; adding
+// the key unconditionally would fail every one of those on a key it never
+// asked about. Every real call from app.js's renderMap() passes `capOf`.
 import { QIN, CHU } from "./shared/engine.js";
 
-export function discParts(q, c, ctl) {
+export function discParts(q, c, ctl, capOf) {
+  const cap = (n) => (capOf == null ? {} : { atCap: n >= capOf });
   if (!q && !c) return { kind: "empty" };
-  if (q && !c) return { kind: "lone", side: QIN, n: q, controlled: ctl === QIN };
-  if (c && !q) return { kind: "lone", side: CHU, n: c, controlled: ctl === CHU };
+  if (q && !c) return { kind: "lone", side: QIN, n: q, controlled: ctl === QIN, ...cap(q) };
+  if (c && !q) return { kind: "lone", side: CHU, n: c, controlled: ctl === CHU, ...cap(c) };
   return {
     kind: "split",
-    qin: { n: q, controlled: ctl === QIN },
-    chu: { n: c, controlled: ctl === CHU },
+    qin: { n: q, controlled: ctl === QIN, ...cap(q) },
+    chu: { n: c, controlled: ctl === CHU, ...cap(c) },
   };
 }

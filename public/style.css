@@ -728,6 +728,22 @@ body.table-lock.table-overflow #table { flex: none; min-height: auto; overflow: 
 .node .disc.split.ctl-q.ctl-c { background: linear-gradient(to right, #0e0e0e 0%, #0e0e0e 36%, #a31c15 64%, #a31c15 100%); }
 .node .disc.split i.c { color: #4a0c08; }
 .node .disc.split.ctl-c i.c { color: #fff; }
+/* #129, design D (owner's cap_design_D.png, top row): a side at its cap
+   (E.capOf: stability + 2) gets a short bar directly over its OWN number,
+   inside the disc, in that number's own colour -- no new colour, no change
+   to the disc's size. `currentColor` is the point: `i`'s `color` already
+   carries every tone rule above (white/#4a0c08/etc, lone or split, control
+   or not), so the bar always matches the digit under it without a second
+   set of colour rules to keep in sync. Split halves are narrower than a
+   lone disc's single numeral, so the bar is narrower there too. */
+.node .disc i.atcap { position: relative; }
+.node .disc i.atcap::before {
+  content: ""; position: absolute; left: 50%; top: 4px; transform: translateX(-50%);
+  width: 6px; height: 2px; border-radius: 1px; background: currentColor;
+}
+.node .disc.lone-q i.atcap::before, .node .disc.lone-c i.atcap::before { width: 9px; top: 3px; }
+.node.big .disc i.atcap::before { top: 5px; }
+.node.big .disc.lone-q i.atcap::before, .node.big .disc.lone-c i.atcap::before { top: 4px; width: 10px; }
 .node .nm { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: 2px; display: block; white-space: nowrap; font: 700 13px/1.2 var(--kai); color: #1a1a1a; text-align: center; text-shadow: 0 0 3px #f7f3e8, 0 0 3px #f7f3e8, 0 0 2px #f7f3e8, 0 0 2px #f7f3e8; }
 .node .nm.sm { font-size: 11px; }
 .node .nm.two-line { font-size: 11px; line-height: 1.05; white-space: normal; width: 44px; }
