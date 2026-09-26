@@ -464,6 +464,15 @@ function reportEmperor(files) {
     const { rows, n } = cells[name];
     out.push(`| ${name} | ${EMP_REASONS.map((e) => { const k = cnt(rows, (x) => x.reason === e); return k ? rate(k, n) : "0"; }).join(" | ")} |`);
   }
+  out.push("", "Games in which box 6 was reached: how they ended, as first-there side won / lost, and the Mandate at the end from the first-there side's point of view (median; for a 稱帝 win it is the Mandate at that moment):", "");
+  out.push(`| cell | games | ${EMP_REASONS.map((e) => REASON_ZH[e] || "稱帝").join(" | ")} | first-there's Mandate, median |`);
+  out.push(`|---|---|${EMP_REASONS.map(() => "---").join("|")}|---|`);
+  for (const name of order) {
+    const reached = cells[name].rows.filter((x) => x.reached);
+    const wl = (e) => { const r = reached.filter((x) => x.reason === e); return r.length ? `${cnt(r, (x) => x.firstWon)} / ${cnt(r, (x) => !x.firstWon)}` : "–"; };
+    const own = reached.map((x) => (x.first6 === 0 ? x.mandate : -x.mandate));
+    out.push(`| ${name} | ${reached.length} | ${EMP_REASONS.map(wl).join(" | ")} | ${own.length ? quant(own, 0.5) : "–"} |`);
+  }
   out.push("", "Is it a reform race? Per game, both sides together [95%]; ops are face values; 'reform share' = ops discarded to reform ÷ ops spent on place + campaign + lobby + reform.", "");
   out.push("| cell | reform uses / game | Qin uses | Chu uses | advances by event | final box Qin | final box Chu | ops: place | ops: campaign | ops: lobby | ops: reform | reform share of ops, % |");
   out.push("|---|---|---|---|---|---|---|---|---|---|---|---|");
