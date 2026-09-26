@@ -1750,7 +1750,7 @@ const useEn = (u) => en.uses[u];
 function sheetMid(sh) {
   const d = document.createElement("div"); d.className = "sheet-mid"; sh.appendChild(d); return d;
 }
-// #118 item 2: toggles `.scroll-fade` (style.css) on `mid` once its real,
+// #118 item 2: toggles `.has-more` (style.css) on `mid` once its real,
 // final height is known (see the requestAnimationFrame call above) -- true
 // exactly when `mid`'s own content actually overflows it. style.css fades
 // the last ~28px of `mid` to transparent while this class is on, so a line
@@ -1761,7 +1761,7 @@ function sheetMid(sh) {
 // issue asks for either way, since `mid` still opens scrolled to the top.
 function syncMidFade(mid) {
   if (!mid.isConnected) return; // #118: a later render may have replaced it before this frame runs
-  mid.classList.toggle("scroll-fade", mid.scrollHeight - mid.clientHeight > 1);
+  mid.classList.toggle("has-more", mid.scrollHeight - mid.clientHeight > 1);
 }
 // #46 (owner: "看手牌沒有卡牌歷史" + a player must never scroll to reach a
 // button): a fixed (non-scrolling) sibling of sheetMid(), between the
