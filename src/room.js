@@ -334,7 +334,9 @@ export class Room {
     const now = Date.now();
     const need = E.mustAct(st);
     // The clock restarts whenever the decision on the table changes.
-    const key = `${st.turn}:${st.phase}:${st.round}:${st.actor}:${st.pending ? st.pending.kind + st.pending.who : ""}:${st.headline.map((h) => (h ? 1 : 0)).join("")}`;
+    // #130: `k` is the 收手 decision's attempt number (realign-own): each roll is a
+    // new decision with its own clock, not one clock for the whole 遊說.
+    const key = `${st.turn}:${st.phase}:${st.round}:${st.actor}:${st.pending ? st.pending.kind + st.pending.who + (st.pending.k ?? "") : ""}:${st.headline.map((h) => (h ? 1 : 0)).join("")}`;
     if (key !== room.clockKey) { room.clockKey = key; room.deadline = now + CLOCK_MS[this.clockKind(st)]; }
     this.pushViews();
     const bots = this.botSides(need);
