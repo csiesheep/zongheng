@@ -17,11 +17,12 @@ import ZH from "../public/i18n/zh-Hant.js";
 
 const { QIN, CHU, CARD, SPACE, JIUDING } = E;
 
-// issue #17, plus the bogDiscard key added by the orchestrator on 2026-09-19.
+// issue #17, plus the bogDiscard key added by the orchestrator on 2026-09-19,
+// plus `emperor` (#125 item 6: the reason when the move wins by 稱帝).
 const REASON_KEYS = [
   "takeControl", "breakControl", "battleground", "scoringSoon", "destroyState",
   "nearDestroy", "seal", "denySeal", "mandate", "reform", "dumpEnemyEvent",
-  "mustPlayScoring", "avoidCollapse", "bogDiscard", "best",
+  "mustPlayScoring", "avoidCollapse", "bogDiscard", "emperor", "best",
 ];
 const USES = ["event", "place", "campaign", "lobby", "reform", "score", "bog", "headline"];
 const ORDERS = ["opsFirst", "eventFirst"];

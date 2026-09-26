@@ -161,16 +161,20 @@ test("end reasons: a spectator's emperor line never says you", () => {
 });
 
 // ---------- the advisor ----------
-test("advisor: the reform that reaches 稱帝 while leading is recommended, and its reason is emperor with copy in both languages", () => {
+// The winning move is usually 長平 for reform; a side may also hold an event that moves its own track (吳起變法 for
+// Chu), which wins the same way. Either is right; what is checked is that the move wins by 稱帝 and says so.
+test("advisor: a move that reaches 稱帝 while leading is recommended, and its reason is emperor with copy in both languages", () => {
   const got = [];
   for (const side of [QIN, CHU]) for (const turn of [3, 6]) {
     const st = atBox5(actionRound({}, side, turn), side, LEAD);
     const adv = A.advise(E.view(st, side), side, E.makeRng(turn));
-    got.push(`${side}/${turn}: ${adv.card} ${adv.use} ${adv.reason.key}`);
-    assert.equal(adv.card, "changping", got.at(-1));
-    assert.equal(adv.use, "reform", got.at(-1));
+    const after = E.apply(st, { ...adv.action, side });
+    got.push(`${side}/${turn}: ${adv.card} ${adv.use} ${adv.reason.key} -> ${after.reason}`);
+    assert.equal(after.reason, "emperor", got.at(-1));
+    assert.equal(after.winner, side, got.at(-1));
     assert.equal(adv.reason.key, "emperor", got.at(-1));
   }
+  assert.ok(got.some((g) => / changping reform /.test(g)), `長平 for reform was never the move: ${got.join("; ")}`);
   for (const L of [ZH, EN]) assert.ok(typeof L.advisor.reasons.emperor === "string" && L.advisor.reasons.emperor.trim());
 });
 
