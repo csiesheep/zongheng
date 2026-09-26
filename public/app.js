@@ -902,6 +902,18 @@ function layoutTableDesktop() {
 // (see mapOverflow below), which would turn this from "two rare states
 // scroll a little" into "every state scrolls a little."
 const LOWER_BLOCK_H = 172;
+// #118 (orchestrator: 320x568 must fit, page scroll 0, without moving
+// 375/390's own map rect): 320 has ~100px less real height than 375/667 to
+// give the SAME 172px lower block and still leave the map its floor -- some
+// of that has to come out of the lower block's own budget too, not just the
+// map (see `narrowTable`/`lowerBlockH` at layoutTable()'s own step 1 below).
+// 140 keeps a real hand row (#68's own fixed CHIP_H/HAND_GUTTER budget,
+// still the smallest a give-way state ever needs) plus two lines of
+// #prompt -- the same floor #109 already sets on #prompt itself, just
+// confirmed to still fit the smaller box. Picked against the #118 table
+// walk at 320x568, not measured from any single state, same as
+// LOWER_BLOCK_H itself.
+const LOWER_BLOCK_H_NARROW = 140;
 function layoutTable() {
   const table = $("table");
   if (table.hidden) return;
@@ -969,13 +981,36 @@ function layoutTable() {
   const tcs = getComputedStyle(table);
   const visibleKids = [...table.children].filter((c) => getComputedStyle(c).display !== "none").length;
   const gapsAndPadding = parseFloat(tcs.paddingTop) + parseFloat(tcs.paddingBottom) + Math.max(0, visibleKids - 1) * parseFloat(tcs.rowGap || 0);
+  // #118 (orchestrator: 320x568 must fit, without moving 375/390's map rect
+  // at all): 320 is narrower than the two viewports LOWER_BLOCK_H was picked
+  // against (the comment above it names 390x669 zh as the tighter of the
+  // two, with 375x667 en landing 1px inside FLOOR_SCALE's own floor -- see
+  // the #118 table walk) -- there is no LOWER_BLOCK_H narrow enough to give
+  // 320 the map's full FLOOR_SCALE spec too without shrinking it below
+  // spaceForMap's own real number, which is exactly what used to force
+  // table-overflow's page-scroll fallback here. `narrowTable` is true only
+  // below 375 (checked against the map's own measured width, same one
+  // `widthScale` already reads) — 375/390 both sit at or above FLOOR_SCALE
+  // already (spaceForMap/DESIGN_H computed at 375x667 en: 0.848, 1px under
+  // 0.8511 -- `Math.max` picks the higher FLOOR_SCALE there today and
+  // mapOverflow's own +1 tolerance already absorbs that 1px, so this branch
+  // must never fire there), so their own `Math.max(FLOOR_SCALE, ...)` path
+  // is untouched below. Only 320 falls through to the plain `spaceForMap /
+  // DESIGN_H` -- a smaller map, exactly the concession the issue itself
+  // offers, sized to fit whatever's actually left rather than forcing an
+  // overflow the floor can't back down from. `LOWER_BLOCK_H_NARROW` (below)
+  // also trims what has to come out of the map in the first place.
+  const narrowTable = availW < 360;
+  const lowerBlockH = narrowTable ? LOWER_BLOCK_H_NARROW : LOWER_BLOCK_H;
   const spaceForMapAndLower = availH - topbarH - statlineH - gapsAndPadding;
-  const spaceForMap = spaceForMapAndLower - LOWER_BLOCK_H;
+  const spaceForMap = spaceForMapAndLower - lowerBlockH;
   // Never below FLOOR_SCALE (the map's own spec), never above widthScale
   // (that would overflow sideways) — same floor/width clamp #68 inherited
   // from the old budget, just against a fixed target instead of a measured
   // one.
-  const scale = Math.min(widthScale, Math.max(FLOOR_SCALE, spaceForMap / DESIGN_H));
+  const scale = narrowTable
+    ? Math.min(widthScale, spaceForMap / DESIGN_H)
+    : Math.min(widthScale, Math.max(FLOOR_SCALE, spaceForMap / DESIGN_H));
   const mapH = Math.round(DESIGN_H * scale);
   // #68 point 3: a viewport that can't give the map its FLOOR_SCALE spec
   // alongside this fixed lower block (375x553 is the known case) keeps the
@@ -985,7 +1020,7 @@ function layoutTable() {
   const mapOverflow = mapH > spaceForMap + 1;
   $("map").style.flex = `0 0 ${mapH}px`;
   fitMap(scale);
-  lowerBlock.style.flex = `0 0 ${LOWER_BLOCK_H}px`;
+  lowerBlock.style.flex = `0 0 ${lowerBlockH}px`;
 
   // 2) Everything that varies negotiates INSIDE the lower block's own fixed
   // height — #promptScroll (flex:1, min-height:0) already shrinks and
@@ -1025,7 +1060,7 @@ function layoutTable() {
   promptEl.style.minHeight = bannerShown
     ? Math.ceil(advBanner.getBoundingClientRect().height + promptPad) + "px"
     : Math.ceil((parseFloat(promptCS.lineHeight) || 18) * 2 + promptPad) + "px";
-  const fits = () => lowerBlock.scrollHeight <= LOWER_BLOCK_H + 1;
+  const fits = () => lowerBlock.scrollHeight <= lowerBlockH + 1;
   if (mapActive && !hand.hidden && !fits()) {
     // Stage 1: the hand row gives way first — its cards (if it holds any)
     // aren't needed while the map itself is what's being tapped (target
