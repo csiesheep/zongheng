@@ -22,6 +22,19 @@ const REFORM_PERK = [0, 0.5, 1.5, 3, 4, 6, 7];
 // as a third 滅 or a fourth 相印 is one marker away, and weighs the same 8.
 const EMPEROR_ROAD = [0, 0, 0.5, 1.5, 4, 8], EMPEROR_CARD = E.MANDATE_TO_WIN;
 const NOISE = { easy: 0, normal: 0.6, hard: 0.2 };
+// #130, only under homeFall: a capital is a road to a loss, like the last 滅 or
+// 相印. FALL is what losing it is worth to a one-ply bot that must see it coming
+// (the game scores -1000 once it happens); the road is the share of it by the
+// points the enemy still lacks (0 = the enemy holds it now, which counts at the
+// turn end under lose-turn / lose-majority / move; 1 = one point away ...) and
+// by who acts next: the attacker (ROAD_TEMPO, it can finish), the defender
+// (ROAD_DEFENCE, it can answer), or neither yet (ROAD: headlines, a pending choice).
+// Under move the FIRST fall of the home capital costs MOVE_VP (and a capital
+// nearer the front, which the evaluation then sees as the new road), so that
+// road is MOVE_ROAD of MOVE_VP: steep, so that taking it is worth nearly the
+// whole +3 to the taker rather than being credited in advance.
+const FALL = 60, ROAD = [1, 0.6, 0.25, 0.1, 0.03], ROAD_TEMPO = [1, 0.9, 0.4, 0.15, 0.05], ROAD_DEFENCE = [0.5, 0.25, 0.1, 0.03, 0.01];
+const MOVE_ROAD = [1, 0.3, 0.1, 0.03];
 const pickOne = (arr, rng) => arr[rng.int(arr.length)];
 function gauss(rng) {
   let u = 0, v = 0;
@@ -137,6 +150,21 @@ export function evaluate(st, side, terms = null) {
     vq += road;
     if (T) T("reform", road);
   }
+  const hf = st.options.homeFall;
+  if (hf && hf !== "none") {
+    let cap = 0;
+    for (const s of [QIN, CHU]) {
+      const id = E.homeCapital(st, s), [q, c] = E.infOf(st, id), own = s === QIN ? q : c, foe = s === QIN ? c : q;
+      const short = hf === "lose-majority" ? Math.max(0, own - foe + 1) : Math.max(0, own + SPACE[id].stability - foe);
+      const next = st.phase === "action" && !st.pending ? st.actor : null;
+      const first = hf === "move" && id === E.HOME_CAPITAL[s];
+      const road = first ? MOVE_ROAD : next === 1 - s ? ROAD_TEMPO : next === s ? ROAD_DEFENCE : ROAD;
+      if (short >= road.length) continue;
+      cap += (s === QIN ? -1 : 1) * (first ? E.MOVE_VP : FALL) * road[short];
+    }
+    vq += cap;
+    if (T) T("capital", cap);
+  }
   const enemyCards = (s) => st.hands[s].filter((c) => CARD[c].side === 1 - s).length;
   const enemyHeld = 0.4 * (enemyCards(QIN) - enemyCards(CHU));
   vq -= enemyHeld;
@@ -232,17 +260,57 @@ export function opsForOrder(view, side, card, order) {
     return s.pending && s.pending.tag === "ops" && s.pending.card === card ? s.pending.ops : now;
   } catch { return now; }
 }
+// ---------- #130: 遊說 as a roll (lobby "realign" / "realign-mild") ----------
+// One simulation of a realignment is ONE roll of the dice. Ranking candidates by
+// one roll each picks the lucky ones: before this, 70 of the normal bot's 94
+// 遊說 under realign (12 games) were worth more than 1 point less, over 48
+// rolls, than its best other play (by 6 on average). So under realign a 遊說
+// is (1) offered only where one attempt is worth something on average, the
+// risk to the actor's own points counted (`realignExpect`), and (2) scored as
+// the mean over DICE_K rolls. Off realign nothing here runs and no RNG is drawn.
+export const DICE_K = 6, DICE_K_REPLY = 2;
+function realigning(st) { return !!E.LOBBY[st.options.lobby]; }
+// The mean of (enemy points removed − own points lost) for ONE attempt by
+// `side` on `id` as the board stands: every pair of faces, the loss capped by
+// the option and by what the loser has there.
+export function realignExpect(st, side, id) {
+  const R = E.LOBBY[st.options.lobby];
+  if (!R) return 0;
+  const opp = 1 - side, mine = E.realignMod(st, side, id) , theirs = E.realignMod(st, opp, id);
+  const own = E.infOf(st, id)[side], enemy = E.infOf(st, id)[opp];
+  let t = 0;
+  for (let a = 1; a <= R.die; a++) for (let b = 1; b <= R.die; b++) {
+    const d = a + mine - (b + theirs);
+    if (d > 0) t += Math.min(d, R.cap, enemy); else if (d < 0) t -= Math.min(-d, R.cap, own);
+  }
+  return t / (R.die * R.die);
+}
+function isLobby(action) { return action.type === "choose" ? !!action.choice && action.choice.use === "lobby" : action.use === "lobby"; }
+function rollsFor(st, action, k = DICE_K) { return realigning(st) && isLobby(action) ? k : 1; }
+// evaluate(after `action`) averaged over `k` rolls (k = 1: one simulation, as always).
+function meanEval(st, action, side, rng, k) {
+  if (k <= 1) return evaluate(simulate(st, action, rng), side);
+  let t = 0;
+  for (let i = 0; i < k; i++) t += evaluate(simulate({ ...st, rngState: rng.int(2 ** 31) }, action, rng), side);
+  return t / k;
+}
 function evalAction(st, action, side, rng) {
-  try { return evaluate(simulate(st, action, rng), side); } catch { return -Infinity; }
+  try { return meanEval(st, action, side, rng, rollsFor(st, action)); } catch { return -Infinity; }
 }
 function bestOf(st, who, choices, rng) {
   let best = null, bestV = -Infinity;
   for (const ch of choices) {
     let v;
-    try { v = evaluate(simulate(st, { type: "choose", side: who, choice: ch }, rng), who); } catch { continue; }
+    const a = { type: "choose", side: who, choice: ch };
+    try { v = meanEval(st, a, who, rng, rollsFor(st, a)); } catch { continue; }
     if (v > bestV) { bestV = v; best = ch; }
   }
   return best ?? choices[0];
+}
+// The 遊說 targets a bot considers: all of them off realign (as always); under
+// realign only those where one attempt gains on average.
+function lobbyTargetsFor(st, side, targets) {
+  return realigning(st) ? targets.filter((t) => realignExpect(st, side, t.id) > 0) : targets;
 }
 
 function roomFor(p, s, side, id, counts) {
@@ -319,7 +387,7 @@ function bestOps(st, who, ops, allowed, rng) {
   const cands = [];
   if (allowed.includes("place")) { const points = greedyPlacement(st, who, ops); if (points.length) cands.push({ use: "place", points }); }
   if (allowed.includes("campaign")) for (const t of o.campaignTargets) cands.push({ use: "campaign", target: t });
-  if (allowed.includes("lobby")) for (const t of o.lobbyTargets) cands.push({ use: "lobby", target: t.id });
+  if (allowed.includes("lobby")) for (const t of lobbyTargetsFor(st, who, o.lobbyTargets)) cands.push({ use: "lobby", target: t.id });
   return bestOf(st, who, cands, rng);
 }
 export function answer(st, p, who, rng) {
@@ -357,6 +425,7 @@ function dropSelfCollapse(st, side, list) {
 // ---------- candidates for an action round ----------
 function actionCandidates(st, side, L) {
   const out = [];
+  const lob = (targets) => lobbyTargetsFor(st, side, targets);
   if (L.bog && L.bog.length) return L.bog.map((c) => ({ type: "play", side, card: c, use: "bog" }));
   let dead = null;
   for (const c of L.cards) {
@@ -368,7 +437,7 @@ function actionCandidates(st, side, L) {
     if (u.reform) out.push({ type: "play", side, card: id, use: "reform" });
     if (u.place) { const points = greedyPlacement(st, side, u.place.ops); if (points.length) out.push({ type: "play", side, card: id, use: "place", order: "opsFirst", points }); }
     if (u.campaign) for (const t of u.campaign.targets) out.push({ type: "play", side, card: id, use: "campaign", order: "opsFirst", target: t });
-    if (u.lobby) for (const t of u.lobby.targets) out.push({ type: "play", side, card: id, use: "lobby", order: "opsFirst", target: t.id });
+    if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, use: "lobby", order: "opsFirst", target: t.id });
     if (u.enemy && (u.place || u.campaign || u.lobby)) out.push({ type: "play", side, card: id, use: "place", order: "eventFirst" });
     if (u.pair && u.pair.length) {
       const pair = u.pair.reduce((a, b) => (CARD[b].ops > CARD[a].ops ? b : a));
@@ -376,7 +445,7 @@ function actionCandidates(st, side, L) {
       const points = greedyPlacement(st, side, pops);
       if (points.length) out.push({ type: "play", side, card: id, pair, use: "place", points });
       if (u.campaign) for (const t of u.campaign.targets) out.push({ type: "play", side, card: id, pair, use: "campaign", target: t });
-      if (u.lobby) for (const t of u.lobby.targets) out.push({ type: "play", side, card: id, pair, use: "lobby", target: t.id });
+      if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, pair, use: "lobby", target: t.id });
     }
   }
   if (L.jiuding) {
@@ -386,7 +455,7 @@ function actionCandidates(st, side, L) {
       const p5 = greedyPlacement(st, side, 5, zhou); if (p5.length && p5.every(zhou)) out.push({ type: "play", side, card: JIUDING, use: "place", points: p5 });
     }
     if (j.campaign) for (const t of j.campaign.targets) out.push({ type: "play", side, card: JIUDING, use: "campaign", target: t });
-    if (j.lobby) for (const t of j.lobby.targets) out.push({ type: "play", side, card: JIUDING, use: "lobby", target: t.id });
+    if (j.lobby) for (const t of lob(j.lobby.targets)) out.push({ type: "play", side, card: JIUDING, use: "lobby", target: t.id });
   }
   if (!out.length && dead) out.push(dead);
   return dropSelfCollapse(st, side, out);
@@ -394,6 +463,11 @@ function actionCandidates(st, side, L) {
 
 // The other side's best one-ply reply, from the sampled state.
 function replyValue(st, action, side, rng) {
+  const k = rollsFor(st, action, DICE_K_REPLY);
+  if (k > 1) { let t = 0; for (let i = 0; i < k; i++) t += replyOnce({ ...st, rngState: rng.int(2 ** 31) }, action, side, rng); return t / k; }
+  return replyOnce(st, action, side, rng);
+}
+function replyOnce(st, action, side, rng) {
   let s;
   try { s = simulate(st, action, rng); } catch { return -Infinity; }
   if (s.winner != null) return evaluate(s, side);
@@ -404,7 +478,7 @@ function replyValue(st, action, side, rng) {
   let worst = Infinity;
   for (const b of actionCandidates(s, opp, L)) {
     let v;
-    try { v = evaluate(simulate(s, b, rng), side); } catch { continue; }
+    try { v = meanEval(s, b, side, rng, rollsFor(s, b, DICE_K_REPLY)); } catch { continue; }
     if (v < worst) worst = v;
   }
   return worst === Infinity ? evaluate(s, side) : worst;

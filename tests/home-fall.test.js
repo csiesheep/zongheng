@@ -132,6 +132,19 @@ test("lose-majority: more enemy influence than yours at the end of a turn loses;
   assert.equal(mid.winner, null);
 });
 
+// Both capitals lost at the same turn end: the rules say nothing; BE's reading (flagged on #130) is the
+// final scoring's -- the side ahead on the Mandate, level by the `tie` option (Chu unless tie=qin).
+for (const [mandate, tie, winner] of [[2, undefined, QIN], [-2, undefined, CHU], [0, undefined, CHU], [0, "qin", QIN]]) {
+  test(`both capitals lost at one turn end: Mandate ${mandate}${tie ? `, tie=${tie}` : ""} → ${winner === QIN ? "Qin" : "Chu"}`, () => {
+    const inf = { ...BOARD, guanzhong: [3, 3], ying: [4, 3] }; // Qin already ahead in 郢
+    const st = stage({ homeFall: "lose-majority", ...(tie ? { tie } : {}) }, CHU, { inf });
+    st.mandate = mandate;
+    const after = E.apply(st, place(CHU, "tiangou", "guanzhong"));
+    assert.equal(after.winner, winner);
+    assert.equal(after.reason, "homeFall");
+  });
+}
+
 test("move: the state says where each capital is; without move there is no such key", () => {
   assert.deepEqual(E.createGame(1, { homeFall: "move" }).capital, HOME);
   for (const options of [{}, { homeFall: "lose" }, { homeFall: "lose-turn" }]) assert.equal("capital" in E.createGame(1, options), false);

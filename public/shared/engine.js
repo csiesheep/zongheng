@@ -105,22 +105,29 @@ export const MOVE_VP = 3;
 //                    `st.capital`); the enemy controlling the new one at the end of a
 //                    LATER turn loses you the game. The old capital is an ordinary
 //                    space; the home region and homeLock do not change.
-// End reason "homeFall". Qin's capital is read first, so on the (never measured)
-// turn end where both fall at once, Chu wins.
+// End reason "homeFall". Both capitals lost at once (a turn end under the turn-end
+// values; the rules give no answer, BE's reading, flagged on #130): the side ahead
+// on the Mandate wins, level goes by `tie` as the final scoring does.
+function homeFallWin(st, losers) {
+  if (losers.length === 1) return win(st, other(losers[0]), "homeFall");
+  const w = st.mandate > 0 ? QIN : st.mandate < 0 ? CHU : st.options.tie === "qin" ? QIN : CHU;
+  win(st, w, "homeFall");
+}
 function homeFallAtTurnEnd(st) {
   const hf = st.options.homeFall;
   if (hf !== "lose-turn" && hf !== "lose-majority" && hf !== "move") return;
-  const moved = [];
+  const moved = [], losers = [];
   for (const side of [QIN, CHU]) {
     const cap = homeCapital(st, side), opp = other(side);
     if (hf === "lose-majority") {
-      if (infOf(st, cap)[opp] > infOf(st, cap)[side]) return win(st, opp, "homeFall");
+      if (infOf(st, cap)[opp] > infOf(st, cap)[side]) losers.push(side);
       continue;
     }
     if (controller(st, cap) !== opp) continue;
-    if (hf === "lose-turn" || cap !== HOME_CAPITAL[side]) return win(st, opp, "homeFall");
-    moved.push(side);
+    if (hf === "lose-turn" || cap !== HOME_CAPITAL[side]) losers.push(side);
+    else moved.push(side);
   }
+  if (losers.length) return homeFallWin(st, losers);
   for (const side of moved) {
     const opp = other(side);
     if (!st.capital) st.capital = HOME_CAPITAL.slice();
@@ -428,7 +435,8 @@ export function checkMarkers(st) {
   if (st.winner == null && Object.keys(st.mie).length >= st.options.mie) win(st, QIN, "unification");
   if (st.winner == null && Object.keys(st.seals).length >= st.options.seals) win(st, CHU, "alliance");
   if (st.winner == null && st.options.homeFall === "lose") {
-    for (const side of [QIN, CHU]) if (controller(st, HOME_CAPITAL[side]) === other(side)) { win(st, other(side), "homeFall"); break; }
+    const losers = [QIN, CHU].filter((side) => controller(st, HOME_CAPITAL[side]) === other(side));
+    if (losers.length) homeFallWin(st, losers);
   }
   if (probe.home) probe.home(st, "check");
 }
