@@ -907,12 +907,14 @@ const LOWER_BLOCK_H = 172;
 // give the SAME 172px lower block and still leave the map its floor -- some
 // of that has to come out of the lower block's own budget too, not just the
 // map (see `narrowTable`/`lowerBlockH` at layoutTable()'s own step 1 below).
-// 140 keeps a real hand row (#68's own fixed CHIP_H/HAND_GUTTER budget,
-// still the smallest a give-way state ever needs) plus two lines of
-// #prompt -- the same floor #109 already sets on #prompt itself, just
-// confirmed to still fit the smaller box. Picked against the #118 table
-// walk at 320x568, not measured from any single state, same as
-// LOWER_BLOCK_H itself.
+// A FLOOR only, not the narrow budget itself any more (round 1 of this fix
+// used it as a flat constant and missed a 3-line English advisor sentence at
+// 320 -- the orchestrator's own catch: "measure the banner's real height, do
+// not guess a constant"). `lowerBlockH` at narrow widths is
+// `max(LOWER_BLOCK_H_NARROW, lowerBlock.scrollHeight)` — this floor only
+// matters for a genuinely short state (no banner, empty sheet), so the map
+// never gets MORE room than the old, walked floor gave it just because
+// nothing happens to be showing below it this render.
 const LOWER_BLOCK_H_NARROW = 140;
 function layoutTable() {
   const table = $("table");
@@ -972,6 +974,45 @@ function layoutTable() {
   sheetEl.classList.remove("sheet-compact");
   if (sheetTitle) sheetTitle.hidden = true;
 
+  // #prompt's own flex-shrink (flex:1 1 auto) could otherwise squeeze it
+  // BELOW the advisor banner's own natural height — a flex item's automatic
+  // minimum size (the "don't shrink below your content" default) resolves
+  // to 0 the moment its `overflow` isn't `visible` (CSS Flexbox's own
+  // carve-out), and #prompt's overflow:hidden (style.css) is exactly that,
+  // so nothing stopped it from silently CLIPPING the banner instead of
+  // surfacing as real #lowerBlock overflow for the give-way stages below to
+  // react to (found while testing #68: a real setup-placement state
+  // clipped ~34px off a 2-line advice sentence with fits() still reporting
+  // "fine"). An explicit min-height (not "auto") isn't subject to that
+  // carve-out, so this pins one to the banner's real rendered height each
+  // pass, before fits() ever reads #lowerBlock's own scrollHeight.
+  //
+  // #109: with the advisor OFF (no banner), this used to fall through to a
+  // flat "0px" floor — the same overflow:hidden carve-out above then let a
+  // sheet-heavy state's flex-shrink squeeze #prompt to literally
+  // clientHeight:0, taking the whole prompt line (and #97's always-on
+  // scoring warning, spliced in as the FIRST line of #promptText — see
+  // renderPromptAndSheet()) with it. Two lines of #prompt's own text
+  // (line-height/padding read live off its computed style, not hardcoded,
+  // so a font-size change stays in sync) is enough room for that first
+  // line to actually paint before anything below it has to scroll; #prompt
+  // remains flex:1 1 auto so it still grows past this floor whenever the
+  // budget allows, and lowerOverflow's existing table-overflow fallback
+  // (below) still catches the rare state where even this floor doesn't fit.
+  //
+  // #118: moved ahead of the map's own budget (step 1, below) — narrowTable
+  // there needs #prompt's min-height to already reflect THIS render's real
+  // banner (a 3-line English advisor sentence measures taller than a
+  // 2-line one) before it measures the lower block's own natural height,
+  // not the previous render's leftover value.
+  const advBanner = document.getElementById("advisorBanner");
+  const bannerShown = advBanner && !advBanner.hidden && advBanner.parentElement === promptEl;
+  const promptCS = getComputedStyle(promptEl);
+  const promptPad = parseFloat(promptCS.paddingTop) + parseFloat(promptCS.paddingBottom);
+  promptEl.style.minHeight = bannerShown
+    ? Math.ceil(advBanner.getBoundingClientRect().height + promptPad) + "px"
+    : Math.ceil((parseFloat(promptCS.lineHeight) || 18) * 2 + promptPad) + "px";
+
   // 1) The map: a pure function of the viewport and the two rows above it
   // (topbar/statline, live-measured but state-invariant) minus the lower
   // block's own fixed budget — never of #prompt/#advisorBanner/#sheet/#hand,
@@ -998,10 +1039,26 @@ function layoutTable() {
   // is untouched below. Only 320 falls through to the plain `spaceForMap /
   // DESIGN_H` -- a smaller map, exactly the concession the issue itself
   // offers, sized to fit whatever's actually left rather than forcing an
-  // overflow the floor can't back down from. `LOWER_BLOCK_H_NARROW` (below)
-  // also trims what has to come out of the map in the first place.
+  // overflow the floor can't back down from.
   const narrowTable = availW < 360;
-  const lowerBlockH = narrowTable ? LOWER_BLOCK_H_NARROW : LOWER_BLOCK_H;
+  // #118 round 2 (orchestrator: a 3-line English advisor sentence at 320
+  // still overflowed 140 -- "measure the banner's real height, do not guess
+  // a constant"): LOWER_BLOCK_H_NARROW is only the FLOOR now, not the whole
+  // answer -- `lowerBlock.scrollHeight`, measured with its flex-basis
+  // released for one reflow, is #prompt (min-height already set above to
+  // the CURRENT banner's real height, however many lines it wrapped to) +
+  // the sheet (however this render already left it, chip/full/empty) + the
+  // hand row, i.e. the actual content this exact render needs — not a
+  // number picked against a different render entirely. Only measured below
+  // 375 (`narrowTable`): 375/390 keep the plain constant, same as before,
+  // so this can never move their own map rect.
+  let lowerBlockH = LOWER_BLOCK_H;
+  if (narrowTable) {
+    const prevFlex = lowerBlock.style.flex;
+    lowerBlock.style.flex = "none";
+    lowerBlockH = Math.max(LOWER_BLOCK_H_NARROW, lowerBlock.scrollHeight);
+    lowerBlock.style.flex = prevFlex;
+  }
   const spaceForMapAndLower = availH - topbarH - statlineH - gapsAndPadding;
   const spaceForMap = spaceForMapAndLower - lowerBlockH;
   // Never below FLOOR_SCALE (the map's own spec), never above widthScale
@@ -1027,39 +1084,8 @@ function layoutTable() {
   // scrolls on its own for any ordinary overflow; the give-way stages below
   // only fire once even THAT isn't enough (mapActive states, where the
   // sheet's own compact/pending rows can still outgrow the budget).
-  //
-  // #prompt's own flex-shrink (flex:1 1 auto) could otherwise squeeze it
-  // BELOW the advisor banner's own natural height — a flex item's automatic
-  // minimum size (the "don't shrink below your content" default) resolves
-  // to 0 the moment its `overflow` isn't `visible` (CSS Flexbox's own
-  // carve-out), and #prompt's overflow:hidden (style.css) is exactly that,
-  // so nothing stopped it from silently CLIPPING the banner instead of
-  // surfacing as real #lowerBlock overflow for the give-way stages below to
-  // react to (found while testing #68: a real setup-placement state
-  // clipped ~34px off a 2-line advice sentence with fits() still reporting
-  // "fine"). An explicit min-height (not "auto") isn't subject to that
-  // carve-out, so this pins one to the banner's real rendered height each
-  // pass, before fits() ever reads #lowerBlock's own scrollHeight.
-  //
-  // #109: with the advisor OFF (no banner), this used to fall through to a
-  // flat "0px" floor — the same overflow:hidden carve-out above then let a
-  // sheet-heavy state's flex-shrink squeeze #prompt to literally
-  // clientHeight:0, taking the whole prompt line (and #97's always-on
-  // scoring warning, spliced in as the FIRST line of #promptText — see
-  // renderPromptAndSheet()) with it. Two lines of #prompt's own text
-  // (line-height/padding read live off its computed style, not hardcoded,
-  // so a font-size change stays in sync) is enough room for that first
-  // line to actually paint before anything below it has to scroll; #prompt
-  // remains flex:1 1 auto so it still grows past this floor whenever the
-  // budget allows, and lowerOverflow's existing table-overflow fallback
-  // (below) still catches the rare state where even this floor doesn't fit.
-  const advBanner = document.getElementById("advisorBanner");
-  const bannerShown = advBanner && !advBanner.hidden && advBanner.parentElement === promptEl;
-  const promptCS = getComputedStyle(promptEl);
-  const promptPad = parseFloat(promptCS.paddingTop) + parseFloat(promptCS.paddingBottom);
-  promptEl.style.minHeight = bannerShown
-    ? Math.ceil(advBanner.getBoundingClientRect().height + promptPad) + "px"
-    : Math.ceil((parseFloat(promptCS.lineHeight) || 18) * 2 + promptPad) + "px";
+  // #prompt's own min-height (bannerShown et al.) was already set above,
+  // ahead of step 1's own map budget — see the #118 comment there.
   const fits = () => lowerBlock.scrollHeight <= lowerBlockH + 1;
   if (mapActive && !hand.hidden && !fits()) {
     // Stage 1: the hand row gives way first — its cards (if it holds any)
