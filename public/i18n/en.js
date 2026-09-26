@@ -399,5 +399,12 @@ export default {
     removeNo: "Kept for the discard pile.",
     history: "The history",
     source: "Source: ",
+    // #122: how a card's text is read where the text alone leaves it open
+    // (owner 裁決 #119), keyed by card id. The card detail view (card-view.js:
+    // phone overlay, desktop panel, in-game peek) and the rules page's card
+    // list (rules.js) both read it from here -- one copy.
+    rulings: {
+      hexi: "\"If that gives\": Chu loses 1 in Daliang only if these 2 are what give Qin Hedong; if Qin already controlled it, nothing is removed.",
+    },
   },
 };

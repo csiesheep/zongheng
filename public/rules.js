@@ -669,14 +669,6 @@ function sideCounts() {
 // (both layouts are never in the DOM at the same time, but each render()
 // call must still only ever produce ONE of each id). Every other caller
 // (mobile) omits opts, which keeps this byte-for-byte what #40 built.
-// #122: how a card's text is read where the text alone leaves it open --
-// owner 裁決 #119 (「其他照牌文字面改」), as shared/cards.js implements it.
-const CARD_RULINGS = {
-  hexi: {
-    zh: "「因此」:只有這 2 點讓秦拿下河東,才移除楚在大梁 1;秦原本就控制河東則不移除。",
-    en: "“If that gives”: Chu loses 1 in Daliang only if these 2 are what give Qin Hedong; if Qin already controlled it, nothing is removed.",
-  },
-};
 function cardList(S, N, cardEn, opts = {}) {
   const rows = E.CARDS.map((c) => {
     const side = c.scoring ? "s" : c.side === 0 ? "q" : c.side === 1 ? "c" : "n";
@@ -685,8 +677,11 @@ function cardList(S, N, cardEn, opts = {}) {
       ? (lang === "en" ? `Scores ${E.REGIONS[c.scoring].en}.` : `結算${E.REGIONS[c.scoring].zh}。`)
       : esc(lang === "en" ? cardEn[c.id] ?? c.text : c.text);
     const year = c.year ? ` <small>(${lang === "en" ? "" : "前"}${c.year}${lang === "en" ? " BC" : ""})</small>` : "";
-    // #122: a ruling on how the card's text reads, on its own line under it.
-    const ruling = CARD_RULINGS[c.id] ? `<br><small>${esc(CARD_RULINGS[c.id][lang === "en" ? "en" : "zh"])}</small>` : "";
+    // #122: a ruling on how the card's text reads (N.sheet.rulings, owner 裁決
+    // #119 -- the same copy card-view.js puts on the card's detail view), on
+    // its own line under the text.
+    const rulingText = N.sheet.rulings && N.sheet.rulings[c.id];
+    const ruling = rulingText ? `<br><small>${esc(rulingText)}</small>` : "";
     const enLine = `${c.en} · ${S.era[c.era]} · ${c.scoring ? S.scoringCard : S.side[c.side]}`;
     // #45 round 1 / #47 item 4: the desktop tile's own line 2 is never empty
     // (the design never shows the name alone) — the year when there is one,
