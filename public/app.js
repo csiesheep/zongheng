@@ -1836,9 +1836,19 @@ function syncMidFade(mid) {
   const sh = mid.parentElement;
   const overflow = () => mid.scrollHeight - mid.clientHeight > 1;
   const history = mid.querySelector(":scope > .sheet-history");
+  // #118 round 4 (orchestrator: a history the reader opened used to vanish,
+  // toggle included, the moment ANY later render made `mid` overflow again --
+  // e.g. tapping a use button after reading 長平之戰's own history). The
+  // fitter may only hide a history nobody opened; once it's open it stays,
+  // however long that makes `mid`, and the reader scrolls to it instead (the
+  // fade below already paints for exactly this case). `sheet-history-open`
+  // is card-view.js's own class for this (histState()'s `open`, app.js) --
+  // read here, never written, so this stays in sync with whatever the
+  // reader's own last tap left it at.
+  const historyOpen = history && history.classList.contains("sheet-history-open");
   if (history) history.hidden = false;
   sh.classList.remove("sheet-art-collapsed");
-  if (history && overflow()) history.hidden = true;
+  if (history && !historyOpen && overflow()) history.hidden = true;
   // #118 round 3 (orchestrator, real render: a real pinned advisor banner
   // (unclamped, #74's own "never cut this sentence" ruling) plus 說客's own
   // full pair grid can leave `.sheet-mid` shorter than even its OWN card
