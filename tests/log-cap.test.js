@@ -99,7 +99,7 @@ test("#128: no move is ever split, at any point of a long game", () => {
   assert.deepEqual(problems, [], problems.join("\n"));
 });
 
-// A full game fits under the cap (see the issue: max 421 entries in 400 games), so the eviction below never runs in a
+// A full game fits under the cap (see the issue: max 437 entries in 400 games), so the eviction below never runs in a
 // real game today. It is tested on its own, with the long game's real log and a cap far under it.
 test("#128: when a log does outgrow the cap, whole moves go and the opening stays", () => {
   assert.equal(typeof E.trimLog, "function", "engine exports trimLog(log, cap)");

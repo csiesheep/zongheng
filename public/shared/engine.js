@@ -115,12 +115,13 @@ function withRng(st, fn) {
 //
 // The log keeps the whole game (#128). It used to keep only the last 400
 // entries, and a full game writes more: over 200 normal + 200 hard bot games
-// on 0e558a8 the longest wrote 421, and a game that reaches turn 8 writes
-// about 400 (median 398). Past the cap the start of the game was gone and a
-// move whose opening entry was evicted fell apart in the log panel. A full
-// game's log is under 40 KB of JSON, so the cap is now a runaway guard far
-// above any real game, not a window: LOG_CAP entries is about 4.7 times the
-// longest game measured and under 200 KB.
+// on 0e558a8, 65 wrote more than 400 (the longest 437), and a game that
+// reaches turn 8 writes about 400 (median 398). Past the cap the start of the
+// game was gone and a move whose opening entry was evicted fell apart in the
+// log panel. A full game's log is under 38 KB of JSON (about 87 bytes an
+// entry), so the cap is now a runaway guard far above any real game, not a
+// window: LOG_CAP entries is about 4.6 times the longest game measured and
+// about 175 KB.
 //
 // If a log ever does outgrow it, `trimLog` drops whole moves, the oldest
 // first, and keeps the game's opening (its setup and turn 1) and the move in
