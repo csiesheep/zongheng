@@ -42,6 +42,8 @@ node tests/sim.js --report-emperor=tests/sim-results/121-emperor-vp.txt.state.js
 
 **Recommendation (the owner decides; the default is unchanged).** If 稱帝 should be able to end the game, `win-lead`: it makes the box decisive without letting a side far behind on the Mandate take the game, it keeps the final scoring alive, and it tilts to Qin least of the three winning values. It still leans Qin (first there 107:44 nn, 172:58 hh), and that tilt — Qin's reform events and its conquest-era 4-op cards — is what to look at next if a win by reform is adopted. `vp5` is not worth a rule change: it does not show in the numbers. `win` and `win-late` I would not adopt: +9 to +14 pp for Qin, 40 % of their 稱帝 wins by the side behind, and the last turns stop being about the board.
 
+**After #119.** The cells ran before #119 landed (its three literal card rulings). After rebasing onto ebc9863 I re-ran seeds 1…200 of emp/nn/vp, emp/nn/win and emp/nn/win-lead: 40, 36 and 44 of the 200 games play differently, and Qin's wins move 94 → 99, 120 → 119, 102 → 99. `win` − `vp` on those seeds is +13 pp before and +10 pp after; the reading does not change. The hard cells were not re-run.
+
 **Caveats.** The `win*` numbers depend on the bot's new race term (weights chosen by reasoning, not tuned; no sensitivity run). Bots do not plan across turns (hold a 4-op card for two turns, deny the opponent's). Differences are computed as independent samples although the seeds are shared, so the intervals are conservative.
 
 <!-- below: the output of --report-emperor, unedited -->
