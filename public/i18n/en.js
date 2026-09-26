@@ -132,7 +132,10 @@ export default {
   // #97: the always-on "must play" tag on a scoring card in hand -- a
   // separate short label (badge) and a longer sentence (its `title`), never
   // the prompt-area/pinned-area line above (that one adds the count).
-  hand: { mustPlay: "Must play", mustPlayTitle: "A scoring card held at the turn's end loses" },
+  // #126: see zh-Hant.js's own comment on this pair -- the round badge shows
+  // what a card is worth right now, marked in colour when an effect changed
+  // it; these carry the printed value back off the badge itself.
+  hand: { mustPlay: "Must play", mustPlayTitle: "A scoring card held at the turn's end loses", opsChanged: "Printed {printed}, now {now}", opsPrinted: "Printed {printed}" },
   preview: { campaign: "Removes {removed} of theirs, places {placed} of yours; weariness {w}.", lobby: "Edge {edge}: removes up to {n}.", locked: "Locked by weariness.", enemyEvent: "This is their card: its event will happen too." },
   // The result screen's colour and art always follow the WINNER, not your
   // own seat, so each ending's line and body read as fact from the table,
@@ -418,6 +421,13 @@ export default {
         one: "An enemy card, event first: once its event resolves, this card has only {ops} op.",
         other: "An enemy card, event first: once its event resolves, this card has only {ops} ops.",
       },
+      // #126 (orchestrator's checker): the round badge shows what a card is
+      // worth right now, but Reform's own threshold reads the printed ops
+      // (engine.js: legal()/apply() both check `card.ops`, never opsOf) — so
+      // when the two differ, this goes on the Reform button itself
+      // (title/aria-label; see app.js's `usable`/useBtn loop) so the mark
+      // never reads as "Reform sees this number too".
+      reformPrinted: "Reform counts the printed ops ({printed})",
     },
     // #35: the read-only card view's own extra facts (side/removal, shown on
     // the header's second line by card-view.js) and the history section
