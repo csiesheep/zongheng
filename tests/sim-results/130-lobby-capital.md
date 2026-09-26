@@ -62,6 +62,7 @@ How often each d came up in the bots' games (realign-own nn / hh): d = 0: 13.9 /
 ### The other values
 
 - **realign (plain) and realign-mild** move Qin −1.6 / −2.6 pp (nn) and −6.4 / −8.8 pp (hh, both outside the interval). 遊說 is used more (+1.7 / +1.0 uses a game nn, +3.3 / +1.6 hh) and 36–42 % (realign) / 17–23 % (mild) of it is aimed where the actor has nothing to lose — the riskless case realign-own closes. Mild makes a lost roll cheap (actor loses points in 4.4 / 3.6 % of attempts) and nets +0.99 / +0.96 per op, more than today's rule: a stronger 遊說, not a riskier one. Both raise 記分 ends (see the caveat below).
+- **realign + lose-turn** (the brief's pairing with plain realign): Qin −4.0 (nn) / **−7.2 [−13.4, −1.0]** (hh) — the same lean to Chu as realign-own + lose-turn, a little smaller.
 - **move (遷都)** changes little: a capital moves in 46 (nn) / 47 (hh) games — Qin's in 40 of them at both levels — the moved capital then falls for good in 4 / 9 games (國都 ends 0.8 / 1.8 %), Qin −1.0 / −3.2 pp. It adds colour and a +3.
 - **lose-majority** ends games early (4.2 / 3.8 turns on average, −1.3 / −2.2) and makes the capital the main event (國都 42.8 / 43.4 % of games) — a majority in a stability-4 capital is cheap. See the next section for its Qin %.
 - **lose** (instant) is balanced (Qin +0.2 / −5.4) but turns the game into a capital race (32.6 / 40.6 % of games end there; 相印 and 天命 ends fall).
@@ -76,6 +77,12 @@ It is not the capital rule favouring Qin. By the capital itself **Chu wins more*
 - **The bots' capital terms are chosen by reasoning, not tuned** (a capital one point from falling is worth up to 60 × a road share that depends on who acts next; the first fall under `move` 3 × a steep road). No sensitivity run.
 - **"遊說 in detail" for the cells run before realign-own** counts the event 縱橫家遊說 (≈ 2 a game, removes 2, no dice) as 遊說; the corrected table ("with the event's scripted 遊說 taken out") estimates it out. Uses per game come from the plays and are exact everywhere.
 - The bots never 遊說 at d < 0 under realign-own and rarely 收手, so the 遊說 numbers describe careful players.
+
+### What the options do and do not touch
+
+- Under any `realign*` value every 遊說 **use of ops** is a realignment: a card played for 遊說, 說客's pair, and the Nine Cauldrons (all go through `doOps` → `lobby()`).
+- Untouched: the event 縱橫家遊說 (`youshui`, cards.js:129: removes 2, 局勢 counted as at least 2, no dice) — the only event that calls `E.edge`; the tutorial's 遊說 step (tutorial.js:261 reads `E.edge`; the tutorial runs on default options). No event calls `E.lobby`.
+- realign-own: the 遊說 ends, and the remaining attempts are lost, when the enemy's **or the actor's own** influence at the target reaches 0, or when the actor chooses 收手; there is no redirect to another space (the target is fixed in the `realign` plan step).
 
 ### Recommendation (the owner decides; no default changed)
 
