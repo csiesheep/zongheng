@@ -208,6 +208,10 @@ function otherRowHtml(row, lang) {
     region: e.region ? regionName(e.region, lang) : "", state: e.state ? stateName(e.state, lang) : "",
     card: e.card ? cardName(e.card, lang) : "", ops: e.ops, box: e.box,
   };
+  // #125: log.over's {side}/{reason} -- the entry carries `winner`, not
+  // `side`, and its reason is the plain ends.* clause (as app.js's fmtLog()
+  // reads it since #123). Before this the row read "遊戲結束:,{reason}。".
+  if (e.type === "over") { P.side = sideName(e.winner, lang); P.reason = t(lang, "ends." + e.reason); }
   // #120: this table's own templates (log.play/log.discard/log.bog/
   // log.headlineOne) can name a card too -- same tCard() splice as every
   // other card-naming row, gated on e.card so the vast majority (turn/era/
@@ -242,6 +246,15 @@ export function renderRows(log, opts) {
   if (filter !== "chat") {
     const wantSide = filter === "0" ? E.QIN : filter === "1" ? E.CHU : null;
     let round = null, sawSetupHead = false;
+    // #125: a game that ends inside a move (稱帝, 滅, 相印, 天命, 土崩) logs
+    // its `over` entry as one of that move's steps, which has no chip -- so
+    // the end was never shown. It gets its own row right after the move,
+    // under every side filter.
+    const overAfter = (row) => {
+      const e = Array.isArray(row.steps) ? row.steps.find((s) => s && s.type === "over") : null;
+      const html = e ? otherRowHtml({ entry: e }, lang) : "";
+      if (html) out.push(html);
+    };
     for (const row of rows) {
       if (row.kind === "setup") {
         if (wantSide != null && row.side !== wantSide) continue;
@@ -252,10 +265,12 @@ export function renderRows(log, opts) {
         round = null; sawSetupHead = false;
       } else if (row.kind === "headline") {
         out.push(headlineRowHtml(row, lang));
+        overAfter(row);
       } else if (row.kind === "move") {
-        if (wantSide != null && row.side !== wantSide) continue;
+        if (wantSide != null && row.side !== wantSide) { overAfter(row); continue; }
         if (row.round != null && row.round !== round) { out.push(`<div class="logsec-round">${t(lang, "logPanel.round", { round: row.round })}</div>`); round = row.round; }
         out.push(moveRowHtml(row, lang, pairOf.get(row.seq)));
+        overAfter(row);
       } else if (row.kind === "other") {
         const html = otherRowHtml(row, lang);
         if (html) out.push(html);
