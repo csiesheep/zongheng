@@ -357,6 +357,18 @@ export default {
     // chosen yet used to do nothing at all -- app.js's flashUseWarning()
     // shows this under the use row until a use is actually picked.
     pickUseFirst: "Pick a use first",
+    // #123 (owner: King Huai Enters Qin played for ops at 民困/Populace
+    // Hardship, its event pushed weariness to Collapse, no warning at all):
+    // whether the event would push weariness to Collapse is decided by
+    // actually simulating it on a clone, E.eventWouldCollapse (shared/
+    // engine.js) -- never read off the card's text. Applies to every use
+    // that fires the event (the event itself, or an enemy card's ops --
+    // place/campaign/lobby, either order); Reform and pairing with The
+    // Lobbyist never fire it. {uses} is collapseSafe's own list of which of
+    // THIS card's uses are safe (app.js's safeUsesFor()).
+    collapseWarn: "This card's event would push the realm to Collapse on your action — you would lose at once.",
+    collapseSafe: "{uses} would not trigger it — safe.",
+    collapsePairSafe: "pairing it with {shuoke}",
     // #117: The Lobbyist's pairing choice -- pick an enemy card from hand to
     // play with it, or explicitly choose not to. {enemy} is the other side's
     // name (Qin/Chu). none/noEnemy/eventReason cover the three states: chose

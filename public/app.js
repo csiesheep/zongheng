@@ -1732,6 +1732,35 @@ function scoringWarnText(v, side) {
   const verb = t(`prompt.scoringWarn.verb.${m === 1 ? "one" : "other"}`);
   return t("prompt.scoringWarn.full", { action, card, verb });
 }
+// #123 (owner: a self-collapse with no warning -- 楚懷王入秦's event, played
+// for ops at 民困, pushed weariness to 土崩 and ended the game with nothing
+// on screen to say it was coming): would the card CURRENTLY open on the
+// sheet, played right now, fire its event and end the game against `side`?
+// Decided by E.eventWouldCollapse (shared/engine.js) -- an actual simulation
+// of the card's own event on a clone, not a hand-written list of "the cards
+// that tire the realm" -- so a future tiring card is covered here for free.
+// "" whenever it doesn't apply: no card open, not this side's action round,
+// the game's already over, or the event is safe right now.
+function collapseWarnText(v, side, card) {
+  if (card == null || card === E.JIUDING || v.phase !== "action" || v.winner != null || v.actor !== side) return "";
+  if (!E.eventWouldCollapse(v, side, card)) return "";
+  const safe = safeUsesFor(v, side, card);
+  return safe.length ? `${t("sheet.collapseWarn")} ${t("sheet.collapseSafe", { uses: list(safe, (x) => x) })}` : t("sheet.collapseWarn");
+}
+// Which of this card's OTHER uses do NOT fire its event, worth naming right
+// next to the warning (#123: "it helps to say which ones are safe") -- 變法
+// (rulebook 三: never fires an event) when this card actually qualifies for
+// it, and pairing it with 說客 when 說客 is in hand (its own text: the paired
+// card's ops are spent, its event never fires). Both already have their own
+// use-grid button; this only says they're the safe way to spend THIS card.
+function safeUsesFor(v, side, card) {
+  const c = card !== E.JIUDING ? E.CARD[card] : null;
+  if (!c) return [];
+  const out = [];
+  if (E.reformUsesLeft(v, side) > 0 && c.ops >= E.reformThreshold(v, side)) out.push(t("uses.reform"));
+  if (card !== "shuoke" && (v.hands[side] || []).includes("shuoke")) out.push(t("sheet.collapsePairSafe", { shuoke: cardName("shuoke") }));
+  return out;
+}
 // #29: the "uses.*" table already carries both languages (one entry per
 // i18n file) — the five-use grid on the full card page shows BOTH at once,
 // same bilingual convention as card names, so it reads the raw imported
@@ -1942,7 +1971,13 @@ function renderPromptAndSheet(v) {
   // setPrompt() to splice in first, ahead of whatever the state's own prompt
   // says, same as the mockup's vermilion warning line.
   const warnText = scoringWarnText(v, me);
-  const roundWarn = warnText ? `<div class="prompt-warn">${esc(warnText)}</div>` : "";
+  // #123: the collapse warning for whichever card is currently open, folded
+  // into the SAME `roundWarn` splice as #97's scoring warning (not a second,
+  // separate mechanism) -- so it survives the compact chip and #110's
+  // never-truncated rule exactly the way that one already does, and the two
+  // can never drift into two different looks.
+  const collapseText = collapseWarnText(v, me, ui.card);
+  let roundWarn = [warnText, collapseText].filter(Boolean).map((w) => `<div class="prompt-warn">${esc(w)}</div>`).join("");
   // #92: `ui.historyOpen` is the persisted choice for THIS card page (reset
   // only by freshUi() — see its own comment); this hands historyBox() a
   // fresh { open, onToggle } each render so a click there writes straight
@@ -1980,7 +2015,17 @@ function renderPromptAndSheet(v) {
     titleEl.innerHTML = roundWarn + (html || err ? `<div class="sheet-rest">${html}${err}</div>` : "");
   };
   if (v.winner != null) {
-    setPrompt(`${t("prompt.over")} <b>${esc(t("over.winner", { side: sideName(v.winner) }))}</b> · ${esc(t("over.reasons." + v.reason))}`);
+    // #123 (owner: this line read "遊戲結束。秦獲勝 · [object Object]" -- since
+    // #113 every `over.reasons.<reason>` is an object of {title,win,lose,
+    // watch,body}, not a string; this used to hand the whole object straight
+    // to a template). Same {winner,loser} params and the same lost/watch/win
+    // outcome pick as renderOver()'s own `$("overLine")` (below), so the
+    // compact line here and the full end screen never say two different
+    // things about the same ending.
+    const lost = !game.spectator && me !== v.winner;
+    const outcome = lost ? "lose" : game.spectator ? "watch" : "win";
+    const op = { winner: sideName(v.winner), loser: sideName(E.other(v.winner)) };
+    setPrompt(`${t("prompt.over")} <b>${esc(t("over.winner", { side: sideName(v.winner) }))}</b> · ${esc(t(`over.reasons.${v.reason}.${outcome}`, op))}`);
     btn(sh, t("buttons.result"), () => renderOver(), "primary");
     return;
   }
@@ -2099,6 +2144,7 @@ function renderPromptAndSheet(v) {
   // other card while the turn's actions are running out must not make the
   // warning disappear. First child of `pinned`, ahead of the use grid.
   if (showFullCard && warnText) note(pinned, warnText, "warn");
+  if (showFullCard && collapseText) note(pinned, collapseText, "warn");
   // #117 (owner: 說客 was "a lone, unexplained button" with the wrong hint
   // and an advisor that never mentioned it): make pairing the first thing a
   // player sees on 說客's own page (its explanation now sits right after the
@@ -2276,6 +2322,15 @@ function renderPromptAndSheet(v) {
     return;
   }
   // campaign or lobby
+  // #123: a raid (奇襲) on THIS target specifically -- a battleground tires
+  // the realm by 1 (rulebook 五) regardless of the card -- checked with the
+  // real target now that one is picked, folded into `roundWarn` the same way
+  // as the card-level check above (never a second look, #110's rule). Only
+  // when the card-level check hasn't already said so: an enemy card whose
+  // event alone already collapses would otherwise say the same sentence twice.
+  if (!collapseText && ui.use === "campaign" && ui.target && E.actionWouldCollapse(v, me, { ...base, side: me, target: ui.target })) {
+    roundWarn += `<div class="prompt-warn">${esc(t("sheet.collapseWarn"))}</div>`;
+  }
   setPrompt(t(`prompt.${ui.use}`, { ops: info.ops }));
   if (ui.target) {
     const trial = E.clone(v); trial.log = [];
@@ -2525,7 +2580,13 @@ function logParams(l) {
     // no card, so P needs nothing extra.
   }
   if (l.type === "jiuding") P.side = sideName(l.to);
-  if (l.type === "over") { P.side = sideName(l.winner); P.reason = t("over.reasons." + l.reason); }
+  // #123: was `t("over.reasons." + l.reason)` -- an object since #113, not a
+  // string (see the matching fix above in renderPromptAndSheet()). `ends.*`
+  // is the log's own plain, param-free clause for exactly this ("the realm
+  // collapsed on the other side"), already the convention this same `log.
+  // over` template was written for; a fresh `over.reasons.<reason>.title`
+  // would also need {winner}/{loser} params this call site doesn't have.
+  if (l.type === "over") { P.side = sideName(l.winner); P.reason = t("ends." + l.reason); }
   if (l.type === "vp") P.side = sideName(l.side);
   return P;
 }

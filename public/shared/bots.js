@@ -270,6 +270,28 @@ export function answer(st, p, who, rng) {
   }
 }
 
+// #123 (owner: a self-collapse played with no warning, lost with a safe
+// alternative sitting in hand): never offer -- to the scored bots below, or
+// to the easy/random one further down -- a play that pushes weariness to 土
+// 崩 against `side` right now, unless every legal play does (forced is still
+// forced). `evaluate()` already scores an ended game at -1000/+1000 (win()'s
+// own bookkeeping), which already pushes a losing play for normal/hard to
+// the very bottom of the ranking -- but that is a strong bias, not a
+// guarantee once several candidates all lose the same way, and it says
+// nothing about the easy bot, which never evaluates anything. This filters
+// candidates BEFORE any of that, from `E.actionWouldCollapse` (engine.js),
+// the same simulate-don't-pattern-match check the card page's own warning
+// uses. Above weariness 4 nothing any sided card tires by today (1, or 2
+// through the one card that tires twice in a single play) can reach 土崩 (1)
+// in one play, so the (cloning, simulating) check is skipped there rather
+// than paid on every candidate all game.
+const COLLAPSE_RISK_WEARINESS = 4;
+function dropSelfCollapse(st, side, list) {
+  if (list.length <= 1 || st.weariness > COLLAPSE_RISK_WEARINESS) return list;
+  const safe = list.filter((a) => !E.actionWouldCollapse(st, side, a));
+  return safe.length ? safe : list;
+}
+
 // ---------- candidates for an action round ----------
 function actionCandidates(st, side, L) {
   const out = [];
@@ -305,7 +327,7 @@ function actionCandidates(st, side, L) {
     if (j.lobby) for (const t of j.lobby.targets) out.push({ type: "play", side, card: JIUDING, use: "lobby", target: t.id });
   }
   if (!out.length && dead) out.push(dead);
-  return out;
+  return dropSelfCollapse(st, side, out);
 }
 
 // The other side's best one-ply reply, from the sampled state.
@@ -441,10 +463,15 @@ export function randomAction(st, side, rng) {
         if (j.lobby) opts.push(() => ({ type: "play", side, card: JIUDING, use: "lobby", target: pickOne(j.lobby.targets, rng).id }));
       }
       // A pair with no ops to spend comes back null: draw again from the rest.
+      // #123: same rejection for a play that would collapse the realm on
+      // this side right now (dropSelfCollapse's own comment, above) -- easy
+      // is pure random with no evaluation at all, so it is the level most
+      // likely to walk into one with a safe card sitting right next to it.
+      const riskGate = st.weariness <= COLLAPSE_RISK_WEARINESS;
       while (opts.length) {
         const i = rng.int(opts.length), o = opts[i];
         const a = typeof o === "function" ? o() : o;
-        if (a) return a;
+        if (a && (!riskGate || !E.actionWouldCollapse(st, side, a))) return a;
         opts.splice(i, 1);
       }
       return dead;
