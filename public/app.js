@@ -1750,6 +1750,19 @@ const useEn = (u) => en.uses[u];
 function sheetMid(sh) {
   const d = document.createElement("div"); d.className = "sheet-mid"; sh.appendChild(d); return d;
 }
+// #118 item 2: toggles `.scroll-fade` (style.css) on `mid` once its real,
+// final height is known (see the requestAnimationFrame call above) -- true
+// exactly when `mid`'s own content actually overflows it. style.css fades
+// the last ~28px of `mid` to transparent while this class is on, so a line
+// that lands right on the fold reads as "more below, scroll" instead of a
+// hard slice through its own glyphs; the fade draws nothing at all (and
+// costs nothing) on every card whose content already fits. Never touches
+// scrollTop -- purely a paint-time affordance, same "true at rest" the
+// issue asks for either way, since `mid` still opens scrolled to the top.
+function syncMidFade(mid) {
+  if (!mid.isConnected) return; // #118: a later render may have replaced it before this frame runs
+  mid.classList.toggle("scroll-fade", mid.scrollHeight - mid.clientHeight > 1);
+}
 // #46 (owner: "看手牌沒有卡牌歷史" + a player must never scroll to reach a
 // button): a fixed (non-scrolling) sibling of sheetMid(), between the
 // scrollable text/history and the pinned Cancel/Confirm footer. The use
@@ -2086,6 +2099,18 @@ function renderPromptAndSheet(v) {
   // (the coach panel needs the room) and never for the compact chip (no
   // `mid` at all there).
   if (showFullCard && !Tut.active()) historyBox(mid, ui.card, lang, histState());
+  // #118 item 2 (orchestrator, screenshot card_chuPair_390zh_advOff.png): a
+  // long note right after the card text (说客's own pairing explanation,
+  // #117) could land exactly on `mid`'s own fold and get sliced mid-line --
+  // no visible scrollbar on a phone to hint that anything was cut. `mid`'s
+  // final height depends on `pinned`/the footer too (both fixed siblings in
+  // the same flex column, built further down, after this point) -- deferred
+  // one frame so the measurement below sees the SAME box the player does,
+  // not a mid-layout guess. Real content only (never in the tutorial, which
+  // never gets a `mid` at all -- see showFullCard/Tut.active() above), so
+  // this never fires on a `mid` that's already been thrown away by the next
+  // render.
+  if (mid) requestAnimationFrame(() => syncMidFade(mid));
   // #46 (owner: a player must never scroll to reach a button): the use
   // grid, the enemy order row, 說客's pairing and the hint below all move
   // to `pinned` — a fixed sibling of `mid`, not `mid` itself — so growing

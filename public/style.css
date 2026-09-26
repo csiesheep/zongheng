@@ -1291,6 +1291,21 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .sheet:has(> .sheet-pinned > .advisor-banner:not([hidden])) .sheet-img {
   width: 90px;
 }
+/* #118 item 2 (orchestrator, screenshot card_chuPair_390zh_advOff.png):
+   說客's own explain note (sheet.shuoke.explain, right after the card text in
+   .sheet-mid -- see the #117 comment above app.js's `note(mid, ...)` call)
+   got sliced mid-line by .sheet-mid's own fold at 390x669 zh, advisor OFF --
+   the advisor-banner rule above never fires there, so the art stayed full
+   width and left .sheet-mid too short for the card text box + the new note
+   to both fit. Same fix, same reasoning, a second trigger: shrink the art
+   whenever 說客's own pairing row (.sheet-pair-row, always in .sheet-pinned
+   whenever a pairing decision exists -- see hasPairOptions in app.js) is on
+   screen, regardless of the advisor. Table walk at 390x669 zh (#118): the
+   explain note and the (collapsed) history toggle both now sit fully above
+   .sheet-mid's own edge at rest -- nothing left to slice. */
+.sheet:has(> .sheet-pinned > .sheet-pair-row) .sheet-img {
+  width: 90px;
+}
 .sheet-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .sheet-badge { flex: none; width: 36px; height: 36px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 18px; line-height: 36px; text-align: center; }
 /* #46 (owner: 卡牌只顯示一語言): a single name node in the interface
