@@ -68,11 +68,15 @@ export const REFORM = [
 // the same either way. A state with no `reach` key at all plays as "control":
 // it can only be a game that started before the flip, and a game in progress
 // must not change its rules under the players (no migration, #107).
+// `emperor`: "win-lead" since #125 (owner, 2026-09-26: 「Wins only if ahead on
+// 天命」): the first to 稱帝 wins at once if it leads the Mandate then, else +3
+// as before. The same rule as `reach` for a game already under way: a state
+// with no `emperor` key plays as "vp" (see EMPEROR below), no migration.
 // Defaults are the rules as decided on 2026-09-18 from the harness (plan note,
 // Balance log); the first drafts stay reachable as cells: sealAt "control",
 // comp 2, hangu 2, wuguo "any", and round 2's westBonus false with yue "lasting"
 // (Qin 39 % over 1,000 games; the pair below brought it to 50 %).
-export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts" };
+export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead" };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 
 // ---------- RNG (mulberry32) ----------
@@ -363,9 +367,9 @@ export function scoreRegion(st, region) {
 export function reformThreshold(st, side) { return st.reform[side] >= 6 ? Infinity : REFORM[st.reform[side]].ops; }
 export function reformUsesLeft(st, side) { return (st.reform[side] >= 2 ? 2 : 1) - st.reformUsed[side]; }
 export function hasPerk(st, side, perk) { return REFORM.some((r) => r.perk === perk && st.reform[side] >= r.box); }
-// #121 `emperor`: what reaching box 6 (稱帝) FIRST is worth. Not a key of
-// DEFAULT_OPTIONS: an absent option plays as "vp", so a default game's state is
-// byte for byte what it was before the option existed.
+// #121 `emperor`: what reaching box 6 (稱帝) FIRST is worth. The default is
+// "win-lead" since #125 (DEFAULT_OPTIONS); an absent key -- a game saved before
+// #125 -- plays as "vp", as it did when it started.
 //   "vp"       the rulebook: first +3, second +1
 //   "vp5"      first +5, second +1
 //   "win"      the first to reach it wins at once (end reason "emperor")
