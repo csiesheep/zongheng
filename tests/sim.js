@@ -685,6 +685,17 @@ export function report130(files) {
     const d = (a, b, k = 2) => (b ? (a / b).toFixed(k) : "–");
     out.push(`| ${name} | ${N} | ${sum(rows, "lbQ")} / ${sum(rows, "lbC")} | ${d(O, N)} | ${d(A, N)} | ${d(R, N)} | ${d(L, N)} | ${A ? f2((R - L) / A) : "–"} | ${O ? f2((R - L) / O) : "–"} | ${A ? pc(sum(rows, "lbAttLost") / A) : "–"} | ${A ? pc(sum(rows, "lbAttWon") / A) : "–"} | ${A ? pc(sum(rows, "lbAttTie") / A) : "–"} | ${N ? pc(sum(rows, "lbBg") / N) : "–"} | ${N ? pc(sum(rows, "lbNoRisk") / N) : "–"} | ${sum(rows, "lbEv") || "(in the counts)"} |`);
   }
+  out.push("", "The same with the event's scripted 遊說 taken out (the 遊說 use of ops only). Exact where it was counted apart; for the earlier cells estimated: event 遊說 ≈ lobby entries − 遊說 plays (a slight overestimate: an event that grants ops, 商旅通賈, also logs a 遊說 without a play; 0.12 a game in lc/nn/realign-own), each removing 1.97 (as measured in lc/nn/realign-own) for 2 ops.", "");
+  out.push("| cell | event 遊說 / game | 遊說 (ops) | enemy removed / 遊說 | net / attempt | net / op |");
+  out.push("|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows } = cells[name];
+    const exactEv = rows.some((x) => x.lbEv !== undefined);
+    const N = sum(rows, "lbN"), A = sum(rows, "lbAtt"), R = sum(rows, "lbRem"), L = sum(rows, "lbLost"), O = sum(rows, "lbOps");
+    const evN = exactEv ? sum(rows, "lbEv") : Math.max(0, N - sum(rows, "n_lobby"));
+    const n = exactEv ? N : N - evN, r = exactEv ? R : R - 1.97 * evN, o = exactEv ? O : O - 2 * evN, t = exactEv ? "" : "≈ ";
+    out.push(`| ${name} | ${t}${(evN / rows.length).toFixed(2)} | ${t}${Math.round(n)} | ${t}${(r / n).toFixed(2)} | ${A ? t + f2((r - L) / A) : "–"} | ${t}${f2((r - L) / o)} |`);
+  }
   out.push("", "收手 (realign-own only asks): 遊說 the actor stopped with attempts left, % of all 遊說, and the result of the roll just before the stop (by the dice: the actor lost it / won it / tied).", "");
   out.push("| cell | 遊說 | attempts / 遊說 | ops / 遊說 | stopped early, % of 遊說 | after a lost roll | after a won roll | after a tie |");
   out.push("|---|---|---|---|---|---|---|---|");
