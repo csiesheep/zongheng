@@ -364,7 +364,13 @@ export default {
     // turned off (playing The Lobbyist alone has an empty effect() --
     // shared/cards.js).
     shuoke: {
-      explain: "The Lobbyist: pick a {enemy} card from your hand to play with it — you use that card's ops, its event doesn't fire, and both go to the discard pile.",
+      // #118 round 2 (orchestrator: at 375/390 with the advisor on, this
+      // sentence plus the advisor's own unclamped pinned banner (#74)
+      // pushed the note below .sheet-mid's own fold, unread even after the
+      // shrink-the-art concession below) -- shortened; same meaning ("pick a
+      // card, use its ops instead of the event, both are discarded"), one
+      // fewer wrapped line at 375/390's own width.
+      explain: "The Lobbyist: pick a {enemy} card to pair with — use its ops instead of the event; both are discarded.",
       none: "Don't pair — play alone",
       noEnemy: "No {enemy} card in hand: The Lobbyist can only be played alone, for 1 op.",
       eventReason: "The Lobbyist alone has no event.",

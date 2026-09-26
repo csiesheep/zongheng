@@ -1306,6 +1306,25 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .sheet:has(> .sheet-pinned > .sheet-pair-row) .sheet-img {
   width: 90px;
 }
+/* #118 round 2 (orchestrator: 375/390 en, advisor ON, 說客's own page -- the
+   explain note landed entirely below .sheet-mid's own fold even after the
+   art-shrink concession above): the advisor's own banner is unclamped once
+   it's pinned (.adv-slot-pinned, advisor.css -- the owner's #74 ruling was
+   "never cut this sentence"), so on 說客's page specifically it can outgrow
+   the art-shrink savings on its own (measured: a 2-line title+why banner
+   costs .sheet-mid ~75px more than advisor-off, more than 375's own leftover
+   slack). The one thing left to give up, once the art is already at its
+   floor and the explain note itself is already as short as it reads: the
+   (collapsed, one-line) story toggle -- real history, but strictly
+   supplementary reading the peek/rules pages already carry, unlike the
+   explain note (needed to actually choose a pair) or the rules text above
+   it. `.sheet-cramped` (app.js's layoutTable(), a plain class -- see its own
+   comment for why this isn't a second chained `:has()`) is true only when
+   BOTH 說客's own pairing row AND a real pinned banner are on screen, so an
+   ordinary card's history is untouched even with the advisor on. */
+.sheet.sheet-cramped .sheet-mid > .sheet-history {
+  display: none;
+}
 .sheet-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .sheet-badge { flex: none; width: 36px; height: 36px; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 18px; line-height: 36px; text-align: center; }
 /* #46 (owner: 卡牌只顯示一語言): a single name node in the interface

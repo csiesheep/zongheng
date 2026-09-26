@@ -973,6 +973,24 @@ function layoutTable() {
   promptScroll.hidden = false;
   sheetEl.classList.remove("sheet-compact");
   if (sheetTitle) sheetTitle.hidden = true;
+  // #118 round 2 (orchestrator: 375/390 en, advisor ON, 說客's own page --
+  // the explain note landed entirely below .sheet-mid's own fold even with
+  // the art already shrunk to its floor): a plain class, not a second
+  // chained `:has()` on top of style.css's existing single-`:has()` rules
+  // above -- two `:has()` pseudo-classes chained on the very same compound
+  // selector silently failed to parse at all in this browser's CSS engine
+  // (confirmed: the identical selector text parsed fine through
+  // CSSStyleSheet.insertRule(), but the same text loaded from style.css's
+  // own <link> never showed up in that sheet's cssRules at all -- dropped
+  // rule, not a specificity loss). `decorateAdvisor()` has already placed
+  // the real banner (or hidden it) by the time layoutTable() runs -- see
+  // render()'s own comment ("Called BEFORE layoutTable()") -- so this reads
+  // the sheet's REAL, current DOM, not a guess.
+  sheetEl.classList.toggle(
+    "sheet-cramped",
+    !!sheetEl.querySelector(":scope > .sheet-pinned > .sheet-pair-row") &&
+      !!sheetEl.querySelector(":scope > .sheet-pinned > .advisor-banner:not([hidden])"),
+  );
 
   // #prompt's own flex-shrink (flex:1 1 auto) could otherwise squeeze it
   // BELOW the advisor banner's own natural height — a flex item's automatic
