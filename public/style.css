@@ -1254,12 +1254,34 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    this sheet's generic `.sheet button[aria-pressed="true"]` rule (the gold
    ring #29's five-use buttons get) doesn't flatten its own selected look
    back down to plain text. */
-.sheet-pair-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
-.sheet-pair-card { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--gold-line); border-radius: 10px; background: var(--bg); color: inherit; font: inherit; min-height: 40px; }
-.sheet-pair-card .ops { flex: none; width: 24px; height: 24px; border-radius: 50%; font-family: var(--sans); font-size: 12px; line-height: 24px; text-align: center; font-weight: 700; }
+/* #118 round 3 (orchestrator, real render: English card names ran long
+   enough that each pair option effectively filled its own full-width row --
+   三張楚牌 + 不搭配 stacked to ~200px on their own, the real reason 說客's own
+   explain note never had room, not just the advisor's banner). A fixed
+   two-column grid instead of a wrapping flex row: 「不搭配」 is appended as a
+   plain `.sheet button` (app.js's `btn()`) into this same row, so it needs
+   its own overflow/ellipsis rule below, not just `.sheet-pair-card`'s. */
+/* `.sheet .rowb` above (a descendant selector, two classes) otherwise beats
+   a plain one-class `.sheet-pair-row` on specificity alone (same trap
+   #sheet-qualified's own comment on `.sheet-grid` describes further down)
+   and silently keeps this a wrapping flex row -- confirmed on the real
+   render (#118 round 3, checker's screenshot): "Besiege Wei to Save Zhao"
+   and "Don't pair" each landed on their OWN row instead of sharing the
+   second one, because `display: grid` here was never actually winning.
+   `.sheet .rowb.sheet-pair-row` matches three classes/one ancestor, high
+   enough to win outright regardless of source order. */
+.sheet .rowb.sheet-pair-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 4px 0 10px; }
+.sheet-pair-card { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--gold-line); border-radius: 10px; background: var(--bg); color: inherit; font: inherit; min-height: 40px; min-width: 0; }
+.sheet-pair-card .ops { flex: none; width: 22px; height: 22px; border-radius: 50%; font-family: var(--sans); font-size: 11px; line-height: 22px; text-align: center; font-weight: 700; }
 .sheet-pair-card .ops.q { background: var(--qin-text); color: var(--bg); }
 .sheet-pair-card .ops.c { background: var(--chu-gold); color: #6f120d; }
-.sheet-pair-card .nm { font-size: 14px; font-weight: 700; }
+/* `min-width: 0` lets a grid/flex child shrink below its text's own natural
+   width in the first place -- without it neither `overflow` nor
+   `text-overflow` ever gets a chance to fire, and a long English name (e.g.
+   "Besiege Wei to Save Zhao") just pushes the column wider instead of
+   eliding. */
+.sheet-pair-card .nm { flex: 1 1 auto; min-width: 0; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sheet-pair-row > button:not(.sheet-pair-card) { min-width: 0; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sheet-pair-card[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--gold); }
 .sheet-pair-card.adv-pick, .sheet-pair-row button.adv-pick { border-color: var(--accent); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent); }
 .sheet-head { flex: none; display: flex; gap: 14px; padding: 4px 0 0; }
@@ -1306,23 +1328,36 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .sheet:has(> .sheet-pinned > .sheet-pair-row) .sheet-img {
   width: 90px;
 }
-/* #118 round 2 (orchestrator: 375/390 en, advisor ON, 說客's own page -- the
-   explain note landed entirely below .sheet-mid's own fold even after the
-   art-shrink concession above): the advisor's own banner is unclamped once
-   it's pinned (.adv-slot-pinned, advisor.css -- the owner's #74 ruling was
-   "never cut this sentence"), so on 說客's page specifically it can outgrow
-   the art-shrink savings on its own (measured: a 2-line title+why banner
-   costs .sheet-mid ~75px more than advisor-off, more than 375's own leftover
-   slack). The one thing left to give up, once the art is already at its
-   floor and the explain note itself is already as short as it reads: the
-   (collapsed, one-line) story toggle -- real history, but strictly
-   supplementary reading the peek/rules pages already carry, unlike the
-   explain note (needed to actually choose a pair) or the rules text above
-   it. `.sheet-cramped` (app.js's layoutTable(), a plain class -- see its own
-   comment for why this isn't a second chained `:has()`) is true only when
-   BOTH 說客's own pairing row AND a real pinned banner are on screen, so an
-   ordinary card's history is untouched even with the advisor on. */
-.sheet.sheet-cramped .sheet-mid > .sheet-history {
+/* #118 round 3 (orchestrator, real render: a real pinned advisor banner
+   plus 說客's own full pair grid can still leave `.sheet-mid` shorter than
+   its own card text box even at the 90px floor above -- app.js's
+   syncMidFade() adds this class ONLY once it's measured that the text box
+   genuinely doesn't fit otherwise, never as a guess keyed off which cards or
+   language are on screen. Collapsing the art the rest of the way (not just
+   shrinking it) is the last thing `mid` is allowed to take room from --
+   .sheet-head's own `display: flex` sizes to whichever child is tallest, so
+   removing the image from that comparison entirely (`display: none`, not
+   `width: 0` -- a 0-width flex item still keeps its own top/bottom border
+   sizing from `object-fit`/`aspect-ratio`) lets the row shrink to `.sheet-
+   meta`'s own natural height instead. */
+.sheet.sheet-art-collapsed .sheet-img {
+  display: none;
+}
+/* #118 round 3 (orchestrator, real render with all 3 of a hand's Chu cards
+   offered as pairs + a real pinned advisor banner): round 2's `.sheet-cramped`
+   heuristic (BOTH the pairing row AND a pinned banner on screen) still wasn't
+   the real question -- the real question is just whether `.sheet-mid`'s own
+   content fits, which depends on how many pair options there are and how
+   long the advisor's own sentence turned out to be, not just whether either
+   exists at all. app.js's syncMidFade() now measures `mid` directly and
+   hides history (the one piece of `mid` that's allowed to give way -- real
+   history, but strictly supplementary reading the peek/rules pages already
+   carry, unlike the card's own rule text above it) only when it's actually
+   needed, on every card, advisor on or off -- this plain `[hidden]` rule is
+   just what makes that stick: `.sheet-history` is also `.sheet-textbox`
+   (`display: flex`, same specificity as a bare class), so the attribute
+   alone wouldn't otherwise beat it. */
+.sheet-history[hidden] {
   display: none;
 }
 .sheet-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }

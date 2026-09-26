@@ -973,24 +973,6 @@ function layoutTable() {
   promptScroll.hidden = false;
   sheetEl.classList.remove("sheet-compact");
   if (sheetTitle) sheetTitle.hidden = true;
-  // #118 round 2 (orchestrator: 375/390 en, advisor ON, 說客's own page --
-  // the explain note landed entirely below .sheet-mid's own fold even with
-  // the art already shrunk to its floor): a plain class, not a second
-  // chained `:has()` on top of style.css's existing single-`:has()` rules
-  // above -- two `:has()` pseudo-classes chained on the very same compound
-  // selector silently failed to parse at all in this browser's CSS engine
-  // (confirmed: the identical selector text parsed fine through
-  // CSSStyleSheet.insertRule(), but the same text loaded from style.css's
-  // own <link> never showed up in that sheet's cssRules at all -- dropped
-  // rule, not a specificity loss). `decorateAdvisor()` has already placed
-  // the real banner (or hidden it) by the time layoutTable() runs -- see
-  // render()'s own comment ("Called BEFORE layoutTable()") -- so this reads
-  // the sheet's REAL, current DOM, not a guess.
-  sheetEl.classList.toggle(
-    "sheet-cramped",
-    !!sheetEl.querySelector(":scope > .sheet-pinned > .sheet-pair-row") &&
-      !!sheetEl.querySelector(":scope > .sheet-pinned > .advisor-banner:not([hidden])"),
-  );
 
   // #prompt's own flex-shrink (flex:1 1 auto) could otherwise squeeze it
   // BELOW the advisor banner's own natural height — a flex item's automatic
@@ -1829,18 +1811,50 @@ const useEn = (u) => en.uses[u];
 function sheetMid(sh) {
   const d = document.createElement("div"); d.className = "sheet-mid"; sh.appendChild(d); return d;
 }
-// #118 item 2: toggles `.has-more` (style.css) on `mid` once its real,
-// final height is known (see the requestAnimationFrame call above) -- true
-// exactly when `mid`'s own content actually overflows it. style.css fades
-// the last ~28px of `mid` to transparent while this class is on, so a line
-// that lands right on the fold reads as "more below, scroll" instead of a
-// hard slice through its own glyphs; the fade draws nothing at all (and
-// costs nothing) on every card whose content already fits. Never touches
-// scrollTop -- purely a paint-time affordance, same "true at rest" the
-// issue asks for either way, since `mid` still opens scrolled to the top.
+// #118 round 3 (orchestrator, real 說客 page with a real pinned advisor
+// banner AND all three of a hand's Chu cards offered as pairs): the card's
+// OWN rule text (cardTextBox, first thing in `mid`) must always stay fully
+// visible at 375/390 -- it's the one thing here that's never optional. The
+// (collapsed, one-line) history toggle is the one piece of `mid` allowed to
+// go first when there isn't room for both; nothing else lives in `mid` any
+// more (the long shuoke.explain paragraph moved into the pinned hint, see
+// the #118 round 3 comment by `hasPairOptions` below) so this is normally
+// enough on its own. Deferred one frame (see the requestAnimationFrame call
+// above) so `mid`'s real, final height is known -- it depends on
+// `.sheet-pinned`/the footer too, both fixed siblings built AFTER this
+// point in the same render.
+//
+// Order: reset first (undo a previous PASS's hide -- a render can go from
+// cramped to roomy, e.g. the advisor switching off), measure, hide history
+// if that alone doesn't already fit, measure again, then fade whatever's
+// STILL left over (a fold landing mid-line reads as "more below, scroll"
+// rather than a slice through its own glyphs). Works the same whether the
+// advisor is on or off -- it never reads `advisor-banner`/`sheet-pair-row`
+// directly, only `mid`'s own real, measured height.
 function syncMidFade(mid) {
   if (!mid.isConnected) return; // #118: a later render may have replaced it before this frame runs
-  mid.classList.toggle("has-more", mid.scrollHeight - mid.clientHeight > 1);
+  const sh = mid.parentElement;
+  const overflow = () => mid.scrollHeight - mid.clientHeight > 1;
+  const history = mid.querySelector(":scope > .sheet-history");
+  if (history) history.hidden = false;
+  sh.classList.remove("sheet-art-collapsed");
+  if (history && overflow()) history.hidden = true;
+  // #118 round 3 (orchestrator, real render: a real pinned advisor banner
+  // (unclamped, #74's own "never cut this sentence" ruling) plus 說客's own
+  // full pair grid can leave `.sheet-mid` shorter than even its OWN card
+  // text box, the one thing in here that must never be optional -- measured
+  // on the real save: 44-46px of `mid` at 375/390 en, advisor on, against a
+  // ~70-90px two-line text box). Hiding the (already-collapsed) history
+  // first is never enough on its own in that combination, so this is the
+  // next thing to give, and the last: the art was already at its #118
+  // round-1 floor (90px, style.css's `:has()` rules above) -- collapsing it
+  // the rest of the way to 0 is strictly a fallback, only applied once
+  // measurement (not a guess at which cards/language/advisor combination
+  // needs it) says the text box still wouldn't fit otherwise. Every other
+  // card, and 說客 itself whenever this much room isn't actually needed,
+  // never sets this class at all.
+  if (overflow()) sh.classList.add("sheet-art-collapsed");
+  mid.classList.toggle("has-more", overflow());
 }
 // #46 (owner: "看手牌沒有卡牌歷史" + a player must never scroll to reach a
 // button): a fixed (non-scrolling) sibling of sheetMid(), between the
@@ -2163,11 +2177,18 @@ function renderPromptAndSheet(v) {
     cardHeader(sh, ui.card);
     mid = sheetMid(sh);
     cardTextBox(mid, ui.card);
-    // #117: reads right after the card's own text, ahead of the history
-    // section -- not tacked on at the very end of `mid` (round 1 of this
-    // fix put it there, past a long history entry, easy to miss).
-    if (ui.card === "shuoke") {
-      note(mid, t(hasPairOptions ? "sheet.shuoke.explain" : "sheet.shuoke.noEnemy", { enemy: sideName(E.other(me)) }));
+    // #118 round 3 (orchestrator, real render: a real pinned advisor banner
+    // plus all 3 of a hand's Chu cards offered as pairs pushed this note
+    // entirely below .sheet-mid's own fold at 375/390 en): the full
+    // sheet.shuoke.explain paragraph moved out of `mid` into `sheet.hint.
+    // shuoke` instead -- the pinned, never-scrolling one-line hint already
+    // shown for every 說客 page below (`note(pinned, t("sheet.hint." + kind,
+    // ...))`), now carrying the whole rule instead of just a summary, so
+    // nothing about how to play the card depends on `mid` having room. Only
+    // sheet.shuoke.noEnemy stays here -- one short line, shown only when
+    // there's genuinely no pair option to explain in the first place.
+    if (ui.card === "shuoke" && !hasPairOptions) {
+      note(mid, t("sheet.shuoke.noEnemy", { enemy: sideName(E.other(me)) }));
     }
   }
   const target = showFullCard ? mid : sh;
@@ -2249,10 +2270,13 @@ function renderPromptAndSheet(v) {
   }
   if (ui.card === "shuoke" && showFullCard) {
     // 事件 is disabled above for every 說客 page, paired or not -- this is
-    // the reason, not just a greyed button with no explanation. `mid`, not
-    // `pinned`, same 320x568 budget reasoning as the explain/noEnemy note
-    // above -- it's prose, not a control.
-    note(mid, t("sheet.shuoke.eventReason"));
+    // the reason, not just a greyed button with no explanation. #118 round
+    // 3: moved from `mid` into `pinned` (right after the use grid it's
+    // explaining) -- same reasoning as the explain note's own move just
+    // above: one short, pinned line the player can always read costs
+    // `mid` nothing, where the same line used to be one more thing that
+    // could push the card's own rule text below the fold.
+    note(pinned, t("sheet.shuoke.eventReason"));
   }
   // #24 round 2, fix #3 (owner): "their card"'s ops-first/event-first order
   // and 說客's pairing used to only render once a map-needing use was
