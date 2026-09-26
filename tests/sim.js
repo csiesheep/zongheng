@@ -444,12 +444,12 @@ function reportEmperor(files) {
   const cnt = (rows, f) => rows.filter(f).length;
   const mean = (rows, k) => meanCi(rows.map((x) => x[k]));
   const mci = (m) => `${m.m.toFixed(2)} ±${m.h.toFixed(2)}`;
-  out.push("| cell | n | errors / stuck | Qin win % [95%] | avg end turn | box 6 reached by anyone, % [95%] | by Qin % | by Chu % | first there: Qin / Chu | first-there side won, % [95%] (of games reached) |");
-  out.push("|---|---|---|---|---|---|---|---|---|---|");
+  out.push("| cell | n | errors / stuck | Qin win % [95%] | avg end turn | box 6 reached by anyone, % [95%] | games that lasted to turn 7: box 6 reached, % (k/n) | by Qin % | by Chu % | first there: Qin / Chu | first-there side won, % [95%] (of games reached) |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|---|");
   for (const name of order) {
     const { rows, n, errors, stuck } = cells[name];
     const reached = rows.filter((x) => x.reached);
-    out.push(`| ${name} | ${n} | ${errors} / ${stuck} | ${rate(cnt(rows, (x) => x.qinWin), n)} | ${mci(mean(rows, "turn"))} | ${rate(reached.length, n)} | ${pc(cnt(rows, (x) => x.q6turn > 0) / n)} | ${pc(cnt(rows, (x) => x.c6turn > 0) / n)} | ${cnt(rows, (x) => x.first6 === 0)} / ${cnt(rows, (x) => x.first6 === 1)} | ${rate(cnt(reached, (x) => x.firstWon), reached.length)} (${cnt(reached, (x) => x.firstWon)}/${reached.length}) |`);
+    out.push(`| ${name} | ${n} | ${errors} / ${stuck} | ${rate(cnt(rows, (x) => x.qinWin), n)} | ${mci(mean(rows, "turn"))} | ${rate(reached.length, n)} | ${(() => { const late = rows.filter((x) => x.turn >= 7); const k = cnt(late, (x) => x.reached); return `${pc(k / (late.length || 1))} (${k}/${late.length})`; })()} | ${pc(cnt(rows, (x) => x.q6turn > 0) / n)} | ${pc(cnt(rows, (x) => x.c6turn > 0) / n)} | ${cnt(rows, (x) => x.first6 === 0)} / ${cnt(rows, (x) => x.first6 === 1)} | ${rate(cnt(reached, (x) => x.firstWon), reached.length)} (${cnt(reached, (x) => x.firstWon)}/${reached.length}) |`);
   }
   out.push("", "End reasons, % of games [Wilson 95%]:", "");
   out.push(`| cell | ${EMP_REASONS.map((e) => REASON_ZH[e] || "稱帝").join(" | ")} |`);
