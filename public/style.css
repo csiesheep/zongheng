@@ -1757,6 +1757,14 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .logrow-chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .logchip { padding: 2px 7px; border-radius: 10px; background: #26211a; border: 1px solid #4a3f30; color: var(--text); font: 600 11.5px/16px var(--sans); }
 .logchip.gold { background: rgba(216, 181, 106, 0.16); border-color: rgba(216, 181, 106, 0.5); color: var(--gold); }
+/* #120: #115's event chips (chipEvent/chipEffectOn/chipEffectOff) and a
+   plain chip (chipDiscard) both name a card now via the shared
+   .log-card-link button (log-view.js) -- .logchip's own `color` above is
+   the same specificity and declared after it, so without this it would
+   quietly win and the link would stop looking tappable inside a chip. No
+   padding/size change here (a chip's own box stays exactly the size it was
+   -- the #320 overflow check below covers the same row). */
+.logchip .log-card-link { color: var(--gold); text-decoration: underline; }
 .logrow-setup { display: block; padding: 6px 14px; font: 400 13px/1.5 var(--serif); }
 .logrow-headline .logrow-body { padding-left: 14px; }
 .logrow-other { padding: 5px 14px; font: 400 12.5px/1.5 var(--serif); color: var(--text-dim); }

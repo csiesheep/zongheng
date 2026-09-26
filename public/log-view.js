@@ -24,6 +24,37 @@ const spaceName = (id, lang) => (id && E.SPACE[id] ? (lang === "en" ? E.SPACE[id
 const stateName = (id, lang) => (id && E.STATES[id] ? (lang === "en" ? E.STATES[id].en : E.STATES[id].zh) : "");
 const regionName = (r, lang) => (r && E.REGIONS[r] ? (lang === "en" ? E.REGIONS[r].en : E.REGIONS[r].zh) : "");
 const useLabel = (use, lang) => t(lang, `useNames.${use}`);
+// #120: every card name in the panel opens the same read-only peek the
+// thumbnail already does (openPeek(cardId, side) in app.js) -- this module
+// never calls it directly (no DOM handle back into app.js, same rule as
+// oppmove-ui.js), it just marks up a <button class="log-card-link"> with
+// the id/side in data-* attributes; app.js's own #logLines click delegate
+// (below the thumb check) reads them and calls openPeek(). `.log-card-link`
+// is the existing style the prompt-area news strip already uses for a card
+// name (app.js's cardLinkButton()) -- reused here rather than invented
+// fresh, so "looks tappable" means the same gold underline everywhere.
+function cardLinkHtml(id, side, lang) {
+  const label = cardName(id, lang);
+  const sideAttr = side != null ? ` data-side="${side}"` : "";
+  return `<button type="button" class="log-card-link no-tap-sound" data-card="${id}"${sideAttr}>${label}</button>`;
+}
+// Same idea as app.js's logLineNodes(): walk an i18n template's own
+// `{param}` placeholders, and for the one named in `cardParam` splice in
+// cardLinkHtml() instead of the plain interpolated string. Every other
+// placeholder still goes through esc() -- these strings are built from our
+// own i18n tables and engine ids (never player text), but esc() costs
+// nothing and keeps this safe if that ever changes.
+function tCardMulti(lang, key, params, cardParams) {
+  const raw = String(key.split(".").reduce((o, k) => (o ? o[k] : undefined), I18N[lang] || I18N.en) ?? key);
+  return raw.replace(/\{(\w+)\}/g, (_, k) => {
+    const ref = cardParams && cardParams[k];
+    if (ref) return cardLinkHtml(ref.id, ref.side, lang);
+    return esc(params[k] ?? `{${k}}`);
+  });
+}
+function tCard(lang, key, params, cardParam, cardId, cardSide) {
+  return tCardMulti(lang, key, params, { [cardParam]: { id: cardId, side: cardSide } });
+}
 // #82's rule (actualOpsOf), copied rather than imported -- oppmove.js is
 // DOM-free but has no such helper of its own, and this module must not
 // reach into oppmove-ui.js (#87's file) to borrow it.
@@ -69,11 +100,11 @@ function chipsForSteps(steps, moverSide, lang) {
     } else if (st.type === "jiuding") {
       chips.push({ text: t(lang, "oppmove.tickerJiuding", { side: sideName(st.to, lang) }), gold: true });
     } else if (st.type === "discard" || st.type === "bog") {
-      chips.push({ text: t(lang, "logPanel.chipDiscard", { side: sideName(st.side, lang), card: cardName(st.card, lang) }), gold: false });
+      chips.push({ text: tCard(lang, "logPanel.chipDiscard", { side: sideName(st.side, lang) }, "card", st.card, st.side), gold: false });
     } else if (st.type === "opsLost") {
       chips.push({ text: t(lang, "logPanel.chipOpsLost", { side: sideName(st.side, lang), ops: st.ops }), gold: false });
     } else if (st.type === "event") {
-      chips.push({ text: t(lang, "logPanel.chipEvent", { side: sideName(st.side, lang), card: cardName(st.card, lang) }), gold: true });
+      chips.push({ text: tCard(lang, "logPanel.chipEvent", { side: sideName(st.side, lang) }, "card", st.card, st.side), gold: true });
     } else if (st.type === "eventEnd") {
       chips.push(...eventEndChips(st, lang));
     }
@@ -92,8 +123,8 @@ function eventEndChips(st, lang) {
     if (dq) out.push({ text: t(lang, "logPanel.chipInf", { space: spaceName(id, lang), side: sideName(E.QIN, lang), d: signed(dq) }), gold: false });
     if (dc) out.push({ text: t(lang, "logPanel.chipInf", { space: spaceName(id, lang), side: sideName(E.CHU, lang), d: signed(dc) }), gold: false });
   }
-  for (const c of (st.fx && st.fx.add) || []) out.push({ text: t(lang, "logPanel.chipEffectOn", { card: cardName(c, lang) }), gold: true });
-  for (const c of (st.fx && st.fx.rm) || []) out.push({ text: t(lang, "logPanel.chipEffectOff", { card: cardName(c, lang) }), gold: true });
+  for (const c of (st.fx && st.fx.add) || []) out.push({ text: tCard(lang, "logPanel.chipEffectOn", {}, "card", c, E.CARD[c] ? E.CARD[c].side : null), gold: true });
+  for (const c of (st.fx && st.fx.rm) || []) out.push({ text: tCard(lang, "logPanel.chipEffectOff", {}, "card", c, E.CARD[c] ? E.CARD[c].side : null), gold: true });
   (st.hands || []).forEach((d, s) => { if (d) out.push({ text: t(lang, "logPanel.chipDraw", { side: sideName(s, lang), d: signed(d) }), gold: false }); });
   if (st.recover) out.push({ text: t(lang, "logPanel.chipTire", { to: t(lang, "weariness." + st.recover) }), gold: true });
   return out;
@@ -136,8 +167,8 @@ function moveRowHtml(row, lang, pair) {
   const sideCls = row.side === E.CHU ? "c" : "q";
   const verb = lang === "en" ? "plays" : "打出";
   const use = row.use === "event" ? t(lang, "useNames.event") : `${useLabel(row.use, lang)} ${actualOpsOf(row)}`;
-  const pairTxt = pair && E.CARD[pair] ? ` <span class="logrow-card">${t(lang, "logPanel.pairWith", { side: sideName(E.CARD[pair].side, lang), card: cardName(pair, lang) })}</span>` : "";
-  const head = `<b class="logrow-side side-${sideCls}">${sideName(row.side, lang)}</b> ${verb} <span class="logrow-card">${cardName(row.card, lang)}</span>${pairTxt} <span class="logrow-use">· ${use}</span>`;
+  const pairTxt = pair && E.CARD[pair] ? ` <span class="logrow-card">${tCard(lang, "logPanel.pairWith", { side: sideName(E.CARD[pair].side, lang) }, "card", pair, E.CARD[pair].side)}</span>` : "";
+  const head = `<b class="logrow-side side-${sideCls}">${sideName(row.side, lang)}</b> ${verb} <span class="logrow-card">${cardLinkHtml(row.card, row.side, lang)}</span>${pairTxt} <span class="logrow-use">· ${use}</span>`;
   const chips = chipsForSteps(row.steps, row.side, lang);
   return (
     `<div class="logrow side-${sideCls}" data-seq="${row.seq}">` +
@@ -151,10 +182,11 @@ function headlineRowHtml(row, lang) {
   const [qin, chu] = row.cards || [];
   let line;
   if (qin != null && chu != null) {
-    line = t(lang, "logPanel.headlineLine", { qinSide: sideName(E.QIN, lang), qinCard: cardName(qin, lang), chuSide: sideName(E.CHU, lang), chuCard: cardName(chu, lang) });
+    line = tCardMulti(lang, "logPanel.headlineLine", { qinSide: sideName(E.QIN, lang), chuSide: sideName(E.CHU, lang) }, { qinCard: { id: qin, side: E.QIN }, chuCard: { id: chu, side: E.CHU } });
   } else if (qin != null || chu != null) {
     const side = qin != null ? E.QIN : E.CHU;
-    line = `${sideName(side, lang)} ${cardName(qin != null ? qin : chu, lang)}`;
+    const id = qin != null ? qin : chu;
+    line = `${sideName(side, lang)} ${cardLinkHtml(id, side, lang)}`;
   } else {
     line = t(lang, "log.headlineNone");
   }
@@ -176,8 +208,12 @@ function otherRowHtml(row, lang) {
     region: e.region ? regionName(e.region, lang) : "", state: e.state ? stateName(e.state, lang) : "",
     card: e.card ? cardName(e.card, lang) : "", ops: e.ops, box: e.box,
   };
+  // #120: this table's own templates (log.play/log.discard/log.bog/
+  // log.headlineOne) can name a card too -- same tCard() splice as every
+  // other card-naming row, gated on e.card so the vast majority (turn/era/
+  // reform/skip, none of which carry one) is untouched.
   let text;
-  try { text = t(lang, key, P); } catch { text = ""; }
+  try { text = e.card ? tCard(lang, key, P, "card", e.card, e.side != null ? e.side : null) : t(lang, key, P); } catch { text = ""; }
   if (text === key || !text) return "";
   return `<div class="logrow logrow-other">${text}</div>`;
 }

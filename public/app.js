@@ -27,6 +27,14 @@ import {
 import { sealProgress } from "./seal-progress.js"; // #89: 相印 progress marks on the capitals
 import { computeLastMoveMarks } from "./lastmove.js";
 import * as OppUI from "./oppmove-ui.js"; // #79: the opponent's-move reveal (card panel/steps/chip/sheet)
+// #120: oppmove-ui.js never gets a DOM handle back into this file (its own
+// header rule) -- it names its ticker's own card-naming beats with a
+// .opp-ticker-card button and calls this callback, set once, when a tap
+// lands on one, so those buttons open the SAME read-only peek as every
+// other card name in the log/news (openPeek(), defined further down --
+// function declarations are hoisted, so this call site runs fine even
+// though it textually comes first).
+OppUI.setOpenPeek((id, side) => openPeek(id, side));
 import * as LogView from "./log-view.js"; // #88: the log panel's own rows/chips and its tap-to-flash overlay
 import { discParts } from "./disc-view.js";
 import * as Audio from "./audio.js";
@@ -2851,9 +2859,15 @@ const desktopLayout = () => { try { return matchMedia("(min-width: 1024px)").mat
 // flashes. The card thumbnail is its own nested button (never the row's own
 // click, so tapping it can't also trigger a flash) and opens the existing
 // read-only peek sheet (#34), same as a card name in the old flat log.
+// #120: every other card name log-view.js marks up (.log-card-link, in the
+// row text, a headline's two cards, 說客's pair, and #115's event chips) is
+// the SAME kind of nested button -- checked right after the thumb, before
+// the row-flash fallback below, so it never also flashes/actives the row.
 $("logLines").addEventListener("click", (ev) => {
   const thumb = ev.target.closest(".logrow-thumb");
   if (thumb) { ev.stopPropagation(); openPeek(thumb.dataset.card, Number(thumb.dataset.side)); return; }
+  const link = ev.target.closest(".log-card-link");
+  if (link) { ev.stopPropagation(); openPeek(link.dataset.card, link.dataset.side != null ? Number(link.dataset.side) : null); return; }
   const rowEl = ev.target.closest(".logrow[data-seq]");
   if (!rowEl) return;
   const seq = Number(rowEl.dataset.seq);
