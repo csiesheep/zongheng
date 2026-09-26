@@ -155,7 +155,7 @@ export default {
       tie: { title: "Level Mandate, {winner}'s tie", body: "The Mandate was level; the tie rule favours {winner}.", win: "You win. The Mandate was level, and the tie favours you.", lose: "You lose. The Mandate was level, and the tie favours {winner}.", watch: "The Mandate was level, and the tie favours {winner}." },
       // #125 (owner: the first to 稱帝 wins if it leads the Mandate then):
       // either side can win this way, so the king is {winner}'s, not Qin's.
-      emperor: { title: "The Emperor", body: "{winner} reached Emperor, the last box of the reform track, first and while ahead on the Mandate; the realm bows.", win: "You win. The King of {winner} takes the title of emperor, and the realm bows.", lose: "You lose. The King of {winner} took the title of emperor first.", watch: "The King of {winner} takes the title of emperor; the Mandate is settled." },
+      emperor: { title: "The Emperor", body: "{winner} reached Emperor, the last box of the reform track, first and while ahead on the Mandate.", win: "You win. The King of {winner} takes the title of emperor, and the realm bows.", lose: "You lose. The King of {winner} took the title of emperor first.", watch: "The King of {winner} takes the title of emperor; the Mandate is settled." },
     },
   },
   log: {
@@ -382,7 +382,7 @@ export default {
     // #125: one line on a card's page when this card can take the last step
     // of reform: arriving while ahead on the Mandate wins, otherwise +3
     // (app.js reads E.emperorWins).
-    emperor: { lead: "Reform to Emperor: you lead the Mandate now, so arriving wins.", notLead: "Reform to Emperor: you don't lead the Mandate now, so arriving gives only +3." },
+    emperor: { lead: "Emperor now: ahead on the Mandate, you win.", notLead: "Emperor now: not ahead on the Mandate, only +3." },
     // #117: The Lobbyist's pairing choice -- pick an enemy card from hand to
     // play with it, or explicitly choose not to. {enemy} is the other side's
     // name (Qin/Chu). none/noEnemy/eventReason cover the three states: chose

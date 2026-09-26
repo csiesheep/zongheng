@@ -120,7 +120,7 @@ export default {
       tie: { title: "天命持平,歸{winner}", body: "天命持平,依規則判給{winner}。", win: "你贏了。天命持平,依規則判你勝。", lose: "你輸了。天命持平,依規則判{winner}勝。", watch: "天命持平,依規則判{winner}勝。" },
       // #125(owner:先抵達稱帝、且當時天命領先,即獲勝):贏家可以是秦也可以是楚,
       // 所以用 {winner}王,不寫死秦王。
-      emperor: { title: "稱帝", body: "{winner}率先變法到稱帝,當時天命領先,天下歸心。", win: "你贏了。{winner}王稱帝,天下歸心。", lose: "你輸了。{winner}王搶先稱帝,天命已定。", watch: "{winner}王稱帝,天命已定。" },
+      emperor: { title: "稱帝", body: "{winner}率先變法到稱帝,而且當時天命領先。", win: "你贏了。{winner}王稱帝,天下歸心。", lose: "你輸了。{winner}王搶先稱帝,天命已定。", watch: "{winner}王稱帝,天命已定。" },
     },
   },
   log: {
