@@ -578,7 +578,7 @@ function eventMark(st) {
   return {
     inf, mandate: st.mandate, weariness: st.weariness, reform: `${st.reform[0]}:${st.reform[1]}`,
     hands: [st.hands[QIN].length, st.hands[CHU].length], draw: st.draw.length, discard: st.discard.length, removed: st.removed.length,
-    effects: st.effects.map((e) => JSON.stringify(e)), seals: Object.keys(st.seals).sort().join(), mie: Object.keys(st.mie).sort().join(),
+    effects: st.effects.slice(), seals: Object.keys(st.seals).sort().join(), mie: Object.keys(st.mie).sort().join(),
     jiuding: `${st.jiuding.holder}:${st.jiuding.faceDown}`, revealed: st.revealed.join(), forced: st.forced.join(), luoyiYields: st.luoyiYields, winner: st.winner,
   };
 }
@@ -607,10 +607,14 @@ function logEventEnd(st, step, a) {
   // Lasting effects as a multiset (函谷關天險 re-played is removed and pushed
   // back: the same set, no change).
   const fx = { add: [], rm: [] };
-  if (a.effects.join("\n") !== b.effects.join("\n")) {
+  // Same objects in the same order (no choice was asked, so no clone came
+  // between the marks): nothing to compare. Otherwise compare by content.
+  const same = a.effects.length === b.effects.length && a.effects.every((e, i) => e === b.effects[i]);
+  if (!same) {
+    const ea = a.effects.map((e) => JSON.stringify(e)), eb = b.effects.map((e) => JSON.stringify(e));
     const count = (arr) => arr.reduce((m, k) => ((m[k] = (m[k] || 0) + 1), m), {});
-    const ca = count(a.effects), cb = count(b.effects);
-    for (const k of new Set([...a.effects, ...b.effects])) {
+    const ca = count(ea), cb = count(eb);
+    for (const k of new Set([...ea, ...eb])) {
       const d = (cb[k] || 0) - (ca[k] || 0), card = JSON.parse(k).card;
       for (let i = 0; i < d; i++) fx.add.push(card);
       for (let i = 0; i < -d; i++) fx.rm.push(card);
