@@ -1395,6 +1395,19 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    of the viewport. Only present while the full card (not the compact chip)
    is on screen. */
 .sheet-mid { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
+/* #118 item 2 (orchestrator, card_chuPair_390zh_advOff.png): app.js's
+   syncMidFade() adds/removes this class once `mid`'s real height is known --
+   on exactly when its content overflows it. Fades the bottom ~28px to
+   transparent so whatever line happens to land on the fold reads as "more
+   below, scroll" rather than getting sliced clean through its own glyphs (no
+   scrollbar is visible on a phone to explain a hard cut otherwise). No
+   visible effect at all when `mid` isn't scrollable -- the mask only ever
+   erases pixels inside `mid`'s own box, and a `mid` shorter than its
+   container has nothing sitting in that bottom strip to erase. */
+.sheet-mid.scroll-fade {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
+}
 /* #71 (owner, iPhone screenshot): the advisor's own suggestion banner
    (.advisor-banner.adv-slot-sheet, public/advisor.css) sits in .sheet-mid
    above, whose own comment already says "it scrolls on its own" -- but the
