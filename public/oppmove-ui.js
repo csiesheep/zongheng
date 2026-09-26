@@ -47,6 +47,32 @@ function actualOpsOf(mv) {
 }
 const cardSideOf = (id) => (id === E.JIUDING ? null : E.CARD[id].side);
 const cardScoring = (id) => id !== E.JIUDING && !!E.CARD[id].scoring;
+// #120: a beat's ticker note can name a card too (the event played, an
+// effect starting/ending, a discard) -- same clickable look as the log
+// panel's own .log-card-link (style.css, shared), opening the SAME
+// openPeek() in app.js. This module never reaches into app.js for it (the
+// file-header rule above: only a context bundle in, never a DOM handle
+// back) -- app.js hands it a callback once via setOpenPeek(), and onTap()
+// below calls it when the tap actually landed on one of these buttons
+// instead of treating it as "skip the reveal".
+let openPeekCb = null;
+export function setOpenPeek(fn) { openPeekCb = fn; }
+function cardLinkHtml(id, side, lang) {
+  const label = esc(cardName(id, lang));
+  const sideAttr = side != null ? ` data-side="${side}"` : "";
+  return `<button type="button" class="log-card-link opp-ticker-card no-tap-sound" data-card="${id}"${sideAttr}>${label}</button>`;
+}
+// Same splice as log-view.js's tCard(): walk the template's `{param}`
+// placeholders, swap the one named `cardParam` for a real button, esc()
+// every other one (defense in depth -- these are all our own i18n/engine
+// strings, never player text).
+function noteHtml(lang, key, params, cardParam, cardId, cardSide) {
+  const raw = String(key.split(".").reduce((o, k) => (o ? o[k] : undefined), I18N[lang] || I18N.en) ?? key);
+  return raw.replace(/\{(\w+)\}/g, (_, k) => {
+    if (k === cardParam) return cardLinkHtml(cardId, cardSide, lang);
+    return esc(params[k] ?? `{${k}}`);
+  });
+}
 // The mandate's own resulting total (v.mandate's own sign convention: +Qin).
 const mandateTotalTxt = (m, lang) => (m > 0 ? `${t(lang, "sides.qin")} +${m}` : m < 0 ? `${t(lang, "sides.chu")} +${-m}` : "0");
 
@@ -151,10 +177,10 @@ function flattenBeats(mv, view, c) {
       out.push({ kind: "stat", stat: "jiuding", text: t(lang, "oppmove.tickerJiuding", { side: sideName(st.to, lang) }) });
     } else if (st.type === "event") {
       // #115: the event gets a beat of its own, so the reveal says it happened.
-      out.push({ kind: "note", text: t(lang, "oppmove.tickerEvent", { side: sideName(st.side, lang), card: cardName(st.card, lang) }) });
+      out.push({ kind: "note", text: t(lang, "oppmove.tickerEvent", { side: sideName(st.side, lang), card: cardName(st.card, lang) }), html: noteHtml(lang, "oppmove.tickerEvent", { side: sideName(st.side, lang) }, "card", st.card, st.side) });
     } else if (st.type === "eventEnd") {
       if (!st.effect) {
-        out.push({ kind: "note", text: t(lang, "oppmove.tickerEventNone", { side: sideName(st.side, lang), card: cardName(st.card, lang), why: t(lang, `logPanel.eventWhy.${st.why}`) }) });
+        out.push({ kind: "note", text: t(lang, "oppmove.tickerEventNone", { side: sideName(st.side, lang), card: cardName(st.card, lang), why: t(lang, `logPanel.eventWhy.${st.why}`) }), html: noteHtml(lang, "oppmove.tickerEventNone", { side: sideName(st.side, lang), why: t(lang, `logPanel.eventWhy.${st.why}`) }, "card", st.card, st.side) });
         continue;
       }
       const signed = (d) => (d > 0 ? `+${d}` : `−${-d}`);
@@ -165,12 +191,12 @@ function flattenBeats(mv, view, c) {
           if (d) out.push({ kind: "ring", spaceId: id, n: d > 0 ? d : null, side: s, text: t(lang, "logPanel.chipInf", { space: spaceName(id, lang), side: sideName(s, lang), d: signed(d) }) });
         }
       }
-      for (const c of (st.fx && st.fx.add) || []) out.push({ kind: "note", text: t(lang, "logPanel.chipEffectOn", { card: cardName(c, lang) }) });
-      for (const c of (st.fx && st.fx.rm) || []) out.push({ kind: "note", text: t(lang, "logPanel.chipEffectOff", { card: cardName(c, lang) }) });
+      for (const c of (st.fx && st.fx.add) || []) out.push({ kind: "note", text: t(lang, "logPanel.chipEffectOn", { card: cardName(c, lang) }), html: noteHtml(lang, "logPanel.chipEffectOn", {}, "card", c, cardSideOf(c)) });
+      for (const c of (st.fx && st.fx.rm) || []) out.push({ kind: "note", text: t(lang, "logPanel.chipEffectOff", { card: cardName(c, lang) }), html: noteHtml(lang, "logPanel.chipEffectOff", {}, "card", c, cardSideOf(c)) });
       (st.hands || []).forEach((d, s) => { if (d) out.push({ kind: "note", text: t(lang, "logPanel.chipDraw", { side: sideName(s, lang), d: signed(d) }) }); });
       if (st.recover) out.push({ kind: "stat", stat: "weariness", text: t(lang, "logPanel.chipTire", { to: t(lang, "weariness." + st.recover) }) });
     } else if (st.type === "discard") {
-      out.push({ kind: "note", text: t(lang, "logPanel.chipDiscard", { side: sideName(st.side, lang), card: cardName(st.card, lang) }) });
+      out.push({ kind: "note", text: t(lang, "logPanel.chipDiscard", { side: sideName(st.side, lang), card: cardName(st.card, lang) }), html: noteHtml(lang, "logPanel.chipDiscard", { side: sideName(st.side, lang) }, "card", st.card, st.side) });
     }
   }
   const marks = c.lastMoveMarks || {};
@@ -293,7 +319,11 @@ function renderBeat(beat, index) {
   }
   const mr = rectOf(mapEl());
   if (mr) d.ticker.style.cssText = `left:${mr.left + 8}px;top:${mr.bottom - 38}px;width:${mr.width - 16}px`;
-  d.ticker.textContent = `${index + 1}. ${beat.text}`;
+  // #120: beat.html (only set on a note that names a card) carries a real
+  // <button> -- innerHTML for that case, plain textContent otherwise (every
+  // other beat's `text` is a translated string with no markup in it).
+  if (beat.html) d.ticker.innerHTML = `${index + 1}. ${beat.html}`;
+  else d.ticker.textContent = `${index + 1}. ${beat.text}`;
 }
 function renderStepsStatic() {
   // prefers-reduced-motion: every beat's ring/glow shown at once, no ticker cycling.
@@ -304,7 +334,10 @@ function renderStepsStatic() {
     renderBeat(beat, i);
     d.rings.innerHTML = prevInner + d.rings.innerHTML;
   });
-  d.ticker.textContent = beats.length ? `${beats.length}. ${beats[beats.length - 1].text}` : "";
+  if (!beats.length) { d.ticker.textContent = ""; return; }
+  const last = beats[beats.length - 1];
+  if (last.html) d.ticker.innerHTML = `${beats.length}. ${last.html}`;
+  else d.ticker.textContent = `${beats.length}. ${last.text}`;
 }
 
 // ---------- overall visibility ----------
@@ -364,7 +397,17 @@ function finishMove() {
 // A tap on the dim/card/ticker (dom's own click listeners, wired in
 // ensureDom()): during ① it continues into ②; during ② it skips straight
 // to the end (finishMove, which then opens the next queued move's own ①).
-function onTap() {
+// #120: EXCEPT a tap that actually landed on one of the ticker's own
+// .opp-ticker-card buttons -- that opens the read-only peek instead (via
+// the callback app.js registered with setOpenPeek()) and does not also
+// skip the reveal; the ticker keeps cycling underneath the peek, same as
+// any other read-only overlay opened mid-animation.
+function onTap(ev) {
+  const link = ev && ev.target && ev.target.closest ? ev.target.closest(".opp-ticker-card") : null;
+  if (link) {
+    if (openPeekCb) openPeekCb(link.dataset.card, link.dataset.side != null ? Number(link.dataset.side) : null);
+    return;
+  }
   if (phase === "card") continueFromCard();
   else if (phase === "steps" || phase === "steps-static") finishMove();
 }
