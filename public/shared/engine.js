@@ -110,12 +110,43 @@ function withRng(st, fn) {
   st.rngState = rng.getState();
   return out;
 }
-// Entries carry a running number `i`, so a reader that only sees the tail
-// (the log keeps the last 400) knows what it missed.
+// Entries carry a running number `i`, so a reader can tell whether anything
+// is missing between two entries.
+//
+// The log keeps the whole game (#128). It used to keep only the last 400
+// entries, and a full game writes more: over 200 normal + 200 hard bot games
+// on 0e558a8 the longest wrote 421, and a game that reaches turn 8 writes
+// about 400 (median 398). Past the cap the start of the game was gone and a
+// move whose opening entry was evicted fell apart in the log panel. A full
+// game's log is under 40 KB of JSON, so the cap is now a runaway guard far
+// above any real game, not a window: LOG_CAP entries is about 4.7 times the
+// longest game measured and under 200 KB.
+//
+// If a log ever does outgrow it, `trimLog` drops whole moves, the oldest
+// first, and keeps the game's opening (its setup and turn 1) and the move in
+// progress. A move is what the log panel groups (`groupLog`, public/oppmove.js):
+// an opening entry and every entry up to the next one.
+export const LOG_CAP = 2000;
+const LOG_OPENS = new Set(["setup", "turn", "headline", "play", "endTurn"]);
+export function trimLog(log, cap = LOG_CAP) {
+  if (log.length <= cap) return log;
+  const opens = [];
+  for (let k = 0; k < log.length; k++) if (LOG_OPENS.has(log[k].type)) opens.push(k);
+  // The opening ends where the first move of turn 2 or later starts.
+  let o = opens.findIndex((k) => log[k].t >= 2);
+  if (o < 0) return log;
+  let drop = 0;
+  const from = opens[o];
+  // Never the last move: it may be the one in progress (an ops step still
+  // writes its real use into its `play` entry).
+  while (o + 1 < opens.length && log.length - drop > cap) { drop = opens[o + 1] - from; o++; }
+  if (drop) log.splice(from, drop);
+  return log;
+}
 export function log(st, entry) {
   st.logSeq = (st.logSeq || 0) + 1;
   st.log.push({ i: st.logSeq, t: st.turn, r: st.round, ...entry });
-  if (st.log.length > 400) st.log.splice(0, st.log.length - 400);
+  trimLog(st.log);
 }
 const fail = (msg) => { throw new Error(msg); };
 
