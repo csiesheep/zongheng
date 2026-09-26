@@ -337,10 +337,11 @@ export class Room {
   // What "the same position" means: the seat plus everything the engine would
   // have had to move for the decision to be a different one. `apply` clones
   // and throws, so a refusal leaves `state` untouched and this string equal.
-  // `logSeq`, not `log.length`: the log itself is capped at 400 entries
-  // (engine.js), so past that point its length stops changing and a count or a
-  // `botStuck` mark could carry over to a position it does not belong to.
-  // `logSeq` is the engine's running number and never stops.
+  // `logSeq`, not `log.length`: the log itself is capped (engine.js LOG_CAP,
+  // a runaway guard since #128), so past that point its length can stop
+  // changing and a count or a `botStuck` mark could carry over to a position
+  // it does not belong to. `logSeq` is the engine's running number and never
+  // stops.
   failKey(side, st) {
     return [
       side, st.logSeq ?? 0, st.plan.length, st.turn, st.round, st.phase, st.actor,
