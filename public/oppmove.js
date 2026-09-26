@@ -62,8 +62,11 @@ export function opponentMoves(log, sinceSeq, me) {
 
 // Collapse a raw per-influence-point list into [spaceId, count] pairs, in
 // the order each space FIRST appears. Shared by opponentMoves' step.spaces
-// (above) and groupLog's setup/place rows (below).
-function collapseSpaces(points) {
+// (above), groupLog's setup/place rows (below), and log-view.js's
+// otherRowHtml() (#127 follow-up: a `place` entry orphaned by the engine's
+// 400-entry log cap needs the same [id,count] shape setupRowHtml already
+// builds its text from, to fill log.place's `{spaces}`).
+export function collapseSpaces(points) {
   if (!Array.isArray(points)) return [];
   const order = [];
   const counts = new Map();
@@ -121,6 +124,21 @@ export function groupLog(log) {
       if (e.type === "endTurn") {
         current = null;
         rows.push({ kind: "other", seq, entry: e });
+        continue;
+      }
+      // #127: an `over` entry used to fall through to the generic "attach
+      // to the open move" branch below with no case anywhere to render it
+      // (log-view.js's chipsForSteps had no "over" type, so it just
+      // vanished). It still gets attached as a step of the move/headline
+      // that ended the game -- chipsForSteps' new "over" case turns that
+      // into the "ended it" chip on that very row -- but it ALSO gets its
+      // own top-level row here, so the panel ends with a line naming the
+      // winner and the reason even when nothing was open (e.g. a turn-end
+      // scoring after endTurn already cleared `current`).
+      if (e.type === "over") {
+        if (current) current.steps.push(e);
+        rows.push({ kind: "over", seq, winner: e.winner, reason: e.reason });
+        current = null;
         continue;
       }
       if (current) {
