@@ -241,8 +241,8 @@ export default {
     },
     done: {
       title: "{state} Destroyed", sub: "{state} is destroyed. Tutorial complete.",
-      lead: "You know what a real game needs. A game ends one of six ways:",
-      ends: ["Qin destroys three states", "Chu holds four seals", "The Mandate reaches 20", "Someone pushes weariness to Collapse", "A scoring card is left in hand at turn's end", "After turn 8, the Mandate leader (a tie goes to Chu)"],
+      lead: "You know what a real game needs. A game ends one of seven ways:",
+      ends: ["Qin destroys three states", "Chu holds four seals", "The Mandate reaches 20", "Someone reaches Emperor first while leading the Mandate", "Someone pushes weariness to Collapse", "A scoring card is left in hand at turn's end", "After turn 8, the Mandate leader (a tie goes to Chu)"],
       also: "Not covered here: how headlines set the order, how the Cauldrons get lent out, who Luoyi pays, how a seal counts toward alliance, and what reform unlocks. It's all in the rules.",
       play: "Play vs bot · Easy", replay: "Replay", rules: "Rules", home: "Home",
     },

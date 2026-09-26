@@ -2339,6 +2339,13 @@ function renderPromptAndSheet(v) {
     }, ui.use === u, illegal);
     if (!illegal && pairPending) b.setAttribute("aria-disabled", "true");
   }
+  // #125 (owner: 稱帝 wins if you lead the Mandate): one line, only when this
+  // card can take the last step (reform legal on it, you at box 5, box 6 still
+  // open) under win-lead -- arriving now wins, or it is only +3. An old save
+  // without the option never shows it (it plays as +3 for everyone).
+  if (showFullCard && usable("reform") && v.options.emperor === "win-lead" && v.reform[me] === 5 && v.reformFirst[6] == null) {
+    note(pinned, t(E.emperorWins(v, me) ? "sheet.emperor.lead" : "sheet.emperor.notLead"));
+  }
   if (ui.card === "shuoke" && showFullCard) {
     // 事件 is disabled above for every 說客 page, paired or not -- this is
     // the reason, not just a greyed button with no explanation. #118 round
