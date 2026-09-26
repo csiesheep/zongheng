@@ -187,6 +187,29 @@ export function simulate(st, action, rng) {
   }
   return s;
 }
+// ---------- the ops a play will really have, for the card page ----------
+// An enemy card played for its ops EVENT FIRST has its ops read after the
+// event (engine.js, the "ops" step's `afterEvent`, owner 裁決 #119): 荊軻刺秦王
+// played by Qin lowers its own ops. So the page cannot print `opsOf` at play
+// time for that order (#122). This plays the event out on a guess of the
+// hidden cards -- the event's choices answered as the bot would, since no
+// event's ops effect depends on them -- and reads the ops the engine then
+// asks for. Ops first, own cards, 說客's pair: `opsOf` now, as always.
+// `view` is left untouched.
+export function opsForOrder(view, side, card, order) {
+  const now = E.opsOf(view, side, card);
+  const c = CARD[card];
+  if (order !== "eventFirst" || !c || c.side == null || c.side === side) return now;
+  try {
+    const rng = E.makeRng(0);
+    let s = E.apply(determinize(view, side, rng), { type: "play", side, card, use: "place", order: "eventFirst" });
+    for (let guard = 0; s.pending && s.pending.tag !== "ops" && s.winner == null && guard < 16; guard++) {
+      const who = s.pending.who;
+      s = E.apply(s, { type: "choose", side: who, choice: answer(s, s.pending, who, rng) });
+    }
+    return s.pending && s.pending.tag === "ops" && s.pending.card === card ? s.pending.ops : now;
+  } catch { return now; }
+}
 function evalAction(st, action, side, rng) {
   try { return evaluate(simulate(st, action, rng), side); } catch { return -Infinity; }
 }

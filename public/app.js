@@ -1317,8 +1317,15 @@ function cardInfo(L, card) {
   if (card === E.JIUDING) return L.jiuding ? { id: card, ops: 4, enemy: false, uses: { place: L.jiuding.place, campaign: L.jiuding.campaign, lobby: L.jiuding.lobby } } : null;
   const c = L.cards.find((x) => x.id === card);
   if (!c) return null;
-  const ops = game.ui.pair ? E.opsOf(game.st, game.me, game.ui.pair) : c.ops;
-  return { id: card, ops, enemy: !!c.uses.enemy, uses: c.uses };
+  // #122: an enemy card played event first has its ops read after its event
+  // (engine, owner 裁決 #119) -- 荊軻刺秦王 played by Qin is 2 − 1 -- so once
+  // that order is chosen every ops number on the page is the one the ops
+  // prompt will then ask for (bots.js opsForOrder, from this seat's view).
+  // `opsNow` keeps the play-time number the order changed it from.
+  const eventFirst = !game.ui.pair && c.uses.enemy && game.ui.order === "eventFirst";
+  const ops = game.ui.pair ? E.opsOf(game.st, game.me, game.ui.pair)
+    : eventFirst ? B.opsForOrder(game.room ? game.st : E.view(game.st, game.me), game.me, card, "eventFirst") : c.ops;
+  return { id: card, ops, opsNow: c.ops, enemy: !!c.uses.enemy, uses: c.uses };
 }
 
 // The last-move mark's own tag text — "+2" / "−2" (U+2212, a true minus,
@@ -2211,7 +2218,14 @@ function renderPromptAndSheet(v) {
   if (showFullCard) {
     const meta = ui.card === E.JIUDING ? null : E.CARD[ui.card];
     const kind = ui.card === "shuoke" ? "shuoke" : meta && meta.scoring ? "score" : info.enemy ? "enemy" : meta && meta.side != null ? "own" : "neutral";
-    note(pinned, t("sheet.hint." + kind, { enemy: sideName(E.other(me)) }));
+    // #122: "you use the ops" is not true of an event-first play whose event
+    // lowers them (荊軻刺秦王 played by Qin): the same line then says how many
+    // this card has once the event resolves -- one line either way, so the
+    // 390x669 budget above is unchanged.
+    const lowered = kind === "enemy" && ui.order === "eventFirst" && !ui.pair && info.ops !== info.opsNow;
+    note(pinned, lowered
+      ? t(`sheet.hint.enemyOps.${info.ops === 1 ? "one" : "other"}`, { ops: info.ops })
+      : t("sheet.hint." + kind, { enemy: sideName(E.other(me)) }));
   }
   const base = { type: "play", card: ui.card, use: ui.use };
   if (ui.pair) base.pair = ui.pair;

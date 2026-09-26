@@ -383,6 +383,13 @@ export default {
       // copy) — {side} is the seat who played/discarded/headlined it, not
       // the viewer's own seat, so it reads the same for either player.
       played: "Played by {side}.",
+      // #122: replaces `enemy` above when an enemy card is played event first
+      // and its event lowers the card's own ops (Qin playing Jing Ke's
+      // Attempt: 2 − 1); {ops} is what the card really has after the event.
+      enemyOps: {
+        one: "An enemy card, event first: once its event resolves, this card has only {ops} op.",
+        other: "An enemy card, event first: once its event resolves, this card has only {ops} ops.",
+      },
     },
     // #35: the read-only card view's own extra facts (side/removal, shown on
     // the header's second line by card-view.js) and the history section
