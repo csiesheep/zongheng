@@ -78,6 +78,22 @@ export const REFORM = [
 // (Qin 39 % over 1,000 games; the pair below brought it to 50 %).
 export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead" };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
+// #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
+// as today, byte for byte (tests/defaults-130.test.js).
+// `lobby`: absent = today's 遊說 (局勢 > 0 removes min(ops, 局勢), no dice).
+//   "realign"       Twilight Struggle's realignment (owner, 2026-09-26:
+//                   「遊說改成雙方都會輸（冷戰熱鬥的「重整」）」): any space with
+//                   enemy influence, one roll per op, both sides can lose;
+//                   `realign` below.
+//   "realign-mild"  the same with 1d3 and a loss of at most 2 per attempt.
+// `homeFall`: absent or "none" = today; see `homeFallCheck` below.
+export const LOBBY = { realign: { die: 6, cap: Infinity }, "realign-mild": { die: 3, cap: 2 } };
+export const HOME_FALL = ["none", "lose", "lose-turn", "lose-majority", "move"];
+export const HOME_REGION = ["west", "south"];
+export const HOME_CAPITAL = ["guanzhong", "ying"];
+// Under "move", where a fallen capital goes (遷都: Chu moved to 陳 in 278 BC).
+export const MOVED_CAPITAL = ["hanzhong", "chencai"];
+export function homeCapital(st, side) { return (st.capital && st.capital[side]) || HOME_CAPITAL[side]; }
 
 // ---------- RNG (mulberry32) ----------
 export function makeRng(seed) {
@@ -482,7 +498,45 @@ export function campaign(st, side, target, ops, { noTire = false, pusher = side 
   checkMarkers(st);
   return { ops: o, removed, placed };
 }
+// One side's modifier for a realignment roll on `id` (#130): +1 per neighbour
+// it controls, +1 if it has more influence there than the other side, +1 if
+// the space is in its home region or next to a space of it.
+export function realignMod(st, side, id) {
+  const sp = SPACE[id], home = HOME_REGION[side];
+  let m = 0;
+  for (const a of sp.adj) if (controller(st, a) === side) m++;
+  if (infOf(st, id)[side] > infOf(st, id)[other(side)]) m++;
+  if (sp.region === home || sp.adj.some((a) => SPACE[a].region === home)) m++;
+  return m;
+}
+// 遊說 under `lobby: "realign"` / "realign-mild": `ops` attempts on `target`,
+// one at a time; each side rolls a die plus its modifier, the loser removes
+// the difference from its own influence there (never below 0, capped under
+// "mild"), a tie does nothing. Stops once the enemy has nothing left there
+// (the rest are lost) or the game ends; markers are read after every attempt.
+function realign(st, side, target, ops) {
+  const R = LOBBY[st.options.lobby], opp = other(side);
+  log(st, { type: "lobby", side, target, ops, mode: st.options.lobby, own: infOf(st, target)[side] });
+  const head = st.log[st.log.length - 1];
+  let removed = 0, lost = 0, k = 0;
+  while (k < ops && infOf(st, target)[opp] > 0 && st.winner == null) {
+    k++;
+    const mod = [realignMod(st, QIN, target), realignMod(st, CHU, target)];
+    const roll = withRng(st, (rng) => [1 + rng.int(R.die), 1 + rng.int(R.die)]);
+    const d = roll[QIN] + mod[QIN] - (roll[CHU] + mod[CHU]);
+    const lose = d > 0 ? CHU : d < 0 ? QIN : null;
+    const n = lose == null ? 0 : remove(st, lose, target, Math.min(Math.abs(d), R.cap));
+    if (lose === opp) removed += n; else if (lose === side) lost += n;
+    log(st, { type: "realign", side, target, k, roll, mod, lose, n });
+    checkMarkers(st);
+  }
+  // The first entry of the 遊說 carries its totals.
+  if (head && head.type === "lobby") Object.assign(head, { attempts: k, removed, lost });
+  checkMarkers(st);
+  return removed;
+}
 export function lobby(st, side, target, ops) {
+  if (st.options.lobby && LOBBY[st.options.lobby]) return realign(st, side, target, ops);
   const e = edge(st, side, target);
   const removed = e > 0 ? remove(st, other(side), target, Math.min(ops, e)) : 0;
   log(st, { type: "lobby", side, target, ops, edge: e, removed });
@@ -931,7 +985,7 @@ function doOps(st, side, card, ops, choice) {
     if (card === JIUDING && inZhou(choice.target)) ops += 1;
     const t = choice.target;
     if (infOf(st, t)[other(side)] <= 0) fail("lobby: no enemy influence there");
-    if (edge(st, side, t) <= 0) fail("lobby: no edge there");
+    if (!LOBBY[st.options.lobby] && edge(st, side, t) <= 0) fail("lobby: no edge there");
     if (isProtected(st, t)) fail("lobby: the space is protected this turn");
     lobby(st, side, t, ops);
   } else fail(`ops: bad use ${choice.use}`);
@@ -1146,8 +1200,9 @@ export function opsOptions(st, side) {
   const placeOptions = SPACES.filter((s) => canPlaceAt(st, side, s.id) && infOf(st, s.id)[side] < capOf(st, s.id))
     .map((s) => ({ id: s.id, cost: placeCost(st, side, s.id) }));
   const campaignTargets = SPACES.filter((s) => infOf(st, s.id)[other(side)] > 0 && !campaignLocked(st, s.id) && !isProtected(st, s.id)).map((s) => s.id);
+  const realigning = !!LOBBY[st.options.lobby];
   const lobbyTargets = SPACES.filter((s) => infOf(st, s.id)[other(side)] > 0 && !isProtected(st, s.id))
-    .map((s) => ({ id: s.id, edge: edge(st, side, s.id) })).filter((x) => x.edge > 0);
+    .map((s) => ({ id: s.id, edge: edge(st, side, s.id) })).filter((x) => realigning || x.edge > 0);
   return { placeOptions, campaignTargets, lobbyTargets };
 }
 export function legal(st, side) {
