@@ -142,6 +142,21 @@ export default {
     summaryFinal: "{target}:秦 {from0} → {to0}　楚 {from1} → {to1}",
     done: "完成",
   },
+  // #133 part 2:國都(homeFall「守不住才敗」)的畫面文字——平時的都字徽章、
+  // 告急/兵臨的橫幅、奪回的提示、回合結束檢查卡。
+  capitalUi: {
+    badge: "都", badgeTitle: "國都",
+    defenderTitle: "國都告急 · {capital}落入{enemy}手",
+    defenderSub: "回合結束前奪回,否則{you}亡 · 你還有 {left} 次行動",
+    retakeHint: "還差 {n} 點就能讓{enemy}不再控制",
+    retakeHintZero: "現在就能讓對方不再控制",
+    attackerTitle: "兵臨{capital} · 守到回合結束即勝",
+    attackerSub: "對方還要 {n} 點才能奪回",
+    attackerSubZero: "對方現在就能奪回",
+    retaken: "{capital}已奪回 · 國都解危",
+    checkTitle: "回合結束 · 國都",
+    statusSafe: "安全", statusFallen: "陷落", statusMoved: "已遷都",
+  },
   over: {
     winner: "{side}獲勝", mandate: "終局天命",
     reasons: {
@@ -159,12 +174,10 @@ export default {
       // #125(owner:先抵達稱帝、且當時天命領先,即獲勝):贏家可以是秦也可以是楚,
       // 所以用 {winner}王,不寫死秦王。
       emperor: { title: "稱帝", body: "{winner}率先變法到稱帝,而且當時天命領先。", win: "你贏了。{winner}王稱帝,天下歸心。", lose: "你輸了。{winner}王搶先稱帝,天命已定。", watch: "{winner}王稱帝,天命已定。" },
-      // #130(homeFall):贏家/輸家可以是秦也可以是楚,而 render 只帶
-      // {winner}/{loser}(見 app.js renderOver、log-view.js overRowHtml),
-      // 沒有國都名稱可用——就算 homeFall:"move" 已遷都也一樣。所以不點名
-      // 關中/郢,寫成不需要國都名的句子(遊說 owner 定案的措辭是點名的,
-      // 但現有欄位傳不出那個名字,回報給 orchestrator,#130)。
-      homeFall: { title: "國都陷落", body: "回合結束時,{loser}的國都仍在{winner}控制之下。", win: "你贏了。{loser}的國都已落入你手。", lose: "你輸了。你的國都已落入{winner}之手。", watch: "{loser}的國都落入{winner}之手。" },
+      // #133 part 2(owner定案措辭):{capital} 現在點名——app.js的renderOver()
+      // 與log-view.js的overRowHtml()從log最後一筆「陷落」的capitalCheck讀出
+      // 空間id(#130當時這個欄位傳不出來,已補上)。
+      homeFall: { title: "國都陷落", body: "回合結束時,{loser}的國都{capital}仍在{winner}控制之下。", win: "你贏了。{winner}軍入{capital},{loser}社稷已亡。", lose: "你輸了。{capital}陷落,{loser}社稷已亡。", watch: "{capital}陷落,{loser}社稷已亡。" },
     },
   },
   log: {
@@ -183,6 +196,7 @@ export default {
     lobbyDice: "{side}遊說{target},共 {attempts} 次:對方失去 {removed},己方失去 {lost}。",
     realign: "第 {k} 次:{loserOrTie}。",
     lobbyStop: "{side}在{target}收手,還剩 {left} 次不擲。",
+    capitalCheck: "回合結束檢查:{side}的國都{capital}{status}。",
     score: "{region}結算:秦 {q},楚 {c}。", vp: "天命 {mandate}。", tire: "疲敝降至{to}。", seal: "楚取得{state}相印。", unseal: "楚失去{state}相印。",
     mie: "秦滅{state}。", restore: "{state}復國。", reform: "{side}變法軌到第 {box} 格。", jiuding: "九鼎蓋著交給{side}。", discard: "{side}棄掉{card}。",
     bog: "{side}頓兵堅城,棄掉{card}。", skip: "{side}無牌可出。", opsLost: "{side}的 {ops} 點行動點無處可用。", reshuffle: "棄牌堆重洗。", era: "{era}牌庫洗入。",

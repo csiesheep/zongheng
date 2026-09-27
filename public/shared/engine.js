@@ -84,7 +84,12 @@ export const REFORM = [
 // only runs once, in createGame(), at the moment a NEW game is made; a state
 // already on disk carries its own complete `options` object forward as-is on
 // every load, so this flip only reaches games created from here on.
-export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead", lobby: "realign-own" };
+// #133 part 2 (owner, 2026-09-26): 守不住才敗 (homeFall "lose-turn") becomes
+// the default, same "old saves keep today's rule" reasoning as part 1's
+// `lobby` flip -- a saved game/room's own `options` object, missing this
+// key, is untouched (see part 1's comment on `lobby` above; the merge only
+// runs once, in createGame(), when a NEW game is made).
+export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "lose-turn" };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).

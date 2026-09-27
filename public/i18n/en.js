@@ -173,6 +173,21 @@ export default {
     summaryFinal: "{target}: Qin {from0} → {to0}  Chu {from1} → {to1}",
     done: "Done",
   },
+  // #133 part 2: the homeFall ("lose-turn") screens -- the capital badge,
+  // the defender/attacker banners, the retake hint, the turn-end check card.
+  capitalUi: {
+    badge: "Cap.", badgeTitle: "Home capital",
+    defenderTitle: "Capital under siege -- {capital} has fallen to {enemy}",
+    defenderSub: "Retake it before the turn ends, or {you} lose -- {left} action(s) left",
+    retakeHint: "{n} more point(s) breaks {enemy}'s control",
+    retakeHintZero: "Already enough to break their control",
+    attackerTitle: "At the gates of {capital} -- hold it to the turn's end and win",
+    attackerSub: "The defender needs {n} more point(s) to retake it",
+    attackerSubZero: "The defender can retake it right now",
+    retaken: "{capital} retaken -- the crisis is over",
+    checkTitle: "Turn end · capitals",
+    statusSafe: "Safe", statusFallen: "Fallen", statusMoved: "Moved",
+  },
   // The result screen's colour and art always follow the WINNER, not your
   // own seat, so each ending's line and body read as fact from the table,
   // and only `win`/`lose` (which side of that fact you were on) changes with
@@ -195,13 +210,11 @@ export default {
       // #125 (owner: the first to 稱帝 wins if it leads the Mandate then):
       // either side can win this way, so the king is {winner}'s, not Qin's.
       emperor: { title: "The Emperor", body: "{winner} reached Emperor, the last box of the reform track, first and while ahead on the Mandate.", win: "You win. The King of {winner} takes the title of emperor, and the realm bows.", lose: "You lose. The King of {winner} took the title of emperor first.", watch: "The King of {winner} takes the title of emperor; the Mandate is settled." },
-      // #130 (homeFall): the winner/loser can be either side, and rendering
-      // only ever passes {winner}/{loser} (app.js renderOver, log-view.js
-      // overRowHtml) -- no capital name reaches this string, even under
-      // homeFall:"move" once the capital has relocated. So this does not
-      // name 關中/郢 (Guanzhong/Ying); the owner's approved wording does
-      // name them, flagged to the orchestrator on #130.
-      homeFall: { title: "The Capital Falls", body: "At the turn's end, {loser}'s home capital was still under {winner}'s control.", win: "You win. {loser}'s home capital has fallen to you.", lose: "You lose. Your home capital has fallen to {winner}.", watch: "{loser}'s home capital has fallen to {winner}." },
+      // #133 part 2 (owner's approved wording): {capital} is now named --
+      // app.js's renderOver() and log-view.js's overRowHtml() read the
+      // space id off the log's last "fallen" capitalCheck entry (#130 left
+      // this field unreachable; filled in now).
+      homeFall: { title: "The Capital Falls", body: "At the turn's end, {loser}'s home capital, {capital}, was still under {winner}'s control.", win: "You win. {winner}'s army has taken {capital}; {loser}'s state is no more.", lose: "You lose. {capital} has fallen; {loser}'s state is no more.", watch: "{capital} has fallen; {loser}'s state is no more." },
     },
   },
   log: {
@@ -223,6 +236,7 @@ export default {
     lobbyDice: "{side} lobbies {target}, {attempts} attempt(s): {removed} of theirs lost, {lost} of its own lost.",
     realign: "Attempt {k}: {loserOrTie}.",
     lobbyStop: "{side} stops lobbying {target}, {left} attempt(s) unspent.",
+    capitalCheck: "Turn-end check: {side}'s home capital {capital} is {status}.",
     score: "{region} scores: Qin {q}, Chu {c}.", vp: "Mandate {mandate}.", tire: "Weariness falls to {to}.", seal: "Chu holds the seal of {state}.", unseal: "Chu loses the seal of {state}.",
     mie: "Qin destroys {state}.", restore: "{state} is restored.", reform: "{side} reaches reform box {box}.", jiuding: "The Cauldrons pass to {side}, face down.", discard: "{side} discards {card}.",
     bog: "{side} is bogged down and discards {card}.", skip: "{side} has no card to play.", opsLost: "{side} has nowhere to spend {ops} ops.", reshuffle: "The discards are reshuffled.", era: "The {era} deck is shuffled in.",

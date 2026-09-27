@@ -256,6 +256,13 @@ function otherRowHtml(row, lang) {
   if (e.type === "lobbyStop") {
     return `<div class="logrow logrow-other">${t(lang, "log.lobbyStop", { side: sideName(e.side, lang), target: spaceName(e.target, lang), left: e.left })}</div>`;
   }
+  // #133 part 2: a turn-end capital check (homeFall) -- always standalone,
+  // logged outside any move, so it always reaches this generic path (never
+  // chipsForSteps() above).
+  if (e.type === "capitalCheck") {
+    const status = e.result === "safe" ? t(lang, "capitalUi.statusSafe") : e.result === "moved" ? t(lang, "capitalUi.statusMoved") : t(lang, "capitalUi.statusFallen");
+    return `<div class="logrow logrow-other">${t(lang, "log.capitalCheck", { side: sideName(e.whose, lang), capital: spaceName(e.capital, lang), status })}</div>`;
+  }
   const key = `log.${e.type}`;
   const P = {
     side: e.side != null ? sideName(e.side, lang) : "", turn: e.turn, era: e.era ? t(lang, "eras." + e.era) : "",
@@ -294,11 +301,18 @@ function otherRowHtml(row, lang) {
 // and title already reads the same as the spectator-only `watch` line for
 // every reason (neither ever says "you") -- so it's the one string in that
 // table that's already correct for every reader, not just a stand-in.
-function overRowHtml(row, lang) {
+function overRowHtml(row, lang, log) {
   const winner = sideName(row.winner, lang);
   const loser = sideName(E.other(row.winner), lang);
+  const params = { winner, loser };
+  // #133 part 2: homeFall's title names the fallen capital -- the log's own
+  // last "fallen" capitalCheck entry (#130 left this field unreachable).
+  if (row.reason === "homeFall") {
+    const cc = [...(log || [])].reverse().find((l) => l.type === "capitalCheck" && l.result === "fallen");
+    if (cc) params.capital = spaceName(cc.capital, lang);
+  }
   let title;
-  try { title = t(lang, `over.reasons.${row.reason}.title`, { winner, loser }); } catch { title = ""; }
+  try { title = t(lang, `over.reasons.${row.reason}.title`, params); } catch { title = ""; }
   return `<div class="logrow logrow-over"><b class="logrow-over-winner">${t(lang, "over.winner", { side: winner })}</b> · ${title}</div>`;
 }
 // The room's chat / the bot's remarks arrive as ready-made "{name}: {text}"
@@ -347,7 +361,7 @@ export function renderRows(log, opts) {
         // #127: same as the headline row above -- always shown, never
         // hidden by a side filter (it's the whole game's own outcome, not
         // one side's move).
-        out.push(overRowHtml(row, lang));
+        out.push(overRowHtml(row, lang, log));
       }
     }
   }

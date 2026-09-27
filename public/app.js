@@ -37,6 +37,7 @@ import * as OppUI from "./oppmove-ui.js"; // #79: the opponent's-move reveal (ca
 OppUI.setOpenPeek((id, side) => openPeek(id, side));
 import * as LogView from "./log-view.js"; // #88: the log panel's own rows/chips and its tap-to-flash overlay
 import * as LobbyUI from "./lobby-ui.js"; // #133: the dice-遊說 pick/preview/roll-card/summary screens
+import * as CapitalUI from "./capital-ui.js"; // #133 part 2: the homeFall badge/banners/toast/turn-end check
 import { discParts } from "./disc-view.js";
 import * as Audio from "./audio.js";
 import * as Cues from "./audio-cues.js";
@@ -177,7 +178,7 @@ function show(view) {
   // comes next -- it is its own fixed element outside #table (lobby-ui.js's
   // ensureCard(), appended to <body>), so hiding #table alone would not
   // touch it.
-  if (view !== "table") LobbyUI.hideCard();
+  if (view !== "table") { LobbyUI.hideCard(); CapitalUI.hideCheckCard(); }
   window.scrollTo(0, 0);
   const prevView = document.body.dataset.view;
   // Desktop-only (see desktop.css, #7): which backdrop/frame the page-card
@@ -727,6 +728,35 @@ function render() {
       }
     }
   }
+  // #133 part 2: the turn-end capital check (mockup D_check) -- for
+  // everyone (a spectator too, `game.me` unused here), detected the same
+  // watermarked way as the lobby summary above: a fresh, not-yet-shown
+  // batch of capitalCheck entries at the tail of the log. Purely
+  // informational (the state already moved on by the time these are
+  // logged), so it never blocks anything underneath it -- a 5s auto-hide
+  // backs up the player's own 完成 tap.
+  if ((v.logSeq || 0) < (game.capitalCheckSeenUpTo || 0)) game.capitalCheckSeenUpTo = 0;
+  {
+    const checks = CapitalUI.findTurnEndChecks(v);
+    if (checks.length && checks[checks.length - 1].i > (game.capitalCheckSeenUpTo || 0)) {
+      game.capitalCheckSeenUpTo = checks[checks.length - 1].i;
+      CapitalUI.syncCheckCard(checks, lang, () => {});
+      clearTimeout(game.capitalCheckTimer);
+      game.capitalCheckTimer = setTimeout(() => CapitalUI.hideCheckCard(), 5000);
+    }
+  }
+  // The retake toast (mockup C_retaken): compare this render's
+  // v.homeCapitals against the last one seen -- a capital that WAS held by
+  // the enemy and now isn't (heldBy: side -> null) just got retaken.
+  if (!game.spectator && game.me != null && v.homeCapitals) {
+    const prevHeld = game.homeCapitalsSeen || {};
+    const nextHeld = {};
+    for (const c of v.homeCapitals) {
+      nextHeld[c.capital] = c.heldBy;
+      if (c.side === game.me && prevHeld[c.capital] != null && c.heldBy == null) CapitalUI.showToast(c.capital, lang);
+    }
+    game.homeCapitalsSeen = nextHeld;
+  }
   updateLastMoveMarks(prevView, v); // #41 — renderMap()/decorateAdvisor() below read game.lastMoveMarks off this
   // #62 part 2, item A + fix 1: one combined decision, one combined
   // playBatch() call, covering both the spectator and the player branches
@@ -762,6 +792,7 @@ function render() {
     renderMap({ ...v, winner: 0 }); // nothing lit
     game.lastMoveFresh = false; // #41: the pulse (if any) has now been drawn once — see updateLastMoveMarks()
     renderStatLine(v);
+    CapitalUI.syncBanner(v, null, lang); // a spectator has no "your capital" -- hides itself
     // #133: a spectator never answers, so `me` is null (rollCardHtml()'s
     // envoyHtml() then never marks either envoy "(you)") and `onChoose` is
     // never called (syncRollCard only wires it when pending.who === me).
@@ -782,6 +813,7 @@ function render() {
   renderMap(v);
   game.lastMoveFresh = false; // #41: same reason as the spectator branch above
   renderStatLine(v);
+  CapitalUI.syncBanner(v, game.me, lang); // #133 part 2: mockups A_defender/B_attacker, below the map
   renderPromptAndSheet(v); // sets #sheet's className outright, so setSheetOpen must come after this, not before
   renderHand(v);
   renderLog(v);
@@ -1713,10 +1745,15 @@ function renderMap(v) {
     const sealMarkHTML = seal && seal.sealed
       ? `<span class="seal-chop"${sealStyle} aria-hidden="true"><span lang="zh-Hant">印</span></span>`
       : "";
+    // #133 part 2: the capital's own ring (mockups A_defender/B_attacker) --
+    // red on a capital held by the enemy, gold on an enemy capital held by
+    // this seat. `v.homeCapitals` only exists while homeFall is on.
+    const homeCap = v.homeCapitals && v.homeCapitals.find((c) => c.capital === sp.id);
+    const capRing = !homeCap || homeCap.heldBy == null || game.spectator ? "" : homeCap.side === game.me ? " capital-fallen" : homeCap.heldBy === game.me ? " capital-held" : "";
     const vis = document.createElement("div");
     vis.className = "node" + (big ? " big" : "") + (empty ? " empty" : "") + (anchor ? ` anchor-${anchor}` : "") +
       (NODE_STAB_RIGHT.has(sp.id) ? " stab-r" : "") + (NODE_STAB_HI.has(sp.id) ? " stab-hi" : "") +
-      (lit ? " lit" : "") + (picked ? " picked" : "") + pickSide +
+      (lit ? " lit" : "") + (picked ? " picked" : "") + pickSide + capRing +
       (mv ? " lastmove" : "") + (mv && game.lastMoveFresh ? " lastmove-pulse" : "") +
       " pill-" + (NODE_PILL_POS[sp.id] || "tr");
     vis.style.cssText = `left:${x}px;top:${y}px`;
@@ -1739,6 +1776,7 @@ function renderMap(v) {
       (mvTag ? `<span class="lastmove-tag${lastMoveTagClass(mv)}" aria-hidden="true">${esc(mvTag)}</span>` : "") +
       sealMarkHTML +
       stateTagHTML(sp, sp.state ? stateName(sp.state) : "", esc) +
+      CapitalUI.capitalBadgeHTML(v, sp.id, lang) + // #133 part 2: mockup 0_rest's gold 都 badge
       nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc);
     el.appendChild(vis);
     const hb = document.createElement("button");
@@ -2309,6 +2347,10 @@ function renderPromptAndSheet(v) {
     const lost = !game.spectator && me !== v.winner;
     const outcome = lost ? "lose" : game.spectator ? "watch" : "win";
     const op = { winner: sideName(v.winner), loser: sideName(E.other(v.winner)) };
+    if (v.reason === "homeFall") {
+      const cc = [...v.log].reverse().find((l) => l.type === "capitalCheck" && l.result === "fallen");
+      if (cc) op.capital = spaceName(cc.capital);
+    }
     setPrompt(`${t("prompt.over")} <b>${esc(t("over.winner", { side: sideName(v.winner) }))}</b> · ${esc(t(`over.reasons.${v.reason}.${outcome}`, op))}`);
     btn(sh, t("buttons.result"), () => renderOver(), "primary");
     return;
@@ -3434,6 +3476,13 @@ function renderOver() {
   const lost = !game.spectator && game.me !== winner;
   const loserSide = lost ? game.me : null;
   const p = { winner: sideName(winner), loser: sideName(1 - winner) };
+  // #133 part 2: homeFall's own copy names the fallen capital -- the log's
+  // last "fallen" capitalCheck entry carries the space id (#130 left this
+  // unreachable; the owner's approved wording names it).
+  if (st.reason === "homeFall") {
+    const cc = [...st.log].reverse().find((l) => l.type === "capitalCheck" && l.result === "fallen");
+    if (cc) p.capital = spaceName(cc.capital);
+  }
   // #113: a spectator never reads "you" -- lost/win decide a SEATED player's
   // wording only (and still drive the art/glyph/colour below, unchanged: a
   // spectator sees exactly the winner's page, per the issue). The line of
