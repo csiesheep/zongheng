@@ -116,10 +116,11 @@ for (const [hf, set, cap, capital] of CASES) {
 for (const [hf, set] of [["lose-turn", { ying: [4, 1] }], ["lose-majority", { ying: [3, 3] }]]) {
   test(`homeFall ${hf}: the normal bot takes the enemy capital mid-turn when it can`, () => {
     const out = [];
+    // #134: a take with room to spare (郢 at [4,0]) is a take too, so `<= 0`, not `=== 0`.
     for (const [seed, st] of staged({ homeFall: hf }, QIN, set)) {
       const a = B.decide(E.view(st, QIN), QIN, "normal", E.makeRng(seed));
       const after = B.simulate(st, a, E.makeRng(seed));
-      out.push({ seed, took: after.winner === QIN || shortOf(hf, after, CHU, "ying") === 0, a: `${a.card} ${a.use} ${a.target || (a.points || []).join(",")}` });
+      out.push({ seed, took: after.winner === QIN || shortOf(hf, after, CHU, "ying") <= 0, a: `${a.card} ${a.use} ${a.target || (a.points || []).join(",")}` });
     }
     const took = out.filter((x) => x.took).length;
     assert.ok(took >= 7, `took it in ${took}/8:\n${out.map((x) => `seed ${x.seed}: ${x.a}${x.took ? " (took)" : ""}`).join("\n")}`);

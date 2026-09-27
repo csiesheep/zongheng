@@ -196,6 +196,9 @@ function racePositions(options, box, used, extra = []) {
     st.reform = [box, 1]; st.reformUsed = [used, 0];
     st.reformFirst = { 1: QIN }; for (let b = 2; b <= box; b++) st.reformFirst[b] = QIN;
     st.mandate = 0;
+    // A random opening can leave Qin forced to play a card (細作 etc.): then no 4-op card can be played and there is
+    // no win to take. #134 found seed 25 forced to 荊軻 under realign-own; the race is about the bot's choice, so clear it.
+    st.forced = [null, null];
     out.push({ seed, st });
   }
   return out;
