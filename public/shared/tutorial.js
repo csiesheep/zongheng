@@ -299,16 +299,36 @@ export const STEPS = [
     facts(st) {
       const id = "luoyi", card = "envoy", f = spaceFacts(st, id), o = E.opsOf(st, QIN, card);
       const odds = E.realignOdds(st, QIN, id);
-      const trial = E.apply(E.clone(st), play(QIN, card, "lobby", { target: id }));
-      const after = trial.pending ? E.apply(trial, { type: "choose", side: QIN, choice: "continue" }) : trial;
-      const rolls = after.log.filter((l) => l.type === "realign");
-      return {
+      const common = {
         ...f, ...cardFacts(st, card), n: o,
         winPct: Math.round(odds.win * 100), tiePct: Math.round(odds.tie * 100), losePct: Math.round(odds.lose * 100),
         qinMod: odds.mod[QIN], chuMod: odds.mod[CHU],
-        attempts: rolls.length,
-        from: f.chu, to: after.inf[id][CHU],
       };
+      // #133 part 3b item 6 (found live, real-browser walkthrough):
+      // tutorial-ui.js's decorate() calls facts() on EVERY render, not just
+      // once at lesson entry -- once the player's own tap has landed the
+      // real lobby action on ctx.game.st, the state sits mid-pending (a
+      // genuine realign choice, waiting for afterAction()'s own scripted
+      // "continue" 650ms later) and st.phase is no longer "action".
+      // Unconditionally re-simulating a FRESH lobby play on top of an
+      // already-pending one threw ("not an action round" — E.apply's own
+      // action-phase guard), wedging the whole lesson: the roll card stayed
+      // up forever, since the throw happened inside render() and aborted
+      // humanAct() before it ever reached Tut.afterAction() (app.js), so
+      // the 650ms auto-continue was never even scheduled.
+      // Only simulate the trial while `st` is still the untouched,
+      // actionable state this lesson opens on. Once the real action has
+      // landed, the real lobby-ui.js roll/summary card on screen is already
+      // the authoritative, live picture -- read the real rolls back off the
+      // log instead of simulating a second attempt on top of the first.
+      if (E.legal(st, QIN).kind !== "action") {
+        const rolls = st.log.filter((l) => l.type === "realign" && l.target === id);
+        return { ...common, attempts: rolls.length, from: f.chu, to: f.chu };
+      }
+      const trial = E.apply(E.clone(st), play(QIN, card, "lobby", { target: id }));
+      const after = trial.pending ? E.apply(trial, { type: "choose", side: QIN, choice: "continue" }) : trial;
+      const rolls = after.log.filter((l) => l.type === "realign");
+      return { ...common, attempts: rolls.length, from: f.chu, to: after.inf[id][CHU] };
     },
   },
   {

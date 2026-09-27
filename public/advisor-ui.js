@@ -355,7 +355,21 @@ function cardPickTitle(pending, choice, meta) {
 // already shown on the button in the wrong UI language is a pre-existing
 // gap in that data, not introduced here (flagged to the orchestrator, not
 // fixed in this file: cards.js is BE's).
-function optionPickTitle(pending, choice, meta) {
+function optionPickTitle(pending, choice, meta, view) {
+  // #133 part 3b item 7: 收手/再說一次 under the dice 遊說 rule (realign-own)
+  // is an "option" pending too, but engine.js's `ask()` call for it passes
+  // bare `{ id: "continue" }`/`{ id: "stop" }` -- no `.label` (app.js's own
+  // renderPending() deliberately renders no generic buttons for it, see its
+  // #133 comment; the roll card, lobby-ui.js, is the real UI). The generic
+  // "advisor.suggestPick.option" line would read `{option}` as literally
+  // undefined here, so this needs its own line: the SAME expected-net rule
+  // bots.js's own realign case decides by (`E.realignOdds(...).net`), read
+  // straight off the public engine query rather than duplicated by hand.
+  if (pending.tag === "realign" && view) {
+    const net = E.realignOdds(view, pending.who, pending.target).net;
+    const key = net > 0 ? "advisor.suggestPick.realignContinue" : "advisor.suggestPick.realignStop";
+    return meta.t(key, { net: Math.abs(net) < 0.05 ? "0" : net.toFixed(1) });
+  }
   const opt = (pending.options || []).find((o) => o.id === choice);
   return opt ? meta.t("advisor.suggestPick.option", { option: opt.label }) : null;
 }
@@ -394,7 +408,7 @@ function bannerTitle(adv, meta, view) {
       // which of the two shapes `choice` is in.
       const pk = view && view.pending ? view.pending.kind : null;
       if (pk === "card" && Array.isArray(choice)) return cardPickTitle(view.pending, choice, meta);
-      if (pk === "option") return optionPickTitle(view.pending, choice, meta);
+      if (pk === "option") return optionPickTitle(view.pending, choice, meta, view);
       return null; // a fully-placed setup pick, or a shape not covered above
     }
     if (opsUse && opsUse !== "place") {
@@ -546,12 +560,22 @@ function decoratePending(adv, view) {
   // value (place/campaign/lobby/reform) this function marks below.
   sheet.querySelectorAll("[data-use]:not([data-use='headline']).adv-pick, [data-option].adv-pick, [data-card].adv-pick, [data-skip].adv-pick")
     .forEach((b) => b.classList.remove("adv-pick"));
+  // #133 part 3b item 7: the roll card's own 收手/再說一次 buttons
+  // (lobby-ui.js's `.lobby-card`, `[data-lobby-choice]`) live outside
+  // #sheet entirely (app.js renders no generic [data-option] buttons for
+  // the realign pending, see its own comment) -- cleared here too so a
+  // stale mark never survives past the roll this decision belonged to.
+  document.querySelectorAll(".lobby-card [data-lobby-choice].adv-pick")
+    .forEach((b) => b.classList.remove("adv-pick"));
   if (!adv || !adv.action || adv.action.type !== "choose") return;
   if (!view || !view.pending) return; // the suggestion is stale the moment the pending choice is gone
   const kind = view.pending.kind;
   const choice = adv.action.choice;
   if (kind === "ops" && choice && choice.use) {
     const b = sheet.querySelector(`[data-use="${choice.use}"]`);
+    if (b) b.classList.add("adv-pick");
+  } else if (kind === "option" && choice != null && view.pending.tag === "realign") {
+    const b = document.querySelector(`.lobby-card [data-lobby-choice="${choice}"]`);
     if (b) b.classList.add("adv-pick");
   } else if (kind === "option" && choice != null) {
     const b = sheet.querySelector(`[data-option="${choice}"]`);

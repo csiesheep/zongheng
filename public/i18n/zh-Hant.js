@@ -260,7 +260,10 @@ export default {
     skip: "跳過教學", back: "上一步", stepOf: "第 {n} / {total} 課", topbar: "教學 · 第 {n} / {total} 課", gotIt: "知道了",
     wrong: "要點亮著的地方。",
     steps: {
-      map: { title: "地圖", text: "26 個據點,分五個記分區加上周;★ 是要衝。圓盤的顏色是影響力:黑是秦、紅是楚;灰和粉紅是有影響力但還沒控制。", do: "點{space}" },
+      // #133 part 3b(item 3,國都規則):折進這一課本來就在看的{homeCapitalZh}
+      // ——見 shared/tutorial.js STEPS[0] 的註解,是在時間有限下的取捨(已在
+      // 交付留言向 orchestrator 點名),不是獨立一課或現場演出的危機。
+      map: { title: "地圖", text: "26 個據點,分五個記分區加上周;★ 是要衝。圓盤的顏色是影響力:黑是秦、紅是楚;灰和粉紅是有影響力但還沒控制。{homeCapitalZh} 是你的國都(「都」字徽章),{enemyCapitalZh} 是對方的——回合結束時如果對方還控制著你的國都,你就輸了;在那之前奪回它就沒事。", do: "點{space}" },
       control: { title: "控制", text: "我方影響力 ≥ 對方 + 安定值就控制,上限是安定值+2。{space}:{qin}≥{chu}+{stability},所以歸你控制。", do: "點{space}" },
       hand: { title: "手牌", text: "圓形徽章是點數;黑是秦的事件、紅是楚的、白是中立的。一張牌有五種用法,先學最簡單的:扶植。", do: "點亮著的牌" },
       // #129:這一課(扶植)在教學裡不會把任何據點放滿到上限——orchestrator
@@ -270,7 +273,9 @@ export default {
       event: { title: "事件", text: "把自己的牌當事件打:{card},變法 +1。先到的人得分,更重要的是解鎖能力。", do: "選「事件」" },
       enemyCard: { title: "敵方的牌", text: "把對方的牌當行動點用,它的事件還是會發生;由你決定事件先、還是行動點先。", do: "選「先行動點」" },
       campaign: { title: "奇襲", text: "奇襲有對方影響力的據點,最多移除 {n} 點,剩下的變成我方的;打要衝疲敝 +1,把疲敝推到{to}的人立刻輸。", do: "確認奇襲{space}" },
-      lobby: { title: "遊說", text: "局勢 = 我方控制的相鄰據點數 − 對方的;最多移除 {n} 點,但不超過局勢。不放置,也不增加疲敝。", do: "遊說{space}" },
+      // #133 part 3b(item 2):改寫成擲骰版遊說——facts() 全部讀自
+      // shared/tutorial.js 的 realignOdds/真實兩次擲骰結果,不是編出來的數字。
+      lobby: { title: "遊說", text: "選一個雙方都有影響力的據點,{n} 點 = {n} 次機會。每次雙方各擲一顆骰,加上周邊局勢優劣——這裡你 +{qinMod}、對方 +{chuMod},你的勝率約 {winPct}%。每次擲完可以「收手」,放棄剩下的次數;輸的一方在那裡失去差值,連自己的點都可能賠上;點數歸零也會自動停止。不放置,也不增加疲敝。", do: "遊說{space}" },
       scoring: { title: "記分", text: "打三晉記分:存在、優勢或控制,每個要衝再 +1;差額移動天命。記分卡留在手上到回合結束就輸。", do: "打記分卡" },
       destroy: { title: "滅國", text: "秦控制一整國的所有據點,那國就滅:{state} 滅,秦 +{n}。滅三國,秦統一;教學到這裡完成。", do: "完成" },
     },
@@ -347,6 +352,10 @@ export default {
       choose: "選{card}。",
       skip: "略過,手牌不動。",
       option: "選{option}。",
+      // #133 part 3b item 7:遊說擲骰的收手/再說一次,照 shared/bots.js
+      // 同一條規則(平均淨賺 > 0 就再說一次)算出的期望值。
+      realignContinue: "再說一次:平均可再賺 {net} 點。",
+      realignStop: "收手:再擲一次平均倒賠 {net} 點。",
     },
     anyLegal: "亮著的都能選,金色只是軍師的推薦。",
     // #102 item 2:打開的這張牌不是軍師建議的那張時,banner 的第一行改講

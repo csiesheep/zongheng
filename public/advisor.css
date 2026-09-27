@@ -236,7 +236,13 @@ body:not(.table-lock) .advisor-banner {
 .rowb button[data-skip].adv-pick,
 /* #60: the headline phase's own confirm button (footer(), app.js) sits in
    a plain .sheet-footer row, not a .rowb -- same mark, its own selector. */
-.sheet-footer button[data-use].adv-pick {
+.sheet-footer button[data-use].adv-pick,
+/* #133 part 3b item 7: the dice 遊說 roll card's own 收手/再說一次 buttons
+   (lobby-ui.js's `.lobby-card`, `[data-lobby-choice]`) live outside #sheet
+   entirely -- app.js renders no generic [data-option] row for this pending
+   (its own #133 comment), so this needs its own selector alongside the
+   others, same mark. */
+.lobby-card button[data-lobby-choice].adv-pick {
   position: relative;
   outline: 2px dashed var(--advisor);
   outline-offset: 2px;
@@ -250,7 +256,8 @@ body:not(.table-lock) .advisor-banner {
    button underneath it. */
 .card.adv-pick::before, .sheet-grid button.adv-pick::before, .rowb.order button.adv-pick::before,
 .rowb button[data-use].adv-pick::before, .rowb button[data-option].adv-pick::before, .rowb button[data-card].adv-pick::before,
-.rowb button[data-skip].adv-pick::before, .sheet-footer button[data-use].adv-pick::before {
+.rowb button[data-skip].adv-pick::before, .sheet-footer button[data-use].adv-pick::before,
+.lobby-card button[data-lobby-choice].adv-pick::before {
   content: "軍師";
   position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
   height: 15px; line-height: 15px; padding: 0 6px; border-radius: 4px;
@@ -260,7 +267,8 @@ body:not(.table-lock) .advisor-banner {
 :root[lang="en"] .card.adv-pick::before, :root[lang="en"] .sheet-grid button.adv-pick::before,
 :root[lang="en"] .rowb.order button.adv-pick::before, :root[lang="en"] .rowb button[data-use].adv-pick::before,
 :root[lang="en"] .rowb button[data-option].adv-pick::before, :root[lang="en"] .rowb button[data-card].adv-pick::before,
-:root[lang="en"] .rowb button[data-skip].adv-pick::before, :root[lang="en"] .sheet-footer button[data-use].adv-pick::before {
+:root[lang="en"] .rowb button[data-skip].adv-pick::before, :root[lang="en"] .sheet-footer button[data-use].adv-pick::before,
+:root[lang="en"] .lobby-card button[data-lobby-choice].adv-pick::before {
   content: "Advisor";
 }
 /* #102 item 1 (orchestrator, 390x669 zh screenshot: the hand strip cuts the
