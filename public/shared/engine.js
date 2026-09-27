@@ -808,6 +808,10 @@ function startGame(seed, options) {
     for (const [id, n] of Object.entries(SETUP[SIDES[side]].fixed)) ensure(st, id)[side] = n;
   }
   ensure(st, "hangu")[QIN] = st.options.hangu;
+  // #135 (D1, 遠交): `qinFarStart: n` -- Qin's fixed setup also puts n in 臨淄 and
+  // n in 薊, before the free placement. Not a key of DEFAULT_OPTIONS: absent (or
+  // 0) is today's setup, and a game saved without it stays as it was.
+  if (st.options.qinFarStart > 0) for (const id of ["linzi", "ji"]) ensure(st, id)[QIN] = st.options.qinFarStart;
   if (st.options.homeFall === "move") st.capital = HOME_CAPITAL.slice();
   const decks = { reform: ERA_DECKS.reform.slice(), alliance: ERA_DECKS.alliance.slice(), conquest: ERA_DECKS.conquest.slice() };
   if (st.options.scoringSplit === "v2") {
