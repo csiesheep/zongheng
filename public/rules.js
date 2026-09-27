@@ -17,6 +17,15 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 let lang = (new URLSearchParams(location.search).get("lang") || (() => { try { return localStorage.getItem("zh.lang"); } catch { return null; } })() || ((navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
 if (!["en", "zh-Hant"].includes(lang)) lang = "en";
 const spaceName = (id) => (lang === "en" ? E.SPACE[id].en : E.SPACE[id].zh);
+// #135: the seals option (how many of the five states' 相印 Chu needs for
+// 合縱) is a balance lever, not a fixed rulebook number any more -- every
+// prose mention reads E.DEFAULT_OPTIONS.seals through this instead of
+// spelling out 四/four, so a later change to the shipped default (like this
+// one, 4 -> 5) never needs a second hunt through this file's own strings.
+const SEALS_ZH = { 3: "三", 4: "四", 5: "五", 6: "六" };
+const SEALS_EN = { 3: "three", 4: "four", 5: "five", 6: "six" };
+const sealsN = () => E.DEFAULT_OPTIONS.seals;
+const sealsWord = (l) => (l === "en" ? SEALS_EN[sealsN()] || String(sealsN()) : SEALS_ZH[sealsN()] || String(sealsN()));
 const stateName = (id) => (id ? (lang === "en" ? E.STATES[id].en : E.STATES[id].zh) : ""); // #95: state tag title/aria
 // Same regionShort table app.js's map uses (see its own comment on this
 // function) — zh's used to fall back to E.REGIONS[r].zh, which is why the
@@ -45,8 +54,10 @@ const T = {
   "zh-Hant": {
     title: "縱橫",
     intro: "兩人對弈,8 回合,約一小時。秦走連橫,逐一吞併六國;楚走合縱,把六國綁在一起。每回合雙方各蓋一張標題牌,再輪流行動 6 或 7 次。",
-    ends: "七種結束方式",
-    endsRows: [["一統", "秦同時滅掉五國(韓、魏、趙、齊、燕)之中的三國:控制該國全部據點即為滅。"], ["合縱", "楚同時持有四國相印:控制該國國都,而且在那裡的影響力達到上限(安定值 + 2)。"], ["天命", "天命軌到達任一方 20。"], ["稱帝", "先抵達稱帝、且當時天命領先,即獲勝;否則天命 +3。"], ["土崩", "把疲敝軌推到土崩的人立刻敗北,包括打出對手陣營的牌時觸發的對手事件。"], ["記分卡", "回合結束時手上還有記分卡的人敗北。"], ["終局", "第 8 回合結束後五區各結算一次,天命領先者勝;平手楚勝。"]],
+    ends: "八種結束方式",
+    // #135:相印數是平衡桿,讀 sealsWord() 而不是寫死「四」。
+    // #133:國都陷落(homeFall)補進第八種;遊說已改骰子版,見下面 usesRows。
+    endsRows: [["一統", "秦同時滅掉五國(韓、魏、趙、齊、燕)之中的三國:控制該國全部據點即為滅。"], ["合縱", `楚同時持有${sealsWord("zh-Hant")}國相印:控制該國國都,而且在那裡的影響力達到上限(安定值 + 2)。`], ["天命", "天命軌到達任一方 20。"], ["稱帝", "先抵達稱帝、且當時天命領先,即獲勝;否則天命 +3。"], ["土崩", "把疲敝軌推到土崩的人立刻敗北,包括打出對手陣營的牌時觸發的對手事件。"], ["記分卡", "回合結束時手上還有記分卡的人敗北。"], ["終局", "第 8 回合結束後五區各結算一次,天命領先者勝;平手楚勝。"], ["國都陷落", "回合結束時,一方的國都仍在對方控制下,那一方立刻敗北。"]],
     board: "棋盤",
     boardText: "26 個據點,分五個記分區(三晉、西土、南方、東方、北疆)與周。五個「國」畫在區域之內,各有一個國都:韓(新鄭)、魏(大梁)、趙(邯鄲)、齊(臨淄)、燕(薊)。★ 為要衝,共八個。每據點有安定值 2 到 4。",
     mapAlt: "地圖:26 個據點分屬五個記分區與周,每個據點旁的小方籤標著它的安定值,★ 是要衝,方形圓盤是國都;屬於五國之一的 14 個據點,還帶著一個彩色小方籤,籤上一字標著所屬國(韓、魏、趙、齊、燕)。",
@@ -57,7 +68,9 @@ const T = {
     // 放在控制小節,也放進地圖圖例(mapLegend)。
     capBarLine: "數字上一橫 = 這一方已達上限(安定值 + 2),不能再扶植。",
     uses: "一張牌的五種用法",
-    usesRows: [["事件", "照牌面做。用行動點打出對手陣營的牌時,對手的事件仍然觸發,你決定事件先或行動點先。"], ["扶植", "每 1 點行動點放 1 點影響力,只能放在已有自己影響力的據點,或與自己有影響力的據點相鄰處;能放哪裡在這次行動開始時就決定,這次放下的點不會再開出新的相鄰處。目標由對手控制時每點花 2,逐點判定。"], ["奇襲", "花 X 點對一個有對手影響力的據點:先移除對手 min(X, 其影響力),剩下的放為自己的(不受相鄰限制)。目標是要衝則疲敝軌前進 1。受疲敝封鎖。"], ["遊說", "局勢 = 我方控制的相鄰據點數 − 對方控制的相鄰據點數。移除對手 min(X, 局勢) 點。不動疲敝、不受封鎖。"], ["變法", "棄掉行動點 ≥ 門檻的牌,變法軌前進 1;每回合 1 次(到第 2 格後 2 次)。"]],
+    // #133:遊說已改骰子版(owner 裁決,realign-own):目標要換成你和對方都有
+    // 影響力的據點,一次 X 點 = X 次機會,一次一次來,每次都可以收手放棄剩下的。
+    usesRows: [["事件", "照牌面做。用行動點打出對手陣營的牌時,對手的事件仍然觸發,你決定事件先或行動點先。"], ["扶植", "每 1 點行動點放 1 點影響力,只能放在已有自己影響力的據點,或與自己有影響力的據點相鄰處;能放哪裡在這次行動開始時就決定,這次放下的點不會再開出新的相鄰處。目標由對手控制時每點花 2,逐點判定。"], ["奇襲", "花 X 點對一個有對手影響力的據點:先移除對手 min(X, 其影響力),剩下的放為自己的(不受相鄰限制)。目標是要衝則疲敝軌前進 1。受疲敝封鎖。"], ["遊說", "選一個你和對方都有影響力的據點,X 點 = X 次機會。每次雙方各擲一顆骰,加上周邊局勢優劣;輸的一方在那裡失去差值——連自己的點都可能賠上。每次擲完可以收手,放棄剩下的次數。不動疲敝、不受封鎖。"], ["變法", "棄掉行動點 ≥ 門檻的牌,變法軌前進 1;每回合 1 次(到第 2 格後 2 次)。"]],
     tracks: "疲敝軌與變法軌",
     weariness: "疲敝軌:承平 5 → 兵連 4 → 禍結 3 → 民困 2 → 土崩 1。要衝奇襲推 1;每回合結算回復 1。封鎖(只限奇襲):兵連以下不可奇襲本土(西土、南方);禍結以下再加上三晉與周;民困時任何要衝都不可。推到土崩者立刻敗北,推進者是正在行動的玩家。",
     reformText: "變法軌 6 格,先到者得分,解鎖是重點:",
@@ -90,8 +103,11 @@ const T = {
   en: {
     title: "Zongheng",
     intro: "Two players, 8 turns, about an hour. Qin plays the Horizontal, picking the states off one by one; Chu plays the Vertical, holding the alliance together. Each turn both headline a card, then alternate 6 or 7 actions.",
-    ends: "Seven ways a game ends",
-    endsRows: [["Unification", "Qin holds three of the five states (韓 Han, 魏 Wei, 趙 Zhao, 齊 Qi, 燕 Yan) at once: a state is destroyed when Qin controls every one of its spaces."], ["Alliance", "Chu holds the seals of four states at once: a seal needs control of the capital with Chu's influence there at the cap (stability + 2)."], ["Mandate", "The Mandate track reaches 20 for either side."], ["Emperor", "The first to reach Emperor (reform box 6) while leading the Mandate wins at once; otherwise it gains 3 Mandate."], ["Collapse", "Whoever pushes weariness to the last box loses, even through the other side's event played for ops."], ["Scoring card", "A scoring card still in hand when the turn ends loses."], ["Final scoring", "After turn 8 every region scores once; the Mandate leader wins, a tie goes to Chu."]],
+    ends: "Eight ways a game ends",
+    // #135: the seals count is a balance lever -- read through sealsWord()
+    // instead of writing "four". #133: the homeFall capital ending is the
+    // new eighth way; Lobby's own row below now describes the dice rule.
+    endsRows: [["Unification", "Qin holds three of the five states (韓 Han, 魏 Wei, 趙 Zhao, 齊 Qi, 燕 Yan) at once: a state is destroyed when Qin controls every one of its spaces."], ["Alliance", `Chu holds the seals of ${sealsWord("en")} states at once: a seal needs control of the capital with Chu's influence there at the cap (stability + 2).`], ["Mandate", "The Mandate track reaches 20 for either side."], ["Emperor", "The first to reach Emperor (reform box 6) while leading the Mandate wins at once; otherwise it gains 3 Mandate."], ["Collapse", "Whoever pushes weariness to the last box loses, even through the other side's event played for ops."], ["Scoring card", "A scoring card still in hand when the turn ends loses."], ["Final scoring", "After turn 8 every region scores once; the Mandate leader wins, a tie goes to Chu."], ["Capital falls", "At a turn's end, either side's home capital is still under the enemy's control: that side loses at once."]],
     board: "The map",
     boardText: "26 spaces in five scoring regions (Three Jin, West, South, East, North) and Zhou. Five states sit inside the regions, each with a capital: Han (Xinzheng), Wei (Daliang), Zhao (Handan), Qi (Linzi), Yan (Ji). ★ marks the eight battlegrounds. Each space has a stability of 2 to 4.",
     mapAlt: "A map of the 26 spaces across five scoring regions and Zhou; a small tag beside each space's disc carries its stability number, a star marks a battleground, and a square disc marks a state capital. The 14 spaces belonging to one of the five states also carry a small coloured square tag naming that state (Han, Wei, Zhao, Qi, Yan).",
@@ -102,7 +118,7 @@ const T = {
     // cap_design_D.png). Also folded into the map legend.
     capBarLine: "A bar over a number: that side is at its cap (stability + 2) and cannot foster there.",
     uses: "A card's five uses",
-    usesRows: [["Event", "Do what it says. When you spend an enemy card for ops its event happens too; you choose event first or ops first."], ["Foster", "1 op per point, where you already have influence or next to any space where you have influence; the choice is fixed when the action starts, so a point you place this action opens nothing new. 2 per point into a space the enemy controls, re-priced point by point."], ["Raid", "Spend X ops on a space with enemy influence: remove up to X of theirs, place the rest of yours (no adjacency needed). A battleground tires the realm by one. Locked by weariness."], ["Lobby", "Edge = your controlled neighbours minus theirs. Remove min(X, edge) enemy points. Never tires, never locked."], ["Reform", "Discard a card of at least the threshold to climb one box; once a turn (twice from box 2)."]],
+    usesRows: [["Event", "Do what it says. When you spend an enemy card for ops its event happens too; you choose event first or ops first."], ["Foster", "1 op per point, where you already have influence or next to any space where you have influence; the choice is fixed when the action starts, so a point you place this action opens nothing new. 2 per point into a space the enemy controls, re-priced point by point."], ["Raid", "Spend X ops on a space with enemy influence: remove up to X of theirs, place the rest of yours (no adjacency needed). A battleground tires the realm by one. Locked by weariness."], ["Lobby", "Pick a space where both you and the enemy have influence: X ops = X attempts, one at a time. Each attempt both sides roll a die and add their surrounding modifiers; the loser removes the difference there -- you can lose your own points too. Stop any time after a roll to give up the rest. Never tires, never locked."], ["Reform", "Discard a card of at least the threshold to climb one box; once a turn (twice from box 2)."]],
     tracks: "Weariness and reform",
     weariness: "Weariness: Peace 5 → War 4 → Strife 3 → Misery 2 → Collapse 1. A battleground raid costs 1; the realm recovers 1 at the end of each turn. Locks (raids only): at War or below no raids in the homes (West, South); at Strife or below none in the Three Jin or Zhou either; at Misery none in any battleground. Pushing to Collapse loses at once; the pusher is whoever is acting.",
     reformText: "The reform track has six boxes; the first to arrive scores, and the unlocks are the point:",
@@ -272,18 +288,29 @@ const EX = {};
   const a = E.clone(b); const res = E.campaign(a, QIN, "daliang", 3);
   EX.campaign = { ids: ["handan", "daliang", "song"], before: b, after: a, res };
 }
-// 4. 遊說: 秦 controls 河東/中山 (2 neighbours of 邯鄲, one from 魏 one from
-// 趙 — NOT both of 魏's own two spaces, which would accidentally trigger
-// 滅國 as a side effect of E.lobby's own E.checkMarkers call, caught while
-// screenshot-checking this branch: the first draft used 河東+大梁, 魏's
-// only two spaces, and a stray "滅"/Destroyed plate showed up on this
-// example's own crop), 楚 controls 上黨 (1 neighbour, 趙);
-// edge = E.edge(st, QIN, "handan") = 2 - 1 = 1. 2 ops.
+// 4. 遊說(#133 part 3a: the dice rule, realign-own, is the default now --
+// this used to call E.lobby() directly for an instant edge-based removal,
+// which under realign-own only pushes a plan step and resolves nothing
+// (E.lobby()'s own "attempts":0 header, caught while re-checking this
+// example after the flip: it silently produced before===after). One
+// attempt now goes through the real play(), fixed to a rngState that rolls
+// a clean win with no 收手 decision left pending (ops 1), same "sides
+// controlling which neighbours" setup as before, plus 1 point of Qin's own
+// influence at the target (realign-own's own "your point there too" rule)
+// -- 秦 controls 河東/中山 (2 neighbours of 邯鄲, one from 魏 one from 趙 —
+// NOT both of 魏's own two spaces, which would accidentally trigger 滅國 as
+// a side effect of checkMarkers, caught while screenshot-checking the
+// pre-#133 version of this same example), 楚 controls 上黨 (1 neighbour,
+// 趙); mods 2 v 1, roll 4 v 3, Qin wins, Chu loses 1.
 {
-  const b = base(); b.inf.hedong = [2, 0]; b.inf.zhongshan = [2, 0]; b.inf.shangdang = [0, 2]; b.inf.handan = [0, 1];
-  const e = E.edge(b, QIN, "handan");
-  const a = E.clone(b); const removed = E.lobby(a, QIN, "handan", 2);
-  EX.lobby = { ids: ["hedong", "shangdang", "zhongshan", "handan"], before: b, after: a, edge: e, removed };
+  const b = base(); b.inf.hedong = [2, 0]; b.inf.zhongshan = [2, 0]; b.inf.shangdang = [0, 2]; b.inf.handan = [1, 1];
+  b.phase = "action"; b.actor = QIN; b.phasing = QIN; b.pending = null; b.plan = []; b.forced = [null, null];
+  b.hands = [["tiangou"], []];
+  b.rngState = 2654435761; // seed 1 * 2654435761 >>> 0 -- see this file's own README on how these EX states are found
+  const odds = E.realignOdds(b, QIN, "handan");
+  const a = E.apply(b, { type: "play", side: QIN, card: "tiangou", use: "lobby", target: "handan" });
+  const roll = a.log.find((l) => l.type === "realign");
+  EX.lobby = { ids: ["hedong", "shangdang", "zhongshan", "handan"], before: b, after: a, odds, roll };
 }
 // 1. 事件: 商鞅變法 (shangyang)'s own effect(st) — reformAdvance(Qin,1) plus
 // a +1-ops-all-Qin-cards effect for the turn (E.CARD.shangyang.effect).
@@ -445,8 +472,8 @@ function usesExamplesHTML(l) {
         arrowP: "秦 扶植 3", capP1: `宜陽 ${infWords(EX.place.before, "yiyang", l)} · 洛邑 ${infWords(EX.place.before, "luoyi", l)}`,
         capP2: `宜陽 +1(1 點,鄰函谷關)· 洛邑 +1(2 點,楚控制)`,
         arrowC: "秦 奇襲 3", capC1: `大梁:${infWords(EX.campaign.before, "daliang", l)}`, capC2: `大梁:${infWords(EX.campaign.after, "daliang", l)}(移除 min(3,2)=2,剩 1 點落地)`,
-        arrowL: "楚 遊說 2", capL1: `邯鄲:${infWords(EX.lobby.before, "handan", l)}`, capL2: `邯鄲:${infWords(EX.lobby.after, "handan", l)}`,
-        edgeCap: `局勢 = 2 − 1 = 1,移除 min(2, 1) = 1`,
+        arrowL: "秦 遊說 1", capL1: `邯鄲:${infWords(EX.lobby.before, "handan", l)}`, capL2: `邯鄲:${infWords(EX.lobby.after, "handan", l)}`,
+        edgeCap: `局勢:秦擲 ${EX.lobby.roll.roll[0]}+${EX.lobby.odds.mod[0]}=${EX.lobby.roll.roll[0] + EX.lobby.odds.mod[0]},楚擲 ${EX.lobby.roll.roll[1]}+${EX.lobby.odds.mod[1]}=${EX.lobby.roll.roll[1] + EX.lobby.odds.mod[1]},楚失去 ${EX.lobby.roll.n} 點`,
         arrowR: "秦 變法", capR1: `變法軌:秦 0`, capR2: `變法軌:秦 1(門檻 ${EX.reform.threshold} 點,棄牌 收復河西 2 點)`,
         noteR: "沒有事件觸發。" }
     : { arrowE: "Shang Yang's Reforms", capE1: `Reform track: Qin 0`, capE2: `Reform track: Qin 1 (+1 op on every Qin card this turn)`,
@@ -454,8 +481,8 @@ function usesExamplesHTML(l) {
         arrowP: "Qin fosters, 3 ops", capP1: `Yiyang ${infWords(EX.place.before, "yiyang", l)} · Luoyi ${infWords(EX.place.before, "luoyi", l)}`,
         capP2: `Yiyang +1 (1 op, next to Hangu Pass) · Luoyi +1 (2 ops, Chu-controlled)`,
         arrowC: "Qin raids, 3 ops", capC1: `Daliang: ${infWords(EX.campaign.before, "daliang", l)}`, capC2: `Daliang: ${infWords(EX.campaign.after, "daliang", l)} (removes min(3,2)=2, 1 left to place)`,
-        arrowL: "Chu lobbies, 2 ops", capL1: `Handan: ${infWords(EX.lobby.before, "handan", l)}`, capL2: `Handan: ${infWords(EX.lobby.after, "handan", l)}`,
-        edgeCap: `Edge = 2 − 1 = 1, removes min(2, 1) = 1`,
+        arrowL: "Qin lobbies, 1 op", capL1: `Handan: ${infWords(EX.lobby.before, "handan", l)}`, capL2: `Handan: ${infWords(EX.lobby.after, "handan", l)}`,
+        edgeCap: `Qin rolls ${EX.lobby.roll.roll[0]}+${EX.lobby.odds.mod[0]}=${EX.lobby.roll.roll[0] + EX.lobby.odds.mod[0]}, Chu rolls ${EX.lobby.roll.roll[1]}+${EX.lobby.odds.mod[1]}=${EX.lobby.roll.roll[1] + EX.lobby.odds.mod[1]} — Chu loses ${EX.lobby.roll.n}`,
         arrowR: "Qin reforms", capR1: `Reform track: Qin 0`, capR2: `Reform track: Qin 1 (needs ${EX.reform.threshold} ops, discards Retaking Hexi's 2)`,
         noteR: "No event happens." };
   const eventFig = `<div class="fig"><div class="fig-pair">` +
@@ -496,12 +523,12 @@ function mieSectionHTML(l) {
        `<b>復國:</b> 楚拿回國都時解除滅國,可再滅一次,但第二次不再得分。秦同時滅三國即勝。`,
        // #122: owner 裁決 #119 (田單復國 read literally; the engine's mieHold).
        `<b>田單復國:</b> 不必拿回國都;之後秦要<b>新拿下</b>一處齊地(復國時不在秦手上,或之後丟過)並控制齊全境,齊才再滅。`,
-       `<b>相印(楚):</b> 控制某國<b>國都</b>且影響力達到上限(安定值 + 2)。每國一次,天命 +1。秦拿下該國都即解除。楚同時持四國相印即勝。`,
+       `<b>相印(楚):</b> 控制某國<b>國都</b>且影響力達到上限(安定值 + 2)。每國一次,天命 +1。秦拿下該國都即解除。楚同時持${sealsWord("zh-Hant")}國相印即勝。`,
        `相印一旦取得,楚的影響力被削減、甚至掉到沒有人控制,也不會失去——只有<b>秦控制該國都</b>才會失印;滅國/復國同理,只有<b>楚控制該國都</b>才會復國,丟掉國都以外的據點不會復國。`]
     : [`<b>Destruction (Qin):</b> control <b>every</b> space of a state, not just its capital. Qin scores that state's value once (2 for Han, Wei, Yan; 3 for Zhao, Qi).`,
        `<b>Restoration:</b> Chu retaking the capital lifts the destroyed mark; it can be destroyed again, but scores nothing the second time. Qin wins on three destroyed at once.`,
        `<b>Tian Dan Restores Qi</b> needs no capital; Qi then falls again only when Qin <b>newly takes</b> a Qi space (not Qin's at the restore, or lost since) and holds all of Qi.`,
-       `<b>Seals (Chu):</b> control a state's <b>capital</b> with influence there at the cap (stability + 2). Once per state, +1 Mandate. Qin taking that capital removes it. Chu wins on four seals at once.`,
+       `<b>Seals (Chu):</b> control a state's <b>capital</b> with influence there at the cap (stability + 2). Once per state, +1 Mandate. Qin taking that capital removes it. Chu wins on ${sealsWord("en")} seals at once.`,
        `Once held, a seal survives Chu's influence there dropping, even to where nobody controls the capital — only <b>Qin controlling that capital</b> removes it. The same is true the other way for destruction/restoration: only <b>Chu controlling the capital</b> restores it; losing any other space does not.`];
   const p = rulesP.map((t) => `<p>${t}</p>`).join("");
   const han = "han", zhao = "zhao";
@@ -523,8 +550,8 @@ function mieSectionHTML(l) {
   const ex9 = ex9a + ex9b;
   const cmpHead = zh ? ["", "秦 滅國", "楚 相印"] : ["", "Qin destruction", "Chu seals"];
   const cmpRows = zh
-    ? [["要佔", "全國每個據點", "國都一處"], ["要多少", "控制即可", "影響力堆到上限（安定值 +2）"], ["得分", "天命 +2 或 +3，每國一次", "天命 +1，每國一次"], ["被奪回", "楚拿回國都", "秦拿下國都"], ["勝利", "三國同滅", "四國同時相印"]]
-    : [["Must hold", "every space of the state", "just the capital"], ["How much", "control is enough", "influence stacked to the cap (stability + 2)"], ["Score", "+2 or +3 Mandate, once per state", "+1 Mandate, once per state"], ["Lost when", "Chu retakes the capital", "Qin takes the capital"], ["Win", "three destroyed at once", "four seals at once"]];
+    ? [["要佔", "全國每個據點", "國都一處"], ["要多少", "控制即可", "影響力堆到上限（安定值 +2）"], ["得分", "天命 +2 或 +3，每國一次", "天命 +1，每國一次"], ["被奪回", "楚拿回國都", "秦拿下國都"], ["勝利", "三國同滅", `${sealsWord("zh-Hant")}國同時相印`]]
+    : [["Must hold", "every space of the state", "just the capital"], ["How much", "control is enough", "influence stacked to the cap (stability + 2)"], ["Score", "+2 or +3 Mandate, once per state", "+1 Mandate, once per state"], ["Lost when", "Chu retakes the capital", "Qin takes the capital"], ["Win", "three destroyed at once", `${sealsWord("en")} seals at once`]];
   return p + stateSpacesHTML(l) + ex6 + ex7 + ex8 + ex9 + table(cmpHead, cmpRows.map((r) => [`<b>${esc(r[0])}</b>`, esc(r[1]), esc(r[2])]));
 }
 

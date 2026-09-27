@@ -50,7 +50,8 @@ export default {
   },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },
   sys: { joined: "{name} 進來了。", left: "{name} 離開了。", leftGame: "{name} 離開了,由電腦代打。", dealt: "發牌了。", timeout: "{name} 逾時,由桌面代為決定。", over: "{side}({name})獲勝:{reason}。", fallback: "對手這一手出了問題,已改用保底動作:{action}。", stuck: "對手無法行動,這一局無法繼續。" },
-  ends: { unification: "三國同滅", alliance: "四國相印", mandate: "天命達 20", collapse: "對方把天下推到土崩", scoring: "對方回合結束時手上還有記分卡", scoringBoth: "雙方都留著記分卡,依平手規則", final: "終局結算後的天命", tie: "天命平手,依平手規則", emperor: "天命領先時率先稱帝", homeFall: "回合結束時,對方的國都仍在敵手控制下" },
+  // #135:相印數是平衡桿(4 或 5),alliance 這裡不寫死數字,舊存檔(4)也讀得對。
+  ends: { unification: "三國同滅", alliance: "相印集滿", mandate: "天命達 20", collapse: "對方把天下推到土崩", scoring: "對方回合結束時手上還有記分卡", scoringBoth: "雙方都留著記分卡,依平手規則", final: "終局結算後的天命", tie: "天命平手,依平手規則", emperor: "天命領先時率先稱帝", homeFall: "回合結束時,對方的國都仍在敵手控制下" },
   errors: { noRoom: "沒有這個房號。", full: "房間已滿。", needMore: "需要兩個座位。", notReady: "對方尚未就緒。", notYet: "牌桌還沒蓋好。", notYourTurn: "現在不是你決定。" },
   landing: { backToRoom: "回到房間 {code}", resume: "繼續上一局", play: "與電腦對弈", create: "多人遊戲", join: "加入", code: "房號", codePlaceholder: "CODE", rulesLink: "規則與七十二張牌", rulesShort: "規則", name: "你的名字" },
   side: {
@@ -112,6 +113,51 @@ export default {
   // hand tile and compact chip, a small visible line on the full card page).
   hand: { mustPlay: "必打", mustPlayTitle: "記分卡留到回合結束會輸", opsChanged: "印刷 {printed}，目前 {now}", opsPrinted: "印刷 {printed}" },
   preview: { campaign: "移除對方 {removed},放置己方 {placed};疲敝 {w}。", lobby: "局勢 {edge}:最多移除 {n}。", locked: "疲敝封鎖中。", enemyEvent: "這是對方的牌:事件也會觸發。" },
+  // #133:遊說(骰子版,realign-own)的畫面文字——選目標、預覽、擲骰卡(display
+  // B)、結算,以及對手/旁觀者看到的同一張卡。骰子畫成真的骰子(CSS 點數
+  // 排列),不是數字方塊(這個專案沒有骰子圖檔,真的骰子圖是 artist 的活,
+  // 已回報給 orchestrator)。
+  lobbyRoll: {
+    pickTitle: "遊說 · {card} {n} 點 = {n} 次",
+    pickHint: "點一個你和{opp}都有影響力的據點",
+    pickRule: "雙方各擲骰加局勢;輸的一方失去差值,你也可能倒賠。",
+    winTag: "勝 {pct}%",
+    previewTitle: "{target} · 遊說 {n} 次",
+    vs: "對",
+    modLine: "{side}擲 {mod}",
+    parts: { adj: "周邊控制{spaces}", more: "影響力較多", home: "本土相鄰" },
+    bar: "勝 {win}% · 平 {tie}% · 負 {lose}%",
+    net: "平均每次 {sign}{n} 點(你的得失)",
+    start: "開始遊說",
+    cardTitle: "遊說 · {target}",
+    attempt: "第 {k} / {n} 次",
+    envoyYou: "{side}使(你)",
+    envoyOther: "{side}使",
+    winsShort: "{side}勝", tieShort: "平",
+    result: "{loser}在{target}失去 {n} 點",
+    resultTie: "平手,沒有點數變化",
+    stop: "收手", continueN: "再說一次 剩{left}次",
+    waiting: "等待{actor}:再說一次或收手",
+    summaryTitle: "{target}·遊說·結果",
+    summaryK: "第 {k} 次",
+    summaryFinal: "{target}:秦 {from0} → {to0}　楚 {from1} → {to1}",
+    done: "完成",
+  },
+  // #133 part 2:國都(homeFall「守不住才敗」)的畫面文字——平時的都字徽章、
+  // 告急/兵臨的橫幅、奪回的提示、回合結束檢查卡。
+  capitalUi: {
+    badge: "都", badgeTitle: "國都",
+    defenderTitle: "國都告急 · {capital}落入{enemy}手",
+    defenderSub: "回合結束前奪回,否則{you}亡 · 你還有 {left} 次行動",
+    retakeHint: "還差 {n} 點就能讓{enemy}不再控制",
+    retakeHintZero: "現在就能讓對方不再控制",
+    attackerTitle: "兵臨{capital} · 守到回合結束即勝",
+    attackerSub: "對方還要 {n} 點才能奪回",
+    attackerSubZero: "對方現在就能奪回",
+    retaken: "{capital}已奪回 · 國都解危",
+    checkTitle: "回合結束 · 國都",
+    statusSafe: "安全", statusFallen: "陷落", statusMoved: "已遷都",
+  },
   over: {
     winner: "{side}獲勝", mandate: "終局天命",
     reasons: {
@@ -119,7 +165,8 @@ export default {
       // 獨立一個 key,不共用 win/lose(照 issue 的要求),這樣入座玩家的文字
       // 還是可以說「你」,旁觀者永遠聽不到。
       unification: { title: "秦并天下", body: "三國盡滅,天下再無缺口歸秦。", win: "你贏了。天下已歸秦所有。", lose: "你輸了。秦并天下。", watch: "秦統一天下。" },
-      alliance: { title: "合縱成", body: "四方相印盡合,秦再無可乘之隙。", win: "你贏了。合縱已成。", lose: "你輸了。合縱已成,你被困其中。", watch: "楚合縱成功。" },
+      // #135:相印數是平衡桿,body 這裡不寫死「四」。
+      alliance: { title: "合縱成", body: "相印盡合,秦再無可乘之隙。", win: "你贏了。合縱已成。", lose: "你輸了。合縱已成,你被困其中。", watch: "楚合縱成功。" },
       mandate: { title: "天命歸{winner}", body: "天命積滿二十,天下已為{winner}所決。", win: "你贏了。天命在你。", lose: "你輸了。天命歸於{winner}。", watch: "天命歸於{winner}。" },
       collapse: { title: "天下先向{loser}崩", body: "疲敝先耗盡,{winner}未耗盡自己的氣力。", win: "你贏了。對手先撐不住。", lose: "你輸了。你先撐不住。", watch: "天下先向{loser}崩潰。" },
       scoring: { title: "記分未清", body: "回合結束時記分卡仍在手上,結算歸於{winner}。", win: "你贏了。對手手上還握著記分卡。", lose: "你輸了。記分卡還留在你手上。", watch: "{loser}手上還握著記分卡。" },
@@ -129,12 +176,10 @@ export default {
       // #125(owner:先抵達稱帝、且當時天命領先,即獲勝):贏家可以是秦也可以是楚,
       // 所以用 {winner}王,不寫死秦王。
       emperor: { title: "稱帝", body: "{winner}率先變法到稱帝,而且當時天命領先。", win: "你贏了。{winner}王稱帝,天下歸心。", lose: "你輸了。{winner}王搶先稱帝,天命已定。", watch: "{winner}王稱帝,天命已定。" },
-      // #130(homeFall):贏家/輸家可以是秦也可以是楚,而 render 只帶
-      // {winner}/{loser}(見 app.js renderOver、log-view.js overRowHtml),
-      // 沒有國都名稱可用——就算 homeFall:"move" 已遷都也一樣。所以不點名
-      // 關中/郢,寫成不需要國都名的句子(遊說 owner 定案的措辭是點名的,
-      // 但現有欄位傳不出那個名字,回報給 orchestrator,#130)。
-      homeFall: { title: "國都陷落", body: "回合結束時,{loser}的國都仍在{winner}控制之下。", win: "你贏了。{loser}的國都已落入你手。", lose: "你輸了。你的國都已落入{winner}之手。", watch: "{loser}的國都落入{winner}之手。" },
+      // #133 part 2(owner定案措辭):{capital} 現在點名——app.js的renderOver()
+      // 與log-view.js的overRowHtml()從log最後一筆「陷落」的capitalCheck讀出
+      // 空間id(#130當時這個欄位傳不出來,已補上)。
+      homeFall: { title: "國都陷落", body: "回合結束時,{loser}的國都{capital}仍在{winner}控制之下。", win: "你贏了。{winner}軍入{capital},{loser}社稷已亡。", lose: "你輸了。{capital}陷落,{loser}社稷已亡。", watch: "{capital}陷落,{loser}社稷已亡。" },
     },
   },
   log: {
@@ -146,6 +191,14 @@ export default {
     headlineNone: "雙方都沒有手牌,跳過標題階段。",
     play: "{side}打出{card}({use})。",
     place: "{side}在{spaces}扶植。", campaign: "{side}以 {ops} 點奇襲{target}:移除 {removed},放置 {placed}。", lobby: "{side}遊說{target}:移除 {removed}。",
+    // #133:骰子版的遊說(mode 有值)——一段序列,共 attempts 次;每次擲骰是
+    // 自己的 log.realign,收手是 log.lobbyStop。孤兒(#128 400 筆上限截斷、
+    // 沒有 play 開頭的一手)時走這裡的通用路徑,平常在一手牌裡由
+    // log-view.js 的 chipsForSteps() 顯示短版。
+    lobbyDice: "{side}遊說{target},共 {attempts} 次:對方失去 {removed},己方失去 {lost}。",
+    realign: "第 {k} 次:{loserOrTie}。",
+    lobbyStop: "{side}在{target}收手,還剩 {left} 次不擲。",
+    capitalCheck: "回合結束檢查:{side}的國都{capital}{status}。",
     score: "{region}結算:秦 {q},楚 {c}。", vp: "天命 {mandate}。", tire: "疲敝降至{to}。", seal: "楚取得{state}相印。", unseal: "楚失去{state}相印。",
     mie: "秦滅{state}。", restore: "{state}復國。", reform: "{side}變法軌到第 {box} 格。", jiuding: "九鼎蓋著交給{side}。", discard: "{side}棄掉{card}。",
     bog: "{side}頓兵堅城,棄掉{card}。", skip: "{side}無牌可出。", opsLost: "{side}的 {ops} 點行動點無處可用。", reshuffle: "棄牌堆重洗。", era: "{era}牌庫洗入。",
@@ -161,6 +214,8 @@ export default {
     setupHeader: "佈局", turnHeader: "第 {turn} 回合 · {era}", round: "行動 {round}",
     headlineLine: "標題:{qinSide} {qinCard} · {chuSide} {chuCard}", headlineFirst: "{first}先結算",
     chipPlace: "{space} +{n}", chipRemove: "{target}:移除{side} {n}",
+    // #133: 遊說(骰子)每次擲骰、以及收手的小標籤。
+    chipRealign: "第{k}次:{loserOrTie}", chipRealignTie: "平手", chipRealignLoss: "{side}失去{n}", chipLobbyLost: "{target}:己方失去 {n}", chipLobbyStop: "收手(剩{left}次)",
     chipReform: "變法 → 第 {box} 格", chipTire: "疲敝 → {to}",
     chipDiscard: "{side}棄掉{card}", chipOpsLost: "{side}的 {ops} 點行動點無處可用",
     // #127:結束這局的那手牌(或標題)身上的「就是這手」小標,只點出誰輸;
@@ -221,8 +276,9 @@ export default {
     },
     done: {
       title: "{state}已滅", sub: "",
-      lead: "你已經知道正式對局要準備什麼了。遊戲有七種結束方式:",
-      ends: ["秦同時滅掉三國", "楚同時持有四國相印", "天命到達 20", "天命領先時率先變法到稱帝", "有人把疲敝推到土崩", "記分卡留在手上到回合結束", "第 8 回合結束,天命領先的一方(平手楚勝)"],
+      lead: "你已經知道正式對局要準備什麼了。遊戲有八種結束方式:",
+      // #135:相印數是平衡桿,這裡不寫死「四」。#133:國都陷落補成第八種。
+      ends: ["秦同時滅掉三國", "楚的相印集滿", "天命到達 20", "天命領先時率先變法到稱帝", "有人把疲敝推到土崩", "記分卡留在手上到回合結束", "第 8 回合結束,天命領先的一方(平手楚勝)", "回合結束時,一方的國都仍在對方控制下"],
       also: "教學沒教到的:標題階段怎麼排順序、九鼎怎麼借出、洛邑替誰加天命、相印怎麼算合縱、變法解鎖了什麼技能,都在規則頁裡。",
       play: "與電腦對弈 · 簡單", replay: "重玩", rules: "規則", home: "回首頁",
     },

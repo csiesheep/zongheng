@@ -62,7 +62,9 @@ export default {
   },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },
   sys: { joined: "{name} joined.", left: "{name} left.", leftGame: "{name} left; the bot plays the seat.", dealt: "The cards are dealt.", timeout: "{name} ran out of time; the table decided.", over: "{side} ({name}) wins: {reason}.", fallback: "The opponent's move failed; a fallback was played instead: {action}.", stuck: "The opponent cannot move; this game cannot continue." },
-  ends: { unification: "three states destroyed", alliance: "four seals held", mandate: "the Mandate reached 20", collapse: "the realm collapsed on the other side", scoring: "the other side held a scoring card at the turn's end", scoringBoth: "both held scoring cards; the tie rule", final: "the Mandate after the final scoring", tie: "a level Mandate; the tie rule", emperor: "first to Emperor while leading the Mandate", homeFall: "the enemy still held the other side's home capital at the turn's end" },
+  // #135: the seals count is a balance lever (4 or 5) -- alliance doesn't
+  // spell out a number here, so an old save (4) still reads right.
+  ends: { unification: "three states destroyed", alliance: "all the seals held", mandate: "the Mandate reached 20", collapse: "the realm collapsed on the other side", scoring: "the other side held a scoring card at the turn's end", scoringBoth: "both held scoring cards; the tie rule", final: "the Mandate after the final scoring", tie: "a level Mandate; the tie rule", emperor: "first to Emperor while leading the Mandate", homeFall: "the enemy still held the other side's home capital at the turn's end" },
   errors: { noRoom: "No room with that code.", full: "That room is full.", needMore: "Two seats are needed.", notReady: "The other seat is not ready.", notYet: "The table is not built yet.", notYourTurn: "It is not your decision right now." },
   landing: { backToRoom: "Back to room {code}", resume: "Resume your game", play: "Play vs bot", create: "Multiplayer", join: "Join", code: "Room code", codePlaceholder: "CODE", rulesLink: "Rules and the 72 cards", rulesShort: "Rules", name: "Your name" },
   side: {
@@ -142,6 +144,52 @@ export default {
   // it; these carry the printed value back off the badge itself.
   hand: { mustPlay: "Must play", mustPlayTitle: "A scoring card held at the turn's end loses", opsChanged: "Printed {printed}, now {now}", opsPrinted: "Printed {printed}" },
   preview: { campaign: "Removes {removed} of theirs, places {placed} of yours; weariness {w}.", lobby: "Edge {edge}: removes up to {n}.", locked: "Locked by weariness.", enemyEvent: "This is their card: its event will happen too." },
+  // #133: the dice-lobby (realign-own) screens -- pick, preview, the roll
+  // card (display B) and the summary, plus what the opponent/spectator see
+  // of the same roll. The dice are drawn as real dice (CSS pip grids), not
+  // numeral boxes (this project has no die-face art -- flagged to the
+  // orchestrator).
+  lobbyRoll: {
+    pickTitle: "Lobby · {card} {n} ops = {n} attempts",
+    pickHint: "Tap a space where both you and {opp} have influence",
+    pickRule: "Each attempt, both roll a die plus modifiers; the loser removes the difference -- you can lose your own points too.",
+    winTag: "{pct}% win",
+    previewTitle: "{target} · {n} lobby attempt(s)",
+    vs: "vs",
+    modLine: "{side} rolls {mod}",
+    parts: { adj: "controls neighbours {spaces}", more: "more influence", home: "home or next to it" },
+    bar: "Win {win}% · Tie {tie}% · Lose {lose}%",
+    net: "Average {sign}{n} per attempt (your net)",
+    start: "Start lobbying",
+    cardTitle: "Lobby · {target}",
+    attempt: "Attempt {k} / {n}",
+    envoyYou: "{side} envoy (you)",
+    envoyOther: "{side} envoy",
+    winsShort: "{side} wins", tieShort: "Tie",
+    result: "{loser} loses {n} at {target}",
+    resultTie: "A tie: nothing changes",
+    stop: "Stop", continueN: "Roll again ({left} left)",
+    waiting: "Waiting for {actor}: roll again or stop",
+    summaryTitle: "{target} · lobby · result",
+    summaryK: "Attempt {k}",
+    summaryFinal: "{target}: Qin {from0} → {to0}  Chu {from1} → {to1}",
+    done: "Done",
+  },
+  // #133 part 2: the homeFall ("lose-turn") screens -- the capital badge,
+  // the defender/attacker banners, the retake hint, the turn-end check card.
+  capitalUi: {
+    badge: "Cap.", badgeTitle: "Home capital",
+    defenderTitle: "Capital under siege -- {capital} has fallen to {enemy}",
+    defenderSub: "Retake it before the turn ends, or {you} lose -- {left} action(s) left",
+    retakeHint: "{n} more point(s) breaks {enemy}'s control",
+    retakeHintZero: "Already enough to break their control",
+    attackerTitle: "At the gates of {capital} -- hold it to the turn's end and win",
+    attackerSub: "The defender needs {n} more point(s) to retake it",
+    attackerSubZero: "The defender can retake it right now",
+    retaken: "{capital} retaken -- the crisis is over",
+    checkTitle: "Turn end · capitals",
+    statusSafe: "Safe", statusFallen: "Fallen", statusMoved: "Moved",
+  },
   // The result screen's colour and art always follow the WINNER, not your
   // own seat, so each ending's line and body read as fact from the table,
   // and only `win`/`lose` (which side of that fact you were on) changes with
@@ -154,7 +202,8 @@ export default {
       // `win`/`lose` (per the issue) so a seated player's text can keep
       // saying "you" without a spectator ever hearing it.
       unification: { title: "Qin unites the realm", body: "Three states destroyed: the map answers to Qin alone.", win: "You win. The realm is united under Qin.", lose: "You lose. Qin unites the realm.", watch: "Qin unites the realm." },
-      alliance: { title: "The Vertical holds", body: "Four seals held: Qin cannot break what is bound together.", win: "You win. The Vertical holds.", lose: "You lose. The Vertical holds against you.", watch: "Chu's alliance holds." },
+      // #135: the seals count is a balance lever -- body doesn't name a number.
+      alliance: { title: "The Vertical holds", body: "Every seal held: Qin cannot break what is bound together.", win: "You win. The Vertical holds.", lose: "You lose. The Vertical holds against you.", watch: "Chu's alliance holds." },
       mandate: { title: "{winner} carries the Mandate", body: "The Mandate reached twenty: the realm has decided for {winner}.", win: "You win. The Mandate is yours.", lose: "You lose. The Mandate turned to {winner}.", watch: "{winner} carries the Mandate." },
       collapse: { title: "The realm gives out on {loser}", body: "Weariness ran out before {winner} had to spend the last of it.", win: "You win. The realm gave out under them first.", lose: "You lose. The realm gave out under you first.", watch: "The realm gives out on {loser} first." },
       scoring: { title: "A card left in hand", body: "A scoring card was still in hand when the turn ended; the tally falls to {winner}.", win: "You win. They were still holding a scoring card.", lose: "You lose. The scoring card was still in your hand.", watch: "{loser} was still holding a scoring card." },
@@ -164,13 +213,11 @@ export default {
       // #125 (owner: the first to 稱帝 wins if it leads the Mandate then):
       // either side can win this way, so the king is {winner}'s, not Qin's.
       emperor: { title: "The Emperor", body: "{winner} reached Emperor, the last box of the reform track, first and while ahead on the Mandate.", win: "You win. The King of {winner} takes the title of emperor, and the realm bows.", lose: "You lose. The King of {winner} took the title of emperor first.", watch: "The King of {winner} takes the title of emperor; the Mandate is settled." },
-      // #130 (homeFall): the winner/loser can be either side, and rendering
-      // only ever passes {winner}/{loser} (app.js renderOver, log-view.js
-      // overRowHtml) -- no capital name reaches this string, even under
-      // homeFall:"move" once the capital has relocated. So this does not
-      // name 關中/郢 (Guanzhong/Ying); the owner's approved wording does
-      // name them, flagged to the orchestrator on #130.
-      homeFall: { title: "The Capital Falls", body: "At the turn's end, {loser}'s home capital was still under {winner}'s control.", win: "You win. {loser}'s home capital has fallen to you.", lose: "You lose. Your home capital has fallen to {winner}.", watch: "{loser}'s home capital has fallen to {winner}." },
+      // #133 part 2 (owner's approved wording): {capital} is now named --
+      // app.js's renderOver() and log-view.js's overRowHtml() read the
+      // space id off the log's last "fallen" capitalCheck entry (#130 left
+      // this field unreachable; filled in now).
+      homeFall: { title: "The Capital Falls", body: "At the turn's end, {loser}'s home capital, {capital}, was still under {winner}'s control.", win: "You win. {winner}'s army has taken {capital}; {loser}'s state is no more.", lose: "You lose. {capital} has fallen; {loser}'s state is no more.", watch: "{capital} has fallen; {loser}'s state is no more." },
     },
   },
   log: {
@@ -184,6 +231,15 @@ export default {
     headlineNone: "Both sides have no card; the headline phase is skipped.",
     play: "{side} plays {card} ({use}).",
     place: "{side} fosters in {spaces}.", campaign: "{side} raids in {target} with {ops}: removes {removed}, places {placed}.", lobby: "{side} lobbies in {target}: removes {removed}.",
+    // #133: the dice lobby (mode set) -- a sequence of `attempts` rolls; each
+    // roll is its own log.realign, a stop is log.lobbyStop. This generic
+    // path only fires for an orphaned entry (#128's 400-entry cap dropping
+    // the move that opened it); the normal in-move rendering is
+    // log-view.js's chipsForSteps().
+    lobbyDice: "{side} lobbies {target}, {attempts} attempt(s): {removed} of theirs lost, {lost} of its own lost.",
+    realign: "Attempt {k}: {loserOrTie}.",
+    lobbyStop: "{side} stops lobbying {target}, {left} attempt(s) unspent.",
+    capitalCheck: "Turn-end check: {side}'s home capital {capital} is {status}.",
     score: "{region} scores: Qin {q}, Chu {c}.", vp: "Mandate {mandate}.", tire: "Weariness falls to {to}.", seal: "Chu holds the seal of {state}.", unseal: "Chu loses the seal of {state}.",
     mie: "Qin destroys {state}.", restore: "{state} is restored.", reform: "{side} reaches reform box {box}.", jiuding: "The Cauldrons pass to {side}, face down.", discard: "{side} discards {card}.",
     bog: "{side} is bogged down and discards {card}.", skip: "{side} has no card to play.", opsLost: "{side} has nowhere to spend {ops} ops.", reshuffle: "The discards are reshuffled.", era: "The {era} deck is shuffled in.",
@@ -198,6 +254,8 @@ export default {
     setupHeader: "Setup", turnHeader: "Turn {turn} · {era}", round: "Move {round}",
     headlineLine: "Headlines: {qinSide} {qinCard} · {chuSide} {chuCard}", headlineFirst: "{first} resolves first",
     chipPlace: "{space} +{n}", chipRemove: "{target}: removes {n} {side}",
+    // #133: the dice-lobby's own per-roll and stop chips.
+    chipRealign: "Attempt {k}: {loserOrTie}", chipRealignTie: "a tie", chipRealignLoss: "{side} loses {n}", chipLobbyLost: "{target}: loses {n} of its own", chipLobbyStop: "Stops ({left} left)",
     chipReform: "Reform → box {box}", chipTire: "Weariness → {to}",
     chipDiscard: "{side} discards {card}", chipOpsLost: "{side} has nowhere to spend {ops} ops",
     // #127: the "ended it" chip on the move (or headline) that ended the
@@ -264,8 +322,10 @@ export default {
     },
     done: {
       title: "{state} Destroyed", sub: "{state} is destroyed. Tutorial complete.",
-      lead: "You know what a real game needs. A game ends one of seven ways:",
-      ends: ["Qin destroys three states", "Chu holds four seals", "The Mandate reaches 20", "Someone reaches Emperor first while leading the Mandate", "Someone pushes weariness to Collapse", "A scoring card is left in hand at turn's end", "After turn 8, the Mandate leader (a tie goes to Chu)"],
+      lead: "You know what a real game needs. A game ends one of eight ways:",
+      // #135: the seals count is a balance lever, not spelled out here.
+      // #133: the capital ending is the new eighth way.
+      ends: ["Qin destroys three states", "Chu holds all the seals", "The Mandate reaches 20", "Someone reaches Emperor first while leading the Mandate", "Someone pushes weariness to Collapse", "A scoring card is left in hand at turn's end", "After turn 8, the Mandate leader (a tie goes to Chu)", "At a turn's end, either side's home capital is still under the enemy's control"],
       also: "Not covered here: how headlines set the order, how the Cauldrons get lent out, who Luoyi pays, how a seal counts toward alliance, and what reform unlocks. It's all in the rules.",
       play: "Play vs bot · Easy", replay: "Replay", rules: "Rules", home: "Home",
     },

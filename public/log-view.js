@@ -80,6 +80,18 @@ function chipsForSteps(steps, moverSide, lang) {
     } else if (st.type === "campaign" || st.type === "lobby") {
       if (st.removed) chips.push({ text: t(lang, "logPanel.chipRemove", { target: spaceName(st.target, lang), side: sideName(1 - moverSide, lang), n: st.removed }), gold: false });
       if (st.placed) chips.push({ text: t(lang, "logPanel.chipPlace", { space: spaceName(st.target, lang), n: st.placed }), gold: false });
+      // #133: under the dice rule (realign-own, `st.mode` set) the actor can
+      // lose its OWN points too -- `st.lost` (the header's own running total,
+      // #130) is that loss, distinct from `st.removed` (the enemy's).
+      if (st.lost) chips.push({ text: t(lang, "logPanel.chipLobbyLost", { target: spaceName(st.target, lang), n: st.lost }), gold: false });
+    } else if (st.type === "realign") {
+      // #133: one chip per attempt -- who lost the roll (and how much), or
+      // a tie. `st.lose` is the LOSING side (or null); the winner is simply
+      // the other one, same reading as lobby-ui.js's own verdictHtml().
+      const loserOrTie = st.lose == null ? t(lang, "logPanel.chipRealignTie") : t(lang, "logPanel.chipRealignLoss", { side: sideName(st.lose, lang), n: st.n });
+      chips.push({ text: t(lang, "logPanel.chipRealign", { k: st.k, loserOrTie }), gold: false });
+    } else if (st.type === "lobbyStop") {
+      chips.push({ text: t(lang, "logPanel.chipLobbyStop", { left: st.left }), gold: true });
     } else if (st.type === "reform") {
       chips.push({ text: t(lang, "logPanel.chipReform", { box: st.box }), gold: true });
     } else if (st.type === "vp") {
@@ -229,6 +241,28 @@ function otherRowHtml(row, lang) {
     const gainer = e.n >= 0 ? e.side : 1 - e.side;
     return `<div class="logrow logrow-other">${t(lang, "oppmove.tickerMandate", { side: sideName(gainer, lang), n: Math.abs(e.n) })}</div>`;
   }
+  // #133: the same orphaning story one level deeper still -- a dice-遊說
+  // sequence's own three entry types (`lobby` with `.mode` set, `realign`,
+  // `lobbyStop`) can land here with no move open, same as `campaign`/`lobby`
+  // above (#128's 400-entry cap). The normal in-move path is
+  // chipsForSteps() above; this is only the fallback.
+  if (e.type === "lobby" && e.mode) {
+    return `<div class="logrow logrow-other">${t(lang, "log.lobbyDice", { side: sideName(e.side, lang), target: spaceName(e.target, lang), attempts: e.attempts, removed: e.removed, lost: e.lost })}</div>`;
+  }
+  if (e.type === "realign") {
+    const loserOrTie = e.lose == null ? t(lang, "logPanel.chipRealignTie") : t(lang, "logPanel.chipRealignLoss", { side: sideName(e.lose, lang), n: e.n });
+    return `<div class="logrow logrow-other">${t(lang, "log.realign", { k: e.k, loserOrTie })}</div>`;
+  }
+  if (e.type === "lobbyStop") {
+    return `<div class="logrow logrow-other">${t(lang, "log.lobbyStop", { side: sideName(e.side, lang), target: spaceName(e.target, lang), left: e.left })}</div>`;
+  }
+  // #133 part 2: a turn-end capital check (homeFall) -- always standalone,
+  // logged outside any move, so it always reaches this generic path (never
+  // chipsForSteps() above).
+  if (e.type === "capitalCheck") {
+    const status = e.result === "safe" ? t(lang, "capitalUi.statusSafe") : e.result === "moved" ? t(lang, "capitalUi.statusMoved") : t(lang, "capitalUi.statusFallen");
+    return `<div class="logrow logrow-other">${t(lang, "log.capitalCheck", { side: sideName(e.whose, lang), capital: spaceName(e.capital, lang), status })}</div>`;
+  }
   const key = `log.${e.type}`;
   const P = {
     side: e.side != null ? sideName(e.side, lang) : "", turn: e.turn, era: e.era ? t(lang, "eras." + e.era) : "",
@@ -267,11 +301,18 @@ function otherRowHtml(row, lang) {
 // and title already reads the same as the spectator-only `watch` line for
 // every reason (neither ever says "you") -- so it's the one string in that
 // table that's already correct for every reader, not just a stand-in.
-function overRowHtml(row, lang) {
+function overRowHtml(row, lang, log) {
   const winner = sideName(row.winner, lang);
   const loser = sideName(E.other(row.winner), lang);
+  const params = { winner, loser };
+  // #133 part 2: homeFall's title names the fallen capital -- the log's own
+  // last "fallen" capitalCheck entry (#130 left this field unreachable).
+  if (row.reason === "homeFall") {
+    const cc = [...(log || [])].reverse().find((l) => l.type === "capitalCheck" && l.result === "fallen");
+    if (cc) params.capital = spaceName(cc.capital, lang);
+  }
   let title;
-  try { title = t(lang, `over.reasons.${row.reason}.title`, { winner, loser }); } catch { title = ""; }
+  try { title = t(lang, `over.reasons.${row.reason}.title`, params); } catch { title = ""; }
   return `<div class="logrow logrow-over"><b class="logrow-over-winner">${t(lang, "over.winner", { side: winner })}</b> · ${title}</div>`;
 }
 // The room's chat / the bot's remarks arrive as ready-made "{name}: {text}"
@@ -320,7 +361,7 @@ export function renderRows(log, opts) {
         // #127: same as the headline row above -- always shown, never
         // hidden by a side filter (it's the whole game's own outcome, not
         // one side's move).
-        out.push(overRowHtml(row, lang));
+        out.push(overRowHtml(row, lang, log));
       }
     }
   }

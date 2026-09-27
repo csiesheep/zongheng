@@ -76,7 +76,27 @@ export const REFORM = [
 // Balance log); the first drafts stay reachable as cells: sealAt "control",
 // comp 2, hangu 2, wuguo "any", and round 2's westBonus false with yue "lasting"
 // (Qin 39 % over 1,000 games; the pair below brought it to 50 %).
-export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead" };
+// #133 part 1 (owner, 2026-09-26): 遊說 by dice (realign-own, with 收手)
+// becomes the default (homeFall stays "none" until part 2's own flip -- kept
+// separate so each part's defaults are consistent on their own, per #133's
+// "Process" section). A saved game or a running room whose own `options`
+// object lacks this key is untouched -- `{ ...DEFAULT_OPTIONS, ...options }`
+// only runs once, in createGame(), at the moment a NEW game is made; a state
+// already on disk carries its own complete `options` object forward as-is on
+// every load, so this flip only reaches games created from here on.
+// #133 part 2 (owner, 2026-09-26): 守不住才敗 (homeFall "lose-turn") becomes
+// the default, same "old saves keep today's rule" reasoning as part 1's
+// `lobby` flip -- a saved game/room's own `options` object, missing this
+// key, is untouched (see part 1's comment on `lobby` above; the merge only
+// runs once, in createGame(), when a NEW game is made).
+// #135 (owner, balance lever): `seals` -- how many of the four states'
+// 相印 Chu needs for 合縱 -- goes from 4 to 5. Unlike `lobby`/`homeFall`
+// above, `seals` was ALREADY a key here (never "absent means off"), so an
+// old save/room's own `options` object already carries its own concrete
+// `seals: 4` baked in from whenever it was created -- this flip cannot
+// reach it at all, by construction, not just by the merge-once-at-creation
+// rule those two rely on. Confirmed with a throwaway script, not committed.
+export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "lose-turn" };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
