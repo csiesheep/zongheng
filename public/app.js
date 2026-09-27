@@ -366,7 +366,6 @@ $("btnStart").onclick = () => {
 // every one of those resets untouched, since it doesn't represent anything
 // about the player's own turn.
 const game = { st: null, me: 0, level: "normal", rng: null, ui: null, botLine: "", botName: "", room: false, spectator: false, peek: null };
-window.__zhDebug = { game, E, render: () => render(), freshUi: () => freshUi(), show: (v) => show(v), botLoop: () => botLoop() }; // #133 scratch verification hook -- removed before hand-in
 // #53 round 2 (orchestrator's review): `botLine` alone never reached the table
 // itself, only the closed log panel / a desktop-only sidebar strip -- so on
 // the phone neither a replaced move nor a genuinely stuck game said anything
