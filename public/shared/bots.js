@@ -35,6 +35,45 @@ const NOISE = { easy: 0, normal: 0.6, hard: 0.2 };
 // whole +3 to the taker rather than being credited in advance.
 const FALL = 60, ROAD = [1, 0.6, 0.25, 0.1, 0.03], ROAD_TEMPO = [1, 0.9, 0.4, 0.15, 0.05], ROAD_DEFENCE = [0.5, 0.25, 0.1, 0.03, 0.01];
 const MOVE_ROAD = [1, 0.3, 0.1, 0.03];
+// #136: a 稱帝 the side can finish THIS TURN with its own hand (one or two of its
+// actions left: a reform with a card of the next box's ops, one per advance left,
+// or an event whose text reads 「變法軌前進 N」, which uses no advance) is a win
+// the other side can rarely undo, unlike a capital it holds with the defender to
+// act (FALL x ROAD_DEFENCE[0] = 30). Before this it scored at most box 5 + card =
+// 16, so under lose-turn a capital take outranked it: at emperor.test.js's box-4
+// race, seed 18, the bot spent 長平 on 郢 (17 losses in 200 playouts) instead of
+// 韓非 then 長平 (200 wins). One action away it is now worth what a capital held
+// by an attacker with the tempo is (FALL x ROAD_TEMPO[0] = 60). Two actions away
+// (box 4 with 韓非 and 長平, or a 3-op card and 長平) keeps the old terms: the
+// one-ply search already sees the first step land on the one-action position,
+// so the bot climbs now; valuing the two-action position as high as well (54
+// was tried) let it put the climb off for a campaign (emperor.test.js :249,
+// hard seed 12, 呂不韋 campaign), with Chu to act in between.
+const TRACK_EVENT = Object.fromEntries(Object.entries(CARD).flatMap(([id, c]) => {
+  const m = /變法軌前進 (\d)/.exec(c.text || "");
+  return m ? [[id, Number(m[1])]] : [];
+}));
+const EMPEROR_NEAR = FALL * ROAD_TEMPO[0];
+// The fewest actions (1 or 2) in which `s` reaches box 6 this turn, or 0.
+function emperorSteps(st, s) {
+  if (st.phase !== "action" || st.pending || st.reform[s] < 4 || !E.emperorWins(st, s)) return 0;
+  const acts = Math.min(2, st.rounds - st.round + (st.actor === QIN || s === CHU ? 1 : 0));
+  const cards = st.hands[s].filter((c) => (TRACK_EVENT[c] && CARD[c].side === s) || (c !== JIUDING && !CARD[c].scoring && CARD[c].ops >= 3));
+  const go = (box, adv, k, rest) => {
+    if (box >= 6) return k;
+    if (k >= acts) return 0;
+    let best = 0;
+    for (let i = 0; i < rest.length; i++) {
+      const c = rest[i], others = rest.slice(0, i).concat(rest.slice(i + 1));
+      let r = 0;
+      if (TRACK_EVENT[c] && CARD[c].side === s) r = go(box + TRACK_EVENT[c], adv, k + 1, others);
+      if (!r && adv > 0 && c !== JIUDING && !CARD[c].scoring && CARD[c].ops >= E.REFORM[box].ops) r = go(box + 1, adv - 1, k + 1, others);
+      if (r && (!best || r < best)) best = r;
+    }
+    return best;
+  };
+  return go(st.reform[s], E.reformUsesLeft(st, s), 0, cards);
+}
 const pickOne = (arr, rng) => arr[rng.int(arr.length)];
 function gauss(rng) {
   let u = 0, v = 0;
@@ -142,6 +181,7 @@ export function evaluate(st, side, terms = null) {
   if (emp === "win" || emp === "win-late" || emp === "win-lead") {
     const race = (s) => {
       if (!E.emperorLive(st, s)) return 0;
+      if (emperorSteps(st, s) === 1) return EMPEROR_NEAR; // #136
       const box = st.reform[s];
       const card = box >= 4 && st.hands[s].some((c) => c !== JIUDING && CARD[c].ops >= 4) ? (box === 5 ? EMPEROR_CARD : EMPEROR_CARD / 2) : 0;
       return EMPEROR_ROAD[box] + card;
