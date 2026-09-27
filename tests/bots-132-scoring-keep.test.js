@@ -24,11 +24,11 @@ import { advise } from "../public/shared/advisor.js";
 const { QIN, CHU, CARD } = E;
 const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
 
-function lastChuAction() {
+function lastChuAction(chu = ["score_west", "mozhe", "wuqi"]) {
   let st = E.createGame(11);
   st = E.apply(st, { type: "choose", side: QIN, choice: ["yiyang", "yiyang", "hedong", "hedong"] });
   st = E.apply(st, { type: "choose", side: CHU, choice: ["song", "song", "huaisi", "chencai"] });
-  const hands = [["hexi", "keqing"], ["score_west", "mozhe", "wuqi"]];
+  const hands = [["hexi", "keqing"], chu];
   st.draw = st.draw.concat(st.hands[0], st.hands[1]).filter((c) => !hands.flat().includes(c));
   st.hands = hands.map((h) => h.slice());
   Object.assign(st, { phase: "action", turn: 1, round: 6, rounds: 6, actor: CHU, phasing: CHU, plan: [], pending: null, headline: [null, null] });
@@ -74,4 +74,19 @@ test("#132 advisor: it never advises Chu to keep the scoring card at its last ac
     if (adv.card !== "score_west") bad.push(`seed ${s}: ${adv.use}:${adv.card} (${adv.reason.key})`);
   }
   assert.deepEqual(bad, [], `advised keeping 西土記分 in ${bad.length}/${SEEDS.length}`);
+});
+
+// The same seat with no scoring card of its own: nothing to play before the
+// check, so "you must play the scoring card" is never the reason. The old
+// advisor read its reason from the one guess of Qin's hand; a guess holding a
+// scoring card made every move a win by 記分, and the reason said so.
+test("#132 advisor: with no scoring card in Chu's hand, the reason is never 'must play the scoring card'", () => {
+  const st = lastChuAction(["mozhe", "wuqi", "shangyang"]);
+  assert.ok(!st.hands[CHU].some((c) => CARD[c].scoring) && !st.hands[QIN].some((c) => CARD[c].scoring));
+  const bad = [];
+  for (const s of SEEDS) {
+    const adv = advise(E.view(st, CHU), CHU, E.makeRng(s));
+    if (adv.reason.key === "mustPlayScoring") bad.push(`seed ${s}: ${adv.use}:${adv.card}`);
+  }
+  assert.deepEqual(bad, [], `gave 'mustPlayScoring' with no scoring card in hand in ${bad.length}/${SEEDS.length}`);
 });
