@@ -32,6 +32,14 @@ const newToken = () => crypto.randomUUID().replace(/-/g, "");
 // same carry (#53). Only the wording of the log line stays here: the client
 // words its own through i18n.
 const describe = (a) => (a.type === "play" ? `${a.card} as ${a.use}` : a.type === "headline" ? `${a.card} as its headline` : `a ${JSON.stringify(a.choice)} choice`);
+// A sys line goes to every socket, the other seat and spectators included, so
+// it names no card the table cannot see in `st` (#131): one still in a hand,
+// or a headline not yet revealed.
+const hideCards = (text, st) => {
+  const hidden = new Set(st.hands.flat());
+  if (st.phase === "headline") for (const c of st.headline) if (c) hidden.add(c);
+  return text.replace(/[a-z][a-z0-9_]*/g, (w) => (hidden.has(w) ? "a hidden card" : w));
+};
 
 export class Room {
   constructor(ctx, env) {
@@ -392,7 +400,7 @@ export class Room {
       // times (the rng moves on, so the next try is a different roll), then
       // play a fallback the engine accepts. Retrying forever kept the room
       // awake and scrolled the only evidence out of the 120-line log (#25).
-      this.say(null, `bot error: ${refused}`, true);
+      this.say(null, `bot error: ${hideCards(refused, st)}`, true);
       const key = this.failKey(side, st);
       const n = room.botFail && room.botFail.key === key ? room.botFail.n + 1 : 1;
       room.botFail = { key, n };
@@ -406,7 +414,7 @@ export class Room {
         await this.park();
         return;
       }
-      this.say(null, `bot fallback: ${who} plays ${describe(fb.action)} after ${n} refused actions (${refused})`, true);
+      this.say(null, `bot fallback: ${who} plays ${hideCards(describe(fb.action), fb.state)} after ${n} refused actions (${hideCards(refused, st)})`, true);
       room.state = fb.state;
     }
     room.botFail = null; room.botStuck = "";

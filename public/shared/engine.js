@@ -1184,7 +1184,9 @@ export function view(st, side) {
   // The plan stays: it names only cards already face up and choices already
   // made, and a bot answering a pending needs it to simulate.
   const v = clone(st);
-  delete v.rngState;
+  // The seed goes with the rng state (#131): the game replays from seed +
+  // moves and the decks are public, so a seed rebuilds both hands and the draw.
+  delete v.seed; delete v.rngState;
   v.drawCount = st.draw.length; delete v.draw;
   v.laterCounts = Object.fromEntries(Object.entries(st.later).map(([k, a]) => [k, a.length])); delete v.later;
   v.handCounts = [st.hands[QIN].length, st.hands[CHU].length];
@@ -1199,6 +1201,13 @@ export function view(st, side) {
     // Headlines stay hidden until both are in, unless 行縣制 lets this side peek.
     if (st.phase === "headline" && st.headline[side] == null && !hasPerk(st, side, "peek")) v.headline[opp] = st.headline[opp] == null ? null : "hidden";
     if (st.phase === "headline" && st.headline[opp] == null) v.headline[opp] = null;
+  }
+  // A card choice someone else is answering may list cards of a hand this
+  // viewer cannot see (明法令's discard, 春申君, 韓非入秦): those options are
+  // dropped (#131). The side that answers keeps them all.
+  if (v.pending && v.pending.who !== side && v.pending.kind === "card") {
+    const hidden = new Set([QIN, CHU].filter((s) => v.hands[s] == null).flatMap((s) => st.hands[s]));
+    v.pending.options = v.pending.options.filter((c) => !hidden.has(c));
   }
   return v;
 }
