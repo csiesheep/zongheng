@@ -89,7 +89,14 @@ export const REFORM = [
 // `lobby` flip -- a saved game/room's own `options` object, missing this
 // key, is untouched (see part 1's comment on `lobby` above; the merge only
 // runs once, in createGame(), when a NEW game is made).
-export const DEFAULT_OPTIONS = { cap: 2, seals: 4, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "lose-turn" };
+// #135 (owner, balance lever): `seals` -- how many of the four states'
+// 相印 Chu needs for 合縱 -- goes from 4 to 5. Unlike `lobby`/`homeFall`
+// above, `seals` was ALREADY a key here (never "absent means off"), so an
+// old save/room's own `options` object already carries its own concrete
+// `seals: 4` baked in from whenever it was created -- this flip cannot
+// reach it at all, by construction, not just by the merge-once-at-creation
+// rule those two rely on. Confirmed with a throwaway script, not committed.
+export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "lose-turn" };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).

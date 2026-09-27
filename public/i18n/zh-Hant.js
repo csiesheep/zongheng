@@ -50,7 +50,8 @@ export default {
   },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },
   sys: { joined: "{name} 進來了。", left: "{name} 離開了。", leftGame: "{name} 離開了,由電腦代打。", dealt: "發牌了。", timeout: "{name} 逾時,由桌面代為決定。", over: "{side}({name})獲勝:{reason}。", fallback: "對手這一手出了問題,已改用保底動作:{action}。", stuck: "對手無法行動,這一局無法繼續。" },
-  ends: { unification: "三國同滅", alliance: "四國相印", mandate: "天命達 20", collapse: "對方把天下推到土崩", scoring: "對方回合結束時手上還有記分卡", scoringBoth: "雙方都留著記分卡,依平手規則", final: "終局結算後的天命", tie: "天命平手,依平手規則", emperor: "天命領先時率先稱帝", homeFall: "回合結束時,對方的國都仍在敵手控制下" },
+  // #135:相印數是平衡桿(4 或 5),alliance 這裡不寫死數字,舊存檔(4)也讀得對。
+  ends: { unification: "三國同滅", alliance: "相印集滿", mandate: "天命達 20", collapse: "對方把天下推到土崩", scoring: "對方回合結束時手上還有記分卡", scoringBoth: "雙方都留著記分卡,依平手規則", final: "終局結算後的天命", tie: "天命平手,依平手規則", emperor: "天命領先時率先稱帝", homeFall: "回合結束時,對方的國都仍在敵手控制下" },
   errors: { noRoom: "沒有這個房號。", full: "房間已滿。", needMore: "需要兩個座位。", notReady: "對方尚未就緒。", notYet: "牌桌還沒蓋好。", notYourTurn: "現在不是你決定。" },
   landing: { backToRoom: "回到房間 {code}", resume: "繼續上一局", play: "與電腦對弈", create: "多人遊戲", join: "加入", code: "房號", codePlaceholder: "CODE", rulesLink: "規則與七十二張牌", rulesShort: "規則", name: "你的名字" },
   side: {
@@ -275,7 +276,8 @@ export default {
     done: {
       title: "{state}已滅", sub: "",
       lead: "你已經知道正式對局要準備什麼了。遊戲有七種結束方式:",
-      ends: ["秦同時滅掉三國", "楚同時持有四國相印", "天命到達 20", "天命領先時率先變法到稱帝", "有人把疲敝推到土崩", "記分卡留在手上到回合結束", "第 8 回合結束,天命領先的一方(平手楚勝)"],
+      // #135:相印數是平衡桿,這裡不寫死「四」。#133:國都陷落補成第八種。
+      ends: ["秦同時滅掉三國", "楚的相印集滿", "天命到達 20", "天命領先時率先變法到稱帝", "有人把疲敝推到土崩", "記分卡留在手上到回合結束", "第 8 回合結束,天命領先的一方(平手楚勝)", "回合結束時,一方的國都仍在對方控制下"],
       also: "教學沒教到的:標題階段怎麼排順序、九鼎怎麼借出、洛邑替誰加天命、相印怎麼算合縱、變法解鎖了什麼技能,都在規則頁裡。",
       play: "與電腦對弈 · 簡單", replay: "重玩", rules: "規則", home: "回首頁",
     },

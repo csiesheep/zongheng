@@ -1320,7 +1320,9 @@ function renderStatLine(v) {
   $("statline").innerHTML =
     col(t("tracks.weariness"), esc(t("weariness." + v.weariness)), "weariness") +
     col(t("tracks.reform"), `${v.reform[0]} · ${v.reform[1]}`, "reform") +
-    col(t("tracks.seals"), `${seals} / 4`, "seals") +
+    // #135: the seals option can be 4 or 5 (the owner's balance lever) --
+    // read v.options.seals, same as the over-page's own $("overStatSeals").
+    col(t("tracks.seals"), `${seals} / ${v.options.seals}`, "seals") +
     col(t("tracks.mie"), `${mie} / 3`, "mie") +
     col(t("tracks.jiuding"), esc(sideName(v.jiuding.holder)) + (v.jiuding.faceDown ? ` (${esc(t("tracks.faceDown"))})` : ""), "jiuding");
 }

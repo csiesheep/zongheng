@@ -62,7 +62,9 @@ export default {
   },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },
   sys: { joined: "{name} joined.", left: "{name} left.", leftGame: "{name} left; the bot plays the seat.", dealt: "The cards are dealt.", timeout: "{name} ran out of time; the table decided.", over: "{side} ({name}) wins: {reason}.", fallback: "The opponent's move failed; a fallback was played instead: {action}.", stuck: "The opponent cannot move; this game cannot continue." },
-  ends: { unification: "three states destroyed", alliance: "four seals held", mandate: "the Mandate reached 20", collapse: "the realm collapsed on the other side", scoring: "the other side held a scoring card at the turn's end", scoringBoth: "both held scoring cards; the tie rule", final: "the Mandate after the final scoring", tie: "a level Mandate; the tie rule", emperor: "first to Emperor while leading the Mandate", homeFall: "the enemy still held the other side's home capital at the turn's end" },
+  // #135: the seals count is a balance lever (4 or 5) -- alliance doesn't
+  // spell out a number here, so an old save (4) still reads right.
+  ends: { unification: "three states destroyed", alliance: "all the seals held", mandate: "the Mandate reached 20", collapse: "the realm collapsed on the other side", scoring: "the other side held a scoring card at the turn's end", scoringBoth: "both held scoring cards; the tie rule", final: "the Mandate after the final scoring", tie: "a level Mandate; the tie rule", emperor: "first to Emperor while leading the Mandate", homeFall: "the enemy still held the other side's home capital at the turn's end" },
   errors: { noRoom: "No room with that code.", full: "That room is full.", needMore: "Two seats are needed.", notReady: "The other seat is not ready.", notYet: "The table is not built yet.", notYourTurn: "It is not your decision right now." },
   landing: { backToRoom: "Back to room {code}", resume: "Resume your game", play: "Play vs bot", create: "Multiplayer", join: "Join", code: "Room code", codePlaceholder: "CODE", rulesLink: "Rules and the 72 cards", rulesShort: "Rules", name: "Your name" },
   side: {
@@ -320,7 +322,9 @@ export default {
     done: {
       title: "{state} Destroyed", sub: "{state} is destroyed. Tutorial complete.",
       lead: "You know what a real game needs. A game ends one of seven ways:",
-      ends: ["Qin destroys three states", "Chu holds four seals", "The Mandate reaches 20", "Someone reaches Emperor first while leading the Mandate", "Someone pushes weariness to Collapse", "A scoring card is left in hand at turn's end", "After turn 8, the Mandate leader (a tie goes to Chu)"],
+      // #135: the seals count is a balance lever, not spelled out here.
+      // #133: the capital ending is the new eighth way.
+      ends: ["Qin destroys three states", "Chu holds all the seals", "The Mandate reaches 20", "Someone reaches Emperor first while leading the Mandate", "Someone pushes weariness to Collapse", "A scoring card is left in hand at turn's end", "After turn 8, the Mandate leader (a tie goes to Chu)", "At a turn's end, either side's home capital is still under the enemy's control"],
       also: "Not covered here: how headlines set the order, how the Cauldrons get lent out, who Luoyi pays, how a seal counts toward alliance, and what reform unlocks. It's all in the rules.",
       play: "Play vs bot · Easy", replay: "Replay", rules: "Rules", home: "Home",
     },
