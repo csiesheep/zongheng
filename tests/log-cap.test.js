@@ -9,19 +9,23 @@
 // The reader for rule 2 is the log panel's grouping, `groupLog` (public/oppmove.js, FE's file), compared with the
 // grouping of the full log the test keeps itself from every entry the engine ever showed it.
 //
-// The long games: bot-vs-bot the way tests/sim.js plays them. #128's measurement found these seeds over 400 entries on
-// origin/main 0e558a8 (normal: 62 -> 421, 14 -> 419, 68 -> 415, 11 -> 404, 10 -> 401). A rules change can move a
-// game's length, so the test takes the first of them that is still long enough and fails loudly if none is. "Long
-// enough" is more than the old cap by more than the game's entries before its first move: a game only 1 over (seed
-// 10) lost one setup row, which is its own row, and the split check passed on the old engine without seeing a split.
+// The long game (rewritten by the orchestrator for #132/#133): a recorded game, replayed. The first version played
+// bot games from fixed seeds and took the first one still over 400 entries; every rules or bot change moved those
+// lengths (seed 62 wrote 421 entries on 0e558a8 and 262 on 1d73cc4), so the guard kept asking for new seeds. Now the
+// game is normal seed 81 recorded on 1d73cc4 (416 entries, the longest of seeds 1-125 there) in
+// tests/fixtures/replays.json, from its exact starting state, and replayed through today's engine: its length depends
+// on the engine alone. "Long enough" is still more than the old cap by more than the game's entries before its first
+// move: a game only 1 over lost one setup row, which is its own row, and the split check passed on the old engine
+// without seeing a split.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as E from "../public/shared/engine.js";
-import * as B from "../public/shared/bots.js";
 import { groupLog } from "../public/oppmove.js";
+import { readFileSync } from "node:fs";
+
+const LONG = JSON.parse(readFileSync(new URL("./fixtures/replays.json", import.meta.url), "utf8")).games.find((g) => g.use === "long");
 
 const OLD_CAP = 400;
-const SEEDS = [62, 14, 68, 11, 10];
 
 // Every entry the engine ever showed, by its running number; a later copy wins (an event-first play's `use` is
 // written back into its entry when the ops are chosen).
@@ -53,29 +57,26 @@ function splitMoves(log, full) {
 let played;
 function longGame() {
   if (played) return played;
-  for (const seed of SEEDS) {
-    const rng = E.makeRng((seed * 2654435761) >>> 0);
-    let st = E.createGame(seed, {});
-    const ref = new Map();
+  const seed = LONG.seed;
+  let st = E.clone(LONG.start);
+  const ref = new Map();
+  remember(ref, st.log);
+  const problems = [];
+  for (const a of LONG.actions) {
+    st = E.apply(st, a);
     remember(ref, st.log);
-    const problems = [];
-    for (let steps = 0; st.winner == null; steps++) {
-      if (steps > 6000) throw new Error(`seed ${seed}: no end after ${steps} actions`);
-      const who = E.mustAct(st);
-      const side = who[rng.int(who.length)];
-      st = E.apply(st, B.decide(E.view(st, side), side, "normal", rng));
-      remember(ref, st.log);
-      if (problems.length < 5) {
-        for (const p of splitMoves(st.log, fullLog(ref))) problems.push(`seed ${seed}, entry ${st.logSeq}: ${p}`);
-        // a pending ops step writes its real use back into its play entry: that entry must still be there
-        for (const s of st.plan) if (s.playSeq && !st.log.some((l) => l.i === s.playSeq && l.type === "play")) problems.push(`seed ${seed}, entry ${st.logSeq}: the play ${s.playSeq} an ops step still waits on is gone`);
-      }
+    if (problems.length < 5) {
+      for (const p of splitMoves(st.log, fullLog(ref))) problems.push(`seed ${seed}, entry ${st.logSeq}: ${p}`);
+      // a pending ops step writes its real use back into its play entry: that entry must still be there
+      for (const s of st.plan) if (s.playSeq && !st.log.some((l) => l.i === s.playSeq && l.type === "play")) problems.push(`seed ${seed}, entry ${st.logSeq}: the play ${s.playSeq} an ops step still waits on is gone`);
     }
-    const full = fullLog(ref);
-    const firstMove = full.findIndex((l) => l.type === "play" || l.type === "headline");
-    if (st.logSeq - OLD_CAP > firstMove + 1) { played = { seed, st, full, problems, firstMove }; return played; }
   }
-  throw new Error(`none of seeds ${SEEDS} is past ${OLD_CAP} log entries by more than its opening rows any more: pick new long games`);
+  assert.ok(st.winner != null, `the recorded long game (seed ${seed}) replays to its end`);
+  const full = fullLog(ref);
+  const firstMove = full.findIndex((l) => l.type === "play" || l.type === "headline");
+  if (!(st.logSeq - OLD_CAP > firstMove + 1)) throw new Error(`the recorded long game (seed ${seed}) wrote ${st.logSeq} entries, not past ${OLD_CAP} by more than its opening rows: the engine now writes fewer entries for the same moves`);
+  played = { seed, st, full, problems, firstMove };
+  return played;
 }
 
 test("#128: a finished long game's log still shows how it began", () => {

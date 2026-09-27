@@ -22,7 +22,10 @@ const GIVEN_OPENLY = new Set(["duojiang"]);
 // Two card ids are also board ids (函谷關天險 `hangu` / the space 函谷關,
 // 宜陽 `yiyang`); a string under a key that holds spaces is not a card.
 const BOARD = new Set([...E.SPACES.map((s) => s.id), ...Object.keys(E.REGIONS), ...Object.keys(E.STATES)]);
-const SPACE_KEYS = new Set(["points", "target", "inf", "regions", "region", "space", "state", "choices", "placeOptions", "campaignTargets", "lobbyTargets", "ids", "id"]);
+const SPACE_KEYS = new Set(["points", "target", "inf", "regions", "region", "space", "state", "choices", "placeOptions", "campaignTargets", "lobbyTargets", "ids", "id",
+  // #130/#133: a dice 遊說 entry names each side's controlled neighbours (`adj`) and the home space it leans on
+  // (`home`); a capital check names the capital. 宜陽 / 函谷關 are also card ids, so these read as cards otherwise.
+  "adj", "home", "capital"]);
 // A lasting effect names the card that made it (`effects`, and `fx` in an
 // `eventEnd` entry): that card was played in front of both, and may since have
 // been reshuffled and drawn. History, not a hand.
