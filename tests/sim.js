@@ -71,6 +71,7 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
   // #132: a side's last action of a turn (round = rounds) with a scoring card it
   // may play: how often it keeps it, and how the game went right after.
   const kp = Object.fromEntries(KEEP_ROW.map((k) => [k, 0]));
+  const keptIn = [0, 0]; // the turn of each side's last keep
   for (let steps = 0; st.winner == null; steps++) {
     if (steps > 6000) throw new Error(`seed ${seed}: no end after ${steps} actions`);
     const who = E.mustAct(st);
@@ -78,15 +79,12 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
     const a = B.decide(E.view(st, side), side, side === E.QIN ? qin : chu, rng);
     if (!a) throw new Error(`seed ${seed}: no action for ${side} at turn ${st.turn}`);
     const P = side === E.QIN ? "Q" : "C", last = lastHold(st, side);
-    E.probe.place = watch; E.probe.home = home;
-    try { st = E.apply(st, a); } finally { E.probe.place = null; E.probe.home = null; }
     if (last) {
       kp["lastHold" + P]++;
-      if (!(a.type === "play" && E.CARD[a.card]?.scoring)) {
-        kp["keep" + P]++;
-        if (st.winner != null && (st.reason === "scoring" || st.reason === "scoringBoth")) kp[(st.winner === side ? "keepWon" : "keepLost") + P]++;
-      }
+      if (!(a.type === "play" && E.CARD[a.card]?.scoring)) { kp["keep" + P]++; keptIn[side] = st.turn; }
     }
+    E.probe.place = watch; E.probe.home = home;
+    try { st = E.apply(st, a); } finally { E.probe.place = null; E.probe.home = null; }
     for (const l of st.log) if (l.i > seen && l.type === "score") scores.push(l);
     for (const l of st.log) if (l.i > seen && l.type === "place") { pl.logged++; if (!seqs.has(l.i)) pl.unmatched++; }
     for (const l of st.log) {
@@ -95,6 +93,11 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
       if (l.i > seen) lobbyStats(lc, l);
     }
     seen = st.logSeq || seen;
+  }
+  // A keep is settled at that turn's end check, which may come an `apply` or
+  // two later (the play can still ask a choice of either side).
+  if (st.reason === "scoring" || st.reason === "scoringBoth") {
+    for (const s of [E.QIN, E.CHU]) if (keptIn[s] === st.turn) kp[(st.winner === s ? "keepWon" : "keepLost") + (s === E.QIN ? "Q" : "C")]++;
   }
   const byUse = {};
   const reformUses = [0, 0];
@@ -114,8 +117,8 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
 // #132 per-game columns, appended after LC_ROW, by side (Q / C): the side's last
 // action of a turn (round = rounds, its own action, nothing pending) with a
 // scoring card among its legal plays; of those, the ones where it played
-// something else (kept the card); of the keeps, the game ending right then by
-// 記分 / 記分2 lost or won by that side. Reads the state only (E.legal draws no
+// something else (kept the card); of the keeps, the game ending at that turn's
+// end check by 記分 / 記分2, lost or won by that side. Reads the state only (E.legal draws no
 // random numbers), so a game plays out exactly as it did without the columns.
 export const KEEP_ROW = ["lastHoldQ", "lastHoldC", "keepQ", "keepC", "keepLostQ", "keepLostC", "keepWonQ", "keepWonC"];
 function lastHold(st, side) {
@@ -765,7 +768,85 @@ export function report130(files) {
   return out.join("\n");
 }
 
+// ---------- report (#132) ----------
+//   node tests/sim.js --report-132=base.state.json@base,fix.state.json@fix > table.md
+// The `k132/<lvl>` cells of each file, named `<cell>@<label>`; every label is
+// compared with the first file's label at the same level, seed for seed.
+export function report132(files) {
+  const cols = [...ROW, ...EMP_ROW, ...LC_ROW, ...KEEP_ROW];
+  const cells = {}, labels = [];
+  for (const spec of files) {
+    const [f, label] = spec.split("@");
+    labels.push(label);
+    const st = JSON.parse(readFileSync(f, "utf8"));
+    for (const [cell, v] of Object.entries(st)) {
+      if (!v.result || !cell.startsWith("k132/")) continue;
+      const rows = v.result.rows.map((x) => Object.fromEntries(cols.map((k, i) => [k, x[i] ?? 0])));
+      rows.sort((a, b) => a.seed - b.seed);
+      cells[`${cell}@${label}`] = { rows, n: rows.length, errors: v.result.errors.length, stuck: v.result.stuck || 0, games: v.result.games };
+    }
+  }
+  const order = ["k132/nn", "k132/hh"].flatMap((c) => labels.map((l) => `${c}@${l}`)).filter((n) => cells[n]);
+  const baseOf = (n) => `${n.split("@")[0]}@${labels[0]}`;
+  const cnt = (rows, f) => rows.filter(f).length;
+  const sum = (rows, k) => rows.reduce((a, x) => a + (x[k] || 0), 0);
+  const rate = (k, n) => { const [lo, hi] = wilson(k, n); return n ? `${pc(k / n)} ${ci(lo, hi)}` : "–"; };
+  const star = (d, h, txt) => (d - h > 0 || d + h < 0 ? `**${txt}**` : txt);
+  const dp = (k1, n1, k2, n2) => {
+    if (!n1 || !n2) return "–";
+    const p1 = k1 / n1, p2 = k2 / n2, d = p2 - p1, h = Z * Math.sqrt(p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2);
+    return star(d, h, `${(100 * d >= 0 ? "+" : "") + (100 * d).toFixed(1)} [${(100 * (d - h)).toFixed(1)}, ${(100 * (d + h)).toFixed(1)}]`);
+  };
+  const hist = (xs) => { const h = {}; for (const x of xs) h[x] = (h[x] || 0) + 1; return Object.entries(h).sort((a, b) => a[0] - b[0]).map(([k, v]) => `${k}:${v}`).join(" "); };
+  const out = [];
+  out.push("| cell | n | errors / stuck | Qin win % [95%] | Qin win − base, pp [95%] | avg end turn [95%] |");
+  out.push("|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows, n, errors, stuck } = cells[name], b = cells[baseOf(name)], other = b && name !== baseOf(name);
+    const t = meanCi(rows.map((x) => x.turn));
+    out.push(`| ${name} | ${n} | ${errors} / ${stuck} | ${rate(cnt(rows, (x) => x.qinWin), n)} | ${other ? dp(cnt(b.rows, (x) => x.qinWin), b.n, cnt(rows, (x) => x.qinWin), n) : ""} | ${t.m.toFixed(2)} ±${t.h.toFixed(2)} |`);
+  }
+  out.push("", "記分 endings by side: 記分 (one side held a scoring card at the turn end) won by Qin / by Chu, 記分2 (both held one: Chu wins), and Chu's 記分 losses as % of games against base.", "");
+  out.push("| cell | 記分 won by Qin (Chu held) | 記分 won by Chu (Qin held) | 記分2 (Chu wins) | all 記分 ends, % [95%] | Chu's 記分 losses, % [95%] | − base, pp [95%] |");
+  out.push("|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows, n } = cells[name], b = cells[baseOf(name)], other = b && name !== baseOf(name);
+    const sq = (r) => cnt(r, (x) => x.reason === "scoring" && x.qinWin), sc = (r) => cnt(r, (x) => x.reason === "scoring" && !x.qinWin), s2 = (r) => cnt(r, (x) => x.reason === "scoringBoth");
+    out.push(`| ${name} | ${sq(rows)} | ${sc(rows)} | ${s2(rows)} | ${rate(sq(rows) + sc(rows) + s2(rows), n)} | ${rate(sq(rows), n)} | ${other ? dp(sq(b.rows), b.n, sq(rows), n) : ""} |`);
+  }
+  out.push("", "A side's last action of a turn (round = rounds) with a scoring card among its legal plays: how often it played something else (kept the card), and how the game went right then. Per side, all games of the cell pooled.", "");
+  out.push("| cell | Qin: held / kept | kept → lost by 記分 | Chu: held / kept | kept, % of held [95%] | kept → lost by 記分 | kept → won (記分2) | games with a Chu keep | Chu keeps / game |");
+  out.push("|---|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows, n } = cells[name];
+    const hq = sum(rows, "lastHoldQ"), kq = sum(rows, "keepQ"), hc = sum(rows, "lastHoldC"), kc = sum(rows, "keepC");
+    out.push(`| ${name} | ${hq} / ${kq} | ${sum(rows, "keepLostQ")} | ${hc} / ${kc} | ${rate(kc, hc)} | ${sum(rows, "keepLostC")} | ${sum(rows, "keepWonC")} | ${cnt(rows, (x) => x.keepC > 0)} | ${(kc / (n || 1)).toFixed(3)} |`);
+  }
+  out.push("", "End reasons, % of games [Wilson 95%], and won by Qin / by Chu:", "");
+  out.push(`| cell | ${LC_REASONS.map((e) => LC_ZH[e]).join(" | ")} |`);
+  out.push(`|---|${LC_REASONS.map(() => "---").join("|")}|`);
+  for (const name of order) {
+    const { rows, n } = cells[name];
+    out.push(`| ${name} | ${LC_REASONS.map((e) => { const r = rows.filter((x) => x.reason === e); return r.length ? `${rate(r.length, n)} (${cnt(r, (x) => x.qinWin)} / ${cnt(r, (x) => !x.qinWin)})` : "0"; }).join(" | ")} |`);
+  }
+  out.push("", "Seed for seed against base (the same seeds; a game follows the base game until the first decision that differs): winner changed Qin → Chu / Chu → Qin; distributions: end turn (turn:games), Chu keeps per game (count:games), the seeds where Chu kept and lost by 記分.", "");
+  for (const name of order) {
+    const { rows } = cells[name], b = cells[baseOf(name)], other = b && name !== baseOf(name);
+    let flips = "";
+    if (other) {
+      const bw = new Map(b.rows.map((x) => [x.seed, x.qinWin]));
+      const both = rows.filter((x) => bw.has(x.seed));
+      flips = `; vs base on ${both.length} seeds: Qin → Chu ${cnt(both, (x) => bw.get(x.seed) === 1 && !x.qinWin)}, Chu → Qin ${cnt(both, (x) => bw.get(x.seed) === 0 && x.qinWin)}`;
+    }
+    const lost = rows.filter((x) => x.keepLostC > 0).map((x) => x.seed);
+    out.push(`- **${name}**: end turn ${hist(rows.map((x) => x.turn))}; Chu keeps/game ${hist(rows.map((x) => x.keepC))}; kept-and-lost seeds ${lost.length ? lost.slice(0, 15).join(" ") + (lost.length > 15 ? ` … (${lost.length})` : "") : "none"}${flips}`);
+  }
+  return out.join("\n");
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  const rep132 = process.argv.find((a) => a.startsWith("--report-132="));
+  if (rep132) { console.log(report132(rep132.slice(13).split(","))); process.exit(0); }
   const rep = process.argv.find((a) => a.startsWith("--report="));
   if (rep) { console.log(report(rep.slice(9).split(","))); process.exit(0); }
   const repE = process.argv.find((a) => a.startsWith("--report-emperor="));
