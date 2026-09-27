@@ -13,9 +13,13 @@
 // dies with an access violation a few percent of the time on long runs.
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import * as E from "../public/shared/engine.js";
-import * as B from "../public/shared/bots.js";
+// SIM_BOTS=<path to a bots.js next to engine.js> plays another build of the bot
+// against the same engine (#132: the base bot, kept as an untracked copy, while
+// the fix is edited in place); the children inherit it.
+const B = process.env.SIM_BOTS ? await import(pathToFileURL(resolve(process.env.SIM_BOTS)).href) : await import("../public/shared/bots.js");
 
 // #104: every real place action is watched through `E.probe.place`, which the
 // engine calls once per `placePoints` before the first point. The probe is on
