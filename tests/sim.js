@@ -60,19 +60,24 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
   // writes its real ops use back into its entry only when the ops are chosen.
   const rf = { reach6: [0, 0], advances: [0, 0] };
   const plays = new Map();
+  // #130: 遊說 from the "lobby" entries (and, under lobby=realign*, one "realign"
+  // entry per attempt), and the two home capitals through `E.probe.home`.
+  const lc = Object.fromEntries(LC_ROW.map((k) => [k, 0]));
+  const home = homeWatch(lc);
   for (let steps = 0; st.winner == null; steps++) {
     if (steps > 6000) throw new Error(`seed ${seed}: no end after ${steps} actions`);
     const who = E.mustAct(st);
     const side = who[rng.int(who.length)];
     const a = B.decide(E.view(st, side), side, side === E.QIN ? qin : chu, rng);
     if (!a) throw new Error(`seed ${seed}: no action for ${side} at turn ${st.turn}`);
-    E.probe.place = watch;
-    try { st = E.apply(st, a); } finally { E.probe.place = null; }
+    E.probe.place = watch; E.probe.home = home;
+    try { st = E.apply(st, a); } finally { E.probe.place = null; E.probe.home = null; }
     for (const l of st.log) if (l.i > seen && l.type === "score") scores.push(l);
     for (const l of st.log) if (l.i > seen && l.type === "place") { pl.logged++; if (!seqs.has(l.i)) pl.unmatched++; }
     for (const l of st.log) {
       if (l.type === "play" && (l.i > seen || plays.has(l.i))) plays.set(l.i, { side: l.side, card: l.card, pair: l.pair, use: l.use });
       if (l.i > seen && l.type === "reform") { rf.advances[l.side]++; if (l.box === 6) rf.reach6[l.side] = l.t; }
+      if (l.i > seen) lobbyStats(lc, l);
     }
     seen = st.logSeq || seen;
   }
@@ -89,7 +94,71 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
   const emp = [rf.reach6[0], rf.reach6[1], first6, st.reform[0], st.reform[1], reformUses[0], reformUses[1],
     rf.advances[0] + rf.advances[1] - reformUses[0] - reformUses[1],
     ...EMP_USES.flatMap((u) => [byUse[u]?.n || 0, byUse[u]?.ops || 0])];
-  return { st, scores, pl, emp };
+  return { st, scores, pl, emp, lc: LC_ROW.map((k) => lc[k]) };
+}
+// #130 per-game columns, appended after EMP_ROW. Lobby: actions, ops, attempts
+// (realign only), enemy points removed, own points lost, attempts the actor
+// lost points in / won / tied (a lost attempt that cost nothing, because the
+// actor had nothing there, counts as won by nobody: a tie), lobby actions on a
+// battleground (要衝), lobby actions where the actor had no influence of its
+// own in the target (nothing to lose), by side. Capitals, `g` = Qin's (關中, or
+// where it moved), `y` = Chu's (郢 ...): times it became enemy-controlled at a
+// marker check, turn of the first, falls retaken before that turn ended, turn
+// ends it was held by the enemy, turn ends the enemy had more influence there
+// than the owner, checks at which the enemy had more, the turn it moved (0 = never).
+// Appended later (rows from earlier builds lack them; the report reads them as 0):
+// 收手 -- 遊說 stopped by the actor, and whether the last roll before the stop
+// was lost / won / tied (by the dice, whatever it cost); and per attempt the
+// modifier difference d = actor's modifiers − the other side's, clamped to
+// −5…+5: attempts, won, tied (by the dice).
+export const MD = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
+export const LC_ROW = ["lbN", "lbOps", "lbAtt", "lbRem", "lbLost", "lbAttLost", "lbAttWon", "lbAttTie", "lbBg", "lbNoRisk", "lbQ", "lbC",
+  ...["g", "y"].flatMap((p) => ["Falls", "First", "Retaken", "HeldEnds", "MajEnds", "MajAny", "Moved"].map((k) => p + k)),
+  "lbStop", "lbStopLost", "lbStopWon", "lbStopTie", "lbEv", "lbEvRem",
+  ...MD.flatMap((d) => [`md${d}n`, `md${d}w`, `md${d}t`])];
+function lobbyStats(lc, l) {
+  // 縱橫家遊說 (youshui) logs its scripted 遊說 as a "lobby" entry too, with no
+  // `edge` and no `mode`: it is an event, not the 遊說 use of ops. Counted apart
+  // (lbEv) since the realign-own cells; the earlier cells' lb* include it.
+  if (l.type === "lobby" && l.edge === undefined && !l.mode) { lc.lbEv++; lc.lbEvRem += l.removed || 0; return; }
+  if (l.type === "lobby") {
+    lc.lbN++; lc.lbOps += l.ops; lc.lbRem += l.removed || 0; lc.lbLost += l.lost || 0;
+    if (E.SPACE[l.target].battleground) lc.lbBg++;
+    if (l.own === 0) lc.lbNoRisk++;
+    if (l.side === E.QIN) lc.lbQ++; else lc.lbC++;
+  } else if (l.type === "realign") {
+    lc.lbAtt++;
+    if (l.lose == null || !l.n) lc.lbAttTie++;
+    else if (l.lose === l.side) lc.lbAttLost++;
+    else lc.lbAttWon++;
+    const d = Math.max(-5, Math.min(5, l.mod[l.side] - l.mod[1 - l.side]));
+    lc[`md${d}n`]++;
+    if (l.lose === 1 - l.side) lc[`md${d}w`]++; else if (l.lose == null) lc[`md${d}t`]++;
+    lc.$last = l.lose == null ? "Tie" : l.lose === l.side ? "Lost" : "Won";
+  } else if (l.type === "lobbyStop") {
+    lc.lbStop++; lc[`lbStop${lc.$last || "Tie"}`]++;
+  } else if (l.type === "capitalMoves") lc[(l.whose === E.QIN ? "g" : "y") + "Moved"] = l.t;
+}
+const HOME = ["guanzhong", "ying"];
+function homeWatch(lc) {
+  const prev = [null, null], fellThisTurn = [0, 0];
+  return (st, where) => {
+    for (const owner of [E.QIN, E.CHU]) {
+      const cap = (st.capital && st.capital[owner]) || HOME[owner], enemy = 1 - owner, p = owner === E.QIN ? "g" : "y";
+      const held = E.controller(st, cap) === enemy;
+      const o = E.infOf(st, cap)[owner], x = E.infOf(st, cap)[enemy];
+      if (where === "check") {
+        const was = prev[owner] && prev[owner].cap === cap && prev[owner].held;
+        if (held && !was) { lc[p + "Falls"]++; if (!lc[p + "First"]) lc[p + "First"] = st.turn; fellThisTurn[owner] = st.turn; }
+        if (!held && was && fellThisTurn[owner] === st.turn) { lc[p + "Retaken"]++; fellThisTurn[owner] = 0; }
+        if (x > o) lc[p + "MajAny"]++;
+        prev[owner] = { cap, held };
+      } else {
+        if (held) { lc[p + "HeldEnds"]++; fellThisTurn[owner] = 0; }
+        if (x > o) lc[p + "MajEnds"]++;
+      }
+    }
+  };
 }
 // #121: per-game reform columns, appended after ROW. Reach turns are 0 when the
 // side never reached box 6; first6 is -1 when nobody did. Ops are face values
@@ -109,7 +178,7 @@ export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal"
       if (/no end after|no action for/.test(e.message)) out.stuck++;
       continue;
     }
-    const { st, scores, pl, emp } = res;
+    const { st, scores, pl, emp, lc } = res;
     for (const k of ["places", "placedPts", "chained", "chainedPts", "beyondTs", "beyondTsPts"]) out[k] += pl[k];
     if (pl.logged !== pl.places || pl.unmatched) out.probeMiss++;
     if (st.winner === E.QIN) out.qinWins++;
@@ -119,7 +188,7 @@ export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal"
     // One row per game (ROW names the columns), so `--report` can give intervals,
     // distributions and the outlying seeds, not only the means.
     out.rows.push([seed + g, st.winner === E.QIN ? 1 : 0, st.reason, st.turn, st.mandate, Object.keys(st.mieVp).length, Object.keys(st.sealVp).length,
-      pl.places, pl.placedPts, pl.chained, pl.chainedPts, pl.beyondTs, ...emp]);
+      pl.places, pl.placedPts, pl.chained, pl.chainedPts, pl.beyondTs, ...emp, ...lc]);
     for (const l of scores) {
       const r = out.regions[l.region] || (out.regions[l.region] = { n: 0, net: 0, q: 0, c: 0 });
       r.n++; r.net += l.qin.total - l.chu.total; r.q += l.qin.total; r.c += l.chu.total;
@@ -130,8 +199,8 @@ export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal"
   return out;
 }
 
-const ENDS = ["unification", "alliance", "mandate", "collapse", "scoring", "scoringBoth", "final", "tie", "emperor"];
-const SHORT = { unification: "一統", alliance: "合縱", mandate: "天命", collapse: "土崩", scoring: "記分", scoringBoth: "記分2", final: "終局", tie: "平手", emperor: "稱帝" };
+const ENDS = ["unification", "alliance", "mandate", "collapse", "scoring", "scoringBoth", "final", "tie", "emperor", "homeFall"];
+const SHORT = { unification: "一統", alliance: "合縱", mandate: "天命", collapse: "土崩", scoring: "記分", scoringBoth: "記分2", final: "終局", tie: "平手", emperor: "稱帝", homeFall: "國都" };
 function line(name, r) {
   const n = r.played || 1;
   const ends = ENDS.filter((e) => r.ends[e]).map((e) => `${SHORT[e]} ${(100 * r.ends[e] / n).toFixed(0)}%`).join(" ");
@@ -139,6 +208,18 @@ function line(name, r) {
   return `${name.padEnd(22)} n=${r.played}  Qin ${(100 * r.qinWins / n).toFixed(0).padStart(3)}%  turn ${(r.turns / n).toFixed(1)}  mandate ${(r.mandate / n) >= 0 ? "+" : ""}${(r.mandate / n).toFixed(1)}  滅 ${(r.mie / n).toFixed(2)} 相印 ${(r.seals / n).toFixed(2)}  ${(r.ms / n / 1000).toFixed(1)}s/game${r.errors.length ? `  ERRORS ${r.errors.length}` : ""}\n${"".padEnd(22)} ${ends}\n${"".padEnd(22)} ${regions}`;
 }
 
+export const LC_CELLS = [
+  ["base", {}],
+  ["realign", { lobby: "realign" }],
+  ["realign-mild", { lobby: "realign-mild" }],
+  ["lose", { homeFall: "lose" }],
+  ["lose-turn", { homeFall: "lose-turn" }],
+  ["lose-majority", { homeFall: "lose-majority" }],
+  ["move", { homeFall: "move" }],
+  ["realign+lose-turn", { lobby: "realign", homeFall: "lose-turn" }],
+  ["realign-own", { lobby: "realign-own" }],
+  ["realign-own+lose-turn", { lobby: "realign-own", homeFall: "lose-turn" }],
+];
 export const CELLS = [
   ["base", {}],
   ["cap=3", { options: { cap: 3 } }],
@@ -182,6 +263,8 @@ export const CELLS = [
   ["nqhc/ts", { qin: "normal", chu: "hard", options: { reach: "ts" } }],
   // #121: what reaching reform box 6 (稱帝) first is worth. emp/<lvl>/vp is today's rule.
   ...["nn", "hh"].flatMap((lv) => E.EMPEROR.map((v) => [`emp/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options: { emperor: v } }])),
+  // #130: 遊說 as a realignment roll, and losing (or moving) the home capital.
+  ...["nn", "hh"].flatMap((lv) => LC_CELLS.map(([v, options]) => [`lc/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options }])),
 ];
 
 function parseArgs(argv) {
@@ -513,11 +596,152 @@ function reportEmperor(files) {
   return out.join("\n");
 }
 
+// ---------- report (#130) ----------
+//   node tests/sim.js --report-130=a.state.json,b.state.json > table.md
+// Every `lc/<lvl>/<value>` cell against `lc/<lvl>/base` on the same seeds;
+// ** = the 95% interval of the difference leaves out 0. Cells not yet finished
+// are reported with the games they have (n says how many).
+const LC_REASONS = ["mandate", "unification", "alliance", "collapse", "scoring", "scoringBoth", "final", "tie", "emperor", "homeFall"];
+const LC_ZH = { ...REASON_ZH, emperor: "稱帝", homeFall: "國都(homeFall)" };
+export function report130(files) {
+  const cells = {};
+  const cols = [...ROW, ...EMP_ROW, ...LC_ROW];
+  for (const f of files) {
+    const st = JSON.parse(readFileSync(f, "utf8"));
+    for (const [name, v] of Object.entries(st)) {
+      if (!v.result || !name.startsWith("lc/")) continue;
+      const rows = v.result.rows.map((x) => Object.fromEntries(cols.map((k, i) => [k, x[i]])));
+      for (const x of rows) {
+        x.opsAll = ["place", "campaign", "lobby", "reform"].reduce((a, u) => a + x[`ops_${u}`], 0);
+        for (const u of ["place", "campaign", "lobby", "reform"]) x[`share_${u}`] = x.opsAll ? x[`ops_${u}`] / x.opsAll : 0;
+        x.gAny = x.gFalls > 0 ? 1 : 0; x.yAny = x.yFalls > 0 ? 1 : 0;
+        x.anyFall = x.gAny || x.yAny ? 1 : 0;
+      }
+      cells[name] = { rows, n: rows.length, errors: v.result.errors.length, stuck: v.result.stuck || 0, games: v.result.games };
+    }
+  }
+  const order = CELLS.map(([n]) => n).filter((n) => cells[n]);
+  const baseOf = (n) => n.replace(/[^/]+$/, "base");
+  const out = [];
+  const cnt = (rows, f) => rows.filter(f).length;
+  const sum = (rows, k) => rows.reduce((a, x) => a + (x[k] || 0), 0);
+  const rate = (k, n) => { const [lo, hi] = wilson(k, n); return n ? `${pc(k / n)} ${ci(lo, hi)}` : "–"; };
+  const mci = (rows, k, d = 2) => { const m = meanCi(rows.map((x) => x[k] || 0)); return `${m.m.toFixed(d)} ±${m.h.toFixed(d)}`; };
+  const star = (d, h, txt) => (d - h > 0 || d + h < 0 ? `**${txt}**` : txt);
+  const dp = (k1, n1, k2, n2) => {
+    if (!n1 || !n2) return "–";
+    const p1 = k1 / n1, p2 = k2 / n2, d = p2 - p1, h = Z * Math.sqrt(p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2);
+    return star(d, h, `${(100 * d >= 0 ? "+" : "") + (100 * d).toFixed(1)} [${(100 * (d - h)).toFixed(1)}, ${(100 * (d + h)).toFixed(1)}]`);
+  };
+  const dm = (a, b, k, scale = 1) => {
+    const A = meanCi(a.map((x) => x[k])), Bm = meanCi(b.map((x) => x[k]));
+    const d = (Bm.m - A.m) * scale, h = Z * Math.sqrt(A.v / A.n + Bm.v / Bm.n) * scale;
+    return star(d, h, `${f2(d)} [${f2(d - h)}, ${f2(d + h)}]`);
+  };
+  out.push("| cell | n | errors / stuck | Qin win % [95%] | Qin win − base, pp [95%] | avg end turn [95%] | end turn − base |");
+  out.push("|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows, n, errors, stuck } = cells[name], b = cells[baseOf(name)];
+    const vs = b && name !== baseOf(name) ? dp(cnt(b.rows, (x) => x.qinWin), b.n, cnt(rows, (x) => x.qinWin), n) : "";
+    const vt = b && name !== baseOf(name) ? dm(b.rows, rows, "turn") : "";
+    out.push(`| ${name} | ${n} | ${errors} / ${stuck} | ${rate(cnt(rows, (x) => x.qinWin), n)} | ${vs} | ${mci(rows, "turn")} | ${vt} |`);
+  }
+  out.push("", "End reasons, % of games [Wilson 95%]; 國都 = the new end reason `homeFall`:", "");
+  out.push(`| cell | ${LC_REASONS.map((e) => LC_ZH[e]).join(" | ")} |`);
+  out.push(`|---|${LC_REASONS.map(() => "---").join("|")}|`);
+  for (const name of order) {
+    const { rows, n } = cells[name];
+    out.push(`| ${name} | ${LC_REASONS.map((e) => { const k = cnt(rows, (x) => x.reason === e); return k ? rate(k, n) : "0"; }).join(" | ")} |`);
+  }
+  out.push("", "End reasons by winner: games won by Qin / by Chu for each reason.", "");
+  out.push(`| cell | ${LC_REASONS.map((e) => LC_ZH[e]).join(" | ")} |`);
+  out.push(`|---|${LC_REASONS.map(() => "---").join("|")}|`);
+  for (const name of order) {
+    const { rows } = cells[name];
+    out.push(`| ${name} | ${LC_REASONS.map((e) => { const r = rows.filter((x) => x.reason === e); return r.length ? `${cnt(r, (x) => x.qinWin)} / ${cnt(r, (x) => !x.qinWin)}` : "–"; }).join(" | ")} |`);
+  }
+  out.push("", "國都 wins by side (Qin took 郢 / Chu took 關中), and the turn they came on (turn:games), per side:", "");
+  out.push("| cell | Qin wins by 國都 | turns | Chu wins by 國都 | turns |");
+  out.push("|---|---|---|---|---|");
+  const hist = (xs) => { const h = {}; for (const x of xs) h[x] = (h[x] || 0) + 1; return Object.entries(h).sort((a, b) => a[0] - b[0]).map(([k, v]) => `${k}:${v}`).join(" "); };
+  for (const name of order) {
+    const hf = cells[name].rows.filter((x) => x.reason === "homeFall");
+    const q = hf.filter((x) => x.qinWin), c = hf.filter((x) => !x.qinWin);
+    out.push(`| ${name} | ${q.length} | ${hist(q.map((x) => x.turn)) || "–"} | ${c.length} | ${hist(c.map((x) => x.turn)) || "–"} |`);
+  }
+  out.push("", "How the ops are spent, per game, both sides [95%]: share of the ops put to 扶植 (place) / 奇襲 (campaign) / 遊說 (lobby) / 變法 (reform); face values (九鼎 4). Uses per game, and the change in 奇襲 and 遊說 uses against base.", "");
+  out.push("| cell | 扶植 % | 奇襲 % | 遊說 % | 變法 % | 奇襲 uses / game | 奇襲 − base | 遊說 uses / game | 遊說 − base |");
+  out.push("|---|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows } = cells[name], b = cells[baseOf(name)], other = b && name !== baseOf(name);
+    out.push(`| ${name} | ${pc(meanCi(rows.map((x) => x.share_place)).m)} | ${pc(meanCi(rows.map((x) => x.share_campaign)).m)} | ${pc(meanCi(rows.map((x) => x.share_lobby)).m)} | ${pc(meanCi(rows.map((x) => x.share_reform)).m)} | ${mci(rows, "n_campaign")} | ${other ? dm(b.rows, rows, "n_campaign") : ""} | ${mci(rows, "n_lobby")} | ${other ? dm(b.rows, rows, "n_lobby") : ""} |`);
+  }
+  out.push("", "遊說 in detail, all games of the cell pooled. Under base there are no attempts: one 遊說 removes min(ops, 局勢) and never costs the actor. 'net / attempt' = (enemy points removed − own points lost) ÷ attempts; 'actor lost' = attempts in which the actor lost at least one point; 'nothing to lose' = 遊說 aimed where the actor had no influence of its own. CAVEAT: in the cells run before realign-own (base … realign+lose-turn) the 遊說 counted here include the scripted 遊說 of the event 縱橫家遊說 (removes 2, no dice); from realign-own on it is counted apart ('event 遊說'). Uses per game in the table above come from the plays and never include it.", "");
+  out.push("| cell | 遊說 actions | by Qin / Chu | ops / 遊說 | attempts / 遊說 | enemy removed / 遊說 | own lost / 遊說 | net / attempt | net / op | attempts: actor lost % | actor won % | no change % | at 要衝 % | nothing to lose % | event 遊說 (counted apart) |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows } = cells[name];
+    const N = sum(rows, "lbN"), A = sum(rows, "lbAtt"), R = sum(rows, "lbRem"), L = sum(rows, "lbLost"), O = sum(rows, "lbOps");
+    const d = (a, b, k = 2) => (b ? (a / b).toFixed(k) : "–");
+    out.push(`| ${name} | ${N} | ${sum(rows, "lbQ")} / ${sum(rows, "lbC")} | ${d(O, N)} | ${d(A, N)} | ${d(R, N)} | ${d(L, N)} | ${A ? f2((R - L) / A) : "–"} | ${O ? f2((R - L) / O) : "–"} | ${A ? pc(sum(rows, "lbAttLost") / A) : "–"} | ${A ? pc(sum(rows, "lbAttWon") / A) : "–"} | ${A ? pc(sum(rows, "lbAttTie") / A) : "–"} | ${N ? pc(sum(rows, "lbBg") / N) : "–"} | ${N ? pc(sum(rows, "lbNoRisk") / N) : "–"} | ${sum(rows, "lbEv") || "(in the counts)"} |`);
+  }
+  out.push("", "The same with the event's scripted 遊說 taken out (the 遊說 use of ops only). Exact where it was counted apart; for the earlier cells estimated: event 遊說 ≈ lobby entries − 遊說 plays (a slight overestimate: an event that grants ops, 商旅通賈, also logs a 遊說 without a play; 0.12 a game in lc/nn/realign-own), each removing 1.97 (as measured in lc/nn/realign-own) for 2 ops.", "");
+  out.push("| cell | event 遊說 / game | 遊說 (ops) | enemy removed / 遊說 | net / attempt | net / op |");
+  out.push("|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows } = cells[name];
+    const exactEv = rows.some((x) => x.lbEv !== undefined);
+    const N = sum(rows, "lbN"), A = sum(rows, "lbAtt"), R = sum(rows, "lbRem"), L = sum(rows, "lbLost"), O = sum(rows, "lbOps");
+    const evN = exactEv ? sum(rows, "lbEv") : Math.max(0, N - sum(rows, "n_lobby"));
+    const n = exactEv ? N : N - evN, r = exactEv ? R : R - 1.97 * evN, o = exactEv ? O : O - 2 * evN, t = exactEv ? "" : "≈ ";
+    out.push(`| ${name} | ${t}${(evN / rows.length).toFixed(2)} | ${t}${Math.round(n)} | ${t}${(r / n).toFixed(2)} | ${A ? t + f2((r - L) / A) : "–"} | ${t}${f2((r - L) / o)} |`);
+  }
+  out.push("", "收手 (realign-own only asks): 遊說 the actor stopped with attempts left, % of all 遊說, and the result of the roll just before the stop (by the dice: the actor lost it / won it / tied).", "");
+  out.push("| cell | 遊說 | attempts / 遊說 | ops / 遊說 | stopped early, % of 遊說 | after a lost roll | after a won roll | after a tie |");
+  out.push("|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows } = cells[name];
+    const N = sum(rows, "lbN"), A = sum(rows, "lbAtt"), S = sum(rows, "lbStop");
+    if (!A) continue;
+    out.push(`| ${name} | ${N} | ${(A / N).toFixed(2)} | ${(sum(rows, "lbOps") / N).toFixed(2)} | ${pc(S / N)} (${S}) | ${sum(rows, "lbStopLost")} | ${sum(rows, "lbStopWon")} | ${sum(rows, "lbStopTie")} |`);
+  }
+  out.push("", "Per attempt: the modifier difference d = the actor's modifiers − the other side's (clamped to −5…+5), how often each occurs (% of attempts), and how the dice went (actor won / tie / actor lost, %). 'exact' is 1d6 against 1d6 at that d, for comparison. Cells whose rows predate this column show nothing.", "");
+  const exact = (d, die = 6) => { let w = 0, t = 0; for (let a = 1; a <= die; a++) for (let b = 1; b <= die; b++) { const x = a + d - b; if (x > 0) w++; else if (x === 0) t++; } const n = die * die; return `${pc(w / n)} / ${pc(t / n)} / ${pc((n - w - t) / n)}`; };
+  for (const name of order) {
+    const { rows } = cells[name];
+    const tot = MD.reduce((a, d) => a + sum(rows, `md${d}n`), 0);
+    if (!tot) continue;
+    out.push(`- **${name}** (${tot} attempts): ` + MD.filter((d) => sum(rows, `md${d}n`)).map((d) => {
+      const n = sum(rows, `md${d}n`), w = sum(rows, `md${d}w`), t = sum(rows, `md${d}t`);
+      return `d=${d >= 0 ? "+" : ""}${d}: ${pc(n / tot)}% (${n}), ${pc(w / n)} / ${pc(t / n)} / ${pc((n - w - t) / n)}${name.includes("mild") ? "" : ` [exact ${exact(d)}]`}`;
+    }).join("; "));
+  }
+  out.push("", "The home capitals. 'fell' = became enemy-controlled at some marker check (the moment `lose` reads); games % [95%]. Falls / game; falls retaken before the end of the same turn (the grace `lose-turn` gives); games in which the enemy held it at a turn end (what `lose-turn` / `move` read) and had more influence there at a turn end (what `lose-majority` reads); the turn of the first fall (turn:games); capital moved (`move`), games.", "");
+  out.push("| cell | 關中 fell (Chu took it), games % | 郢 fell (Qin took it), games % | falls / game | retaken in the turn / falls | held at a turn end: 關中 / 郢, games | enemy majority at a turn end: 關中 / 郢, games | enemy majority at any check: 關中 / 郢, games | first fall turn, 關中 | first fall turn, 郢 | moved: Qin / Chu, games |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows, n } = cells[name];
+    const falls = sum(rows, "gFalls") + sum(rows, "yFalls");
+    out.push(`| ${name} | ${rate(cnt(rows, (x) => x.gAny), n)} | ${rate(cnt(rows, (x) => x.yAny), n)} | ${(falls / (n || 1)).toFixed(3)} | ${sum(rows, "gRetaken") + sum(rows, "yRetaken")} / ${falls} | ${cnt(rows, (x) => x.gHeldEnds > 0)} / ${cnt(rows, (x) => x.yHeldEnds > 0)} | ${cnt(rows, (x) => x.gMajEnds > 0)} / ${cnt(rows, (x) => x.yMajEnds > 0)} | ${cnt(rows, (x) => x.gMajAny > 0)} / ${cnt(rows, (x) => x.yMajAny > 0)} | ${hist(rows.filter((x) => x.gFirst).map((x) => x.gFirst)) || "–"} | ${hist(rows.filter((x) => x.yFirst).map((x) => x.yFirst)) || "–"} | ${cnt(rows, (x) => x.gMoved > 0)} / ${cnt(rows, (x) => x.yMoved > 0)} |`);
+  }
+  out.push("", "Distributions per cell: end turn (turn:games); final Mandate min / p5 / p25 / median / p75 / p95 / max; 遊說 actions per game (count:games); the seeds with the most 遊說 and the seeds of the 國都 ends.", "");
+  for (const name of order) {
+    const { rows } = cells[name];
+    const q = (k) => [0, 0.05, 0.25, 0.5, 0.75, 0.95, 1].map((p) => quant(rows.map((x) => x[k]), p)).join(" / ");
+    const top = rows.slice().sort((a, b) => b.lbN - a.lbN).slice(0, 3);
+    const hf = rows.filter((x) => x.reason === "homeFall").map((x) => x.seed);
+    out.push(`- **${name}**: end turn ${hist(rows.map((x) => x.turn))}; mandate ${q("mandate")}; 遊說/game ${hist(rows.map((x) => x.lbN))}; most 遊說 ${top.map((x) => `seed ${x.seed} (${x.lbN}, ${x.reason})`).join(", ")}; 國都 seeds ${hf.length ? hf.slice(0, 12).join(" ") + (hf.length > 12 ? " …" : "") : "none"}`);
+  }
+  return out.join("\n");
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const rep = process.argv.find((a) => a.startsWith("--report="));
   if (rep) { console.log(report(rep.slice(9).split(","))); process.exit(0); }
   const repE = process.argv.find((a) => a.startsWith("--report-emperor="));
   if (repE) { console.log(reportEmperor(repE.slice(17).split(","))); process.exit(0); }
+  const rep130 = process.argv.find((a) => a.startsWith("--report-130="));
+  if (rep130) { console.log(report130(rep130.slice(13).split(","))); process.exit(0); }
   const cfg = parseArgs(process.argv.slice(2));
   if (cfg.cells) await runCells(cfg);
   else {

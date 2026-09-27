@@ -62,7 +62,7 @@ export default {
   },
   names: { qin: ["Fan Ju", "Sima Cuo", "Wang He"], chu: ["Zhao Yang", "Qu Gai", "Xiang Yan"] },
   sys: { joined: "{name} joined.", left: "{name} left.", leftGame: "{name} left; the bot plays the seat.", dealt: "The cards are dealt.", timeout: "{name} ran out of time; the table decided.", over: "{side} ({name}) wins: {reason}.", fallback: "The opponent's move failed; a fallback was played instead: {action}.", stuck: "The opponent cannot move; this game cannot continue." },
-  ends: { unification: "three states destroyed", alliance: "four seals held", mandate: "the Mandate reached 20", collapse: "the realm collapsed on the other side", scoring: "the other side held a scoring card at the turn's end", scoringBoth: "both held scoring cards; the tie rule", final: "the Mandate after the final scoring", tie: "a level Mandate; the tie rule", emperor: "first to Emperor while leading the Mandate" },
+  ends: { unification: "three states destroyed", alliance: "four seals held", mandate: "the Mandate reached 20", collapse: "the realm collapsed on the other side", scoring: "the other side held a scoring card at the turn's end", scoringBoth: "both held scoring cards; the tie rule", final: "the Mandate after the final scoring", tie: "a level Mandate; the tie rule", emperor: "first to Emperor while leading the Mandate", homeFall: "the enemy still held the other side's home capital at the turn's end" },
   errors: { noRoom: "No room with that code.", full: "That room is full.", needMore: "Two seats are needed.", notReady: "The other seat is not ready.", notYet: "The table is not built yet.", notYourTurn: "It is not your decision right now." },
   landing: { backToRoom: "Back to room {code}", resume: "Resume your game", play: "Play vs bot", create: "Multiplayer", join: "Join", code: "Room code", codePlaceholder: "CODE", rulesLink: "Rules and the 72 cards", rulesShort: "Rules", name: "Your name" },
   side: {
@@ -164,6 +164,13 @@ export default {
       // #125 (owner: the first to 稱帝 wins if it leads the Mandate then):
       // either side can win this way, so the king is {winner}'s, not Qin's.
       emperor: { title: "The Emperor", body: "{winner} reached Emperor, the last box of the reform track, first and while ahead on the Mandate.", win: "You win. The King of {winner} takes the title of emperor, and the realm bows.", lose: "You lose. The King of {winner} took the title of emperor first.", watch: "The King of {winner} takes the title of emperor; the Mandate is settled." },
+      // #130 (homeFall): the winner/loser can be either side, and rendering
+      // only ever passes {winner}/{loser} (app.js renderOver, log-view.js
+      // overRowHtml) -- no capital name reaches this string, even under
+      // homeFall:"move" once the capital has relocated. So this does not
+      // name 關中/郢 (Guanzhong/Ying); the owner's approved wording does
+      // name them, flagged to the orchestrator on #130.
+      homeFall: { title: "The Capital Falls", body: "At the turn's end, {loser}'s home capital was still under {winner}'s control.", win: "You win. {loser}'s home capital has fallen to you.", lose: "You lose. Your home capital has fallen to {winner}.", watch: "{loser}'s home capital has fallen to {winner}." },
     },
   },
   log: {

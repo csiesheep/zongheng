@@ -50,7 +50,7 @@ export default {
   },
   names: { qin: ["范雎", "司馬錯", "王齕"], chu: ["昭陽", "屈匄", "項燕"] },
   sys: { joined: "{name} 進來了。", left: "{name} 離開了。", leftGame: "{name} 離開了,由電腦代打。", dealt: "發牌了。", timeout: "{name} 逾時,由桌面代為決定。", over: "{side}({name})獲勝:{reason}。", fallback: "對手這一手出了問題,已改用保底動作:{action}。", stuck: "對手無法行動,這一局無法繼續。" },
-  ends: { unification: "三國同滅", alliance: "四國相印", mandate: "天命達 20", collapse: "對方把天下推到土崩", scoring: "對方回合結束時手上還有記分卡", scoringBoth: "雙方都留著記分卡,依平手規則", final: "終局結算後的天命", tie: "天命平手,依平手規則", emperor: "天命領先時率先稱帝" },
+  ends: { unification: "三國同滅", alliance: "四國相印", mandate: "天命達 20", collapse: "對方把天下推到土崩", scoring: "對方回合結束時手上還有記分卡", scoringBoth: "雙方都留著記分卡,依平手規則", final: "終局結算後的天命", tie: "天命平手,依平手規則", emperor: "天命領先時率先稱帝", homeFall: "回合結束時,對方的國都仍在敵手控制下" },
   errors: { noRoom: "沒有這個房號。", full: "房間已滿。", needMore: "需要兩個座位。", notReady: "對方尚未就緒。", notYet: "牌桌還沒蓋好。", notYourTurn: "現在不是你決定。" },
   landing: { backToRoom: "回到房間 {code}", resume: "繼續上一局", play: "與電腦對弈", create: "多人遊戲", join: "加入", code: "房號", codePlaceholder: "CODE", rulesLink: "規則與七十二張牌", rulesShort: "規則", name: "你的名字" },
   side: {
@@ -129,6 +129,12 @@ export default {
       // #125(owner:先抵達稱帝、且當時天命領先,即獲勝):贏家可以是秦也可以是楚,
       // 所以用 {winner}王,不寫死秦王。
       emperor: { title: "稱帝", body: "{winner}率先變法到稱帝,而且當時天命領先。", win: "你贏了。{winner}王稱帝,天下歸心。", lose: "你輸了。{winner}王搶先稱帝,天命已定。", watch: "{winner}王稱帝,天命已定。" },
+      // #130(homeFall):贏家/輸家可以是秦也可以是楚,而 render 只帶
+      // {winner}/{loser}(見 app.js renderOver、log-view.js overRowHtml),
+      // 沒有國都名稱可用——就算 homeFall:"move" 已遷都也一樣。所以不點名
+      // 關中/郢,寫成不需要國都名的句子(遊說 owner 定案的措辭是點名的,
+      // 但現有欄位傳不出那個名字,回報給 orchestrator,#130)。
+      homeFall: { title: "國都陷落", body: "回合結束時,{loser}的國都仍在{winner}控制之下。", win: "你贏了。{loser}的國都已落入你手。", lose: "你輸了。你的國都已落入{winner}之手。", watch: "{loser}的國都落入{winner}之手。" },
     },
   },
   log: {
