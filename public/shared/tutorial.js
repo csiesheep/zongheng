@@ -96,6 +96,14 @@ export const CHU_HAND = ["wuqi", "jixia", "chumieyue", "maling", "wuguo", "mozhe
 // currently expects, then overwritten field by field.
 export function createTutorial() {
   const st = E.createGame(TUTORIAL_SEED);
+  // #133: DEFAULT_OPTIONS.lobby now defaults to "realign-own" (dice), but
+  // lesson 8 below still teaches today's 局勢-based 遊說 with a scripted,
+  // deterministic outcome -- #133's own item 8 asks for that lesson to be
+  // rewritten for the dice rule (a staged/fixed roll), planned as its own
+  // pass (reported to the orchestrator); until then this pins the tutorial's
+  // own game to the pre-#133 rule so the lesson keeps teaching what its text
+  // says, rather than silently drifting once the default flips.
+  st.options = { ...st.options, lobby: undefined };
   st.inf = {};
   for (const [id, [q, c]] of Object.entries(START_INF)) st.inf[id] = [q, c];
   st.hands = [QIN_HAND.slice(), CHU_HAND.slice()];

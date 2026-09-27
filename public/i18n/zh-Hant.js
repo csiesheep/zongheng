@@ -112,6 +112,34 @@ export default {
   // hand tile and compact chip, a small visible line on the full card page).
   hand: { mustPlay: "必打", mustPlayTitle: "記分卡留到回合結束會輸", opsChanged: "印刷 {printed}，目前 {now}", opsPrinted: "印刷 {printed}" },
   preview: { campaign: "移除對方 {removed},放置己方 {placed};疲敝 {w}。", lobby: "局勢 {edge}:最多移除 {n}。", locked: "疲敝封鎖中。", enemyEvent: "這是對方的牌:事件也會觸發。" },
+  // #133:遊說(骰子版,realign-own)的畫面文字——選目標、預覽、擲骰卡(display
+  // B)、結算,以及對手/旁觀者看到的同一張卡。骰子本身用文字/數字呈現(這個
+  // 專案沒有骰子圖檔,做真的骰子圖是 artist 的活,回報給 orchestrator)。
+  lobbyRoll: {
+    pickHint: "點一個你和{opp}都有影響力的據點",
+    pickRule: "每次雙方各擲一顆骰,加上周邊局勢;輸的一方在那裡失去差值——你也可能失去自己的點。",
+    winTag: "勝{pct}%",
+    previewTitle: "{target} · 遊說 {n} 次",
+    modLine: "{side}擲 {mod}",
+    parts: { adj: "周邊控制{spaces}", more: "影響力較多", home: "本土相鄰" },
+    bar: "勝 {win}% · 平 {tie}% · 負 {lose}%",
+    net: "平均每次 {sign}{n} 點(你的得失)",
+    start: "開始遊說",
+    cardTitle: "遊說 · {target}",
+    attempt: "第 {k} / {n} 次",
+    envoyYou: "{side}使(你)",
+    envoyOther: "{side}使",
+    winsShort: "{side}勝", tieShort: "平",
+    result: "{loser}在{target}失去 {n} 點",
+    resultTie: "平手,沒有點數變化",
+    stop: "收手", continueN: "再說一次 剩{left}次",
+    waiting: "等待{actor}:再說一次或收手",
+    summaryTitle: "{target}·遊說·結果",
+    summaryRow: "第 {k} 次:{roll0}+{mod0}={total0} 對 {roll1}+{mod1}={total1}",
+    summaryTie: "第 {k} 次:平手",
+    summaryFinal: "{target}:秦 {from0} → {to0}　楚 {from1} → {to1}",
+    done: "完成",
+  },
   over: {
     winner: "{side}獲勝", mandate: "終局天命",
     reasons: {
@@ -146,6 +174,13 @@ export default {
     headlineNone: "雙方都沒有手牌,跳過標題階段。",
     play: "{side}打出{card}({use})。",
     place: "{side}在{spaces}扶植。", campaign: "{side}以 {ops} 點奇襲{target}:移除 {removed},放置 {placed}。", lobby: "{side}遊說{target}:移除 {removed}。",
+    // #133:骰子版的遊說(mode 有值)——一段序列,共 attempts 次;每次擲骰是
+    // 自己的 log.realign,收手是 log.lobbyStop。孤兒(#128 400 筆上限截斷、
+    // 沒有 play 開頭的一手)時走這裡的通用路徑,平常在一手牌裡由
+    // log-view.js 的 chipsForSteps() 顯示短版。
+    lobbyDice: "{side}遊說{target},共 {attempts} 次:對方失去 {removed},己方失去 {lost}。",
+    realign: "第 {k} 次:{loserOrTie}。",
+    lobbyStop: "{side}在{target}收手,還剩 {left} 次不擲。",
     score: "{region}結算:秦 {q},楚 {c}。", vp: "天命 {mandate}。", tire: "疲敝降至{to}。", seal: "楚取得{state}相印。", unseal: "楚失去{state}相印。",
     mie: "秦滅{state}。", restore: "{state}復國。", reform: "{side}變法軌到第 {box} 格。", jiuding: "九鼎蓋著交給{side}。", discard: "{side}棄掉{card}。",
     bog: "{side}頓兵堅城,棄掉{card}。", skip: "{side}無牌可出。", opsLost: "{side}的 {ops} 點行動點無處可用。", reshuffle: "棄牌堆重洗。", era: "{era}牌庫洗入。",
@@ -161,6 +196,8 @@ export default {
     setupHeader: "佈局", turnHeader: "第 {turn} 回合 · {era}", round: "行動 {round}",
     headlineLine: "標題:{qinSide} {qinCard} · {chuSide} {chuCard}", headlineFirst: "{first}先結算",
     chipPlace: "{space} +{n}", chipRemove: "{target}:移除{side} {n}",
+    // #133: 遊說(骰子)每次擲骰、以及收手的小標籤。
+    chipRealign: "第{k}次:{loserOrTie}", chipRealignTie: "平手", chipRealignLoss: "{side}失去{n}", chipLobbyLost: "{target}:己方失去 {n}", chipLobbyStop: "收手(剩{left}次)",
     chipReform: "變法 → 第 {box} 格", chipTire: "疲敝 → {to}",
     chipDiscard: "{side}棄掉{card}", chipOpsLost: "{side}的 {ops} 點行動點無處可用",
     // #127:結束這局的那手牌(或標題)身上的「就是這手」小標,只點出誰輸;

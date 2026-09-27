@@ -80,6 +80,18 @@ function chipsForSteps(steps, moverSide, lang) {
     } else if (st.type === "campaign" || st.type === "lobby") {
       if (st.removed) chips.push({ text: t(lang, "logPanel.chipRemove", { target: spaceName(st.target, lang), side: sideName(1 - moverSide, lang), n: st.removed }), gold: false });
       if (st.placed) chips.push({ text: t(lang, "logPanel.chipPlace", { space: spaceName(st.target, lang), n: st.placed }), gold: false });
+      // #133: under the dice rule (realign-own, `st.mode` set) the actor can
+      // lose its OWN points too -- `st.lost` (the header's own running total,
+      // #130) is that loss, distinct from `st.removed` (the enemy's).
+      if (st.lost) chips.push({ text: t(lang, "logPanel.chipLobbyLost", { target: spaceName(st.target, lang), n: st.lost }), gold: false });
+    } else if (st.type === "realign") {
+      // #133: one chip per attempt -- who lost the roll (and how much), or
+      // a tie. `st.lose` is the LOSING side (or null); the winner is simply
+      // the other one, same reading as lobby-ui.js's own verdictHtml().
+      const loserOrTie = st.lose == null ? t(lang, "logPanel.chipRealignTie") : t(lang, "logPanel.chipRealignLoss", { side: sideName(st.lose, lang), n: st.n });
+      chips.push({ text: t(lang, "logPanel.chipRealign", { k: st.k, loserOrTie }), gold: false });
+    } else if (st.type === "lobbyStop") {
+      chips.push({ text: t(lang, "logPanel.chipLobbyStop", { left: st.left }), gold: true });
     } else if (st.type === "reform") {
       chips.push({ text: t(lang, "logPanel.chipReform", { box: st.box }), gold: true });
     } else if (st.type === "vp") {
@@ -228,6 +240,21 @@ function otherRowHtml(row, lang) {
   if (e.type === "vp") {
     const gainer = e.n >= 0 ? e.side : 1 - e.side;
     return `<div class="logrow logrow-other">${t(lang, "oppmove.tickerMandate", { side: sideName(gainer, lang), n: Math.abs(e.n) })}</div>`;
+  }
+  // #133: the same orphaning story one level deeper still -- a dice-遊說
+  // sequence's own three entry types (`lobby` with `.mode` set, `realign`,
+  // `lobbyStop`) can land here with no move open, same as `campaign`/`lobby`
+  // above (#128's 400-entry cap). The normal in-move path is
+  // chipsForSteps() above; this is only the fallback.
+  if (e.type === "lobby" && e.mode) {
+    return `<div class="logrow logrow-other">${t(lang, "log.lobbyDice", { side: sideName(e.side, lang), target: spaceName(e.target, lang), attempts: e.attempts, removed: e.removed, lost: e.lost })}</div>`;
+  }
+  if (e.type === "realign") {
+    const loserOrTie = e.lose == null ? t(lang, "logPanel.chipRealignTie") : t(lang, "logPanel.chipRealignLoss", { side: sideName(e.lose, lang), n: e.n });
+    return `<div class="logrow logrow-other">${t(lang, "log.realign", { k: e.k, loserOrTie })}</div>`;
+  }
+  if (e.type === "lobbyStop") {
+    return `<div class="logrow logrow-other">${t(lang, "log.lobbyStop", { side: sideName(e.side, lang), target: spaceName(e.target, lang), left: e.left })}</div>`;
   }
   const key = `log.${e.type}`;
   const P = {

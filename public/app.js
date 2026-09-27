@@ -36,6 +36,7 @@ import * as OppUI from "./oppmove-ui.js"; // #79: the opponent's-move reveal (ca
 // though it textually comes first).
 OppUI.setOpenPeek((id, side) => openPeek(id, side));
 import * as LogView from "./log-view.js"; // #88: the log panel's own rows/chips and its tap-to-flash overlay
+import * as LobbyUI from "./lobby-ui.js"; // #133: the dice-遊說 pick/preview/roll-card/summary screens
 import { discParts } from "./disc-view.js";
 import * as Audio from "./audio.js";
 import * as Cues from "./audio-cues.js";
@@ -171,6 +172,12 @@ function trackView(view) {
 }
 function show(view) {
   for (const v of ["setup", "lobby", "table", "over"]) $(v).hidden = v !== view;
+  // #133: leaving the table (a new game, a room closing, the result screen)
+  // must not leave the roll card/summary overlay stuck on top of whatever
+  // comes next -- it is its own fixed element outside #table (lobby-ui.js's
+  // ensureCard(), appended to <body>), so hiding #table alone would not
+  // touch it.
+  if (view !== "table") LobbyUI.hideCard();
   window.scrollTo(0, 0);
   const prevView = document.body.dataset.view;
   // Desktop-only (see desktop.css, #7): which backdrop/frame the page-card
@@ -359,6 +366,7 @@ $("btnStart").onclick = () => {
 // every one of those resets untouched, since it doesn't represent anything
 // about the player's own turn.
 const game = { st: null, me: 0, level: "normal", rng: null, ui: null, botLine: "", botName: "", room: false, spectator: false, peek: null };
+window.__zhDebug = { game, E, render: () => render(), freshUi: () => freshUi(), show: (v) => show(v), botLoop: () => botLoop() }; // #133 scratch verification hook -- removed before hand-in
 // #53 round 2 (orchestrator's review): `botLine` alone never reached the table
 // itself, only the closed log panel / a desktop-only sidebar strip -- so on
 // the phone neither a replaced move nor a genuinely stuck game said anything
@@ -694,6 +702,32 @@ function render() {
   const prevView = game.lastView; // #41: the view from just before this action, read BEFORE it's overwritten below
   const v = game.room ? game.st : E.view(game.st, game.me);
   game.lastView = v; // layoutTable() re-renders the hand off this if it flips full<->chip
+  // #133: the dice-遊說 summary (mockup 4_summary) -- shown once, to the
+  // actor only, right after a sequence this seat ran fully resolves (a
+  // stop, an auto-stop, or the last attempt). Detected off the log alone so
+  // it works the same way for solo's local E.apply() and a room's `view`
+  // message; a watermark (`lobbySummarySeenUpTo`) stops it firing twice for
+  // the same sequence, and is reset when the log itself goes backwards
+  // (a new game/room replacing the old one -- the log's own logSeq always
+  // restarts low then).
+  if (!game.spectator && game.me != null) {
+    if ((v.logSeq || 0) < (game.lobbySummarySeenUpTo || 0)) game.lobbySummarySeenUpTo = 0;
+    if (!(v.pending && v.pending.tag === "realign")) {
+      const log = v.log || [];
+      for (let i = log.length - 1; i >= 0; i--) {
+        const e = log[i];
+        if (e.i <= (game.lobbySummarySeenUpTo || 0)) break;
+        if (e.type === "lobby" && e.mode != null && e.side === game.me) {
+          const { header, entries } = LobbyUI.findLobbySequence(v, e.target);
+          if (header && header.i === e.i && header.attempts === entries.length) {
+            game.lobbySummarySeenUpTo = e.i;
+            LobbyUI.syncSummary(v, header, entries, lang, () => render());
+          }
+          break;
+        }
+      }
+    }
+  }
   updateLastMoveMarks(prevView, v); // #41 — renderMap()/decorateAdvisor() below read game.lastMoveMarks off this
   // #62 part 2, item A + fix 1: one combined decision, one combined
   // playBatch() call, covering both the spectator and the player branches
@@ -729,7 +763,12 @@ function render() {
     renderMap({ ...v, winner: 0 }); // nothing lit
     game.lastMoveFresh = false; // #41: the pulse (if any) has now been drawn once — see updateLastMoveMarks()
     renderStatLine(v);
-    $("promptText").textContent = ""; $("sheet").innerHTML = ""; $("hand").innerHTML = "";
+    // #133: a spectator never answers, so `me` is null (rollCardHtml()'s
+    // envoyHtml() then never marks either envoy "(you)") and `onChoose` is
+    // never called (syncRollCard only wires it when pending.who === me).
+    LobbyUI.syncRollCard(v, v.pending, null, lang, null);
+    $("promptText").textContent = v.pending && v.pending.tag === "realign" ? t("lobbyRoll.waiting", { actor: sideName(v.pending.who) }) : "";
+    $("sheet").innerHTML = ""; $("hand").innerHTML = "";
     renderLog(v);
     fitMap(); // after every sibling has its final flex size, so the map's own box is final too
     decorateAdvisor(v, { solo: false, side: game.me });
@@ -1366,7 +1405,12 @@ function currentMode(v) {
     if (p.kind === "ops" && ui.opsUse === "place") return placing(p.ops, ui.points);
     if (p.kind === "ops" && (ui.opsUse === "campaign" || ui.opsUse === "lobby")) {
       const ids = ui.opsUse === "campaign" ? p.options.campaignTargets : p.options.lobbyTargets.map((x) => x.id);
-      return { lit: new Set(ids), picked: ui.target ? { [ui.target]: 1 } : {}, costs: null, side: me, onTap: (id) => { ui.target = id; render(); } };
+      // #133: under the dice rule (E.realignOdds non-null) each lit 遊說
+      // target carries its own one-attempt win% (mockup 1_pick) -- read once
+      // here rather than per-node in renderMap(), so a target no longer lit
+      // (edge/eligibility already filtered `ids` above) never gets a tag.
+      const odds = ui.opsUse === "lobby" ? Object.fromEntries(ids.map((id) => [id, LobbyUI.oddsPct(v, me, id)]).filter(([, pct]) => pct != null)) : null;
+      return { lit: new Set(ids), picked: ui.target ? { [ui.target]: 1 } : {}, costs: null, odds, side: me, onTap: (id) => { ui.target = id; render(); } };
     }
     return none;
   }
@@ -1397,7 +1441,8 @@ function currentMode(v) {
   if (ui.use === "campaign" || ui.use === "lobby") {
     const u = info.uses[ui.use];
     const ids = u ? (ui.use === "campaign" ? u.targets : u.targets.map((x) => x.id)) : [];
-    return { lit: new Set(ids), picked: ui.target ? { [ui.target]: 1 } : {}, costs: null, side: me, onTap: (id) => { ui.target = id; render(); } };
+    const odds = ui.use === "lobby" ? Object.fromEntries(ids.map((id) => [id, LobbyUI.oddsPct(v, me, id)]).filter(([, pct]) => pct != null)) : null;
+    return { lit: new Set(ids), picked: ui.target ? { [ui.target]: 1 } : {}, costs: null, odds, side: me, onTap: (id) => { ui.target = id; render(); } };
   }
   return none;
 }
@@ -1689,6 +1734,9 @@ function renderMap(v) {
       stabilityTagHTML(sp) +
       (picked ? `<span class="badge">+${picked}</span>` : "") +
       (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
+      // #133: the dice-遊說 pick screen's per-target win% tag (mockup
+      // 1_pick) -- dark when under 40% (the mockup's own threshold).
+      (mode.odds && mode.odds[sp.id] != null ? `<span class="odds-tag${mode.odds[sp.id] < 40 ? " odds-low" : ""}">${t("lobbyRoll.winTag", { pct: mode.odds[sp.id] })}</span>` : "") +
       (mvTag ? `<span class="lastmove-tag${lastMoveTagClass(mv)}" aria-hidden="true">${esc(mvTag)}</span>` : "") +
       sealMarkHTML +
       stateTagHTML(sp, sp.state ? stateName(sp.state) : "", esc) +
@@ -1797,6 +1845,15 @@ function flashUseWarning() {
 function appendPromptNote(text) {
   const p = $("promptText");
   if (p) p.insertAdjacentHTML("beforeend", `<div class="prompt-note">${esc(text)}</div>`);
+}
+// #133: same slot as appendPromptNote() above, for the one caller (the
+// dice-遊說 preview, mockup 2_preview) that needs real markup -- the
+// modifiers/bar/net block -- rather than one line of plain text. `html` is
+// always our own lobby-ui.js template output (built from i18n strings and
+// engine ids, esc()'d field by field inside it), never player text.
+function appendPromptHtml(html) {
+  const p = $("promptText");
+  if (p) p.insertAdjacentHTML("beforeend", html);
 }
 // #129: the "why is this space unlit" line for the ONE case that has a real
 // answer -- a foster tap on a space where `side` already sits at its cap
@@ -2194,6 +2251,13 @@ function renderPromptAndSheet(v) {
   // neutral/scoring on parchment).
   sh.className = "sheet" + (game.ui.card != null ? " sheet-" + cardSide(game.ui.card) : "");
   const me = game.me, ui = game.ui;
+  // #133: the dice-遊說 roll card (mockup 3b_court) is its own small fixed
+  // overlay (lobby-ui.js), synced once per render regardless of which
+  // branch below actually runs -- it shows/hides itself from `v.pending`
+  // alone, with buttons only for the actor (`pending.who === me`); the
+  // opponent/spectator get the read-only card + the "waiting" line the
+  // "wait" branch below adds to the prompt.
+  LobbyUI.syncRollCard(v, v.pending, me, lang, (choice) => humanAct({ type: "choose", choice }));
   const err = ui.err ? `<div class="err">${esc(ui.err)}</div>` : "";
   // #97: always on, independent of the advisor -- see scoringWarnText()'s own
   // comment. `warnText` is the plain sentence (reused below for the pinned
@@ -2269,7 +2333,16 @@ function renderPromptAndSheet(v) {
   // where "Waiting for..." lives, kept telling the player to keep waiting
   // forever. `game.stuck` (set in botLoop() above) overrides it here, on
   // the phone and on desktop alike, including right after a `?resume`.
-  if (L.kind === "wait") { setPrompt(game.stuck && game.botLine ? esc(game.botLine) : t("prompt.wait", { name: game.botName })); return; }
+  if (L.kind === "wait") {
+    // #133: the opponent/a spectator mid-遊說 sees the same roll card
+    // (synced above) with the brief's own placeholder line instead of the
+    // generic "waiting for X" -- named to whichever side is actually
+    // rolling (`v.pending.who`), not `game.botName` (a bot's own name,
+    // meaningless to a human opponent or a spectator).
+    if (v.pending && v.pending.tag === "realign") { setPrompt(t("lobbyRoll.waiting", { actor: sideName(v.pending.who) })); return; }
+    setPrompt(game.stuck && game.botLine ? esc(game.botLine) : t("prompt.wait", { name: game.botName }));
+    return;
+  }
   if (L.kind === "pending") { renderPending(v, L.pending, setPrompt, sh); return; }
   if (L.kind === "headline") {
     setPrompt(t("prompt.headline"));
@@ -2624,11 +2697,21 @@ function renderPromptAndSheet(v) {
     roundWarn += `<div class="prompt-warn">${esc(t("sheet.collapseWarn"))}</div>`;
   }
   setPrompt(t(`prompt.${ui.use}`, { ops: info.ops }));
+  // #133: the dice-遊說 pick screen's rule line (mockup 1_pick) -- only
+  // while no target is picked yet; once one is, the richer preview below
+  // replaces it (the odds tags on the map already carry the per-target
+  // summary at this stage). `E.LOBBY[v.options.lobby]` is the same "is the
+  // dice rule on" check realignOdds() makes internally.
+  if (ui.use === "lobby" && !ui.target && E.LOBBY[v.options.lobby]) {
+    appendPromptNote(t("lobbyRoll.pickHint", { opp: sideName(1 - me) }));
+    appendPromptNote(t("lobbyRoll.pickRule"));
+  }
   if (ui.target) {
     const trial = E.clone(v); trial.log = [];
+    const diceOdds = ui.use === "lobby" ? LobbyUI.previewHtml(v, me, ui.target, info.ops, lang) : null;
     let text;
     if (ui.use === "campaign") { const r = E.campaign(trial, me, ui.target, info.ops); text = t("preview.campaign", { removed: r.removed, placed: r.placed, w: t("weariness." + trial.weariness) }); }
-    else { const e = E.edge(v, me, ui.target); text = t("preview.lobby", { edge: e, n: Math.min(info.ops, e) }); }
+    else if (!diceOdds) { const e = E.edge(v, me, ui.target); text = t("preview.lobby", { edge: e, n: Math.min(info.ops, e) }); }
     // #68 round 2 (orchestrator's ruling): the target's own preview used to
     // be a `note(sh, ...)` row — the exact "explanatory note" the ruling
     // asks to move into #promptScroll instead, so #sheet only has to
@@ -2638,7 +2721,8 @@ function renderPromptAndSheet(v) {
     // in #promptScroll instead of #sheet, the parked sheet-title is no
     // longer redundant with it — keeping it is what lets Stage 2's give-way
     // still show SOMETHING if #promptScroll itself has to hide.
-    appendPromptNote(`${spaceName(ui.target)}: ${text}`);
+    if (diceOdds) appendPromptHtml(diceOdds); // #133: mockup 2_preview's own modifiers/bar/net block, in place of the plain 局勢 line
+    else appendPromptNote(`${spaceName(ui.target)}: ${text}`);
     // #68 round 2: the compact chip gets the SHORT Cancel/Confirm labels,
     // appended onto its own row (`chipRow`) instead of a rich "Confirm ·
     // Campaign · Xinzheng" button on a second row — the target and use are
@@ -2646,10 +2730,15 @@ function renderPromptAndSheet(v) {
     // moved into #promptScroll, so the long label was pure repetition once
     // those two existed. The full card page (showFullCard) is untouched:
     // still its own richHTML confirm, still its own row.
+    // #133: the dice-遊說 confirm reads "開始遊說"/"Start lobbying" (the
+    // mockup's own button), never the generic "Confirm", on either sheet
+    // shape -- there is a real decision (dice) past this tap, unlike a
+    // riskless 局勢 move.
+    const confirmLabel = diceOdds ? t("lobbyRoll.start") : showFullCard ? `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}` : t("buttons.confirm");
     if (showFullCard) {
-      footer(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}`, () => humanAct({ ...base, target: ui.target }), false, undefined, false, ui.use, "sfx.map.confirm");
+      footer(sh, confirmLabel, () => humanAct({ ...base, target: ui.target }), false, undefined, false, ui.use, "sfx.map.confirm");
     } else {
-      footer(sh, t("buttons.confirm"), () => humanAct({ ...base, target: ui.target }), false, undefined, false, ui.use, "sfx.map.confirm", chipRow);
+      footer(sh, confirmLabel, () => humanAct({ ...base, target: ui.target }), false, undefined, false, ui.use, "sfx.map.confirm", chipRow);
     }
   } else {
     // #24 round 2, fix #1 (owner): before a target is tapped, this branch
@@ -2721,6 +2810,17 @@ function renderPending(v, p, setPrompt, sh) {
     if (p.min === 0) { const b = btn(r, t("buttons.skip"), () => humanAct({ type: "choose", choice: [] })); b.dataset.skip = "1"; }
     return;
   }
+  if (p.kind === "option" && p.tag === "realign") {
+    // #133: 收手 (realign-own) -- the roll card itself (its own 收手/再說
+    //一次 buttons) is the synced overlay from renderPromptAndSheet() above;
+    // this pending's own `options` carry no `.label` (engine.js's `ask()`
+    // call passes `{ id: "continue" }`/`{ id: "stop" }` bare, since the
+    // generic "option" prompt below never applies here) so the sheet itself
+    // only needs a short prompt line pointing at the card, not a second set
+    // of buttons.
+    setPrompt(t("lobbyRoll.cardTitle", { target: spaceName(p.target) }));
+    return;
+  }
   if (p.kind === "option") {
     setPrompt(`${p.card ? `<b>${esc(cardName(p.card))}</b> · ` : ""}${t("prompt.option")}`);
     const r = row(sh);
@@ -2763,8 +2863,23 @@ function renderPending(v, p, setPrompt, sh) {
       appendPromptNote(t("prompt.place", { ops: p.ops, left: p.ops - spent }));
       btnSound(r, t("buttons.done"), () => humanAct({ type: "choose", choice: { use: "place", points: ui.points } }), "sfx.map.confirm", "primary", null, ui.points.length === 0);
       btn(r, t("buttons.cancel"), () => { ui.points = []; render(); });
-    } else if (ui.opsUse && ui.target) {
-      btnSound(sh, `${t("buttons.confirm")} · ${t(`uses.${ui.opsUse}`)} · ${spaceName(ui.target)}`, () => humanAct({ type: "choose", choice: { use: ui.opsUse, target: ui.target } }), "sfx.map.confirm", "primary");
+    } else {
+      // #133: same pick-screen hint and target preview as the "own card"
+      // ops path above (2645-ish), for the jiuding/pending-ops route -- a
+      // 遊說 target reached this way (the Nine Cauldrons, or an opponent's
+      // card with no ops left over to choose from directly) gets the exact
+      // same odds/preview, never the plain 局勢 line, whenever the dice
+      // rule is on.
+      if (ui.opsUse === "lobby" && !ui.target && E.LOBBY[v.options.lobby]) {
+        appendPromptNote(t("lobbyRoll.pickHint", { opp: sideName(1 - game.me) }));
+        appendPromptNote(t("lobbyRoll.pickRule"));
+      }
+      if (ui.opsUse && ui.target) {
+        const diceOdds = ui.opsUse === "lobby" ? LobbyUI.previewHtml(v, game.me, ui.target, p.ops, lang) : null;
+        if (diceOdds) appendPromptHtml(diceOdds);
+        const label = diceOdds ? t("lobbyRoll.start") : `${t("buttons.confirm")} · ${t(`uses.${ui.opsUse}`)} · ${spaceName(ui.target)}`;
+        btnSound(sh, label, () => humanAct({ type: "choose", choice: { use: ui.opsUse, target: ui.target } }), "sfx.map.confirm", "primary");
+      }
     }
   }
 }

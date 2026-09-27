@@ -142,6 +142,36 @@ export default {
   // it; these carry the printed value back off the badge itself.
   hand: { mustPlay: "Must play", mustPlayTitle: "A scoring card held at the turn's end loses", opsChanged: "Printed {printed}, now {now}", opsPrinted: "Printed {printed}" },
   preview: { campaign: "Removes {removed} of theirs, places {placed} of yours; weariness {w}.", lobby: "Edge {edge}: removes up to {n}.", locked: "Locked by weariness.", enemyEvent: "This is their card: its event will happen too." },
+  // #133: the dice-lobby (realign-own) screens -- pick, preview, the roll
+  // card (display B) and the summary, plus what the opponent/spectator see
+  // of the same roll. The dice are shown as plain numbers/text -- this
+  // project has no die-face art (a real one is the artist's job, flagged to
+  // the orchestrator).
+  lobbyRoll: {
+    pickHint: "Tap a space where both you and {opp} have influence",
+    pickRule: "Each attempt both sides roll a die and add their surrounding modifiers; the loser removes the difference there -- you can lose your own points too.",
+    winTag: "{pct}% win",
+    previewTitle: "{target} · {n} lobby attempt(s)",
+    modLine: "{side} rolls {mod}",
+    parts: { adj: "controls neighbours {spaces}", more: "more influence", home: "home or next to it" },
+    bar: "Win {win}% · Tie {tie}% · Lose {lose}%",
+    net: "Average {sign}{n} per attempt (your net)",
+    start: "Start lobbying",
+    cardTitle: "Lobby · {target}",
+    attempt: "Attempt {k} / {n}",
+    envoyYou: "{side} envoy (you)",
+    envoyOther: "{side} envoy",
+    winsShort: "{side} wins", tieShort: "Tie",
+    result: "{loser} loses {n} at {target}",
+    resultTie: "A tie: nothing changes",
+    stop: "Stop", continueN: "Roll again ({left} left)",
+    waiting: "Waiting for {actor}: roll again or stop",
+    summaryTitle: "{target} · lobby · result",
+    summaryRow: "Attempt {k}: {roll0}+{mod0}={total0} vs {roll1}+{mod1}={total1}",
+    summaryTie: "Attempt {k}: a tie",
+    summaryFinal: "{target}: Qin {from0} → {to0}  Chu {from1} → {to1}",
+    done: "Done",
+  },
   // The result screen's colour and art always follow the WINNER, not your
   // own seat, so each ending's line and body read as fact from the table,
   // and only `win`/`lose` (which side of that fact you were on) changes with
@@ -184,6 +214,14 @@ export default {
     headlineNone: "Both sides have no card; the headline phase is skipped.",
     play: "{side} plays {card} ({use}).",
     place: "{side} fosters in {spaces}.", campaign: "{side} raids in {target} with {ops}: removes {removed}, places {placed}.", lobby: "{side} lobbies in {target}: removes {removed}.",
+    // #133: the dice lobby (mode set) -- a sequence of `attempts` rolls; each
+    // roll is its own log.realign, a stop is log.lobbyStop. This generic
+    // path only fires for an orphaned entry (#128's 400-entry cap dropping
+    // the move that opened it); the normal in-move rendering is
+    // log-view.js's chipsForSteps().
+    lobbyDice: "{side} lobbies {target}, {attempts} attempt(s): {removed} of theirs lost, {lost} of its own lost.",
+    realign: "Attempt {k}: {loserOrTie}.",
+    lobbyStop: "{side} stops lobbying {target}, {left} attempt(s) unspent.",
     score: "{region} scores: Qin {q}, Chu {c}.", vp: "Mandate {mandate}.", tire: "Weariness falls to {to}.", seal: "Chu holds the seal of {state}.", unseal: "Chu loses the seal of {state}.",
     mie: "Qin destroys {state}.", restore: "{state} is restored.", reform: "{side} reaches reform box {box}.", jiuding: "The Cauldrons pass to {side}, face down.", discard: "{side} discards {card}.",
     bog: "{side} is bogged down and discards {card}.", skip: "{side} has no card to play.", opsLost: "{side} has nowhere to spend {ops} ops.", reshuffle: "The discards are reshuffled.", era: "The {era} deck is shuffled in.",
@@ -198,6 +236,8 @@ export default {
     setupHeader: "Setup", turnHeader: "Turn {turn} · {era}", round: "Move {round}",
     headlineLine: "Headlines: {qinSide} {qinCard} · {chuSide} {chuCard}", headlineFirst: "{first} resolves first",
     chipPlace: "{space} +{n}", chipRemove: "{target}: removes {n} {side}",
+    // #133: the dice-lobby's own per-roll and stop chips.
+    chipRealign: "Attempt {k}: {loserOrTie}", chipRealignTie: "a tie", chipRealignLoss: "{side} loses {n}", chipLobbyLost: "{target}: loses {n} of its own", chipLobbyStop: "Stops ({left} left)",
     chipReform: "Reform → box {box}", chipTire: "Weariness → {to}",
     chipDiscard: "{side} discards {card}", chipOpsLost: "{side} has nowhere to spend {ops} ops",
     // #127: the "ended it" chip on the move (or headline) that ended the
