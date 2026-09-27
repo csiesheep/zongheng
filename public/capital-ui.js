@@ -126,8 +126,14 @@ export function findTurnEndChecks(v) {
 // ---------- the banner row: a normal in-flow element, not an overlay --
 // inserted once right after #statline (below the map, per the brief's own
 // "push the map, or the status row" choice: this repo already has the
-// stats-row pattern below the map, so a new row there needs no changes to
-// layoutTable()'s own map-height math the way pushing the map down would). ----------
+// stats-row pattern below the map). #133-ship: layoutTable() (app.js) DOES
+// need to know about this row -- it measures the banner's real height the
+// same way it measures #topbar/#statline and subtracts it from the map's
+// budget, so the banner takes its height from the map rather than pushing
+// the hand tray out of #table's fixed, overflow:hidden box (found by the
+// checker at 320x568: the hand fell 66px below the viewport, unreachable
+// even by scrolling, because layoutTable() had no idea the banner was
+// there). ----------
 let bannerEl = null;
 function ensureBanner() {
   if (bannerEl) return bannerEl;

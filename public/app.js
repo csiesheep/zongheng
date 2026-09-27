@@ -1089,6 +1089,17 @@ function layoutTable() {
   // which all live below it and are sized in step 2, entirely separately.
   const topbarH = $("topbar").getBoundingClientRect().height;
   const statlineH = $("statline").getBoundingClientRect().height;
+  // #133-ship fix: capital-ui.js's #capitalBannerRow is inserted as a real
+  // sibling of #statline inside #table (its own comment there assumed that
+  // cost nothing extra to account for) -- it IS extra, fixed, non-negotiable
+  // height above the map exactly like topbar/statline are, and the checker
+  // found it silently eating into the map/lower-block budget at 320x568,
+  // pushing the hand tray below the viewport with no scroll fallback (the
+  // overflow checks below never saw it, since neither topbarH/statlineH nor
+  // spaceForMapAndLower knew it was there). Measure it the same way and
+  // subtract it here so the map shrinks to make room for it instead.
+  const bannerRow = document.getElementById("capitalBannerRow");
+  const bannerH = bannerRow && !bannerRow.hidden ? bannerRow.getBoundingClientRect().height : 0;
   const tcs = getComputedStyle(table);
   const visibleKids = [...table.children].filter((c) => getComputedStyle(c).display !== "none").length;
   const gapsAndPadding = parseFloat(tcs.paddingTop) + parseFloat(tcs.paddingBottom) + Math.max(0, visibleKids - 1) * parseFloat(tcs.rowGap || 0);
@@ -1129,7 +1140,7 @@ function layoutTable() {
     lowerBlockH = Math.max(LOWER_BLOCK_H_NARROW, lowerBlock.scrollHeight);
     lowerBlock.style.flex = prevFlex;
   }
-  const spaceForMapAndLower = availH - topbarH - statlineH - gapsAndPadding;
+  const spaceForMapAndLower = availH - topbarH - statlineH - bannerH - gapsAndPadding;
   const spaceForMap = spaceForMapAndLower - lowerBlockH;
   // Never below FLOOR_SCALE (the map's own spec), never above widthScale
   // (that would overflow sideways) — same floor/width clamp #68 inherited

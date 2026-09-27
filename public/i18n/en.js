@@ -322,7 +322,7 @@ export default {
     },
     done: {
       title: "{state} Destroyed", sub: "{state} is destroyed. Tutorial complete.",
-      lead: "You know what a real game needs. A game ends one of seven ways:",
+      lead: "You know what a real game needs. A game ends one of eight ways:",
       // #135: the seals count is a balance lever, not spelled out here.
       // #133: the capital ending is the new eighth way.
       ends: ["Qin destroys three states", "Chu holds all the seals", "The Mandate reaches 20", "Someone reaches Emperor first while leading the Mandate", "Someone pushes weariness to Collapse", "A scoring card is left in hand at turn's end", "After turn 8, the Mandate leader (a tie goes to Chu)", "At a turn's end, either side's home capital is still under the enemy's control"],
