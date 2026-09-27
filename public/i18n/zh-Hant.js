@@ -119,7 +119,7 @@ export default {
   lobbyRoll: {
     pickTitle: "遊說 · {card} {n} 點 = {n} 次",
     pickHint: "點一個你和{opp}都有影響力的據點",
-    pickRule: "每次雙方各擲一顆骰,加上周邊局勢;輸的一方在那裡失去差值——你也可能失去自己的點。",
+    pickRule: "雙方各擲骰加局勢;輸的一方失去差值,你也可能倒賠。",
     winTag: "勝 {pct}%",
     previewTitle: "{target} · 遊說 {n} 次",
     vs: "對",

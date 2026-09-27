@@ -150,7 +150,7 @@ export default {
   lobbyRoll: {
     pickTitle: "Lobby · {card} {n} ops = {n} attempts",
     pickHint: "Tap a space where both you and {opp} have influence",
-    pickRule: "Each attempt both sides roll a die and add their surrounding modifiers; the loser removes the difference there -- you can lose your own points too.",
+    pickRule: "Each attempt, both roll a die plus modifiers; the loser removes the difference -- you can lose your own points too.",
     winTag: "{pct}% win",
     previewTitle: "{target} · {n} lobby attempt(s)",
     vs: "vs",
