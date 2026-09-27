@@ -15,6 +15,7 @@
 // not the bots (see #134: a forced 荊軻 left no win; a capital taken by more than one point counted as not taken).
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import * as E from "../public/shared/engine.js";
 import * as B from "../public/shared/bots.js";
 
@@ -142,6 +143,38 @@ for (const lob of LOBBIES) {
     assert.deepEqual(misses(pos, CHU), []);
   });
 }
+
+// Ties at a win. tests/bots-134.fixtures.json: the 4 decisions in 200 normal-vs-normal games (seeds 1-200,
+// lobby realign-own, homeFall lose-turn) where the bots after the placement fix (b45f7e3) still did not take a
+// win they had: each state is the true one at that decision, and its `witness` wins there on 12 of 12 engine
+// rolls (recorded then, checked again below). The bot had scored a win on its one guess for several plays and the
+// noise picked one that won only on the guess (a 遊說's rolls, an event against the guessed hand). The judge is
+// the same 12 rolls on the true state, never the bot's own score.
+const FIX = JSON.parse(readFileSync(new URL("./bots-134.fixtures.json", import.meta.url), "utf8"));
+const ROLLS = 12;
+function winsOn(st, a, side) {
+  let w = 0;
+  for (let k = 0; k < ROLLS; k++) {
+    try { if (B.simulate({ ...st, rngState: (k * 2654435761 + 17) >>> 0 }, a, E.makeRng(k)).winner === side) w++; } catch { /* no win */ }
+  }
+  return w;
+}
+test("#134 ties at a win (fixtures from 200 nn games): normal and hard take the certain one", () => {
+  assert.equal(FIX.length, 4, "the population is the 4 fixtures");
+  const bad = [];
+  let n = 0;
+  for (const f of FIX) {
+    assert.equal(winsOn(f.st, f.witness, f.side), ROLLS, `seed ${f.seed}: the witness does not win for certain`);
+    for (const level of LEVELS) for (let seed = 1; seed <= 6; seed++) {
+      const a = B.decide(E.view(f.st, f.side), f.side, level, E.makeRng(seed * 7919));
+      n++;
+      const w = winsOn(f.st, a, f.side);
+      if (w < ROLLS) bad.push(`${f.seed} t${f.turn} r${f.round} ${level} rng ${seed}: ${a.card} ${a.use} ${a.target || (a.points || []).join(",")} wins ${w}/${ROLLS}`);
+    }
+  }
+  assert.equal(n, FIX.length * LEVELS.length * 6);
+  assert.deepEqual(bad, []);
+});
 
 // 稱帝 under realign-own: Qin at box 5 with no advance spent this turn, 長平之戰 (4 ops; box 6's threshold is 4)
 // in hand, no other 4-op card, Chu at box 1; under win-lead Qin leads the Mandate by 1.

@@ -761,6 +761,34 @@ function inWorlds(worlds, st, f) {
   return t;
 }
 
+// #134: several plays can win on the one guess the bot scored, and the noise
+// picked among them -- a 遊說 that won on its 6 rolls, or an event that won
+// against the guessed hand -- when another won for certain (7 decisions in 200
+// normal games, realign-own + lose-turn, after the placement fix above). So
+// every play that won on the guess is played again on WIN_CHECK fresh guesses
+// with fresh rolls, and the one that wins most often is taken (the scored
+// order breaks ties). The RNG is derived from the guess, not drawn from the
+// bot's, and nothing here runs without a win on the guess. At #132's turn-end
+// decision "a win on the guess" means a win in BOTH worlds (the weighted value
+// is 1000 only then); the fresh guesses are dealt by `determinize`, the same
+// uniform belief the worlds are weighted by, so they rank those plays by the
+// same odds and never re-admit a play that loses in one world.
+const WIN_CHECK = 6;
+function surestWin(view, side, st, wins) {
+  if (!wins.length) return null;
+  const r = E.makeRng((st.rngState ^ 0x5bd1e995) >>> 0);
+  let best = null, bestN = -1;
+  for (const w of wins) {
+    let n = 0;
+    for (let k = 0; k < WIN_CHECK; k++) {
+      try { if (simulate(determinize(view, side, r), w.a, r).winner === side) n++; } catch { /* not a win on that guess */ }
+    }
+    if (n > bestN) { bestN = n; best = w.a; }
+    if (n === WIN_CHECK) break;
+  }
+  return best;
+}
+
 // ---------- the decision ----------
 export function decide(view, side, level = "normal", rng) {
   if (level === "easy") { const a = randomAction(view, side, rng); if (a) a.why = "random"; return a; }
@@ -775,8 +803,11 @@ export function decide(view, side, level = "normal", rng) {
       if (!cands.length) return null;
       // #132: at the last action before the turn-end check, over both worlds of the hidden hand.
       const worlds = turnEndWorlds(view, side, st, rng);
-      const scored = cands.map((a) => ({ a, v: inWorlds(worlds, st, (s) => evalAction(s, a, side, rng)) + noise * gauss(rng) }));
+      const scored = cands.map((a) => { const raw = inWorlds(worlds, st, (s) => evalAction(s, a, side, rng)); return { a, raw, v: raw + noise * gauss(rng) }; });
       scored.sort((x, y) => y.v - x.v);
+      // #134: a win in every world scored (the weighted sum of 1000s may round a hair below 1000).
+      const sure = surestWin(view, side, st, scored.filter((x) => x.raw >= 1000 - 1e-6));
+      if (sure) { sure.why = `${sure.use}:${sure.card}`; return sure; }
       let top = scored.slice(0, level === "hard" ? 4 : 1);
       if (level === "hard" && top.length > 1) {
         for (const t of top) t.v = inWorlds(worlds, st, (s) => replyValue(s, t.a, side, rng)) + noise * gauss(rng);
