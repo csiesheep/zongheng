@@ -8,6 +8,7 @@
 //   node tests/sim.js 200 --cells [--jobs=4]    # every cell in child processes, with retries
 //   node tests/sim.js 1000 --only=nn/control,nn/ts --out=f.txt [--resume]   # resumable batch
 //   node tests/sim.js --report=f.txt.state.json # markdown table with 95% intervals (#104)
+//   node tests/sim.js 500 --only=d1/nn/new,d1/nn/new+D1 --out=f.txt --chunk=10 --resume; then --report-135=f.txt.state.json (#135)
 //
 // Cells run as child processes because Node 24 on the development machine
 // dies with an access violation a few percent of the time on long runs.
@@ -55,6 +56,7 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
     const { ctl, ts } = startSets(s, side);
     const outC = points.filter((id) => !ctl.has(id)).length, outT = points.filter((id) => !ts.has(id)).length;
     pl.places++; pl.placedPts += points.length;
+    if (side === E.QIN) for (const id of points) { const k = D1_FAR[id]; if (k) d1["qPl" + k]++; }
     if (outC) { pl.chained++; pl.chainedPts += outC; }
     if (outT) { pl.beyondTs++; pl.beyondTsPts += outT; }
   };
@@ -68,6 +70,9 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
   // entry per attempt), and the two home capitals through `E.probe.home`.
   const lc = Object.fromEntries(LC_ROW.map((k) => [k, 0]));
   const home = homeWatch(lc);
+  // #135: 齊 / 燕 -- Chu's 相印 there, and what Qin does with a foothold there.
+  const d1 = Object.fromEntries(D1_ROW.map((k) => [k, 0]));
+  const d1Home = (s, where) => { home(s, where); if (where === "turnEnd") d1TurnEnd(d1, s); };
   // #132: a side's last action of a turn (round = rounds) with a scoring card it
   // may play: how often it keeps it, and how the game went right after.
   const kp = Object.fromEntries(KEEP_ROW.map((k) => [k, 0]));
@@ -87,14 +92,14 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
         if (st.hands[1 - side].some((c) => E.CARD[c].scoring)) kp["keepFoeHeld" + P]++;
       }
     }
-    E.probe.place = watch; E.probe.home = home;
+    E.probe.place = watch; E.probe.home = d1Home;
     try { st = E.apply(st, a); } finally { E.probe.place = null; E.probe.home = null; }
     for (const l of st.log) if (l.i > seen && l.type === "score") scores.push(l);
     for (const l of st.log) if (l.i > seen && l.type === "place") { pl.logged++; if (!seqs.has(l.i)) pl.unmatched++; }
     for (const l of st.log) {
       if (l.type === "play" && (l.i > seen || plays.has(l.i))) plays.set(l.i, { side: l.side, card: l.card, pair: l.pair, use: l.use });
       if (l.i > seen && l.type === "reform") { rf.advances[l.side]++; if (l.box === 6) rf.reach6[l.side] = l.t; }
-      if (l.i > seen) lobbyStats(lc, l);
+      if (l.i > seen) { lobbyStats(lc, l); d1Stats(d1, l); }
     }
     seen = st.logSeq || seen;
   }
@@ -116,7 +121,10 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
   const emp = [rf.reach6[0], rf.reach6[1], first6, st.reform[0], st.reform[1], reformUses[0], reformUses[1],
     rf.advances[0] + rf.advances[1] - reformUses[0] - reformUses[1],
     ...EMP_USES.flatMap((u) => [byUse[u]?.n || 0, byUse[u]?.ops || 0])];
-  return { st, scores, pl, emp, lc: [...LC_ROW.map((k) => lc[k]), ...KEEP_ROW.map((k) => kp[k])] };
+  for (const [k, id] of [["Qi", "qi"], ["Yan", "yan"]]) {
+    d1["sealEnd" + k] = st.seals[id] ? 1 : 0; d1["mie" + k] = st.mieVp[id] ? 1 : 0;
+  }
+  return { st, scores, pl, emp, lc: [...LC_ROW.map((k) => lc[k]), ...KEEP_ROW.map((k) => kp[k])], d1: D1_ROW.map((k) => d1[k]) };
 }
 // #132 per-game columns, appended after LC_ROW, by side (Q / C): the side's last
 // action of a turn (round = rounds, its own action, nothing pending) with a
@@ -206,6 +214,49 @@ function homeWatch(lc) {
     }
   };
 }
+// #135 per-game columns, appended after LC_ROW + KEEP_ROW (rows from earlier
+// builds lack them). 齊 = 臨淄 即墨 莒 薛, 燕 = 薊 遼東 (the states, from board.js).
+// cSetLinzi: Chu's free setup points in 臨淄. sealT<Qi|Yan>: the turn Chu first
+// took that 相印 (0 = never); sealEnd: held at the end; unseal: times Qin broke
+// it (took the capital back); mie: Qin 滅 it at some point. At every turn end
+// (`E.probe.home` "turnEnd"; teN of them): Qin's influence summed over the
+// state (qQiTE / qYanTE) and in the capital (qLinziTE / qJiTE); turn ends with
+// no Qin influence left in the capital (the foothold gone); turn ends Chu
+// controls the capital. Qin's points placed in the state (from the placement
+// probe, real placements only), its campaigns there, its 遊說 there (actions,
+// ops, and per attempt from the "realign" entries -- or the whole 遊說 under
+// today's rule -- Chu points removed and own points lost), and Chu's 遊說 there.
+export const D1_ROW = ["cSetLinzi", "sealTQi", "sealTYan", "sealEndQi", "sealEndYan", "unsealQi", "unsealYan", "mieQi", "mieYan",
+  "teN", "qQiTE", "qYanTE", "qLinziTE", "qJiTE", "qLinziZeroTE", "qJiZeroTE", "cLinziCtlTE", "cJiCtlTE",
+  "qPlQi", "qPlYan", "qCpQi", "qCpYan", "qLbQi", "qLbYan", "qLbOpsQi", "qLbOpsYan", "qLbRemQi", "qLbRemYan", "qLbLostQi", "qLbLostYan",
+  "cLbQi", "cLbYan"];
+const D1_FAR = Object.fromEntries([...E.spacesOfState("qi").map((id) => [id, "Qi"]), ...E.spacesOfState("yan").map((id) => [id, "Yan"])]);
+function d1TurnEnd(d, st) {
+  d.teN++;
+  for (const [id, k] of Object.entries(D1_FAR)) d["q" + k + "TE"] += E.infOf(st, id)[E.QIN];
+  for (const [id, k] of [["linzi", "Linzi"], ["ji", "Ji"]]) {
+    const q = E.infOf(st, id)[E.QIN];
+    d["q" + k + "TE"] += q;
+    if (!q) d["q" + k + "ZeroTE"]++;
+    if (E.controller(st, id) === E.CHU) d["c" + k + "CtlTE"]++;
+  }
+}
+function d1Stats(d, l) {
+  const K = { qi: "Qi", yan: "Yan" };
+  if (l.type === "setup" && l.side === E.CHU) d.cSetLinzi += (l.points || []).filter((id) => id === "linzi").length;
+  else if (l.type === "seal" && K[l.state]) { if (!d["sealT" + K[l.state]]) d["sealT" + K[l.state]] = l.t; }
+  else if (l.type === "unseal" && K[l.state]) d["unseal" + K[l.state]]++;
+  const k = D1_FAR[l.target];
+  if (!k) return;
+  if (l.type === "campaign" && l.side === E.QIN) d["qCp" + k]++;
+  else if (l.type === "lobby" && (l.edge !== undefined || l.mode)) { // the 遊說 use of ops, not 縱橫家遊說's event
+    if (l.side === E.CHU) { d["cLb" + k]++; return; }
+    d["qLb" + k]++; d["qLbOps" + k] += l.ops;
+    if (!l.mode) d["qLbRem" + k] += l.removed || 0; // today's rule: the entry is the whole 遊說
+  } else if (l.type === "realign" && l.side === E.QIN) {
+    if (l.lose === E.CHU) d["qLbRem" + k] += l.n; else if (l.lose === E.QIN) d["qLbLost" + k] += l.n;
+  }
+}
 // #121: per-game reform columns, appended after ROW. Reach turns are 0 when the
 // side never reached box 6; first6 is -1 when nobody did. Ops are face values
 // (九鼎 4; 說客's pair: the paired card's), both sides together.
@@ -224,7 +275,7 @@ export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal"
       if (/no end after|no action for/.test(e.message)) out.stuck++;
       continue;
     }
-    const { st, scores, pl, emp, lc } = res;
+    const { st, scores, pl, emp, lc, d1 } = res;
     for (const k of ["places", "placedPts", "chained", "chainedPts", "beyondTs", "beyondTsPts"]) out[k] += pl[k];
     if (pl.logged !== pl.places || pl.unmatched) out.probeMiss++;
     if (st.winner === E.QIN) out.qinWins++;
@@ -234,7 +285,7 @@ export function simulate({ games = 100, seed = 1, qin = "normal", chu = "normal"
     // One row per game (ROW names the columns), so `--report` can give intervals,
     // distributions and the outlying seeds, not only the means.
     out.rows.push([seed + g, st.winner === E.QIN ? 1 : 0, st.reason, st.turn, st.mandate, Object.keys(st.mieVp).length, Object.keys(st.sealVp).length,
-      pl.places, pl.placedPts, pl.chained, pl.chainedPts, pl.beyondTs, ...emp, ...lc]);
+      pl.places, pl.placedPts, pl.chained, pl.chainedPts, pl.beyondTs, ...emp, ...lc, ...d1]);
     for (const l of scores) {
       const r = out.regions[l.region] || (out.regions[l.region] = { n: 0, net: 0, q: 0, c: 0 });
       r.n++; r.net += l.qin.total - l.chu.total; r.q += l.qin.total; r.c += l.chu.total;
@@ -314,6 +365,9 @@ export const CELLS = [
   // #132: today's rules, run once on the base build and once on the fix (two --out files).
   ["k132/nn", { qin: "normal", chu: "normal" }],
   ["k132/hh", { qin: "hard", chu: "hard" }],
+  // #135: D1 (遠交) -- Qin starts with 1 in 臨淄 and 1 in 薊 -- under the new rules (realign-own + lose-turn) and today's.
+  ...["nn", "hh"].flatMap((lv) => [["new", { lobby: "realign-own", homeFall: "lose-turn" }], ["new+D1", { lobby: "realign-own", homeFall: "lose-turn", qinFarStart: 1 }],
+    ["today+D1", { qinFarStart: 1 }], ["today", {}]].map(([v, options]) => [`d1/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options }])),
 ];
 
 function parseArgs(argv) {
@@ -861,6 +915,113 @@ export function report132(files) {
   return out.join("\n");
 }
 
+// ---------- report (#135) ----------
+//   node tests/sim.js --report-135=f.txt.state.json > table.md
+// The `d1/<lvl>/*` cells: Qin's win rate against the 50 ± 2.5 target, the end
+// reasons, 齊 / 燕 (相印, 滅, Qin's foothold and what it does there), and the
+// home capitals; every `X+D1` cell against `X` on the same seeds.
+export function report135(files) {
+  const cells = {};
+  const cols = [...ROW, ...EMP_ROW, ...LC_ROW, ...KEEP_ROW, ...D1_ROW];
+  for (const f of files) {
+    const st = JSON.parse(readFileSync(f, "utf8"));
+    for (const [name, v] of Object.entries(st)) {
+      if (!v.result || !name.startsWith("d1/")) continue;
+      const rows = v.result.rows.map((x) => Object.fromEntries(cols.map((k, i) => [k, x[i] ?? 0])));
+      cells[name] = { rows, n: rows.length, errors: v.result.errors.length, stuck: v.result.stuck || 0, games: v.result.games };
+    }
+  }
+  const order = CELLS.map(([n]) => n).filter((n) => cells[n]);
+  const baseOf = (n) => (n.endsWith("+D1") ? n.slice(0, -3) : null);
+  const out = [];
+  const cnt = (rows, f) => rows.filter(f).length;
+  const sum = (rows, k) => rows.reduce((a, x) => a + (x[k] || 0), 0);
+  const rate = (k, n) => { const [lo, hi] = wilson(k, n); return n ? `${pc(k / n)} ${ci(lo, hi)}` : "–"; };
+  const star = (d, h, txt) => (d - h > 0 || d + h < 0 ? `**${txt}**` : txt);
+  const dp = (k1, n1, k2, n2) => {
+    if (!n1 || !n2) return "–";
+    const p1 = k1 / n1, p2 = k2 / n2, d = p2 - p1, h = Z * Math.sqrt(p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2);
+    return star(d, h, `${(100 * d >= 0 ? "+" : "") + (100 * d).toFixed(1)} [${(100 * (d - h)).toFixed(1)}, ${(100 * (d + h)).toFixed(1)}]`);
+  };
+  const mci = (xs, d = 2) => { const m = meanCi(xs); return `${m.m.toFixed(d)} ±${m.h.toFixed(d)}`; };
+  const hist = (xs) => { const h = {}; for (const x of xs) h[x] = (h[x] || 0) + 1; return Object.entries(h).sort((a, b) => a[0] - b[0]).map(([k, v]) => `${k}:${v}`).join(" "); };
+  const win = (rows) => cnt(rows, (x) => x.qinWin);
+  const band = (p) => (p >= 0.475 && p <= 0.525 ? "yes" : `no, ${p < 0.5 ? "" : "+"}${(100 * (p - 0.5)).toFixed(1)} pp from 50`);
+  out.push("Qin win % against the target 50 ± 2.5 (47.5 … 52.5). 'in band' = the point estimate is inside; 'CI in band' = the whole 95 % interval is.", "");
+  out.push("| cell | n | errors / stuck | Qin wins | Qin win % [95%] | in band | CI in band | − its base, pp [95%] | avg end turn [95%] |");
+  out.push("|---|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows, n, errors, stuck } = cells[name], b = cells[baseOf(name)];
+    const k = win(rows), [lo, hi] = wilson(k, n);
+    out.push(`| ${name} | ${n} | ${errors} / ${stuck} | ${k} | ${rate(k, n)} | ${band(k / (n || 1))} | ${lo >= 0.475 && hi <= 0.525 ? "yes" : "no"} | ${b ? dp(win(b.rows), b.n, k, n) : ""} | ${mci(rows.map((x) => x.turn))} |`);
+  }
+  out.push("", "End reasons, % of games [Wilson 95%] (won by Qin / by Chu):", "");
+  out.push(`| cell | ${LC_REASONS.map((e) => LC_ZH[e]).join(" | ")} |`);
+  out.push(`|---|${LC_REASONS.map(() => "---").join("|")}|`);
+  for (const name of order) {
+    const { rows, n } = cells[name];
+    out.push(`| ${name} | ${LC_REASONS.map((e) => { const r = rows.filter((x) => x.reason === e); return r.length ? `${rate(r.length, n)} (${cnt(r, (x) => x.qinWin)} / ${cnt(r, (x) => !x.qinWin)})` : "0"; }).join(" | ")} |`);
+  }
+  out.push("", "End reasons against the cell's base, pp [95%] (** = the interval leaves out 0):", "");
+  out.push(`| cell | ${LC_REASONS.map((e) => LC_ZH[e]).join(" | ")} |`);
+  out.push(`|---|${LC_REASONS.map(() => "---").join("|")}|`);
+  for (const name of order) {
+    const b = cells[baseOf(name)];
+    if (!b) continue;
+    const { rows, n } = cells[name];
+    out.push(`| ${name} | ${LC_REASONS.map((e) => dp(cnt(b.rows, (x) => x.reason === e), b.n, cnt(rows, (x) => x.reason === e), n)).join(" | ")} |`);
+  }
+  out.push("", "齊 (臨淄) and 燕 (薊): games in which Chu took the 相印 at some point, held it at the end, times Qin broke it (took the capital back), games Qin 滅 the state; the turn Chu first took it (turn:games).", "");
+  out.push("| cell | 齊 相印 taken, % [95%] | − base, pp | held at end | Qin broke it | 齊 滅 | 燕 相印 taken, % [95%] | − base, pp | held at end | Qin broke it | 燕 滅 | first taken, 齊 | first taken, 燕 |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows, n } = cells[name], b = cells[baseOf(name)];
+    const part = (K) => {
+      const k = cnt(rows, (x) => x["sealT" + K] > 0);
+      return [rate(k, n), b ? dp(cnt(b.rows, (x) => x["sealT" + K] > 0), b.n, k, n) : "", `${cnt(rows, (x) => x["sealEnd" + K])}`, `${sum(rows, "unseal" + K)}`, `${cnt(rows, (x) => x["mie" + K])}`];
+    };
+    out.push(`| ${name} | ${part("Qi").join(" | ")} | ${part("Yan").join(" | ")} | ${hist(rows.filter((x) => x.sealTQi).map((x) => x.sealTQi)) || "–"} | ${hist(rows.filter((x) => x.sealTYan).map((x) => x.sealTYan)) || "–"} |`);
+  }
+  out.push("", "Qin's foothold at turn ends: Qin's influence in 臨淄 / 薊 and in the whole state (齊 = 臨淄 即墨 莒 薛, 燕 = 薊 遼東), mean [95%] over games of the per-game mean; the share of all turn ends with no Qin influence left in the capital, and with Chu in control of it.", "");
+  out.push("| cell | turn ends | Qin in 臨淄 | Qin in 齊 | Qin gone from 臨淄, % | Chu controls 臨淄, % | Qin in 薊 | Qin in 燕 | Qin gone from 薊, % | Chu controls 薊, % |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows } = cells[name], te = rows.filter((x) => x.teN > 0), T = sum(rows, "teN") || 1;
+    const per = (k) => mci(te.map((x) => x[k] / x.teN));
+    out.push(`| ${name} | ${sum(rows, "teN")} | ${per("qLinziTE")} | ${per("qQiTE")} | ${pc(sum(rows, "qLinziZeroTE") / T)} | ${pc(sum(rows, "cLinziCtlTE") / T)} | ${per("qJiTE")} | ${per("qYanTE")} | ${pc(sum(rows, "qJiZeroTE") / T)} | ${pc(sum(rows, "cJiCtlTE") / T)} |`);
+  }
+  out.push("", "What Qin does there, per game: points placed [95%], campaigns, 遊說 (actions / ops, and the games with any), Chu points removed / own points lost by its 遊說 there (per attempt, from the dice); Chu's 遊說 there (actions per game).", "");
+  out.push("| cell | Qin places in 齊, pts | in 燕, pts | Qin campaigns 齊 / 燕 | Qin 遊說 齊: actions / ops (games) | removed / lost | Qin 遊說 燕: actions / ops (games) | removed / lost | Chu 遊說 齊 / 燕 |");
+  out.push("|---|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows, n } = cells[name];
+    const m = (k) => (sum(rows, k) / (n || 1)).toFixed(2);
+    out.push(`| ${name} | ${mci(rows.map((x) => x.qPlQi))} | ${mci(rows.map((x) => x.qPlYan))} | ${m("qCpQi")} / ${m("qCpYan")} | ${m("qLbQi")} / ${m("qLbOpsQi")} (${cnt(rows, (x) => x.qLbQi > 0)}) | ${m("qLbRemQi")} / ${m("qLbLostQi")} | ${m("qLbYan")} / ${m("qLbOpsYan")} (${cnt(rows, (x) => x.qLbYan > 0)}) | ${m("qLbRemYan")} / ${m("qLbLostYan")} | ${m("cLbQi")} / ${m("cLbYan")} |`);
+  }
+  out.push("", "Home capitals (關中 = Qin's, 郢 = Chu's): games in which it fell (enemy control at a marker check) at least once, % [95%]; falls per game; turn ends it was held by the enemy; 國都 endings.", "");
+  out.push("| cell | 關中 fell, % [95%] | − base, pp | 關中 falls / game | 關中 enemy-held turn ends | 郢 fell, % [95%] | − base, pp | 郢 falls / game | 郢 enemy-held turn ends | 國都 ends (Qin / Chu won) |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|");
+  for (const name of order) {
+    const { rows, n } = cells[name], b = cells[baseOf(name)];
+    const fell = (r, p) => cnt(r, (x) => x[p + "Falls"] > 0);
+    const part = (p) => [rate(fell(rows, p), n), b ? dp(fell(b.rows, p), b.n, fell(rows, p), n) : "", (sum(rows, p + "Falls") / (n || 1)).toFixed(2), `${sum(rows, p + "HeldEnds")}`];
+    const hf = rows.filter((x) => x.reason === "homeFall");
+    out.push(`| ${name} | ${part("g").join(" | ")} | ${part("y").join(" | ")} | ${hf.length} (${cnt(hf, (x) => x.qinWin)} / ${cnt(hf, (x) => !x.qinWin)}) |`);
+  }
+  out.push("", "Chu's free setup points in 臨淄 (points:games), end turn (turn:games), and seed for seed against the base (the same seeds): winner changed Qin → Chu / Chu → Qin.", "");
+  for (const name of order) {
+    const { rows } = cells[name], b = cells[baseOf(name)];
+    let flips = "";
+    if (b) {
+      const bw = new Map(b.rows.map((x) => [x.seed, x.qinWin]));
+      const both = rows.filter((x) => bw.has(x.seed));
+      flips = `; vs ${baseOf(name)} on ${both.length} seeds: Qin → Chu ${cnt(both, (x) => bw.get(x.seed) === 1 && !x.qinWin)}, Chu → Qin ${cnt(both, (x) => bw.get(x.seed) === 0 && x.qinWin)}`;
+    }
+    out.push(`- **${name}**: Chu setup in 臨淄 ${hist(rows.map((x) => x.cSetLinzi))}; end turn ${hist(rows.map((x) => x.turn))}${flips}`);
+  }
+  return out.join("\n");
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const rep132 = process.argv.find((a) => a.startsWith("--report-132="));
   if (rep132) { console.log(report132(rep132.slice(13).split(","))); process.exit(0); }
@@ -868,6 +1029,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   if (rep) { console.log(report(rep.slice(9).split(","))); process.exit(0); }
   const repE = process.argv.find((a) => a.startsWith("--report-emperor="));
   if (repE) { console.log(reportEmperor(repE.slice(17).split(","))); process.exit(0); }
+  const rep135 = process.argv.find((a) => a.startsWith("--report-135="));
+  if (rep135) { console.log(report135(rep135.slice(13).split(","))); process.exit(0); }
   const rep130 = process.argv.find((a) => a.startsWith("--report-130="));
   if (rep130) { console.log(report130(rep130.slice(13).split(","))); process.exit(0); }
   const cfg = parseArgs(process.argv.slice(2));
