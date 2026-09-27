@@ -288,18 +288,29 @@ const EX = {};
   const a = E.clone(b); const res = E.campaign(a, QIN, "daliang", 3);
   EX.campaign = { ids: ["handan", "daliang", "song"], before: b, after: a, res };
 }
-// 4. 遊說: 秦 controls 河東/中山 (2 neighbours of 邯鄲, one from 魏 one from
-// 趙 — NOT both of 魏's own two spaces, which would accidentally trigger
-// 滅國 as a side effect of E.lobby's own E.checkMarkers call, caught while
-// screenshot-checking this branch: the first draft used 河東+大梁, 魏's
-// only two spaces, and a stray "滅"/Destroyed plate showed up on this
-// example's own crop), 楚 controls 上黨 (1 neighbour, 趙);
-// edge = E.edge(st, QIN, "handan") = 2 - 1 = 1. 2 ops.
+// 4. 遊說(#133 part 3a: the dice rule, realign-own, is the default now --
+// this used to call E.lobby() directly for an instant edge-based removal,
+// which under realign-own only pushes a plan step and resolves nothing
+// (E.lobby()'s own "attempts":0 header, caught while re-checking this
+// example after the flip: it silently produced before===after). One
+// attempt now goes through the real play(), fixed to a rngState that rolls
+// a clean win with no 收手 decision left pending (ops 1), same "sides
+// controlling which neighbours" setup as before, plus 1 point of Qin's own
+// influence at the target (realign-own's own "your point there too" rule)
+// -- 秦 controls 河東/中山 (2 neighbours of 邯鄲, one from 魏 one from 趙 —
+// NOT both of 魏's own two spaces, which would accidentally trigger 滅國 as
+// a side effect of checkMarkers, caught while screenshot-checking the
+// pre-#133 version of this same example), 楚 controls 上黨 (1 neighbour,
+// 趙); mods 2 v 1, roll 4 v 3, Qin wins, Chu loses 1.
 {
-  const b = base(); b.inf.hedong = [2, 0]; b.inf.zhongshan = [2, 0]; b.inf.shangdang = [0, 2]; b.inf.handan = [0, 1];
-  const e = E.edge(b, QIN, "handan");
-  const a = E.clone(b); const removed = E.lobby(a, QIN, "handan", 2);
-  EX.lobby = { ids: ["hedong", "shangdang", "zhongshan", "handan"], before: b, after: a, edge: e, removed };
+  const b = base(); b.inf.hedong = [2, 0]; b.inf.zhongshan = [2, 0]; b.inf.shangdang = [0, 2]; b.inf.handan = [1, 1];
+  b.phase = "action"; b.actor = QIN; b.phasing = QIN; b.pending = null; b.plan = []; b.forced = [null, null];
+  b.hands = [["tiangou"], []];
+  b.rngState = 2654435761; // seed 1 * 2654435761 >>> 0 -- see this file's own README on how these EX states are found
+  const odds = E.realignOdds(b, QIN, "handan");
+  const a = E.apply(b, { type: "play", side: QIN, card: "tiangou", use: "lobby", target: "handan" });
+  const roll = a.log.find((l) => l.type === "realign");
+  EX.lobby = { ids: ["hedong", "shangdang", "zhongshan", "handan"], before: b, after: a, odds, roll };
 }
 // 1. 事件: 商鞅變法 (shangyang)'s own effect(st) — reformAdvance(Qin,1) plus
 // a +1-ops-all-Qin-cards effect for the turn (E.CARD.shangyang.effect).
@@ -461,8 +472,8 @@ function usesExamplesHTML(l) {
         arrowP: "秦 扶植 3", capP1: `宜陽 ${infWords(EX.place.before, "yiyang", l)} · 洛邑 ${infWords(EX.place.before, "luoyi", l)}`,
         capP2: `宜陽 +1(1 點,鄰函谷關)· 洛邑 +1(2 點,楚控制)`,
         arrowC: "秦 奇襲 3", capC1: `大梁:${infWords(EX.campaign.before, "daliang", l)}`, capC2: `大梁:${infWords(EX.campaign.after, "daliang", l)}(移除 min(3,2)=2,剩 1 點落地)`,
-        arrowL: "楚 遊說 2", capL1: `邯鄲:${infWords(EX.lobby.before, "handan", l)}`, capL2: `邯鄲:${infWords(EX.lobby.after, "handan", l)}`,
-        edgeCap: `局勢 = 2 − 1 = 1,移除 min(2, 1) = 1`,
+        arrowL: "秦 遊說 1", capL1: `邯鄲:${infWords(EX.lobby.before, "handan", l)}`, capL2: `邯鄲:${infWords(EX.lobby.after, "handan", l)}`,
+        edgeCap: `局勢:秦擲 ${EX.lobby.roll.roll[0]}+${EX.lobby.odds.mod[0]}=${EX.lobby.roll.roll[0] + EX.lobby.odds.mod[0]},楚擲 ${EX.lobby.roll.roll[1]}+${EX.lobby.odds.mod[1]}=${EX.lobby.roll.roll[1] + EX.lobby.odds.mod[1]},楚失去 ${EX.lobby.roll.n} 點`,
         arrowR: "秦 變法", capR1: `變法軌:秦 0`, capR2: `變法軌:秦 1(門檻 ${EX.reform.threshold} 點,棄牌 收復河西 2 點)`,
         noteR: "沒有事件觸發。" }
     : { arrowE: "Shang Yang's Reforms", capE1: `Reform track: Qin 0`, capE2: `Reform track: Qin 1 (+1 op on every Qin card this turn)`,
@@ -470,8 +481,8 @@ function usesExamplesHTML(l) {
         arrowP: "Qin fosters, 3 ops", capP1: `Yiyang ${infWords(EX.place.before, "yiyang", l)} · Luoyi ${infWords(EX.place.before, "luoyi", l)}`,
         capP2: `Yiyang +1 (1 op, next to Hangu Pass) · Luoyi +1 (2 ops, Chu-controlled)`,
         arrowC: "Qin raids, 3 ops", capC1: `Daliang: ${infWords(EX.campaign.before, "daliang", l)}`, capC2: `Daliang: ${infWords(EX.campaign.after, "daliang", l)} (removes min(3,2)=2, 1 left to place)`,
-        arrowL: "Chu lobbies, 2 ops", capL1: `Handan: ${infWords(EX.lobby.before, "handan", l)}`, capL2: `Handan: ${infWords(EX.lobby.after, "handan", l)}`,
-        edgeCap: `Edge = 2 − 1 = 1, removes min(2, 1) = 1`,
+        arrowL: "Qin lobbies, 1 op", capL1: `Handan: ${infWords(EX.lobby.before, "handan", l)}`, capL2: `Handan: ${infWords(EX.lobby.after, "handan", l)}`,
+        edgeCap: `Qin rolls ${EX.lobby.roll.roll[0]}+${EX.lobby.odds.mod[0]}=${EX.lobby.roll.roll[0] + EX.lobby.odds.mod[0]}, Chu rolls ${EX.lobby.roll.roll[1]}+${EX.lobby.odds.mod[1]}=${EX.lobby.roll.roll[1] + EX.lobby.odds.mod[1]} — Chu loses ${EX.lobby.roll.n}`,
         arrowR: "Qin reforms", capR1: `Reform track: Qin 0`, capR2: `Reform track: Qin 1 (needs ${EX.reform.threshold} ops, discards Retaking Hexi's 2)`,
         noteR: "No event happens." };
   const eventFig = `<div class="fig"><div class="fig-pair">` +

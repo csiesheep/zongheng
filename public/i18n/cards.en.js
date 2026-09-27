@@ -22,7 +22,9 @@ export default {
   wuguo: "Chu makes a free raid in a West space that is not a battleground, with +1 op, ignoring weariness locks. Hangu Pass leaves the game.",
   mozhe: "Name one space: no raid or lobby there for the rest of the turn.",
   chumieyue: "Chu places 2 in Wu-Yue.",
-  youshui: "Lobby any one space with 2 ops; your edge counts as at least 2.",
+  // #133: the dice 遊說 default has no edge -- the event itself stays
+  // scripted (removes exactly 2, never rolls), only the text changed.
+  youshui: "Removes 2 enemy influence at any one space (no roll).",
   zhizi: "Each side removes 1 enemy influence from a space of its choice; you choose first.",
   shuoke: "Play together with an enemy card from your hand, as one action: that card's event does not happen and you use its ops.",
   huanghe: "Both sides lose 1 influence in every space of the Three Jin. Weariness recovers 1.",

@@ -121,8 +121,12 @@ export const CARDS = [
     effect(st) { E.place(st, C, "wuyue", 2); if (st.options.yue !== "none") E.addEffect(st, { card: "chumieyue", side: C, kind: "score", region: "south", who: C, delta: 1, until: "game" }); } },
 
   // ---------- 變法期・中立 ----------
+  // #133 (orchestrator, card-text fix): under the dice 遊說 default this
+  // event's own text used to name 局勢, a rule that no longer exists as the
+  // default. The owner ruled the event itself stays scripted -- it removes
+  // exactly 2, never rolls -- so only the text changes to say that.
   { id: "youshui", num: 22, zh: "縱橫家遊說", en: "The Persuaders", era: "reform", side: null, ops: 2, remove: false,
-    text: "打出者對任一據點遊說,行動點 2,局勢至少視為 2。",
+    text: "打出者移除任一據點的對手影響力 2 點(不擲骰)。",
     effect(st, side, ch) {
       if (!ch.length) return pick(side, withEnemy(st, side, all()).filter((id) => !E.isProtected(st, id)));
       const [t] = ch[0]; if (!t) return;
