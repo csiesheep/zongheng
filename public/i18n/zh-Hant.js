@@ -113,13 +113,16 @@ export default {
   hand: { mustPlay: "必打", mustPlayTitle: "記分卡留到回合結束會輸", opsChanged: "印刷 {printed}，目前 {now}", opsPrinted: "印刷 {printed}" },
   preview: { campaign: "移除對方 {removed},放置己方 {placed};疲敝 {w}。", lobby: "局勢 {edge}:最多移除 {n}。", locked: "疲敝封鎖中。", enemyEvent: "這是對方的牌:事件也會觸發。" },
   // #133:遊說(骰子版,realign-own)的畫面文字——選目標、預覽、擲骰卡(display
-  // B)、結算,以及對手/旁觀者看到的同一張卡。骰子本身用文字/數字呈現(這個
-  // 專案沒有骰子圖檔,做真的骰子圖是 artist 的活,回報給 orchestrator)。
+  // B)、結算,以及對手/旁觀者看到的同一張卡。骰子畫成真的骰子(CSS 點數
+  // 排列),不是數字方塊(這個專案沒有骰子圖檔,真的骰子圖是 artist 的活,
+  // 已回報給 orchestrator)。
   lobbyRoll: {
+    pickTitle: "遊說 · {card} {n} 點 = {n} 次",
     pickHint: "點一個你和{opp}都有影響力的據點",
     pickRule: "每次雙方各擲一顆骰,加上周邊局勢;輸的一方在那裡失去差值——你也可能失去自己的點。",
-    winTag: "勝{pct}%",
+    winTag: "勝 {pct}%",
     previewTitle: "{target} · 遊說 {n} 次",
+    vs: "對",
     modLine: "{side}擲 {mod}",
     parts: { adj: "周邊控制{spaces}", more: "影響力較多", home: "本土相鄰" },
     bar: "勝 {win}% · 平 {tie}% · 負 {lose}%",
@@ -135,8 +138,7 @@ export default {
     stop: "收手", continueN: "再說一次 剩{left}次",
     waiting: "等待{actor}:再說一次或收手",
     summaryTitle: "{target}·遊說·結果",
-    summaryRow: "第 {k} 次:{roll0}+{mod0}={total0} 對 {roll1}+{mod1}={total1}",
-    summaryTie: "第 {k} 次:平手",
+    summaryK: "第 {k} 次",
     summaryFinal: "{target}:秦 {from0} → {to0}　楚 {from1} → {to1}",
     done: "完成",
   },

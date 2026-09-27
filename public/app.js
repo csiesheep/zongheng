@@ -1845,15 +1845,6 @@ function appendPromptNote(text) {
   const p = $("promptText");
   if (p) p.insertAdjacentHTML("beforeend", `<div class="prompt-note">${esc(text)}</div>`);
 }
-// #133: same slot as appendPromptNote() above, for the one caller (the
-// dice-遊說 preview, mockup 2_preview) that needs real markup -- the
-// modifiers/bar/net block -- rather than one line of plain text. `html` is
-// always our own lobby-ui.js template output (built from i18n strings and
-// engine ids, esc()'d field by field inside it), never player text.
-function appendPromptHtml(html) {
-  const p = $("promptText");
-  if (p) p.insertAdjacentHTML("beforeend", html);
-}
 // #129: the "why is this space unlit" line for the ONE case that has a real
 // answer -- a foster tap on a space where `side` already sits at its cap
 // (renderMap()'s capInfo, from capBlockedSpaces() above). This goes through
@@ -2696,48 +2687,47 @@ function renderPromptAndSheet(v) {
     roundWarn += `<div class="prompt-warn">${esc(t("sheet.collapseWarn"))}</div>`;
   }
   setPrompt(t(`prompt.${ui.use}`, { ops: info.ops }));
-  // #133: the dice-遊說 pick screen's rule line (mockup 1_pick) -- only
-  // while no target is picked yet; once one is, the richer preview below
-  // replaces it (the odds tags on the map already carry the per-target
-  // summary at this stage). `E.LOBBY[v.options.lobby]` is the same "is the
-  // dice rule on" check realignOdds() makes internally.
-  if (ui.use === "lobby" && !ui.target && E.LOBBY[v.options.lobby]) {
-    appendPromptNote(t("lobbyRoll.pickHint", { opp: sideName(1 - me) }));
-    appendPromptNote(t("lobbyRoll.pickRule"));
-  }
+  // #133 round 2 (owner's review): the pick screen's rule line and the
+  // preview (mockups 1_pick/2_preview) now live in the SAME dark overlay
+  // card the roll/summary screens use, not #promptScroll -- the owner's own
+  // review found the sheet's give-way math left them clipped behind the
+  // hand at 320-390px, and offered "collapse the hand, or its own panel"
+  // as alternatives; this takes the panel route, which needed no new layout
+  // measuring code and cannot regress the same way. `E.LOBBY[v.options.lobby]`
+  // is the same "is the dice rule on" check realignOdds() makes internally.
+  const diceMode = ui.use === "lobby" && E.LOBBY[v.options.lobby];
+  if (diceMode && !ui.target) LobbyUI.syncPickCard(ui.card, info.ops, 1 - me, lang);
   if (ui.target) {
     const trial = E.clone(v); trial.log = [];
-    const diceOdds = ui.use === "lobby" ? LobbyUI.previewHtml(v, me, ui.target, info.ops, lang) : null;
     let text;
     if (ui.use === "campaign") { const r = E.campaign(trial, me, ui.target, info.ops); text = t("preview.campaign", { removed: r.removed, placed: r.placed, w: t("weariness." + trial.weariness) }); }
-    else if (!diceOdds) { const e = E.edge(v, me, ui.target); text = t("preview.lobby", { edge: e, n: Math.min(info.ops, e) }); }
-    // #68 round 2 (orchestrator's ruling): the target's own preview used to
-    // be a `note(sh, ...)` row — the exact "explanatory note" the ruling
-    // asks to move into #promptScroll instead, so #sheet only has to
-    // reserve the chip + the Cancel/Confirm footer. #24 round 3's own
-    // `.sheet-title` removal (right below, now gone) existed only to avoid
-    // restating the SAME text twice on screen; now that the preview lives
-    // in #promptScroll instead of #sheet, the parked sheet-title is no
-    // longer redundant with it — keeping it is what lets Stage 2's give-way
-    // still show SOMETHING if #promptScroll itself has to hide.
-    if (diceOdds) appendPromptHtml(diceOdds); // #133: mockup 2_preview's own modifiers/bar/net block, in place of the plain 局勢 line
-    else appendPromptNote(`${spaceName(ui.target)}: ${text}`);
+    else if (!diceMode) { const e = E.edge(v, me, ui.target); text = t("preview.lobby", { edge: e, n: Math.min(info.ops, e) }); }
+    if (diceMode) {
+      // #133: mockup 2_preview's own panel -- Cancel/Start live on the card
+      // itself now, not the sheet footer, so Start fires the exact same
+      // humanAct() the old footer button did.
+      LobbyUI.syncPreviewCard(v, me, ui.target, info.ops, lang, me, cancelToFresh, () => humanAct({ ...base, target: ui.target }));
+    } else {
+      // #68 round 2 (orchestrator's ruling): the target's own preview used to
+      // be a `note(sh, ...)` row — the exact "explanatory note" the ruling
+      // asks to move into #promptScroll instead, so #sheet only has to
+      // reserve the chip + the Cancel/Confirm footer.
+      appendPromptNote(`${spaceName(ui.target)}: ${text}`);
+    }
     // #68 round 2: the compact chip gets the SHORT Cancel/Confirm labels,
     // appended onto its own row (`chipRow`) instead of a rich "Confirm ·
     // Campaign · Xinzheng" button on a second row — the target and use are
-    // already named by the sheet-title above and the preview note just
-    // moved into #promptScroll, so the long label was pure repetition once
-    // those two existed. The full card page (showFullCard) is untouched:
-    // still its own richHTML confirm, still its own row.
-    // #133: the dice-遊說 confirm reads "開始遊說"/"Start lobbying" (the
-    // mockup's own button), never the generic "Confirm", on either sheet
-    // shape -- there is a real decision (dice) past this tap, unlike a
-    // riskless 局勢 move.
-    const confirmLabel = diceOdds ? t("lobbyRoll.start") : showFullCard ? `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}` : t("buttons.confirm");
-    if (showFullCard) {
-      footer(sh, confirmLabel, () => humanAct({ ...base, target: ui.target }), false, undefined, false, ui.use, "sfx.map.confirm");
-    } else {
-      footer(sh, confirmLabel, () => humanAct({ ...base, target: ui.target }), false, undefined, false, ui.use, "sfx.map.confirm", chipRow);
+    // already named by the sheet-title above. The full card page
+    // (showFullCard) is untouched: still its own richHTML confirm, still
+    // its own row. Neither renders at all for dice-遊說 (diceMode): the
+    // overlay card's own Cancel/Start already cover the whole decision.
+    if (!diceMode) {
+      const confirmLabel = showFullCard ? `${t("buttons.confirm")} · ${t(`uses.${ui.use}`)} · ${spaceName(ui.target)}` : t("buttons.confirm");
+      if (showFullCard) {
+        footer(sh, confirmLabel, () => humanAct({ ...base, target: ui.target }), false, undefined, false, ui.use, "sfx.map.confirm");
+      } else {
+        footer(sh, confirmLabel, () => humanAct({ ...base, target: ui.target }), false, undefined, false, ui.use, "sfx.map.confirm", chipRow);
+      }
     }
   } else {
     // #24 round 2, fix #1 (owner): before a target is tapped, this branch
@@ -2748,6 +2738,9 @@ function renderPromptAndSheet(v) {
     // target-picked branch above — a lone Cancel on its OWN row measured
     // 19px over #lowerBlock's own budget at 375x667 en (longer button
     // labels than zh) even after every other trim in this state.
+    // Dice-遊說's own pick card (above) has no buttons of its own -- the
+    // owner's mockup keeps Cancel in the normal sheet here, unlike the
+    // preview (whose Cancel/Start move onto the card itself).
     btn(showFullCard ? sh : chipRow, t("buttons.cancel"), cancelToFresh);
   }
 }
@@ -2863,21 +2856,23 @@ function renderPending(v, p, setPrompt, sh) {
       btnSound(r, t("buttons.done"), () => humanAct({ type: "choose", choice: { use: "place", points: ui.points } }), "sfx.map.confirm", "primary", null, ui.points.length === 0);
       btn(r, t("buttons.cancel"), () => { ui.points = []; render(); });
     } else {
-      // #133: same pick-screen hint and target preview as the "own card"
-      // ops path above (2645-ish), for the jiuding/pending-ops route -- a
-      // 遊說 target reached this way (the Nine Cauldrons, or an opponent's
-      // card with no ops left over to choose from directly) gets the exact
-      // same odds/preview, never the plain 局勢 line, whenever the dice
-      // rule is on.
-      if (ui.opsUse === "lobby" && !ui.target && E.LOBBY[v.options.lobby]) {
-        appendPromptNote(t("lobbyRoll.pickHint", { opp: sideName(1 - game.me) }));
-        appendPromptNote(t("lobbyRoll.pickRule"));
-      }
+      // #133 round 2: same overlay-card pick/preview as the "own card" ops
+      // path above, for the jiuding/pending-ops route -- a 遊說 target
+      // reached this way (the Nine Cauldrons, or an opponent's card with no
+      // ops left over to choose from directly) gets the exact same
+      // pick/preview cards, never the plain 局勢 line or a clipped
+      // #promptScroll note, whenever the dice rule is on.
+      const diceModeOps = ui.opsUse === "lobby" && E.LOBBY[v.options.lobby];
+      if (diceModeOps && !ui.target) LobbyUI.syncPickCard(p.card, p.ops, 1 - game.me, lang);
       if (ui.opsUse && ui.target) {
-        const diceOdds = ui.opsUse === "lobby" ? LobbyUI.previewHtml(v, game.me, ui.target, p.ops, lang) : null;
-        if (diceOdds) appendPromptHtml(diceOdds);
-        const label = diceOdds ? t("lobbyRoll.start") : `${t("buttons.confirm")} · ${t(`uses.${ui.opsUse}`)} · ${spaceName(ui.target)}`;
-        btnSound(sh, label, () => humanAct({ type: "choose", choice: { use: ui.opsUse, target: ui.target } }), "sfx.map.confirm", "primary");
+        if (diceModeOps) {
+          LobbyUI.syncPreviewCard(v, game.me, ui.target, p.ops, lang, game.me,
+            () => { ui.target = null; render(); },
+            () => humanAct({ type: "choose", choice: { use: ui.opsUse, target: ui.target } }));
+        } else {
+          const label = `${t("buttons.confirm")} · ${t(`uses.${ui.opsUse}`)} · ${spaceName(ui.target)}`;
+          btnSound(sh, label, () => humanAct({ type: "choose", choice: { use: ui.opsUse, target: ui.target } }), "sfx.map.confirm", "primary");
+        }
       }
     }
   }

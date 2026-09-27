@@ -144,14 +144,16 @@ export default {
   preview: { campaign: "Removes {removed} of theirs, places {placed} of yours; weariness {w}.", lobby: "Edge {edge}: removes up to {n}.", locked: "Locked by weariness.", enemyEvent: "This is their card: its event will happen too." },
   // #133: the dice-lobby (realign-own) screens -- pick, preview, the roll
   // card (display B) and the summary, plus what the opponent/spectator see
-  // of the same roll. The dice are shown as plain numbers/text -- this
-  // project has no die-face art (a real one is the artist's job, flagged to
-  // the orchestrator).
+  // of the same roll. The dice are drawn as real dice (CSS pip grids), not
+  // numeral boxes (this project has no die-face art -- flagged to the
+  // orchestrator).
   lobbyRoll: {
+    pickTitle: "Lobby · {card} {n} ops = {n} attempts",
     pickHint: "Tap a space where both you and {opp} have influence",
     pickRule: "Each attempt both sides roll a die and add their surrounding modifiers; the loser removes the difference there -- you can lose your own points too.",
     winTag: "{pct}% win",
     previewTitle: "{target} · {n} lobby attempt(s)",
+    vs: "vs",
     modLine: "{side} rolls {mod}",
     parts: { adj: "controls neighbours {spaces}", more: "more influence", home: "home or next to it" },
     bar: "Win {win}% · Tie {tie}% · Lose {lose}%",
@@ -167,8 +169,7 @@ export default {
     stop: "Stop", continueN: "Roll again ({left} left)",
     waiting: "Waiting for {actor}: roll again or stop",
     summaryTitle: "{target} · lobby · result",
-    summaryRow: "Attempt {k}: {roll0}+{mod0}={total0} vs {roll1}+{mod1}={total1}",
-    summaryTie: "Attempt {k}: a tie",
+    summaryK: "Attempt {k}",
     summaryFinal: "{target}: Qin {from0} → {to0}  Chu {from1} → {to1}",
     done: "Done",
   },
