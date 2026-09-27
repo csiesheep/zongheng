@@ -188,7 +188,7 @@ for (const mode of ["realign", "realign-mild", "realign-own"]) {
     assert.equal(after.weariness, 4);
     assert.equal(after.log.filter((l) => l.type === "realign").length, 1);
     // The same play without the option: refused, as today.
-    const today = stage({}, CHU, { inf, card: "tiangou", weariness: 4 });
+    const today = stage({ lobby: undefined }, CHU, { inf, card: "tiangou", weariness: 4 });
     assert.throws(() => E.apply(today, lobbyPlay(CHU, "tiangou", "guanzhong")), /no edge/);
     const prot = stage({ lobby: mode }, CHU, { inf, card: "tiangou", weariness: 4, effects: [{ card: "mozhe", side: QIN, kind: "protect", space: "guanzhong", until: "turn" }] });
     assert.throws(() => E.apply(prot, lobbyPlay(CHU, "tiangou", "guanzhong")), /protected/);
@@ -217,9 +217,11 @@ for (const mode of ["realign", "realign-mild", "realign-own"]) {
   });
 }
 
+// "Without the option" means a game whose options do not name `lobby` -- an old save, since #133 made realign-own
+// the default. `lobby: undefined` stands for that here (createGame spreads it over the defaults).
 test("without the option 遊說 is today's: 局勢 decides, no dice, the actor never loses", () => {
   const inf = { hangu: [6, 0], yiyang: [4, 0], xinzheng: [0, 4], luoyi: [2, 3] };
-  const st = stage({}, QIN, { inf, card: "mibing" });
+  const st = stage({ lobby: undefined }, QIN, { inf, card: "mibing" });
   const rng0 = st.rngState;
   const after = E.apply(st, lobbyPlay(QIN, "mibing", "luoyi"));
   // 局勢 = 2 controlled (函谷關, 宜陽) − 1 (新鄭) = 1: one Chu point goes.
@@ -375,7 +377,7 @@ test("realignOdds: one attempt's modifiers, win / tie / lose and expected net, a
   assert.ok(Math.abs(o.win - 15 / 36) < 1e-12 && Math.abs(o.tie - 6 / 36) < 1e-12 && Math.abs(o.lose - 15 / 36) < 1e-12);
   assert.ok(Math.abs(o.net - 6 / 36) < 1e-12, `net ${o.net}`);
   // Without a realign value there are no odds to show.
-  assert.equal(E.realignOdds(stage({}, QIN, { inf: LUOYI, card: "tiangou" }), QIN, "luoyi"), null);
+  assert.equal(E.realignOdds(stage({ lobby: undefined }, QIN, { inf: LUOYI, card: "tiangou" }), QIN, "luoyi"), null);
   // Mild caps the loss at 2 and rolls 1d3: modifiers 2 : 2, faces 1…3: win 3/9, tie 3/9, lose 3/9.
   const m = E.realignOdds(stage({ lobby: "realign-mild" }, QIN, { inf: LUOYI, card: "tiangou" }), QIN, "luoyi");
   assert.ok(Math.abs(m.win - 3 / 9) < 1e-12 && Math.abs(m.tie - 3 / 9) < 1e-12);

@@ -108,7 +108,9 @@ test("campaign refuses a space with no enemy influence and a space under 墨者�
 
 // ---------- lobby ----------
 test("lobby removes up to the edge, never tires, works under any lock", () => {
+  // The 局勢 rule, which old saves (options without `lobby`) keep; #133 made the dice 遊說 the default.
   const st = atAction([["shangyang"], []], { weariness: 2 });
+  st.options.lobby = undefined;
   // shangdang's neighbours: yiyang (Qin), hedong (Qin), handan, xinzheng.
   setInf(st, "shangdang", 1, 3); setInf(st, "xinzheng", 0, 2);
   assert.equal(E.edge(st, QIN, "shangdang"), 1);
