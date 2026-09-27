@@ -83,5 +83,5 @@ test("room: when the engine declares a winner the room finishes and says who won
   await room.afterChange();
   assert.equal(room.room.phase, "over");
   assert.equal(last(0).view.winner, 1);
-  assert.ok(room.room.log.some((l) => l.sys && /wins: four seals held/.test(l.text)));
+  assert.ok(room.room.log.some((l) => l.sys && /wins: (all the|four) seals held/.test(l.text)));
 });

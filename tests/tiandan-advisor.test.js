@@ -15,7 +15,8 @@ import * as B from "../public/shared/bots.js";
 import { advise } from "../public/shared/advisor.js";
 
 function firstAction(seed) {
-  let st = E.createGame(seed);
+  // Built under four 相印 (#133 made five the default); the test is about the advisor's reason, not the count.
+  let st = E.createGame(seed, { seals: 4 });
   const rng = E.makeRng(seed);
   for (let g = 0; g < 50 && (st.phase !== "action" || st.pending); g++) {
     const who = E.mustAct(st)[0];

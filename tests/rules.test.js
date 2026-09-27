@@ -164,7 +164,7 @@ test("滅: all of a state's spaces under Qin control, paid once; 復國 when Chu
   assert.equal(st.mandate, 1, "the second 滅 pays nothing");
 });
 
-test("three 滅 win for Qin; four 相印 win for Chu; 田單 lifts 滅 齊", () => {
+test("three 滅 win for Qin; all the 相印 (five by default since #133, four in an old save) win for Chu; 田單 lifts 滅 齊", () => {
   const st = atAction();
   for (const id of ["yiyang", "xinzheng", "hedong", "daliang", "ji", "liaodong"]) setInf(st, id, 4, 0);
   E.checkMarkers(st);
@@ -173,8 +173,18 @@ test("three 滅 win for Qin; four 相印 win for Chu; 田單 lifts 滅 齊", () 
   const st2 = atAction();
   for (const id of ["xinzheng", "daliang", "handan", "linzi"]) setInf(st2, id, 0, E.capOf(st2, id));
   E.checkMarkers(st2);
+  assert.equal(st2.winner, st2.options.seals === 4 ? CHU : null, "four 相印 win only where four are needed");
+  if (st2.options.seals === 5) {
+    setInf(st2, "ji", 0, E.capOf(st2, "ji"));
+    E.checkMarkers(st2);
+  }
   assert.equal(st2.winner, CHU);
   assert.equal(st2.reason, "alliance");
+  // An old save keeps its four.
+  const old = atAction(); old.options.seals = 4;
+  for (const id of ["xinzheng", "daliang", "handan", "linzi"]) setInf(old, id, 0, E.capOf(old, id));
+  E.checkMarkers(old);
+  assert.equal(old.winner, CHU);
   const st3 = atAction([[], ["tiandan"]], { actor: CHU, phasing: CHU });
   for (const id of ["linzi", "jimo", "ju", "xue"]) setInf(st3, id, 4, 0);
   E.checkMarkers(st3);

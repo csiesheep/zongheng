@@ -100,7 +100,9 @@ for (const lob of LOBBIES) {
 const CHU_2OPS = ["wuqi", "weiwei", "jixia"];
 function lastSeal(options) {
   return (seed) => {
-    const st = staged(options, CHU, seed);
+    // Built for four 相印 to win (three held + 邯鄲). #133 made five the default; the bot reads `options.seals - 1`
+    // (#135 checked), so pinning 4 here tests the same logic.
+    const st = staged({ ...options, seals: 4 }, CHU, seed);
     if (!st) return null;
     for (const id of Object.keys(st.mie)) delete st.mie[id];
     for (const id of ["han", "wei", "yan"]) {
