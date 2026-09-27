@@ -256,7 +256,13 @@ test("bots, win: at box 4 with two advances left, a 3-op card and 長平, hard c
     const a = B.decide(E.view(st, QIN), QIN, "hard", E.makeRng(seed));
     const after = B.simulate(st, a, E.makeRng(seed));
     const climbed = after.reason === "emperor" || (after.reform[QIN] === 5 && after.hands[QIN].includes("changping"));
-    if (!climbed) other.push(`seed ${seed}: ${a.card} ${a.use} -> box ${after.reform[QIN]}`);
+    // #133/#136: under homeFall a bot may first take 郢, which is legitimate if it keeps every tool of the climb: 長平,
+    // a way to box 5 (a card of 3+ ops to reform, or a track event, 韓非入秦 +1 / 鄭國渠 +2), and no advance spent. The #134
+    // peer played seeds 16 and 18 out 200 times each: such a move wins 200/200, as the climb does.
+    const h = after.hands[QIN];
+    const kept = h.includes("changping") && after.reformUsed[QIN] === st.reformUsed[QIN]
+      && h.some((c) => c !== "changping" && c !== E.JIUDING && (E.CARD[c].ops >= 3 || c === "hanfei" || c === "zhengguoqu"));
+    if (!climbed && !kept) other.push(`seed ${seed}: ${a.card} ${a.use} -> box ${after.reform[QIN]}`);
   }
   assert.deepEqual(other, []);
 });
