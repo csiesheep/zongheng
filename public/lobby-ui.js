@@ -93,22 +93,6 @@ export function previewCardHtml(v, side, target, ops, lang, me) {
   );
 }
 
-// ---------- the pick screen's own hint card (mockup 1_pick's explanatory
-// text), moved into the overlay so it is never clipped by the sheet below. ----------
-function cardLabel(card, lang) {
-  if (!card || !E.CARD[card]) return card === E.JIUDING ? (lang === "en" ? "The Nine Cauldrons" : "九鼎") : "";
-  return lang === "en" ? E.CARD[card].en : E.CARD[card].zh;
-}
-export function pickCardHtml(card, ops, opp, lang) {
-  return (
-    `<div class="lobby-card lobby-pick-card" role="dialog" aria-modal="true">` +
-      `<div class="lobby-card-title">${t(lang, "lobbyRoll.pickTitle", { card: cardLabel(card, lang), n: ops })}</div>` +
-      `<div class="lobby-pick-hint">${t(lang, "lobbyRoll.pickHint", { opp: sideName(opp, lang) })}</div>` +
-      `<div class="lobby-pick-rule">${t(lang, "lobbyRoll.pickRule")}</div>` +
-    `</div>`
-  );
-}
-
 // ---------- the roll card (mockup 3b_court, display B) ----------
 // Finds the header ("lobby") and the attempts ("realign") logged for
 // `pending.target`, from `v.log` alone -- the same log every seat's/
@@ -247,16 +231,6 @@ export function syncSummary(v, header, entries, lang, onDone) {
   el.innerHTML = summaryHtml(v, header, entries, lang);
   const b = el.querySelector("[data-lobby-done]");
   if (b) b.onclick = () => { summaryActive = false; el.hidden = true; el.innerHTML = ""; onDone(); };
-}
-// The pick screen's hint card (mockup 1_pick) -- no buttons; Cancel/use
-// stays in the normal sheet below, this is purely the explanatory text that
-// #promptScroll could not fit without clipping at 320-390px.
-export function syncPickCard(card, ops, opp, lang) {
-  if (summaryActive) return;
-  const el = ensureCard();
-  el.hidden = false;
-  el.className = "lobby-card-overlay lobby-card-overlay-note";
-  el.innerHTML = pickCardHtml(card, ops, opp, lang);
 }
 // The preview (mockup 2_preview), with its own Cancel/Start.
 export function syncPreviewCard(v, side, target, ops, lang, me, onCancel, onStart) {

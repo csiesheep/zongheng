@@ -2687,16 +2687,20 @@ function renderPromptAndSheet(v) {
     roundWarn += `<div class="prompt-warn">${esc(t("sheet.collapseWarn"))}</div>`;
   }
   setPrompt(t(`prompt.${ui.use}`, { ops: info.ops }));
-  // #133 round 2 (owner's review): the pick screen's rule line and the
-  // preview (mockups 1_pick/2_preview) now live in the SAME dark overlay
-  // card the roll/summary screens use, not #promptScroll -- the owner's own
-  // review found the sheet's give-way math left them clipped behind the
-  // hand at 320-390px, and offered "collapse the hand, or its own panel"
-  // as alternatives; this takes the panel route, which needed no new layout
-  // measuring code and cannot regress the same way. `E.LOBBY[v.options.lobby]`
-  // is the same "is the dice rule on" check realignOdds() makes internally.
+  // #133 round 3 (owner's review, round 2 of the pick screen specifically):
+  // the pick step's own hint/rule text stays in #promptScroll, in flow,
+  // BELOW the map (mockup 1_pick) -- round 2's overlay card sat ON TOP of
+  // the map instead, which hid/untapped whichever eligible space happened
+  // to fall under it (measured: 邯鄲 at 390x669, most of the map at
+  // 320x568). The preview/roll/summary cards below are unaffected: none of
+  // them need a further map tap once shown. `E.LOBBY[v.options.lobby]` is
+  // the same "is the dice rule on" check realignOdds() makes internally.
   const diceMode = ui.use === "lobby" && E.LOBBY[v.options.lobby];
-  if (diceMode && !ui.target) LobbyUI.syncPickCard(ui.card, info.ops, 1 - me, lang);
+  if (diceMode && !ui.target) {
+    LobbyUI.hideCard();
+    appendPromptNote(t("lobbyRoll.pickHint", { opp: sideName(1 - me) }));
+    appendPromptNote(t("lobbyRoll.pickRule"));
+  }
   if (ui.target) {
     const trial = E.clone(v); trial.log = [];
     let text;
@@ -2863,7 +2867,11 @@ function renderPending(v, p, setPrompt, sh) {
       // pick/preview cards, never the plain 局勢 line or a clipped
       // #promptScroll note, whenever the dice rule is on.
       const diceModeOps = ui.opsUse === "lobby" && E.LOBBY[v.options.lobby];
-      if (diceModeOps && !ui.target) LobbyUI.syncPickCard(p.card, p.ops, 1 - game.me, lang);
+      if (diceModeOps && !ui.target) {
+        LobbyUI.hideCard();
+        appendPromptNote(t("lobbyRoll.pickHint", { opp: sideName(1 - game.me) }));
+        appendPromptNote(t("lobbyRoll.pickRule"));
+      }
       if (ui.opsUse && ui.target) {
         if (diceModeOps) {
           LobbyUI.syncPreviewCard(v, game.me, ui.target, p.ops, lang, game.me,

@@ -1980,15 +1980,13 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    hand, or its own panel" as alternatives; this is the panel route. */
 .lobby-card-overlay { position: fixed; inset: 0; z-index: 45; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(10, 8, 5, 0.6); }
 .lobby-card-overlay[hidden] { display: none; }
-/* #133 round 2 follow-up: the PICK screen's own hint (mockup 1_pick) must
-   NOT block the map -- unlike preview/roll/summary, the player still has to
-   tap a lit space underneath it. No scrim, no centering flex box that
-   covers the whole viewport; just the card itself, pinned under the header,
-   with pointer-events left off everywhere except the card's own small rect
-   so a tap that misses it reaches the map/hit-layer below untouched. */
-.lobby-card-overlay-note { align-items: flex-start; justify-content: center; background: none; pointer-events: none; padding-top: 100px; }
-.lobby-card-overlay-note .lobby-card { pointer-events: auto; max-width: 320px; padding: 10px 14px; }
-.lobby-card-overlay-note .lobby-card-title { font-size: 13px; margin-bottom: 2px; }
+/* #133 round 3: the pick screen's own hint (mockup 1_pick) is NOT one of
+   these overlay cards at all any more -- round 2's attempt (a non-modal
+   card pinned under the header) still sat on top of the map and hid/
+   untapped whichever eligible space fell under it (measured: 邯鄲 at
+   390x669, most of the map at 320x568). It goes back to #promptScroll, in
+   flow below the map, exactly like every other prompt-note -- see app.js's
+   two `diceMode && !ui.target` branches. */
 .lobby-card {
   position: relative; width: 100%; max-width: 340px; max-height: calc(100% - 32px); overflow-y: auto;
   background: linear-gradient(160deg, #5c130d, #33090a 65%, #290708); color: #fbe9c8;
@@ -2050,10 +2048,8 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 }
 .node .odds-tag.odds-low { background: #2a1f10; color: var(--gold); border: 1px solid var(--gold); }
 
-/* The pick/preview cards' own content (mockups 1_pick/2_preview), inside
-   the same dark .lobby-card as the roll/summary screens above. */
-.lobby-pick-hint { font-weight: 700; margin: 4px 0 6px; }
-.lobby-pick-rule { font-size: 12.5px; line-height: 1.5; color: #e8cdae; }
+/* The preview card's own content (mockup 2_preview), inside the same dark
+   .lobby-card as the roll/summary screens above. */
 .lobby-modboxes { display: flex; align-items: stretch; gap: 8px; margin: 10px 0; }
 .lobby-modbox { flex: 1; min-width: 0; border-radius: 10px; padding: 8px 10px; font-size: 12px; }
 .lobby-modbox.side-c { background: rgba(196, 38, 28, 0.28); border: 1px solid #c4261c; }
