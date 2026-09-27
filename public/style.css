@@ -2040,9 +2040,12 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 
 /* The pick screen's per-target win% pill (mockup 1_pick, item 3 of the
    owner's review): a readable pill, not a tiny corner tag -- ~11px bold on
-   a light background, dark under 40%. */
+   a light background, dark under 40%. Below the node, not above: several
+   spaces (map-draw.js's STATE_TAG_POS -- 上黨/邯鄲/新鄭/大梁, the ones with
+   a state badge) put that badge directly above at dy -25/-26, exactly where
+   a centered top tag would sit (owner: 邯鄲's tag overlapped 趙/燕 at 390). */
 .node .odds-tag {
-  position: absolute; top: -14px; left: 50%; transform: translateX(-50%); z-index: 3; white-space: nowrap;
+  position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); z-index: 3; white-space: nowrap;
   padding: 2px 7px; border-radius: 999px; background: var(--gold); color: #1a1a1a; font: 700 11px/16px var(--sans);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
