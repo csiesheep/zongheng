@@ -64,14 +64,25 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
   // entry per attempt), and the two home capitals through `E.probe.home`.
   const lc = Object.fromEntries(LC_ROW.map((k) => [k, 0]));
   const home = homeWatch(lc);
+  // #132: a side's last action of a turn (round = rounds) with a scoring card it
+  // may play: how often it keeps it, and how the game went right after.
+  const kp = Object.fromEntries(KEEP_ROW.map((k) => [k, 0]));
   for (let steps = 0; st.winner == null; steps++) {
     if (steps > 6000) throw new Error(`seed ${seed}: no end after ${steps} actions`);
     const who = E.mustAct(st);
     const side = who[rng.int(who.length)];
     const a = B.decide(E.view(st, side), side, side === E.QIN ? qin : chu, rng);
     if (!a) throw new Error(`seed ${seed}: no action for ${side} at turn ${st.turn}`);
+    const P = side === E.QIN ? "Q" : "C", last = lastHold(st, side);
     E.probe.place = watch; E.probe.home = home;
     try { st = E.apply(st, a); } finally { E.probe.place = null; E.probe.home = null; }
+    if (last) {
+      kp["lastHold" + P]++;
+      if (!(a.type === "play" && E.CARD[a.card]?.scoring)) {
+        kp["keep" + P]++;
+        if (st.winner != null && (st.reason === "scoring" || st.reason === "scoringBoth")) kp[(st.winner === side ? "keepWon" : "keepLost") + P]++;
+      }
+    }
     for (const l of st.log) if (l.i > seen && l.type === "score") scores.push(l);
     for (const l of st.log) if (l.i > seen && l.type === "place") { pl.logged++; if (!seqs.has(l.i)) pl.unmatched++; }
     for (const l of st.log) {
@@ -94,7 +105,19 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
   const emp = [rf.reach6[0], rf.reach6[1], first6, st.reform[0], st.reform[1], reformUses[0], reformUses[1],
     rf.advances[0] + rf.advances[1] - reformUses[0] - reformUses[1],
     ...EMP_USES.flatMap((u) => [byUse[u]?.n || 0, byUse[u]?.ops || 0])];
-  return { st, scores, pl, emp, lc: LC_ROW.map((k) => lc[k]) };
+  return { st, scores, pl, emp, lc: [...LC_ROW.map((k) => lc[k]), ...KEEP_ROW.map((k) => kp[k])] };
+}
+// #132 per-game columns, appended after LC_ROW, by side (Q / C): the side's last
+// action of a turn (round = rounds, its own action, nothing pending) with a
+// scoring card among its legal plays; of those, the ones where it played
+// something else (kept the card); of the keeps, the game ending right then by
+// 記分 / 記分2 lost or won by that side. Reads the state only (E.legal draws no
+// random numbers), so a game plays out exactly as it did without the columns.
+export const KEEP_ROW = ["lastHoldQ", "lastHoldC", "keepQ", "keepC", "keepLostQ", "keepLostC", "keepWonQ", "keepWonC"];
+function lastHold(st, side) {
+  if (st.phase !== "action" || st.pending || st.actor !== side || st.round !== st.rounds) return false;
+  const L = E.legal(st, side);
+  return L.kind === "action" && !(L.bog && L.bog.length) && L.cards.some((c) => E.CARD[c.id]?.scoring);
 }
 // #130 per-game columns, appended after EMP_ROW. Lobby: actions, ops, attempts
 // (realign only), enemy points removed, own points lost, attempts the actor
@@ -265,6 +288,9 @@ export const CELLS = [
   ...["nn", "hh"].flatMap((lv) => E.EMPEROR.map((v) => [`emp/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options: { emperor: v } }])),
   // #130: 遊說 as a realignment roll, and losing (or moving) the home capital.
   ...["nn", "hh"].flatMap((lv) => LC_CELLS.map(([v, options]) => [`lc/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options }])),
+  // #132: today's rules, run once on the base build and once on the fix (two --out files).
+  ["k132/nn", { qin: "normal", chu: "normal" }],
+  ["k132/hh", { qin: "hard", chu: "hard" }],
 ];
 
 function parseArgs(argv) {
