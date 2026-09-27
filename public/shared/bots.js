@@ -380,6 +380,10 @@ function bestPoints(st, p, who, rng) {
   const s = E.clone(st); s.log = [];
   const counts = {}, out = [];
   const bump = (id, d, side) => { const a = s.inf[id] || (s.inf[id] = [0, 0]); a[side] += d; };
+  if (p.side === who) { // #134: an event's own points that win now (winTargets below)
+    const room = (_, x, pts) => p.options.includes(x) && roomFor(p, st, who, x, { [x]: pts.filter((y) => y === x).length }) > 0;
+    for (const pts of winningPoints(st, who, p.n, room, () => 1)) if (winsNow(st, { type: "choose", side: who, choice: pts })) return pts;
+  }
   if (p.side != null) {
     for (let i = 0; i < p.n; i++) {
       let best = null, bestV = -Infinity;
@@ -436,10 +440,68 @@ export function greedyPlacement(st, side, ops, restrict = null) {
   }
   return points;
 }
+// ---------- #134: a win by placement is never missed ----------
+// The one place candidate per card is the greedy walk above, and the roads to
+// 滅 and 相印 in `evaluate` are steps (every need up to 2 points is worth the
+// same), so the first point on the last state gains nothing there and goes
+// elsewhere: before this the normal and hard bots took the last 滅 by placement
+// in 0 of 12 positions and the last 相印 in 1 of 12 (tests/bots-134.test.js).
+// So when one placement can end the game -- the last 滅 (Qin), the last 相印
+// (Chu), the enemy home capital under homeFall "lose" (or on the turn's last
+// round under the turn-end values) -- the points that complete it are offered
+// as candidates too; each caller keeps only a play the engine says wins. With
+// no such target nothing here runs, and no RNG is drawn either way.
+function winTargets(st, side) {
+  const out = [], opp = 1 - side;
+  if (side === QIN && Object.keys(st.mie).length >= st.options.mie - 1) {
+    for (const id of Object.keys(STATES)) if (!st.mie[id]) out.push({ ids: E.spacesOfState(id), done: (s, x) => E.controller(s, x) === QIN });
+  }
+  if (side === CHU && Object.keys(st.seals).length >= st.options.seals - 1) {
+    const sealed = (s, x) => E.controller(s, x) === CHU && (s.options.sealAt !== "cap" || E.infOf(s, x)[CHU] >= E.capOf(s, x));
+    for (const [id, s] of Object.entries(STATES)) if (!st.seals[id]) out.push({ ids: [s.capital], done: sealed });
+  }
+  const hf = st.options.homeFall;
+  if (hf && hf !== "none" && (hf === "lose" || st.round >= st.rounds)) {
+    const held = hf === "lose-majority" ? (s, x) => E.infOf(s, x)[side] > E.infOf(s, x)[opp] : (s, x) => E.controller(s, x) === side;
+    out.push({ ids: [E.homeCapital(st, opp)], done: held });
+  }
+  return out;
+}
+// For each target, the fewest points that complete it: `room(s, id)` says
+// whether one more point may go there, `cost(s, id)` what it spends of `budget`.
+function winningPoints(st, side, budget, room, cost) {
+  const out = [];
+  for (const t of winTargets(st, side)) {
+    const inf = {};
+    for (const k of Object.keys(st.inf)) inf[k] = st.inf[k].slice();
+    const s = { ...st, inf }, pts = [];
+    let left = budget, ok = true;
+    for (const x of t.ids) {
+      while (ok && !t.done(s, x)) {
+        const c = cost(s, x);
+        if (c > left || !room(s, x, pts)) { ok = false; break; }
+        (s.inf[x] || (s.inf[x] = [0, 0]))[side]++;
+        pts.push(x); left -= c;
+      }
+    }
+    if (ok && pts.length) out.push(pts);
+  }
+  return out;
+}
+// Placements of `ops` that complete a target; `restrict` as in greedyPlacement.
+export function winningPlacements(st, side, ops, restrict = null) {
+  return winningPoints(st, side, ops, (s, x) => (!restrict || restrict(x)) && E.infOf(s, x)[side] < E.capOf(s, x), (s, x) => E.placeCost(s, side, x));
+}
+function winsNow(st, action) {
+  try { return E.apply(st, action).winner === action.side; } catch { return false; }
+}
 function bestOps(st, who, ops, allowed, rng) {
   const o = E.opsOptions(st, who);
   const cands = [];
-  if (allowed.includes("place")) { const points = greedyPlacement(st, who, ops); if (points.length) cands.push({ use: "place", points }); }
+  if (allowed.includes("place")) {
+    const points = greedyPlacement(st, who, ops); if (points.length) cands.push({ use: "place", points });
+    for (const pts of winningPlacements(st, who, ops)) cands.push({ use: "place", points: pts }); // #134
+  }
   if (allowed.includes("campaign")) for (const t of o.campaignTargets) cands.push({ use: "campaign", target: t });
   if (allowed.includes("lobby")) for (const t of lobbyTargetsFor(st, who, o.lobbyTargets)) cands.push({ use: "lobby", target: t.id });
   return bestOf(st, who, cands, rng);
@@ -483,6 +545,10 @@ function dropSelfCollapse(st, side, list) {
 function actionCandidates(st, side, L) {
   const out = [];
   const lob = (targets) => lobbyTargetsFor(st, side, targets);
+  // #134: a placement that wins now, next to the greedy one (winTargets above).
+  const winPlace = (ops, make, restrict) => {
+    for (const points of winningPlacements(st, side, ops, restrict)) { const a = make(points); if (winsNow(st, a)) out.push(a); }
+  };
   if (L.bog && L.bog.length) return L.bog.map((c) => ({ type: "play", side, card: c, use: "bog" }));
   let dead = null;
   for (const c of L.cards) {
@@ -492,7 +558,10 @@ function actionCandidates(st, side, L) {
     if (id === "shuoke") dead = { type: "play", side, card: id, use: "event" };
     else out.push({ type: "play", side, card: id, use: "event" });
     if (u.reform) out.push({ type: "play", side, card: id, use: "reform" });
-    if (u.place) { const points = greedyPlacement(st, side, u.place.ops); if (points.length) out.push({ type: "play", side, card: id, use: "place", order: "opsFirst", points }); }
+    if (u.place) {
+      const points = greedyPlacement(st, side, u.place.ops); if (points.length) out.push({ type: "play", side, card: id, use: "place", order: "opsFirst", points });
+      winPlace(u.place.ops, (pts) => ({ type: "play", side, card: id, use: "place", order: "opsFirst", points: pts }));
+    }
     if (u.campaign) for (const t of u.campaign.targets) out.push({ type: "play", side, card: id, use: "campaign", order: "opsFirst", target: t });
     if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, use: "lobby", order: "opsFirst", target: t.id });
     if (u.enemy && (u.place || u.campaign || u.lobby)) out.push({ type: "play", side, card: id, use: "place", order: "eventFirst" });
@@ -501,6 +570,7 @@ function actionCandidates(st, side, L) {
       const pops = E.opsOf(st, side, pair);
       const points = greedyPlacement(st, side, pops);
       if (points.length) out.push({ type: "play", side, card: id, pair, use: "place", points });
+      winPlace(pops, (pts) => ({ type: "play", side, card: id, pair, use: "place", points: pts }));
       if (u.campaign) for (const t of u.campaign.targets) out.push({ type: "play", side, card: id, pair, use: "campaign", target: t });
       if (u.lobby) for (const t of lob(u.lobby.targets)) out.push({ type: "play", side, card: id, pair, use: "lobby", target: t.id });
     }
@@ -510,6 +580,8 @@ function actionCandidates(st, side, L) {
     if (j.place) {
       const p4 = greedyPlacement(st, side, 4); if (p4.length) out.push({ type: "play", side, card: JIUDING, use: "place", points: p4 });
       const p5 = greedyPlacement(st, side, 5, zhou); if (p5.length && p5.every(zhou)) out.push({ type: "play", side, card: JIUDING, use: "place", points: p5 });
+      winPlace(4, (pts) => ({ type: "play", side, card: JIUDING, use: "place", points: pts }));
+      winPlace(5, (pts) => ({ type: "play", side, card: JIUDING, use: "place", points: pts }), zhou);
     }
     if (j.campaign) for (const t of j.campaign.targets) out.push({ type: "play", side, card: JIUDING, use: "campaign", target: t });
     if (j.lobby) for (const t of lob(j.lobby.targets)) out.push({ type: "play", side, card: JIUDING, use: "lobby", target: t.id });

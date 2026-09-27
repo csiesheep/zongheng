@@ -52,10 +52,10 @@ function positions(make, witness, side) {
     if (!st) continue;
     E.checkMarkers(st);
     if (st.winner != null) continue;
-    const w = witness(st);
-    let after;
-    try { after = E.apply(st, w); } catch (e) { throw new Error(`seed ${seed}: the witness is illegal: ${e.message}`); }
-    assert.equal(after.winner, side, `seed ${seed}: the witness ${w.card} ${w.use} ${(w.points || []).join(",")} does not win`);
+    const ws = [].concat(witness(st));
+    let after = st;
+    try { for (const w of ws) after = E.apply(after, w); } catch (e) { throw new Error(`seed ${seed}: the witness is illegal: ${e.message}`); }
+    assert.equal(after.winner, side, `seed ${seed}: the witness ${JSON.stringify(ws)} does not win`);
     out.push({ seed, st });
   }
   assert.ok(out.length >= 10, `only ${out.length} positions`);
@@ -115,6 +115,30 @@ function lastSeal(options) {
 for (const lob of LOBBIES) {
   test(`#134 alliance by placement (lobby ${lob.lobby || "off"}): one 相印 short, normal and hard take the fourth`, () => {
     const pos = positions(lastSeal(lob), () => ({ type: "play", side: CHU, card: "wuqi", use: "place", order: "opsFirst", points: ["handan", "handan"] }), CHU);
+    assert.deepEqual(misses(pos, CHU), []);
+  });
+}
+
+// The same by an event's own points: Chu at 3 相印, 臨淄 (stability 3, cap 5) three points under the cap with Chu
+// short of control there; 稷下學宮 (楚在東方放 3,可分散) as its event seals it, and nothing else in hand can (2 ops
+// place 2). A bot that plays 稷下 as its event must put all three on 臨淄.
+function lastSealByEvent(options) {
+  return (seed) => {
+    const st = lastSeal(options)(seed);
+    if (!st) return null;
+    st.inf.handan = [0, 0];
+    st.inf.linzi = [0, E.capOf(st, "linzi") - 3];
+    give(st, CHU, ["jixia", "weiwei", "wuqi"]);
+    return st;
+  };
+}
+for (const lob of LOBBIES) {
+  test(`#134 alliance by an event's points (lobby ${lob.lobby || "off"}): 稷下學宮 puts all three on 臨淄`, () => {
+    const pos = positions(lastSealByEvent(lob), () => [{ type: "play", side: CHU, card: "jixia", use: "event" }, { type: "choose", side: CHU, choice: ["linzi", "linzi", "linzi"] }], CHU);
+    // And no ops placement wins: two points on 臨淄 leave it under the cap.
+    for (const { seed, st } of pos) {
+      assert.notEqual(E.apply(st, { type: "play", side: CHU, card: "wuqi", use: "place", order: "opsFirst", points: ["linzi", "linzi"] }).winner, CHU, `seed ${seed}`);
+    }
     assert.deepEqual(misses(pos, CHU), []);
   });
 }
