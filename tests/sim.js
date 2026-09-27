@@ -72,7 +72,11 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
   const home = homeWatch(lc);
   // #135: 齊 / 燕 -- Chu's 相印 there, and what Qin does with a foothold there.
   const d1 = Object.fromEntries(D1_ROW.map((k) => [k, 0]));
-  const d1Home = (s, where) => { home(s, where); if (where === "turnEnd") d1TurnEnd(d1, s); };
+  const d1Home = (s, where) => {
+    home(s, where);
+    if (where === "turnEnd") d1TurnEnd(d1, s);
+    else { const n = Object.keys(s.seals).length; if (n > d1.sealsMax) d1.sealsMax = n; if (n >= 4 && !d1.seals4T) d1.seals4T = s.turn; }
+  };
   // #132: a side's last action of a turn (round = rounds) with a scoring card it
   // may play: how often it keeps it, and how the game went right after.
   const kp = Object.fromEntries(KEEP_ROW.map((k) => [k, 0]));
@@ -229,7 +233,10 @@ function homeWatch(lc) {
 export const D1_ROW = ["cSetLinzi", "sealTQi", "sealTYan", "sealEndQi", "sealEndYan", "unsealQi", "unsealYan", "mieQi", "mieYan",
   "teN", "qQiTE", "qYanTE", "qLinziTE", "qJiTE", "qLinziZeroTE", "qJiZeroTE", "cLinziCtlTE", "cJiCtlTE",
   "qPlQi", "qPlYan", "qCpQi", "qCpYan", "qLbQi", "qLbYan", "qLbOpsQi", "qLbOpsYan", "qLbRemQi", "qLbRemYan", "qLbLostQi", "qLbLostYan",
-  "cLbQi", "cLbYan"];
+  "cLbQi", "cLbYan",
+  // Appended for the seals=5 cells (#135, owner: 「模擬合縱需要5個」): the most 相印 Chu held at once at any marker
+  // check, and the turn it first held 4 at once (0 = never) -- the games the 4-seal rule would have ended there.
+  "sealsMax", "seals4T"];
 const D1_FAR = Object.fromEntries([...E.spacesOfState("qi").map((id) => [id, "Qi"]), ...E.spacesOfState("yan").map((id) => [id, "Yan"])]);
 function d1TurnEnd(d, st) {
   d.teN++;
@@ -368,6 +375,10 @@ export const CELLS = [
   // #135: D1 (遠交) -- Qin starts with 1 in 臨淄 and 1 in 薊 -- under the new rules (realign-own + lose-turn) and today's.
   ...["nn", "hh"].flatMap((lv) => [["new", { lobby: "realign-own", homeFall: "lose-turn" }], ["new+D1", { lobby: "realign-own", homeFall: "lose-turn", qinFarStart: 1 }],
     ["today+D1", { qinFarStart: 1 }], ["today", {}]].map(([v, options]) => [`d1/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options }])),
+  // #135, second ask: 相印 needed for 合縱 = 5 (all five capitals). The variants first, then their baselines on the same build.
+  ...[["nn", "new+seals5"], ["nn", "today+seals5"], ["hh", "new+seals5"], ["hh", "today+seals5"], ["nn", "new"], ["nn", "today"], ["hh", "new"], ["hh", "today"]].map(([lv, v]) => [`s5/${lv}/${v}`, {
+    qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard",
+    options: { ...(v.startsWith("new") ? { lobby: "realign-own", homeFall: "lose-turn" } : {}), ...(v.endsWith("+seals5") ? { seals: 5 } : {}) } }]),
 ];
 
 function parseArgs(argv) {
@@ -926,13 +937,13 @@ export function report135(files) {
   for (const f of files) {
     const st = JSON.parse(readFileSync(f, "utf8"));
     for (const [name, v] of Object.entries(st)) {
-      if (!v.result || !name.startsWith("d1/")) continue;
+      if (!v.result || !/^(d1|s5)\//.test(name)) continue;
       const rows = v.result.rows.map((x) => Object.fromEntries(cols.map((k, i) => [k, x[i] ?? 0])));
       cells[name] = { rows, n: rows.length, errors: v.result.errors.length, stuck: v.result.stuck || 0, games: v.result.games };
     }
   }
   const order = CELLS.map(([n]) => n).filter((n) => cells[n]);
-  const baseOf = (n) => (n.endsWith("+D1") ? n.slice(0, -3) : null);
+  const baseOf = (n) => { const m = n.match(/^(.*)\+(D1|seals5)$/); return m ? m[1] : null; };
   const out = [];
   const cnt = (rows, f) => rows.filter(f).length;
   const sum = (rows, k) => rows.reduce((a, x) => a + (x[k] || 0), 0);
@@ -948,12 +959,12 @@ export function report135(files) {
   const win = (rows) => cnt(rows, (x) => x.qinWin);
   const band = (p) => (p >= 0.475 && p <= 0.525 ? "yes" : `no, ${p < 0.5 ? "" : "+"}${(100 * (p - 0.5)).toFixed(1)} pp from 50`);
   out.push("Qin win % against the target 50 ± 2.5 (47.5 … 52.5). 'in band' = the point estimate is inside; 'CI in band' = the whole 95 % interval is.", "");
-  out.push("| cell | n | errors / stuck | Qin wins | Qin win % [95%] | in band | CI in band | − its base, pp [95%] | avg end turn [95%] |");
-  out.push("|---|---|---|---|---|---|---|---|---|");
+  out.push("| cell | n | errors / stuck | Qin wins | Qin win % [95%] | in band | CI in band | − its base, pp [95%] | avg end turn [95%] | 終局 (turn limit) ends |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|");
   for (const name of order) {
     const { rows, n, errors, stuck } = cells[name], b = cells[baseOf(name)];
     const k = win(rows), [lo, hi] = wilson(k, n);
-    out.push(`| ${name} | ${n} | ${errors} / ${stuck} | ${k} | ${rate(k, n)} | ${band(k / (n || 1))} | ${lo >= 0.475 && hi <= 0.525 ? "yes" : "no"} | ${b ? dp(win(b.rows), b.n, k, n) : ""} | ${mci(rows.map((x) => x.turn))} |`);
+    out.push(`| ${name} | ${n} | ${errors} / ${stuck} | ${k} | ${rate(k, n)} | ${band(k / (n || 1))} | ${lo >= 0.475 && hi <= 0.525 ? "yes" : "no"} | ${b ? dp(win(b.rows), b.n, k, n) : ""} | ${mci(rows.map((x) => x.turn))} | ${cnt(rows, (x) => x.reason === "final")} (${cnt(rows, (x) => x.reason === "final" && x.qinWin)} / ${cnt(rows, (x) => x.reason === "final" && !x.qinWin)}) |`);
   }
   out.push("", "End reasons, % of games [Wilson 95%] (won by Qin / by Chu):", "");
   out.push(`| cell | ${LC_REASONS.map((e) => LC_ZH[e]).join(" | ")} |`);
@@ -1007,6 +1018,28 @@ export function report135(files) {
     const part = (p) => [rate(fell(rows, p), n), b ? dp(fell(b.rows, p), b.n, fell(rows, p), n) : "", (sum(rows, p + "Falls") / (n || 1)).toFixed(2), `${sum(rows, p + "HeldEnds")}`];
     const hf = rows.filter((x) => x.reason === "homeFall");
     out.push(`| ${name} | ${part("g").join(" | ")} | ${part("y").join(" | ")} | ${hf.length} (${cnt(hf, (x) => x.qinWin)} / ${cnt(hf, (x) => !x.qinWin)}) |`);
+  }
+  const s5 = order.filter((n) => n.startsWith("s5/"));
+  if (s5.length) {
+    out.push("", "相印 held at once (the most at any marker check; games per count 0…5), and the games in which Chu held 4 at once (under seals 5 the game goes on), with how they ended (reason: Qin won / Chu won).", "");
+    out.push("| cell | most 相印 held at once (count:games) | held 4 at once, games | … of which Chu won | … how they ended |");
+    out.push("|---|---|---|---|---|");
+    for (const name of s5) {
+      const { rows } = cells[name], four = rows.filter((x) => x.seals4T > 0);
+      const how = {}; for (const x of four) { const k = x.reason; how[k] = how[k] || [0, 0]; how[k][x.qinWin ? 0 : 1]++; }
+      out.push(`| ${name} | ${hist(rows.map((x) => x.sealsMax))} | ${four.length} | ${cnt(four, (x) => !x.qinWin)} | ${Object.entries(how).map(([k, [q, c]]) => `${LC_ZH[k] || k} ${q}/${c}`).join(", ") || "–"} |`);
+    }
+    out.push("", "What replaces the 相印 wins: the base's 合縱 games (same seeds), and how each of them ended in the variant (reason: Qin won / Chu won).", "");
+    out.push("| cell | base 合縱 games | … now ended by (reason: Qin / Chu) | … now won by Qin |");
+    out.push("|---|---|---|---|");
+    for (const name of s5) {
+      const b = cells[baseOf(name)];
+      if (!b) continue;
+      const now = new Map(cells[name].rows.map((x) => [x.seed, x]));
+      const was = b.rows.filter((x) => x.reason === "alliance" && now.has(x.seed));
+      const how = {}; for (const w of was) { const x = now.get(w.seed); how[x.reason] = how[x.reason] || [0, 0]; how[x.reason][x.qinWin ? 0 : 1]++; }
+      out.push(`| ${name} | ${was.length} | ${Object.entries(how).sort((a, c) => (c[1][0] + c[1][1]) - (a[1][0] + a[1][1])).map(([k, [q, c]]) => `${LC_ZH[k] || k} ${q}/${c}`).join(", ")} | ${was.filter((w) => now.get(w.seed).qinWin).length} |`);
+    }
   }
   out.push("", "Chu's free setup points in 臨淄 (points:games), end turn (turn:games), and seed for seed against the base (the same seeds): winner changed Qin → Chu / Chu → Qin.", "");
   for (const name of order) {
