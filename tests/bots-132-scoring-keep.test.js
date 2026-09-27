@@ -44,7 +44,7 @@ test("#132 the position is what it claims: Chu's last action, 西土記分 playa
   const v = E.view(st, CHU);
   assert.ok(!Array.isArray(v.hands[QIN]), "Chu does not see Qin's hand");
   // Keeping it really is a loss by 記分 here: any non-scoring play ends the turn with Chu holding it.
-  const keep = E.apply(st, { type: "play", side: CHU, card: "mozhe", use: "event" });
+  const keep = E.apply(st, { type: "play", side: CHU, card: "mozhe", use: "place", points: B.greedyPlacement(st, CHU, 1) });
   assert.equal(keep.winner, QIN);
   assert.equal(keep.reason, "scoring");
   // Alive: the guess of Qin's hand the bot works from does hold a scoring card

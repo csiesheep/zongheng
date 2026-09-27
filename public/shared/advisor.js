@@ -24,7 +24,7 @@
 // points the bot was maximising, and `best` is what is left when nothing moved
 // enough to name.
 import * as E from "./engine.js";
-import { decide, determinize, evaluate, heldSinceRestore, simulate } from "./bots.js";
+import { choiceWorld, decide, determinize, evaluate, heldSinceRestore, simulate } from "./bots.js";
 
 const { QIN, CHU, SPACE, SPACES, STATES, SCORED_REGIONS, CARD, JIUDING, REFORM } = E;
 
@@ -68,7 +68,11 @@ export function advise(view, side, rng) {
   // this rng state, so replaying it from `at` reproduces that exact position.
   const aux = E.makeRng(0);
   aux.setState(at);
-  const st = determinize(view, side, aux);
+  // #132: at the last action before the turn-end check the bot weighs two
+  // worlds of the hidden hand (bots.js turnEndWorlds); the reason is read from
+  // the one where the choice matters, the other hand holding no scoring card --
+  // not from a guess that happened to hold one, which made every move "win".
+  const st = choiceWorld(view, side, determinize(view, side, aux), aux);
   const targets = targetsOf(action);
   return {
     action,

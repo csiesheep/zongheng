@@ -228,6 +228,68 @@ export function determinize(view, side, rng) {
   return st;
 }
 
+// ---------- #132: the turn-end check against a hidden hand ----------
+// The turn-end check (engine endTurnChecks, rulebook): a side still holding a
+// scoring card loses; both holding one is a Chu win. When `side` is the last to
+// act before it -- the other side has no action left this turn, which (Qin
+// acting first in a round) is Chu on the last round -- the one thing a guess of
+// the hidden hand decides is whether the other side holds a scoring card, and
+// one guess bet the game on it: a guess holding one made every move look like a
+// win (記分2), so the bot kept its own scoring card about as often as that guess
+// came up, and lost by 記分 whenever the real hand held none (#132; nn 59 : 13
+// of the 記分 ends were Chu's losses).
+//
+// So at that decision the guess is split into the two worlds the check can see:
+// the other hand WITHOUT a scoring card and WITH one, each dealt afresh from the
+// same unseen cards, and every candidate is valued as the weighted sum of both,
+// the weight of "with" being the chance a hand of that size drawn from those
+// cards holds one (the same uniform belief `determinize` deals from). Playing
+// one's scoring card then always beats keeping it: in the "with" world both win,
+// in the "without" world keeping is -1000. And a move that ends the game at
+// once is still weighed in both worlds, which the blunter "count a kept card as
+// a loss" would not do. Returns [{ st, w }] with w > 0, or null when there is
+// nothing to split (not that decision, the hand is seen, or no unseen scoring
+// card could be in it). Draws from `rng` only when it splits.
+// The other side's actions left this turn, `side` acting now (evaluate's count).
+function othersActionsLeft(st, side) {
+  return st.rounds - st.round + (side === QIN ? 1 : 0);
+}
+export function turnEndWorlds(view, side, st, rng) {
+  if (st.phase !== "action" || st.pending || st.actor !== side) return null;
+  const opp = 1 - side;
+  if (Array.isArray(view.hands[opp]) || othersActionsLeft(st, side) > 0) return null;
+  const h = st.hands[opp].length;
+  const pool = st.hands[opp].concat(st.draw);
+  const scoring = pool.filter((c) => CARD[c].scoring), plain = pool.filter((c) => !CARD[c].scoring);
+  if (!h || !scoring.length) return null;
+  // P(no scoring card in h cards drawn from the pool) = C(plain, h) / C(pool, h).
+  let pNone = 1;
+  for (let i = 0; i < h; i++) pNone *= Math.max(0, plain.length - i) / (pool.length - i);
+  const deal = (hand) => {
+    const s = E.clone(st);
+    const rest = pool.slice();
+    for (const c of hand) rest.splice(rest.indexOf(c), 1);
+    s.hands[opp] = hand;
+    s.draw = E.shuffle(rng, rest);
+    s.rngState = rng.int(2 ** 31);
+    return s;
+  };
+  const worlds = [];
+  if (pNone > 0) worlds.push({ st: deal(E.shuffle(rng, plain).slice(0, h)), w: pNone });
+  if (pNone < 1) {
+    const one = pickOne(scoring, rng);
+    const others = E.shuffle(rng, pool.filter((c) => c !== one)).slice(0, h - 1);
+    worlds.push({ st: deal([one, ...others]), w: 1 - pNone });
+  }
+  return worlds;
+}
+// The world a reason is read from at that decision (advisor.js): the one where
+// the choice matters, the other hand holding no scoring card, when it can.
+export function choiceWorld(view, side, st, rng) {
+  const worlds = turnEndWorlds(view, side, st, rng);
+  return worlds ? worlds[0].st : st;
+}
+
 // ---------- playing a candidate out, answering what it asks ----------
 export function simulate(st, action, rng) {
   let s = E.apply(st, action);
@@ -616,7 +678,15 @@ export function scoreCandidates(view, side, rng, level = "normal") {
   const st = determinize(view, side, rng);
   const L = E.legal(st, side);
   if (L.kind !== "action") return [];
-  return actionCandidates(st, side, L).map((a) => ({ a, v: evalAction(st, a, side, rng) })).sort((x, y) => y.v - x.v);
+  const worlds = turnEndWorlds(view, side, st, rng);
+  return actionCandidates(st, side, L).map((a) => ({ a, v: inWorlds(worlds, st, (s) => evalAction(s, a, side, rng)) })).sort((x, y) => y.v - x.v);
+}
+// A value on the guess, or (#132, turnEndWorlds) the weighted sum over its worlds.
+function inWorlds(worlds, st, f) {
+  if (!worlds) return f(st);
+  let t = 0;
+  for (const { st: s, w } of worlds) t += w * f(s);
+  return t;
 }
 
 // ---------- the decision ----------
@@ -631,11 +701,13 @@ export function decide(view, side, level = "normal", rng) {
     case "action": {
       const cands = actionCandidates(st, side, L);
       if (!cands.length) return null;
-      const scored = cands.map((a) => ({ a, v: evalAction(st, a, side, rng) + noise * gauss(rng) }));
+      // #132: at the last action before the turn-end check, over both worlds of the hidden hand.
+      const worlds = turnEndWorlds(view, side, st, rng);
+      const scored = cands.map((a) => ({ a, v: inWorlds(worlds, st, (s) => evalAction(s, a, side, rng)) + noise * gauss(rng) }));
       scored.sort((x, y) => y.v - x.v);
       let top = scored.slice(0, level === "hard" ? 4 : 1);
       if (level === "hard" && top.length > 1) {
-        for (const t of top) t.v = replyValue(st, t.a, side, rng) + noise * gauss(rng);
+        for (const t of top) t.v = inWorlds(worlds, st, (s) => replyValue(s, t.a, side, rng)) + noise * gauss(rng);
         top.sort((x, y) => y.v - x.v);
       }
       const a = top[0].a;
