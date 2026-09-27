@@ -202,7 +202,8 @@ export default {
       // `win`/`lose` (per the issue) so a seated player's text can keep
       // saying "you" without a spectator ever hearing it.
       unification: { title: "Qin unites the realm", body: "Three states destroyed: the map answers to Qin alone.", win: "You win. The realm is united under Qin.", lose: "You lose. Qin unites the realm.", watch: "Qin unites the realm." },
-      alliance: { title: "The Vertical holds", body: "Four seals held: Qin cannot break what is bound together.", win: "You win. The Vertical holds.", lose: "You lose. The Vertical holds against you.", watch: "Chu's alliance holds." },
+      // #135: the seals count is a balance lever -- body doesn't name a number.
+      alliance: { title: "The Vertical holds", body: "Every seal held: Qin cannot break what is bound together.", win: "You win. The Vertical holds.", lose: "You lose. The Vertical holds against you.", watch: "Chu's alliance holds." },
       mandate: { title: "{winner} carries the Mandate", body: "The Mandate reached twenty: the realm has decided for {winner}.", win: "You win. The Mandate is yours.", lose: "You lose. The Mandate turned to {winner}.", watch: "{winner} carries the Mandate." },
       collapse: { title: "The realm gives out on {loser}", body: "Weariness ran out before {winner} had to spend the last of it.", win: "You win. The realm gave out under them first.", lose: "You lose. The realm gave out under you first.", watch: "The realm gives out on {loser} first." },
       scoring: { title: "A card left in hand", body: "A scoring card was still in hand when the turn ended; the tally falls to {winner}.", win: "You win. They were still holding a scoring card.", lose: "You lose. The scoring card was still in your hand.", watch: "{loser} was still holding a scoring card." },
