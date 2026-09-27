@@ -81,7 +81,11 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
     const P = side === E.QIN ? "Q" : "C", last = lastHold(st, side);
     if (last) {
       kp["lastHold" + P]++;
-      if (!(a.type === "play" && E.CARD[a.card]?.scoring)) { kp["keep" + P]++; keptIn[side] = st.turn; }
+      if (!(a.type === "play" && E.CARD[a.card]?.scoring)) {
+        kp["keep" + P]++; keptIn[side] = st.turn;
+        if (last.some((c) => !losesAtOnce(st, side, c))) kp["keepAvoid" + P]++;
+        if (st.hands[1 - side].some((c) => E.CARD[c].scoring)) kp["keepFoeHeld" + P]++;
+      }
     }
     E.probe.place = watch; E.probe.home = home;
     try { st = E.apply(st, a); } finally { E.probe.place = null; E.probe.home = null; }
@@ -120,11 +124,23 @@ export function playGame(seed, { qin = "normal", chu = "normal", options = {} } 
 // something else (kept the card); of the keeps, the game ending at that turn's
 // end check by 記分 / 記分2, lost or won by that side. Reads the state only (E.legal draws no
 // random numbers), so a game plays out exactly as it did without the columns.
-export const KEEP_ROW = ["lastHoldQ", "lastHoldC", "keepQ", "keepC", "keepLostQ", "keepLostC", "keepWonQ", "keepWonC"];
+// Appended later: of the keeps, those where some playable scoring card would
+// NOT have lost the game at once when played (on the true state: a scoring that
+// hands the other side the win -- e.g. the Mandate over the line -- makes keeping
+// the card and hoping the other side holds one too the better play), and those
+// where the other side truly held a scoring card too.
+export const KEEP_ROW = ["lastHoldQ", "lastHoldC", "keepQ", "keepC", "keepLostQ", "keepLostC", "keepWonQ", "keepWonC", "keepAvoidQ", "keepAvoidC", "keepFoeHeldQ", "keepFoeHeldC"];
+// The scoring cards `side` may play at its last action of the turn, or null.
 function lastHold(st, side) {
-  if (st.phase !== "action" || st.pending || st.actor !== side || st.round !== st.rounds) return false;
+  if (st.phase !== "action" || st.pending || st.actor !== side || st.round !== st.rounds) return null;
   const L = E.legal(st, side);
-  return L.kind === "action" && !(L.bog && L.bog.length) && L.cards.some((c) => E.CARD[c.id]?.scoring);
+  if (L.kind !== "action" || (L.bog && L.bog.length)) return null;
+  const cards = L.cards.filter((c) => E.CARD[c.id]?.scoring).map((c) => c.id);
+  return cards.length ? cards : null;
+}
+// Played as its event on the true state, the card ends the game for the other side.
+function losesAtOnce(st, side, card) {
+  try { return E.apply(st, { type: "play", side, card, use: "event" }).winner === 1 - side; } catch { return false; }
 }
 // #130 per-game columns, appended after EMP_ROW. Lobby: actions, ops, attempts
 // (realign only), enemy points removed, own points lost, attempts the actor
@@ -815,12 +831,13 @@ export function report132(files) {
     out.push(`| ${name} | ${sq(rows)} | ${sc(rows)} | ${s2(rows)} | ${rate(sq(rows) + sc(rows) + s2(rows), n)} | ${rate(sq(rows), n)} | ${other ? dp(sq(b.rows), b.n, sq(rows), n) : ""} |`);
   }
   out.push("", "A side's last action of a turn (round = rounds) with a scoring card among its legal plays: how often it played something else (kept the card), and how the game went right then. Per side, all games of the cell pooled.", "");
-  out.push("| cell | Qin: held / kept | kept → lost by 記分 | Chu: held / kept | kept, % of held [95%] | kept → lost by 記分 | kept → won (記分2) | games with a Chu keep | Chu keeps / game |");
-  out.push("|---|---|---|---|---|---|---|---|---|");
+  out.push("'avoidable' = some playable scoring card would not have lost the game at once (on the true state); the rest are keeps where playing the card hands the other side the win there and then, and keeping it is the only chance (the other side holding one too). 'foe held' = the other side truly held a scoring card.", "");
+  out.push("| cell | Qin: held / kept / avoidable | Qin kept → lost by 記分 | Chu: held / kept / avoidable | Chu kept, % of held [95%] | Chu avoidable keeps, % of held [95%] | foe held | kept → lost by 記分 | kept → won (記分2) | Chu avoidable keeps / game |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|");
   for (const name of order) {
     const { rows, n } = cells[name];
-    const hq = sum(rows, "lastHoldQ"), kq = sum(rows, "keepQ"), hc = sum(rows, "lastHoldC"), kc = sum(rows, "keepC");
-    out.push(`| ${name} | ${hq} / ${kq} | ${sum(rows, "keepLostQ")} | ${hc} / ${kc} | ${rate(kc, hc)} | ${sum(rows, "keepLostC")} | ${sum(rows, "keepWonC")} | ${cnt(rows, (x) => x.keepC > 0)} | ${(kc / (n || 1)).toFixed(3)} |`);
+    const hq = sum(rows, "lastHoldQ"), kq = sum(rows, "keepQ"), hc = sum(rows, "lastHoldC"), kc = sum(rows, "keepC"), ac = sum(rows, "keepAvoidC");
+    out.push(`| ${name} | ${hq} / ${kq} / ${sum(rows, "keepAvoidQ")} | ${sum(rows, "keepLostQ")} | ${hc} / ${kc} / ${ac} | ${rate(kc, hc)} | ${rate(ac, hc)} | ${sum(rows, "keepFoeHeldC")} | ${sum(rows, "keepLostC")} | ${sum(rows, "keepWonC")} | ${(ac / (n || 1)).toFixed(3)} |`);
   }
   out.push("", "End reasons, % of games [Wilson 95%], and won by Qin / by Chu:", "");
   out.push(`| cell | ${LC_REASONS.map((e) => LC_ZH[e]).join(" | ")} |`);
