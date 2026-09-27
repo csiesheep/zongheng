@@ -6,7 +6,7 @@ import * as E from "../public/shared/engine.js";
 import { playRandomGame } from "./driver.js";
 
 const GAMES = Number(process.env.FUZZ_GAMES || 60);
-const REASONS = new Set(["unification", "alliance", "mandate", "collapse", "scoring", "scoringBoth", "final", "tie", "emperor"]);
+const REASONS = new Set(["unification", "alliance", "mandate", "collapse", "scoring", "scoringBoth", "final", "tie", "emperor", "homeFall"]); // homeFall: #133 made lose-turn the default
 const ALL = E.CARDS.map((c) => c.id).sort();
 
 function checkInvariants(st, seed) {

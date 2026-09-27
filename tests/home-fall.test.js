@@ -61,7 +61,8 @@ function toTurnEnd(s) {
 const BOARD = { guanzhong: [1, 4], ying: [4, 1], hangu: [3, 0], wuyue: [0, 2], song: [1, 1] };
 
 test("absent and none: the enemy may hold your capital, nothing ends", () => {
-  for (const options of [{}, { homeFall: "none" }]) {
+  // "Absent" is an old save's options (#133 made lose-turn the default): `homeFall: undefined` stands for that.
+  for (const options of [{ homeFall: undefined }, { homeFall: "none" }]) {
     const st = stage(options, CHU, { inf: BOARD });
     const after = E.apply(st, place(CHU, "tiangou", "guanzhong"));
     assert.equal(E.controller(after, "guanzhong"), CHU);
@@ -128,7 +129,7 @@ test("lose-turn: the view says which home capital the enemy holds right now; no 
   for (const seat of [QIN, CHU, null]) {
     assert.deepEqual(E.view(s, seat).homeCapitals, [{ side: QIN, capital: "guanzhong", heldBy: CHU }, { side: CHU, capital: "ying", heldBy: null }], `seat ${seat}`);
   }
-  assert.equal("homeCapitals" in E.view(stage({}, CHU, { inf: BOARD }), QIN), false);
+  assert.equal("homeCapitals" in E.view(stage({ homeFall: undefined }, CHU, { inf: BOARD }), QIN), false);
 });
 
 test("lose-turn: every turn end logs one check per capital -- safe, or fallen (and then the game is over)", () => {
@@ -144,7 +145,7 @@ test("lose-turn: every turn end logs one check per capital -- safe, or fallen (a
   assert.ok(over > fell.log.indexOf(c2[1]), "the checks come before the end of the game");
   assert.equal(fell.reason, "homeFall");
   // Without homeFall no such entry.
-  assert.equal(toTurnEnd(stage({}, CHU, { inf: BOARD })).log.some((l) => l.type === "capitalCheck"), false);
+  assert.equal(toTurnEnd(stage({ homeFall: undefined }, CHU, { inf: BOARD })).log.some((l) => l.type === "capitalCheck"), false);
 });
 
 test("lose-majority: more enemy influence than yours at the end of a turn loses; level does not", () => {

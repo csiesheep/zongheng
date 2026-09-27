@@ -139,7 +139,8 @@ test("end reasons: the engine's list is the one this test expects to cover, empe
 
 for (const [lang, L] of [["zh-Hant", ZH], ["en", EN]]) {
   test(`end reasons (${lang}): every reason renders a string in every view -- winner, loser, spectator, log`, () => {
-    const p = { winner: L.sides.qin, loser: L.sides.chu };
+    // {capital}: the fallen home capital's name, which renderOver() and the log's over row pass for homeFall (#133).
+    const p = { winner: L.sides.qin, loser: L.sides.chu, capital: lang === "en" ? "Ying" : "郢" };
     const bad = [];
     for (const r of ENGINE_REASONS) {
       for (const f of ["title", "body", "win", "lose", "watch"]) {
