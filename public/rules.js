@@ -1100,7 +1100,13 @@ function render() {
   $("backLink").textContent = fromGame ? N.nav.backGame : N.nav.back;
   $("barMid").textContent = N.landing.rulesLink;
   $("langBtn").textContent = N.nav.lang;
-  $("credit").textContent = S.credit;
+  $("credit").textContent = S.credit + " · ";
+  const privacyLink = document.createElement("a");
+  privacyLink.href = "https://csiesheep.com/privacy-policy/";
+  privacyLink.target = "_blank";
+  privacyLink.rel = "noopener";
+  privacyLink.textContent = N.landing.privacy;
+  $("credit").appendChild(privacyLink);
   updateTabsUI(N);
   // Read fresh every render(): the bar's own height can change with the
   // language (line-wrapped labels) or the viewport, and rules-desktop.css's

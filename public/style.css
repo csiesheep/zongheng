@@ -433,6 +433,7 @@ body:has(#over:not([hidden])) .bar::after {
 .seat .tag { font-size: 11px; color: #4a463c; border: 1px solid #8a8060; border-radius: 6px; padding: 1px 5px; margin-left: 6px; }
 .seat.away { opacity: 0.6; }
 .credit { margin-top: auto; padding: 18px 14px 14px; font-size: 11px; line-height: 1.6; color: #8a7f68; max-width: 640px; }
+.credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 /* ---------- landing (100svh, never scrolls) ---------- */
 .landing-body { min-height: 100svh; }
@@ -519,6 +520,8 @@ body:has(#over:not([hidden])) .bar::after {
    exactly, so this fixed math is load-bearing: don't add a border or
    padding here without re-deriving it. */
 .controls { flex: none; height: 116px; box-sizing: border-box; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.landing-foot { flex: none; margin: 0; padding: 0 0 10px; text-align: center; font-size: 12px; opacity: .75; }
+.landing-foot a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .controls .row { display: flex; gap: 8px; }
 .controls input, .controls button, .controls .ctl-btn { height: 44px; box-sizing: border-box; }
 .controls input { flex: 1; min-width: 0; padding: 0 12px; border: 1px solid var(--gold-line); border-radius: 10px; background: rgba(255, 255, 255, 0.05); color: var(--text); font: 700 16px var(--sans); letter-spacing: 4px; text-align: center; }
