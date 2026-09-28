@@ -31,6 +31,7 @@ import zh from "./i18n/zh-Hant.js";
 import * as D from "./shared/report-digest.js"; // the real digest/turnEnds module (be/138-report), not a stub
 import { buildLogText, buildFilename } from "./log-text.js";
 import * as LogDL from "./log-download.js";
+import { adOn, adSlotHTML, activateAds } from "./ads.js"; // #145: empty, invisible slots until AdSense is set up
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -333,6 +334,55 @@ function wireFooter(gameExp) {
   };
 }
 
+// ---------- ad slots (#145) ----------
+// After chapter 2, then after every 3 more (5, 8, ...), never directly after the last chapter
+// (the one at the end of the article takes that place).
+const slotAfterChapter = (k, n) => k >= 2 && (k - 2) % 3 === 0 && k < n;
+// Desktop rail: only where the width is (>= 1100px), and drawn only then, so a narrow window never asks
+// for a unit it has no room for. With no ad client it is never shown and takes no space.
+const railQuery = window.matchMedia("(min-width: 1100px)");
+function fillRail() {
+  const rail = $("rpRail"), root = $("rpRoot");
+  const on = adOn("rail") && railQuery.matches && !$("rpArticle").hidden;
+  root.classList.toggle("has-rail", on);
+  if (!on) { rail.hidden = true; rail.textContent = ""; return; }
+  if (rail.hidden) {
+    rail.innerHTML = adSlotHTML("rail", t("report.adLabel"));
+    rail.hidden = false;
+    activateAds(rail);
+  }
+}
+railQuery.addEventListener("change", fillRail);
+
+// ---------- the waiting page's recap: 本局回顧 (#145) ----------
+// Built from the game the GET hands back (also while pending), in the current language, and only when the
+// game or the language changed -- not on every poll. If it can't be built, the status line stands alone.
+let recapFor = "";
+function recapHTML(gameExp) {
+  const ends = D.turnEnds(gameExp);
+  const years = D.yearHighlights(gameExp, lang === "en" ? "en" : "zh");
+  const result = resultLineText(gameExp);
+  const rows = years.map((y) => `<div class="rp-yr"><span class="rp-yr-n">${esc(t("report.yearN", { n: lang === "en" ? y.turn : (ZH_NUM[y.turn] || y.turn) }))}</span>` +
+    `<span class="rp-yr-t">${y.items.map((s) => `<span>${esc(s)}</span>`).join("")}</span></div>` +
+    (y.turn === Math.min(3, years.length) ? adSlotHTML("wait", t("report.adLabel")) : "")).join("");
+  return `<div class="rp-recap-head"><h2>${esc(t("report.recapTitle"))}</h2><span>${esc(result)}</span></div>` +
+    `<div class="rp-chart">${chartSVG(ends)}<p class="rp-chart-cap">${esc(t("report.mandateCaption"))}</p></div>` +
+    `<h3 class="rp-recap-years">${esc(t("report.recapYears", { n: ZH_NUM[years.length] || years.length }))}</h3>${rows}`;
+}
+function renderRecap(gameExp) {
+  const box = $("rpRecap");
+  const tag = gameExp ? `${lang}|${(gameExp.final && gameExp.final.actions ? gameExp.final.actions.length : 0)}|${gameExp.final && gameExp.final.seed}` : "";
+  if (tag === recapFor && (box.hidden === !gameExp)) return;
+  recapFor = tag;
+  if (!gameExp) { box.hidden = true; box.textContent = ""; return; }
+  try {
+    box.innerHTML = recapHTML(gameExp);
+    box.hidden = false;
+    activateAds(box);
+  } catch { box.hidden = true; box.textContent = ""; recapFor = ""; }
+}
+let pendingGame = null;
+
 // ---------- article assembly ----------
 function articleHTML(R, gameExp, ends, mine) {
   const result = resultLineText(gameExp);
@@ -343,8 +393,9 @@ function articleHTML(R, gameExp, ends, mine) {
     `<div class="rp-chart">${chartSVG(ends)}<p class="rp-chart-cap">${esc(t("report.mandateCaption"))}</p></div>` +
     tocHTML(R.chapters || []) +
     `<p class="rp-intro">${esc(R.intro || "")}</p>` +
-    (R.chapters || []).map(chapterHTML).join("") +
+    (R.chapters || []).map((ch, i, all) => chapterHTML(ch) + (slotAfterChapter(i + 1, all.length) ? adSlotHTML("inArticle", t("report.adLabel")) : "")).join("") +
     `<p class="rp-end">${esc(R.ending || "")}</p>` +
+    adSlotHTML("end", t("report.adLabel")) +
     footerHTML();
 }
 
@@ -355,6 +406,8 @@ function showWaiting() {
   $("rpWaitingTitle").textContent = t("report.waitingTitle");
   $("rpWaitingNote").textContent = t("report.waitingNote");
   $("rpWaitingBack").textContent = t("report.wayBack");
+  fillRail();
+  renderRecap(pendingGame);
 }
 let lastErrorKey = null;
 function showError(key) {
@@ -364,6 +417,7 @@ function showError(key) {
   $("rpError").hidden = false;
   $("rpErrorTitle").textContent = t(key);
   $("rpErrorBack").textContent = t("report.wayBack");
+  fillRail();
 }
 function isMineFlag(key) {
   try { return sessionStorage.getItem("zh.report.mine." + key) === "1"; } catch { return false; }
@@ -382,6 +436,9 @@ function renderReport(data, key) {
   article.innerHTML = articleHTML(R, gameExp, ends, isMineFlag(key));
   document.querySelectorAll(".rp-mapbox").forEach((box) => { fitMapBox(box); mapObserver.observe(box); });
   wireFooter(gameExp);
+  $("rpRail").hidden = true; // redrawn below, so its label follows the language
+  fillRail();
+  activateAds(article);
 }
 // Switching language re-renders from the ALREADY-FETCHED report (both `zh`
 // and `en` come back on the same GET) -- no new request -- and keeps the
@@ -415,7 +472,7 @@ async function tick(key) {
   if (res.status === 404) { showError("report.notFound"); return; }
   if (!res.ok) { pollTimer = setTimeout(() => tick(key), 3000); return; }
   try { data = await res.json(); } catch { pollTimer = setTimeout(() => tick(key), 3000); return; }
-  if (data.state === "pending") { showWaiting(); pollTimer = setTimeout(() => tick(key), 3000); return; }
+  if (data.state === "pending") { pendingGame = data.game || null; showWaiting(); pollTimer = setTimeout(() => tick(key), 3000); return; }
   if (data.state === "failed") { showError("report.failed"); return; }
   if (data.state === "done") { renderReport(data, key); return; }
   showError("report.failed");

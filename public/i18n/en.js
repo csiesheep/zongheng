@@ -649,6 +649,11 @@ export default {
     shareCopied: "Link copied",
     footnote: "Written by AI from this game's record · maps and cards are the real position",
     viewCard: "View card ›", // #138 owner: a link label, not narrative -- stays
+    // #145 (added by FE; this file is the writer's): the waiting page's recap and the ad label.
+    recapTitle: "Recap of this game",
+    recapYears: "Year by year",
+    yearN: "Year {n}",
+    adLabel: "Advertisement",
     mandateCaption: "The realm's favor at each year's end · Qin above, Chu below",
     // #144 (FE change -- flagged at hand-in, this file belongs to writer):
     // one-line captions under a year's map, shown only for whichever of
