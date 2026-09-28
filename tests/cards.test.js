@@ -7,7 +7,7 @@ import * as E from "../public/shared/engine.js";
 const { QIN, CHU } = E;
 
 function atAction(hands = [[], []], patch = {}) {
-  let st = E.createGame(11);
+  let st = E.createGame(11, { qinFarStart: 0 }); // #142 made D1 (Qin 1 in 臨淄 / 薊) the default; these positions were built without it.
   st = E.apply(st, { type: "choose", side: QIN, choice: ["yiyang", "yiyang", "hedong", "hedong"] });
   st = E.apply(st, { type: "choose", side: CHU, choice: ["song", "song", "huaisi", "chencai"] });
   st.draw = st.draw.concat(st.hands[0], st.hands[1]).filter((c) => !hands.flat().includes(c));

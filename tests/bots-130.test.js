@@ -65,7 +65,7 @@ function* staged(options, side, set) {
 const CARDS = ["tiangou", "yetie", "huanghe", "daji", "zhizi", "mibing"];
 function stage(options, side, seed, set) {
   const rng = E.makeRng(seed * 7919);
-  let s = E.createGame(seed, options);
+  let s = E.createGame(seed, { qinFarStart: 0, ...options }); // #142 made D1 (Qin 1 in 臨淄 / 薊) the default; these positions were built without it.
   for (let k = 0; s.winner == null && k < 3000; k++) {
     if (s.phase === "action" && s.actor === side && !s.pending && s.turn === 3) break;
     const who = E.mustAct(s), x = who[rng.int(who.length)];

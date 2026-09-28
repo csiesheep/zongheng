@@ -199,6 +199,9 @@ function racePositions(options, box, used, extra = []) {
     // A random opening can leave Qin forced to play a card (細作 etc.): then no 4-op card can be played and there is
     // no win to take. #134 found seed 25 forced to 荊軻 under realign-own; the race is about the bot's choice, so clear it.
     st.forced = [null, null];
+    // #142: with D1 the random opening can also leave a lasting effect on Qin (seed 8: Chu's 頓兵堅城); the race is
+    // about the bot's choice in a clean position, so clear those too.
+    st.effects = [];
     out.push({ seed, st });
   }
   return out;

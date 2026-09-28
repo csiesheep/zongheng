@@ -23,7 +23,7 @@ const { QIN, CHU } = E;
 // Setup and the headline phase out of the way, with two quiet headlines, so
 // every test below starts at turn 1, action round 1, with Qin to act.
 function dealt(seed = 7) {
-  let st = E.createGame(seed);
+  let st = E.createGame(seed, { qinFarStart: 0 }); // #142 made D1 (Qin 1 in 臨淄 / 薊) the default; these positions were built without it.
   while (st.pending) {
     const p = st.pending;
     st = E.apply(st, { type: "choose", side: p.who, choice: p.options.slice(0, p.n) });

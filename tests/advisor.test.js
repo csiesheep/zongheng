@@ -28,7 +28,7 @@ const USES = ["event", "place", "campaign", "lobby", "reform", "score", "bog", "
 const ORDERS = ["opsFirst", "eventFirst"];
 
 function opened(seed = 11) {
-  let st = E.createGame(seed);
+  let st = E.createGame(seed, { qinFarStart: 0 }); // #142 made D1 (Qin 1 in 臨淄 / 薊) the default; these positions were built without it.
   st = E.apply(st, { type: "choose", side: QIN, choice: ["yiyang", "yiyang", "hedong", "hedong"] });
   st = E.apply(st, { type: "choose", side: CHU, choice: ["song", "song", "huaisi", "chencai"] });
   return st;
@@ -95,7 +95,7 @@ test("advisor: 20 seeded games, the advice is the hard bot's own legal move at e
   let checks = 0;
   for (let seed = 1; seed <= 20; seed++) {
     const rng = E.makeRng(seed ^ 0x9e3779b9);
-    let st = E.createGame(seed);
+    let st = E.createGame(seed, { qinFarStart: 0 });
     let taken = 0;
     for (let step = 0; st.winner == null && step < 400 && taken < 4; step++) {
       const who = E.mustAct(st);
@@ -115,7 +115,7 @@ test("advisor: the headline, the opening placement and an event's pending all ge
   const seen = new Set();
   for (let seed = 30; seed < 45 && seen.size < 3; seed++) {
     const rng = E.makeRng(seed);
-    let st = E.createGame(seed);
+    let st = E.createGame(seed, { qinFarStart: 0 });
     for (let step = 0; st.winner == null && step < 60; step++) {
       const who = E.mustAct(st);
       if (!who.length) break;

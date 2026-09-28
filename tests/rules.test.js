@@ -9,7 +9,7 @@ const { QIN, CHU, JIUDING } = E;
 // A game past setup, parked at Qin's first action with an empty plan and the
 // hands replaced by what the test needs. Headlines are skipped on purpose.
 function atAction(hands = [[], []], patch = {}) {
-  let st = E.createGame(11);
+  let st = E.createGame(11, { qinFarStart: 0 }); // #142 made D1 (Qin 1 in 臨淄 / 薊) the default; these positions were built without it.
   st = E.apply(st, { type: "choose", side: QIN, choice: ["yiyang", "yiyang", "hedong", "hedong"] });
   st = E.apply(st, { type: "choose", side: CHU, choice: ["song", "song", "huaisi", "chencai"] });
   assert.equal(st.phase, "headline");
