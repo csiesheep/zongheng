@@ -26,7 +26,7 @@ html:not([lang="en"]) .en { display: none; }
 .tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border: 1px solid var(--gold-line); border-radius: 999px; font: 11px/1.5 system-ui, sans-serif; color: var(--gold); letter-spacing: 0; vertical-align: 2px; }
 .etitle { margin: 2px 0 4px; font-family: var(--kai); font-weight: 400; font-size: 18px; line-height: 1.4; color: #f4d98a; }
 .ebody { margin: 0; font-size: 14.5px; line-height: 1.8; color: var(--text-soft); overflow-wrap: anywhere; }
-.eshot { display: block; margin-top: 10px; width: 100%; height: 150px; object-fit: cover; object-position: top; border: 1px solid var(--gold-line); border-radius: 10px; }
+.eshot { display: block; margin-top: 10px; width: 100%; height: auto; border: 1px solid var(--gold-line); border-radius: 10px; }
 .eshot-d { display: none; }
 
 .dl-side { margin-top: 22px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -53,7 +53,7 @@ html:not([lang="en"]) .en { display: none; }
   .etitle { margin: 0 0 6px; font-size: 21px; }
   .ebody { font-size: 15.5px; line-height: 1.85; }
   .eshot-m { display: none; }
-  .eshot-d { display: block; width: 340px; height: 260px; margin: 0; border-radius: 12px; }
+  .eshot-d { display: block; width: 340px; height: auto; margin: 0; border-radius: 12px; }
   .dl-side { margin-top: 0; padding-top: 118px; }
   .blog { padding: 18px; gap: 8px; }
   .blog-t { font-size: 20px; }
