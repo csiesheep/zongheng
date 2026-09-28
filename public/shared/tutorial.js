@@ -117,6 +117,10 @@ export function createTutorial() {
   st.effects = []; st.forced = [null, null]; st.revealed = [false, false];
   st.winner = null; st.reason = null;
   st.log = []; st.logSeq = 0;
+  // #137: this position is written by hand, not reached by actions from the
+  // seed, so it cannot be replayed: no action list, so nothing is recorded
+  // and an export of it carries no `final.actions`.
+  delete st.actions;
   // #133 part 3b: lesson 8's own dice 遊說 needs a deterministic roll (the
   // brief's own "the tutorial's own RNG, or a fixed roll for the lesson").
   // No earlier lesson's script ever calls into the RNG (no card here has a

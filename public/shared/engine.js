@@ -769,10 +769,25 @@ export function forcedCard(st, side) {
 export function jiudingUsable(st, side) { return st.jiuding.holder === side && !st.jiuding.faceDown; }
 
 // ---------- creating a game ----------
+// #137: which rules a game was created under, kept in the state
+// (`st.rulesVersion`, public) and written into an export's `game.rulesVersion`,
+// so a later engine can tell whether a recorded action list still replays
+// under its rules. It is the date of the last change to what a given seed +
+// options + actions play out to: bump it (to that day's date, "-2" for a
+// second change the same day) with any change to the rules in engine.js /
+// cards.js / board.js, or to what the engine does with a given options object.
+// A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
+// and a replay uses the recorded options exactly (`replay`).
+export const RULES_VERSION = "2026-09-27";
+// A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
+  return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
+}
+// `options` is the game's complete options object, used as it is.
+function startGame(seed, options) {
   const rng = makeRng(seed);
   const st = {
-    seed, rngState: 0, options: { ...DEFAULT_OPTIONS, ...options },
+    seed, rngState: 0, options, rulesVersion: RULES_VERSION,
     turn: 0, era: null, phase: "setup", round: 0, rounds: 0, actor: QIN, phasing: QIN,
     inf: {}, mandate: 0, weariness: 5,
     reform: [0, 0], reformUsed: [0, 0], reformFirst: {}, perkUsed: [false, false],
@@ -782,6 +797,12 @@ export function createGame(seed, options = {}) {
     hands: [[], []], headline: [null, null],
     effects: [], forced: [null, null], revealed: [false, false],
     pending: null, plan: [], winner: null, reason: null, log: [],
+    // #137: every action `apply` accepts, as given, in order: with the seed
+    // and the options it replays the game exactly (`replay` below). It holds
+    // hidden choices (a headline before the reveal, a card out of a hand), so
+    // `view` drops it until the game is over. A state without it (a save from
+    // before #137, the tutorial's hand-built position) records nothing.
+    actions: [],
   };
   for (const side of [QIN, CHU]) {
     for (const [id, n] of Object.entries(SETUP[SIDES[side]].fixed)) ensure(st, id)[side] = n;
@@ -1159,12 +1180,32 @@ export function mustAct(st) {
 export function apply(state, action) {
   const st = clone(state);
   if (st.winner != null) fail("game over");
+  // Copied before the handlers run, so what is kept is the action as given.
+  const given = Array.isArray(st.actions) ? clone(action) : null;
+  let out;
   switch (action.type) {
-    case "choose": return choose(st, action);
-    case "headline": return headline(st, action);
-    case "play": return play(st, action);
+    case "choose": out = choose(st, action); break;
+    case "headline": out = headline(st, action); break;
+    case "play": out = play(st, action); break;
     default: fail(`unknown action ${action.type}`);
   }
+  // Only an accepted action gets here: a refusal throws and the clone is dropped.
+  if (given) out.actions.push(given);
+  return out;
+}
+
+// #137: the game again from its seed, its options and its recorded actions.
+// `options` is the game's own `st.options` (an export's `game.options`), used
+// EXACTLY as recorded: it is not merged over today's DEFAULT_OPTIONS, so a key
+// the recorded object lacks (a key added or a default flipped since, or one a
+// JSON copy dropped because it was undefined) stays absent, which the engine
+// reads as the old rule, as it did when the game was played. No actions (a game from before #137, or the tutorial) means
+// no replay: this throws rather than hand back a game that never happened.
+export function replay(seed, options, actions) {
+  if (!Array.isArray(actions)) fail("replay: this game has no recorded actions");
+  let st = startGame(seed, clone(options || {}));
+  for (const a of actions) st = apply(st, a);
+  return st;
 }
 
 function choose(st, action) {
@@ -1399,7 +1440,10 @@ export function legal(st, side) {
 export function view(st, side) {
   // The plan stays: it names only cards already face up and choices already
   // made, and a bot answering a pending needs it to simulate.
-  const v = clone(st);
+  // #137: the action list never goes into a view's top level, mid-game or
+  // after (it names hidden choices); it is left out of the copy rather than
+  // copied and deleted, since bots and the UI call this constantly.
+  const v = clone({ ...st, actions: undefined });
   // The seed goes with the rng state (#131): the game replays from seed +
   // moves and the decks are public, so a seed rebuilds both hands and the draw.
   delete v.seed; delete v.rngState;
@@ -1436,6 +1480,10 @@ export function view(st, side) {
       hands: st.hands, draw: st.draw, later: st.later, discard: st.discard, removed: st.removed,
       seed: st.seed ?? 0, inf: st.inf, reform: st.reform, weariness: st.weariness, seals: st.seals, mie: st.mie,
     });
+    // With seed + options (`v.options`) the recorded actions replay the game
+    // (`replay`). A game without them (older save, tutorial) has no `actions`
+    // key here at all: that absence is the "not replayable" mark.
+    if (Array.isArray(st.actions)) v.final.actions = clone(st.actions);
   }
   return v;
 }
