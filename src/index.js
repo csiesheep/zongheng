@@ -8,7 +8,9 @@
 // The public path segment is independent of the repo / Worker name; change
 // PREFIX alone to move the site to a different path.
 export { Room } from "./room.js";
+export { Report } from "./report.js";
 import { withRange } from "./range.js";
+import { handleReportRequest } from "./report-core.js";
 
 const PREFIX = "/zongheng";
 const CANONICAL = "https://games.csiesheep.com" + PREFIX + "/";
@@ -139,6 +141,8 @@ export default {
 
     const sub = url.pathname.slice(PREFIX.length);
     if (sub === "/ws") return connectRoom(request, env, url);
+    // #138: the 戰報 (POST an export; GET a stored report by its key).
+    if (sub === "/api/report" || sub.startsWith("/api/report/")) return handleReportRequest(request, env, sub);
     if (sub === "/sitemap.xml") {
       return new Response(SITEMAP_XML, { headers: { "content-type": "application/xml; charset=utf-8" } });
     }

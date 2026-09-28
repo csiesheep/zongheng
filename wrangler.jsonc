@@ -22,12 +22,27 @@
     "run_worker_first": true
   },
   // One Durable Object per two-player room, named by its four-letter code.
+  // #138: one per game report, named by the game's key (report-digest.js
+  // reportKey), plus one named "__cap__" that counts the day's generations.
   "durable_objects": {
     "bindings": [
-      { "name": "ROOMS", "class_name": "Room" }
+      { "name": "ROOMS", "class_name": "Room" },
+      { "name": "REPORTS", "class_name": "Report" }
     ]
   },
   "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["Room"] }
+    { "tag": "v1", "new_sqlite_classes": ["Room"] },
+    { "tag": "v2", "new_sqlite_classes": ["Report"] }
+  ],
+  // #138: new report generations per UTC day, across all games (the owner's
+  // cost stop, about US$0.05 a game). A stored report is always served.
+  // DEEPSEEK_API_KEY is a secret (wrangler secret put); DEEPSEEK_BASE_URL, not
+  // set here, points the model call at a local stub (in .dev.vars).
+  "vars": {
+    "REPORT_DAILY_CAP": "100"
+  },
+  // The 戰報 skill prompts (src/report-skill/*.md) are imported as text.
+  "rules": [
+    { "type": "Text", "globs": ["**/*.md"], "fallthrough": true }
   ]
 }
