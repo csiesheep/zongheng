@@ -59,9 +59,9 @@ const T = {
     // #133:國都陷落(homeFall)補進第八種;遊說已改骰子版,見下面 usesRows。
     endsRows: [["一統", "秦同時滅掉五國(韓、魏、趙、齊、燕)之中的三國:控制該國全部據點即為滅。"], ["合縱", `楚同時持有${sealsWord("zh-Hant")}國相印:控制該國國都,而且在那裡的影響力達到上限(安定值 + 2)。`], ["天命", "天命軌到達任一方 20。"], ["稱帝", "先抵達稱帝、且當時天命領先,即獲勝;否則天命 +3。"], ["土崩", "把疲敝軌推到土崩的人立刻敗北,包括打出對手陣營的牌時觸發的對手事件。"], ["記分卡", "回合結束時手上還有記分卡的人敗北。"], ["終局", "第 8 回合結束後五區各結算一次,天命領先者勝;平手楚勝。"], ["國都陷落", "回合結束時,一方的國都仍在對方控制下,那一方立刻敗北。"]],
     board: "棋盤",
-    boardText: "26 個據點,分五個記分區(三晉、西土、南方、東方、北疆)與周。五個「國」畫在區域之內,各有一個國都:韓(新鄭)、魏(大梁)、趙(邯鄲)、齊(臨淄)、燕(薊)。★ 為要衝,共八個。每據點有安定值 2 到 4。",
+    boardText: "26 個據點,分五個記分區(三晉、西土、南方、東方、北疆)與周。五個「國」畫在區域之內,各有一個國都:韓(新鄭)、魏(大梁)、趙(邯鄲)、齊(臨淄)、燕(薊)。★ 為要衝,共八個。每據點有安定值 2 到 4。秦、楚各有本國國都(關中、郢),地圖上標「都」,國都陷落規則以此判定。",
     mapAlt: "地圖:26 個據點分屬五個記分區與周,每個據點旁的小方籤標著它的安定值,★ 是要衝,方形圓盤是國都;屬於五國之一的 14 個據點,還帶著一個彩色小方籤,籤上一字標著所屬國(韓、魏、趙、齊、燕)。",
-    mapLegend: "★ 要衝　▢ 國都　籤上的數字 = 安定值　色塊 = 記分區　小方籤:所屬國(韓 魏 趙 齊 燕)　數字上一橫 = 這一方已達上限(安定值 + 2)",
+    mapLegend: "★ 要衝　▢ 國都　都 = 秦、楚本國國都　籤上的數字 = 安定值　色塊 = 記分區　小方籤:所屬國(韓 魏 趙 齊 燕)　數字上一橫 = 這一方已達上限(安定值 + 2)",
     control: "影響力與控制",
     controlText: "控制 = 我方影響力 ≥ 對方影響力 + 安定值。任一方在任一據點最多安定值 + 2 點,多的消失。",
     // #129:地圖上「數字上一橫」的意思——設計 D(owner's cap_design_D.png)。
@@ -87,7 +87,7 @@ const T = {
       ["補牌", "補到手牌上限;牌庫抽完時把棄牌堆(不含已移除的牌)洗成新牌庫。第 4、7 回合補牌前先把該期牌庫洗入抽牌堆。"],
       ["標題階段", "雙方各從手牌選一張牌蓋下(可蓋記分卡,不可蓋九鼎),同時翻開;行動點高者的事件先結算,同點秦先。標題牌的事件一定發生,就算是對手陣營的牌。變法軌第 4 格「行縣制」解鎖後,對手先亮牌。"],
       ["行動回合", "秦、楚輪流,各打 6 或 7 次,每次打 1 張牌(或九鼎)。"],
-      ["結算", "手上仍有記分卡者敗北;疲敝軌後退 1 格;控制洛邑者天命 +1;本回合效果結束;已解鎖「明法令」者可棄 1 張非記分卡,事件不觸發。"],
+      ["結算", "手上仍有記分卡者敗北;國都在對手控制下者敗北;疲敝軌後退 1 格;控制洛邑者天命 +1;本回合效果結束;已解鎖「明法令」者可棄 1 張非記分卡,事件不觸發。"],
     ],
     scoring: "記分",
     scoringText: "記分卡結算該區,兩邊各算,差額記入天命。存在:控制 ≥ 1 據點;優勢:控制據點數與要衝數都多於對手;獨佔:控制全區。另加該區每個要衝 +1。",
@@ -109,9 +109,9 @@ const T = {
     // new eighth way; Lobby's own row below now describes the dice rule.
     endsRows: [["Unification", "Qin holds three of the five states (韓 Han, 魏 Wei, 趙 Zhao, 齊 Qi, 燕 Yan) at once: a state is destroyed when Qin controls every one of its spaces."], ["Alliance", `Chu holds the seals of ${sealsWord("en")} states at once: a seal needs control of the capital with Chu's influence there at the cap (stability + 2).`], ["Mandate", "The Mandate track reaches 20 for either side."], ["Emperor", "The first to reach Emperor (reform box 6) while leading the Mandate wins at once; otherwise it gains 3 Mandate."], ["Collapse", "Whoever pushes weariness to the last box loses, even through the other side's event played for ops."], ["Scoring card", "A scoring card still in hand when the turn ends loses."], ["Final scoring", "After turn 8 every region scores once; the Mandate leader wins, a tie goes to Chu."], ["Capital falls", "At a turn's end, either side's home capital is still under the enemy's control: that side loses at once."]],
     board: "The map",
-    boardText: "26 spaces in five scoring regions (Three Jin, West, South, East, North) and Zhou. Five states sit inside the regions, each with a capital: Han (Xinzheng), Wei (Daliang), Zhao (Handan), Qi (Linzi), Yan (Ji). ★ marks the eight battlegrounds. Each space has a stability of 2 to 4.",
+    boardText: "26 spaces in five scoring regions (Three Jin, West, South, East, North) and Zhou. Five states sit inside the regions, each with a capital: Han (Xinzheng), Wei (Daliang), Zhao (Handan), Qi (Linzi), Yan (Ji). ★ marks the eight battlegrounds. Each space has a stability of 2 to 4. Qin and Chu each have their own home capital too -- Guanzhong and Ying -- marked 都 on the map and used by the Capital Falls rule.",
     mapAlt: "A map of the 26 spaces across five scoring regions and Zhou; a small tag beside each space's disc carries its stability number, a star marks a battleground, and a square disc marks a state capital. The 14 spaces belonging to one of the five states also carry a small coloured square tag naming that state (Han, Wei, Zhao, Qi, Yan).",
-    mapLegend: "★ battleground　▢ capital　the tag's number = stability　colour = scoring region　small square tag = the state it belongs to (Han/Wei/Zhao/Qi/Yan)　a bar over a number = that side is at its cap (stability + 2)",
+    mapLegend: "★ battleground　▢ capital　都 = Qin/Chu's own home capital　the tag's number = stability　colour = scoring region　small square tag = the state it belongs to (Han/Wei/Zhao/Qi/Yan)　a bar over a number = that side is at its cap (stability + 2)",
     control: "Influence and control",
     controlText: "Control = your influence ≥ theirs + stability. Nobody holds more than stability + 2 in a space; the excess is lost.",
     // #129: what the bar over a number on the map means (design D, owner's
@@ -137,7 +137,7 @@ const T = {
       ["Refill", "Draw up to the hand limit; when the deck runs out, reshuffle the discards (minus any removed cards) into a new deck. Before the refill on turns 4 and 7, that era's deck is shuffled in first."],
       ["Headline", "Both sides pick one card from hand and lay it face down (a scoring card may be picked, the Nine Cauldrons may not), then reveal together. The higher-ops card's event resolves first, Qin first on a tie. A headline's event always happens, even for the other side's card. Once reform reaches box 4, the opponent reveals first."],
       ["Action rounds", "Qin and Chu alternate, each playing one card (or the Cauldrons) per turn, 6 or 7 times."],
-      ["End of turn", "Holding a scoring card loses; weariness recovers one box; Luoyi's controller gains 1 Mandate; this turn's effects expire; whoever unlocked box 5 may discard one non-scoring card without its event."],
+      ["End of turn", "Holding a scoring card loses; a home capital still under the enemy's control loses; weariness recovers one box; Luoyi's controller gains 1 Mandate; this turn's effects expire; whoever unlocked box 5 may discard one non-scoring card without its event."],
     ],
     scoring: "Scoring",
     scoringText: "A scoring card scores its region for both sides; the difference moves the Mandate. Presence: control at least one space. Domination: more spaces and more battlegrounds than the other side. Control: every space. Plus 1 per battleground controlled.",
@@ -473,7 +473,7 @@ function usesExamplesHTML(l) {
         capP2: `宜陽 +1(1 點,鄰函谷關)· 洛邑 +1(2 點,楚控制)`,
         arrowC: "秦 奇襲 3", capC1: `大梁:${infWords(EX.campaign.before, "daliang", l)}`, capC2: `大梁:${infWords(EX.campaign.after, "daliang", l)}(移除 min(3,2)=2,剩 1 點落地)`,
         arrowL: "秦 遊說 1", capL1: `邯鄲:${infWords(EX.lobby.before, "handan", l)}`, capL2: `邯鄲:${infWords(EX.lobby.after, "handan", l)}`,
-        edgeCap: `局勢:秦擲 ${EX.lobby.roll.roll[0]}+${EX.lobby.odds.mod[0]}=${EX.lobby.roll.roll[0] + EX.lobby.odds.mod[0]},楚擲 ${EX.lobby.roll.roll[1]}+${EX.lobby.odds.mod[1]}=${EX.lobby.roll.roll[1] + EX.lobby.odds.mod[1]},楚失去 ${EX.lobby.roll.n} 點`,
+        edgeCap: `遊說:秦擲 ${EX.lobby.roll.roll[0]}+${EX.lobby.odds.mod[0]}=${EX.lobby.roll.roll[0] + EX.lobby.odds.mod[0]},楚擲 ${EX.lobby.roll.roll[1]}+${EX.lobby.odds.mod[1]}=${EX.lobby.roll.roll[1] + EX.lobby.odds.mod[1]},楚失去 ${EX.lobby.roll.n} 點`,
         arrowR: "秦 變法", capR1: `變法軌:秦 0`, capR2: `變法軌:秦 1(門檻 ${EX.reform.threshold} 點,棄牌 收復河西 2 點)`,
         noteR: "沒有事件觸發。" }
     : { arrowE: "Shang Yang's Reforms", capE1: `Reform track: Qin 0`, capE2: `Reform track: Qin 1 (+1 op on every Qin card this turn)`,
@@ -482,7 +482,7 @@ function usesExamplesHTML(l) {
         capP2: `Yiyang +1 (1 op, next to Hangu Pass) · Luoyi +1 (2 ops, Chu-controlled)`,
         arrowC: "Qin raids, 3 ops", capC1: `Daliang: ${infWords(EX.campaign.before, "daliang", l)}`, capC2: `Daliang: ${infWords(EX.campaign.after, "daliang", l)} (removes min(3,2)=2, 1 left to place)`,
         arrowL: "Qin lobbies, 1 op", capL1: `Handan: ${infWords(EX.lobby.before, "handan", l)}`, capL2: `Handan: ${infWords(EX.lobby.after, "handan", l)}`,
-        edgeCap: `Qin rolls ${EX.lobby.roll.roll[0]}+${EX.lobby.odds.mod[0]}=${EX.lobby.roll.roll[0] + EX.lobby.odds.mod[0]}, Chu rolls ${EX.lobby.roll.roll[1]}+${EX.lobby.odds.mod[1]}=${EX.lobby.roll.roll[1] + EX.lobby.odds.mod[1]} — Chu loses ${EX.lobby.roll.n}`,
+        edgeCap: `Lobby: Qin rolls ${EX.lobby.roll.roll[0]}+${EX.lobby.odds.mod[0]}=${EX.lobby.roll.roll[0] + EX.lobby.odds.mod[0]}, Chu rolls ${EX.lobby.roll.roll[1]}+${EX.lobby.odds.mod[1]}=${EX.lobby.roll.roll[1] + EX.lobby.odds.mod[1]} — Chu loses ${EX.lobby.roll.n}`,
         arrowR: "Qin reforms", capR1: `Reform track: Qin 0`, capR2: `Reform track: Qin 1 (needs ${EX.reform.threshold} ops, discards Retaking Hexi's 2)`,
         noteR: "No event happens." };
   const eventFig = `<div class="fig"><div class="fig-pair">` +

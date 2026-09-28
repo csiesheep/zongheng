@@ -305,7 +305,10 @@ export default {
     skip: "Skip the tutorial", back: "Back", stepOf: "Step {n} of {total}", topbar: "Tutorial {n}/{total}", gotIt: "Got it",
     wrong: "Tap the highlighted spot.",
     steps: {
-      map: { title: "The map", text: "26 spaces in five regions plus Zhou; a star marks a battleground. A disc's colour is influence: black is Qin, red is Chu; grey and pink mean influence without control.", do: "Tap {space}" },
+      // #133 part 3b (item 3, capital rule): folded into this lesson, which
+      // is already looking straight at {homeCapitalEn} -- see the scoping
+      // note on shared/tutorial.js STEPS[0]; flagged to the orchestrator.
+      map: { title: "The map", text: "26 spaces in five regions plus Zhou; a star marks a battleground. A disc's colour is influence: black is Qin, red is Chu; grey and pink mean influence without control. {homeCapitalEn} is your home capital (the 都 badge) and {enemyCapitalEn} is theirs -- if the enemy still holds yours at a turn's end, you lose; retake it before then and you're fine.", do: "Tap {space}" },
       control: { title: "Control", text: "Control needs yours at least theirs plus stability; the cap is stability + 2. {space}: {qin} is at least {chu} plus {stability}, so it's yours.", do: "Tap {space}" },
       hand: { title: "Your hand", text: "The round badge is the card's points. Black carries Qin's event, red Chu's, white nobody's. A card has five uses; start with the simplest, foster.", do: "Tap the lit card" },
       // #129: no lesson ever fills a space to its cap, so this line is a
@@ -316,7 +319,10 @@ export default {
       event: { title: "Event", text: "Play your own card for its event: {card}, reform +1. First to arrive scores, but the unlock matters more.", do: "Choose Event" },
       enemyCard: { title: "An enemy card", text: "Spend the other side's card for ops; its event still happens. You choose which goes first.", do: "Choose ops first" },
       campaign: { title: "Raid", text: "Remove up to {n} of theirs, place the rest as yours. A battleground tires the realm by one; pushing it to {to} loses.", do: "Confirm the raid on {space}" },
-      lobby: { title: "Lobby", text: "Edge is your controlled neighbours minus theirs. Remove up to {n}, capped by the edge. It places nothing and never tires the realm.", do: "Lobby {space}" },
+      // #133 part 3b (item 2): rewritten for the dice rule -- every number
+      // in this text is read off shared/tutorial.js's own realignOdds()/the
+      // real two-roll outcome, never typed in.
+      lobby: { title: "Lobby", text: "Pick a space where you both have influence -- {n} ops means {n} attempts. Each attempt both sides roll a die and add the local edge (yours +{qinMod} here, theirs +{chuMod}); your odds are about {winPct}%. After every roll you can stop and give up the rest -- the loser there loses the difference, even from their own points -- and it stops on its own once either side hits 0. It places nothing and never tires the realm.", do: "Lobby {space}" },
       scoring: { title: "Scoring", text: "Play Three Jin scoring: presence, domination or control, plus 1 per battleground; the gap moves the Mandate. A scoring card left in hand loses.", do: "Play the scoring card" },
       destroy: { title: "Destroy a state", text: "Qin controls every space of a state and it is destroyed: {state} falls, Qin +{n}. Three states and Qin wins. Tutorial complete.", do: "Finish" },
     },
@@ -402,6 +408,11 @@ export default {
       choose: "Choose {card}.",
       skip: "Skip -- the hand stays as is.",
       option: "Choose {option}.",
+      // #133 part 3b item 7: the dice 遊說's own continue/stop, by the same
+      // expected-net rule shared/bots.js already decides its own play by
+      // (continue when the average net of one more roll is positive).
+      realignContinue: "Keep going -- another roll nets about {net} on average.",
+      realignStop: "Stop here -- another roll would cost about {net} on average.",
     },
     anyLegal: "Anything lit up is legal. Gold is just the advisor's pick.",
     // #102 item 2 (orchestrator, iPhone screenshot: Chu Conquers Yue open,

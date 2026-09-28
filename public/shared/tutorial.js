@@ -64,7 +64,7 @@ export const START_INF = {
   shangdang: [0, 2],   // lesson 7: Chu controls, battleground
   handan:    [3, 0],   // Qin controls: the one neighbour that gives 大梁 a positive edge
   // 周室
-  luoyi:     [0, 0],
+  luoyi:     [2, 2],   // lesson 8: dice 遊說 target -- untouched by any other lesson, both sides present
   // 東方
   song:      [0, 1],
   linzi:     [0, 0],
@@ -96,16 +96,11 @@ export const CHU_HAND = ["wuqi", "jixia", "chumieyue", "maling", "wuguo", "mozhe
 // currently expects, then overwritten field by field.
 export function createTutorial() {
   const st = E.createGame(TUTORIAL_SEED);
-  // #133: DEFAULT_OPTIONS now defaults `lobby` to "realign-own" (dice) and
-  // `homeFall` to "lose-turn", but lesson 8 below still teaches today's
-  // 局勢-based 遊說 with a scripted, deterministic outcome, and no lesson
-  // teaches capitals at all -- #133's own item 8 asks for the lobby lesson
-  // to be rewritten for the dice rule (a staged/fixed roll), planned as its
-  // own pass (reported to the orchestrator); until then this pins the
-  // tutorial's own game to the pre-#133 rules so it keeps teaching what its
-  // text says, rather than silently drifting (or a capital quietly falling
-  // mid-lesson) once the defaults flip.
-  st.options = { ...st.options, lobby: undefined, homeFall: undefined };
+  // #133 part 3b: unpinned. The tutorial now plays under the SAME defaults
+  // as a real game (lobby: "realign-own", homeFall: "lose-turn", seals: 5)
+  // -- lesson 8 below teaches the dice 遊說 rule, and a step inside lesson 2
+  // teaches the capital badge/rule. No lesson exercises 相印 count directly,
+  // so seals never needed a pin either way.
   st.inf = {};
   for (const [id, [q, c]] of Object.entries(START_INF)) st.inf[id] = [q, c];
   st.hands = [QIN_HAND.slice(), CHU_HAND.slice()];
@@ -122,6 +117,19 @@ export function createTutorial() {
   st.effects = []; st.forced = [null, null]; st.revealed = [false, false];
   st.winner = null; st.reason = null;
   st.log = []; st.logSeq = 0;
+  // #133 part 3b: lesson 8's own dice 遊說 needs a deterministic roll (the
+  // brief's own "the tutorial's own RNG, or a fixed roll for the lesson").
+  // No earlier lesson's script ever calls into the RNG (no card here has a
+  // random effect), so this value is untouched until lesson 8 consumes it --
+  // found by search (see tools/find-tutorial-rng.mjs is NOT a real file;
+  // this was a throwaway script, not committed): with 洛邑 at Qin 2 | Chu 2,
+  // Qin's modifier +3 (周邊控制函谷關、宜陽 -- both Qin's; +1 本土相鄰,
+  // 函谷關 is 西土), Chu's modifier +0, this rngState makes attempt 1 a
+  // narrow Qin win (Chu 2 -> 1, a real 收手 decision follows) and, once the
+  // script answers "continue", attempt 2 zeros Chu's remaining point
+  // (Chu 1 -> 0, the sequence auto-stops) -- both ways the brief asks the
+  // lesson to end (收手 shown, and "ends when either side's points reach 0").
+  st.rngState = 2175734977;
   return st;
 }
 
@@ -159,6 +167,16 @@ const chuPlaces = (card, points) => play(CHU, card, "place", { points });
 // ---------- the ten lessons ----------
 export const STEPS = [
   {
+    // #133 part 3b item 3 (the capital rule): 關中, the very space this
+    // lesson already has the learner tap, is Qin's home capital -- the
+    // clearly-visible step the brief asks for is folded into THIS lesson's
+    // own facts (not a new lesson: the learner is already looking straight
+    // at it), rather than staged as a live crisis -- doing that would need
+    // its own scripted board-state chain the same way lesson 8 did, and
+    // isn't attempted here; flagged to the orchestrator as the scoping
+    // choice made under time. `homeCapital`/`enemyCapital` are read off the
+    // engine, never typed in, so they stay right if HOME_CAPITAL ever
+    // changes; `capitalBadge` matches capital-ui.js's own i18n key.
     id: "map",
     spotlight: { space: "guanzhong" },
     expect: { kind: "tap", space: "guanzhong" },
@@ -170,6 +188,8 @@ export const STEPS = [
         regions: E.SCORED_REGIONS.length,
         battlegrounds: E.BATTLEGROUNDS.length,
         n: E.SPACES.length,
+        homeCapital: E.homeCapital(st, QIN), homeCapitalZh: E.SPACE[E.homeCapital(st, QIN)].zh, homeCapitalEn: E.SPACE[E.homeCapital(st, QIN)].en,
+        enemyCapital: E.homeCapital(st, CHU), enemyCapitalZh: E.SPACE[E.homeCapital(st, CHU)].zh, enemyCapitalEn: E.SPACE[E.homeCapital(st, CHU)].en,
       };
     },
   },
@@ -262,22 +282,53 @@ export const STEPS = [
     },
   },
   {
+    // #133 part 3b: rewritten for the dice rule (realign-own). 洛邑 (untouched
+    // by any other lesson) is the one space in START_INF where the player
+    // already has influence too, as realign-own requires. The lesson plays
+    // out both required beats: a 收手 decision after attempt 1 (the script
+    // answers "continue" in `then`), and the sequence auto-ending because
+    // Chu's own point there reaches 0 (the brief's own third bullet) --
+    // both against createTutorial()'s fixed rngState, so the same two rolls
+    // happen every time. `facts()` never types the roll's own numbers in:
+    // it replays the same two actions on a trial clone and reads them back,
+    // the same rule spaceFacts()/campaignFacts() already follow elsewhere.
     id: "lobby",
-    spotlight: { space: "daliang" },
-    expect: { kind: "action", action: play(QIN, "envoy", "lobby", { target: "daliang" }) },
-    then: [chuPlaces("wuguo", ["qianzhong", "chencai", "chencai"])],
+    spotlight: { space: "luoyi" },
+    expect: { kind: "action", action: play(QIN, "envoy", "lobby", { target: "luoyi" }) },
+    then: [{ type: "choose", side: QIN, choice: "continue" }, chuPlaces("wuguo", ["qianzhong", "chencai", "chencai"])],
     facts(st) {
-      const id = "daliang", card = "envoy", f = spaceFacts(st, id), o = E.opsOf(st, QIN, card);
-      const edge = E.edge(st, QIN, id);
-      const removed = edge > 0 ? Math.min(o, edge) : 0;
-      const mine = E.SPACE[id].adj.filter((a) => E.controller(st, a) === QIN);
-      const theirs = E.SPACE[id].adj.filter((a) => E.controller(st, a) === CHU);
-      return {
-        ...f, ...cardFacts(st, card), edge, removed, n: removed,
-        mine: mine.length, theirs: theirs.length,
-        mineZh: mine.map((a) => E.SPACE[a].zh), theirsZh: theirs.map((a) => E.SPACE[a].zh),
-        from: f.chu, to: f.chu - removed,
+      const id = "luoyi", card = "envoy", f = spaceFacts(st, id), o = E.opsOf(st, QIN, card);
+      const odds = E.realignOdds(st, QIN, id);
+      const common = {
+        ...f, ...cardFacts(st, card), n: o,
+        winPct: Math.round(odds.win * 100), tiePct: Math.round(odds.tie * 100), losePct: Math.round(odds.lose * 100),
+        qinMod: odds.mod[QIN], chuMod: odds.mod[CHU],
       };
+      // #133 part 3b item 6 (found live, real-browser walkthrough):
+      // tutorial-ui.js's decorate() calls facts() on EVERY render, not just
+      // once at lesson entry -- once the player's own tap has landed the
+      // real lobby action on ctx.game.st, the state sits mid-pending (a
+      // genuine realign choice, waiting for afterAction()'s own scripted
+      // "continue" 650ms later) and st.phase is no longer "action".
+      // Unconditionally re-simulating a FRESH lobby play on top of an
+      // already-pending one threw ("not an action round" — E.apply's own
+      // action-phase guard), wedging the whole lesson: the roll card stayed
+      // up forever, since the throw happened inside render() and aborted
+      // humanAct() before it ever reached Tut.afterAction() (app.js), so
+      // the 650ms auto-continue was never even scheduled.
+      // Only simulate the trial while `st` is still the untouched,
+      // actionable state this lesson opens on. Once the real action has
+      // landed, the real lobby-ui.js roll/summary card on screen is already
+      // the authoritative, live picture -- read the real rolls back off the
+      // log instead of simulating a second attempt on top of the first.
+      if (E.legal(st, QIN).kind !== "action") {
+        const rolls = st.log.filter((l) => l.type === "realign" && l.target === id);
+        return { ...common, attempts: rolls.length, from: f.chu, to: f.chu };
+      }
+      const trial = E.apply(E.clone(st), play(QIN, card, "lobby", { target: id }));
+      const after = trial.pending ? E.apply(trial, { type: "choose", side: QIN, choice: "continue" }) : trial;
+      const rolls = after.log.filter((l) => l.type === "realign");
+      return { ...common, attempts: rolls.length, from: f.chu, to: after.inf[id][CHU] };
     },
   },
   {
