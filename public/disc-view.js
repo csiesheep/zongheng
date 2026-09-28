@@ -42,3 +42,25 @@ export function discParts(q, c, ctl, capOf) {
     chu: { n: c, controlled: ctl === CHU, ...cap(c) },
   };
 }
+
+// #144: the disc's own markup from discParts()'s output -- moved here from
+// app.js (its one private, unexported helper) so report.js can share it
+// instead of keeping its own copy (report.js used to carry a byte-for-byte
+// duplicate, flagged in its own top comment as "the one piece copied rather
+// than imported"). Pure function of discParts()'s shape plus whether this
+// node is a capital (`cap`, squared corners, style.css's `.sq`) -- no DOM,
+// same rule as discParts() itself. Tone is CSS (.lone-q/.lone-c/.split/.ctl*,
+// style.css); this only says which classes and how many numerals. `atCap`
+// (#129) adds the `atcap` class to a numeral once that side's own influence
+// there is at its own cap.
+export function discHTML(parts, cap) {
+  const base = "disc" + (cap ? " sq" : "");
+  if (parts.kind === "empty") return `<span class="${base}"></span>`;
+  if (parts.kind === "lone") {
+    const side = parts.side === QIN ? "q" : "c";
+    const cls = `${base} lone-${side}${parts.controlled ? " ctl" : ""}`;
+    return `<span class="${cls}"><i${parts.atCap ? ` class="atcap"` : ""}>${parts.n}</i></span>`;
+  }
+  const cls = `${base} split${parts.qin.controlled ? " ctl-q" : ""}${parts.chu.controlled ? " ctl-c" : ""}`;
+  return `<span class="${cls}"><i class="q${parts.qin.atCap ? " atcap" : ""}">${parts.qin.n}</i><i class="c${parts.chu.atCap ? " atcap" : ""}">${parts.chu.n}</i></span>`;
+}
