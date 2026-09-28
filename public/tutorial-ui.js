@@ -42,8 +42,47 @@ let advanceTimer = 0;
 // alone" (restrictMap's own convention — see its `allowed == null` return).
 let mapAllowed = null;   // Set of space ids, or null
 let handAllowedIdx = -1; // index into the hand array, or -1 (no card wanted)
+// #139: set by pinCoach() whenever the coach panel has dropped into normal
+// flow (tut-pin-flow — neither edge clears the target even collapsed).
+// flowHeight is that panel's own real, measured FOOTPRINT in that mode
+// (getBoundingClientRect().height PLUS its own margin-top/bottom, which
+// getBoundingClientRect() never includes but which is real space it takes
+// out of #table's flex column) — app.js's layoutTable() (flowReserve()
+// below) subtracts it from the map's budget so the map gives the panel a
+// genuine, non-overlapping slot instead of the flow-mode panel landing
+// whatever height the map happened to leave, same idea as capital-ui.js's
+// #capitalBannerRow reserving its own row. Peeked and full-flow have
+// DIFFERENT margins (tutorial.css), so this is measured live rather than a
+// single constant added on top — see flowFootprint() below.
+let flowActive = false;
+let flowHeight = 0;
+// #139: whether flow mode is showing only the "do" line (tut-flow-peek,
+// tutorial.css) or the full panel — starts peeked on every fresh lesson
+// entry (enterStep()), same as `expanded` always starting open; a tap on
+// the peeked line (buildCoach()'s own click handler) flips it for the rest
+// of this lesson. Irrelevant outside flow mode (pinCoach() never reads it
+// there); reset here rather than left dangling from whichever OTHER lesson
+// last used it, or a lesson that never needed flow at all would inherit
+// some earlier lesson's expanded-peek state the moment it did.
+let flowPeek = true;
 
 export function active() { return on; }
+// Read by app.js's layoutTable() on every call (a no-op outside a tutorial,
+// or whenever the panel isn't in flow mode): the real px flow mode's panel
+// needs taken out of the map's own height budget — flowHeight already has
+// its own margin folded in (see flowFootprint() below), so no separate
+// constant is added here.
+export function flowReserve() { return on && flowActive ? flowHeight : 0; }
+// The real vertical space `el` (in flow mode) takes out of #table's flex
+// column right now: its own box height plus margin-top/bottom, which
+// getBoundingClientRect() never includes. Peeked and full-flow have
+// different margins (tutorial.css) — read live, never guessed, same rule
+// this whole fix follows everywhere else (measuredHeight() above, and
+// app.js's own #139 lowerBlockH fix).
+function flowFootprint(el, h) {
+  const cs = getComputedStyle(el);
+  return h + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+}
 // app.js's topbar (#barMid) shows this instead of "Turn N · side" while a
 // tutorial is running (owner: "教學 · 第 n / 10 課", not the turn count).
 export function barText() { return ctx.t("tutorial.topbar", { n: stepIdx + 1, total: STEPS.length }); }
@@ -70,6 +109,7 @@ function applyPreset(step) {
 function enterStep(i) {
   stepIdx = i;
   expanded = true; // owner: switching lessons always comes back open
+  flowPeek = true; // #139: same rule for flow mode's own peeked/expanded state
   applyPreset(STEPS[i]);
   ctx.show("table");
   ctx.render();
@@ -448,22 +488,49 @@ function buildCoach() {
     d.className = "tut-dot";
     dotsWrap.appendChild(d);
   }
-  // Mounted as #table's own last child (not #map's): on a phone (<1024px)
-  // tutorial.css makes it float, position:absolute, over the map's box
-  // (pinCoach() below computes its top/bottom in pixels to match #map's own
-  // rect within #table, since the two no longer share a box); it can never
-  // push the "Back"/"Skip" row off screen because it never takes a row of
-  // its own (issue #15 review, item 1). On desktop (>=1024px, #7's frame)
-  // it instead becomes a normal grid child in the sidebar's own "prompt"
-  // grid-area (which is empty during a tutorial — see $("prompt").hidden
-  // above) rather than floating over the map (the orchestrator's desktop
-  // note on this same issue): tutorial.css's @media(min-width:1024px)
-  // block resets position back to static for that.
-  ctx.$("table").insertAdjacentElement("beforeend", el);
+  // Mounted right after #map (not #table's last child — #139: see below) —
+  // on a phone (<1024px) tutorial.css makes it float, position:absolute,
+  // over the map's box (pinCoach() below computes its top/bottom in pixels
+  // to match #map's own rect within #table, since the two no longer share a
+  // box); it can never push the "Back"/"Skip" row off screen because it
+  // never takes a row of its own (issue #15 review, item 1). On desktop
+  // (>=1024px, #7's frame) it instead becomes a normal grid child in the
+  // sidebar's own "prompt" grid-area (which is empty during a tutorial —
+  // see $("prompt").hidden above) rather than floating over the map (the
+  // orchestrator's desktop note on this same issue): tutorial.css's
+  // @media(min-width:1024px) block resets position back to static for that.
+  //
+  // #139: when NEITHER edge clears the spotlighted target even collapsed
+  // (pinCoach()'s tut-pin-flow escape hatch), the panel drops out of
+  // position:absolute into the normal flex flow instead — and its DOM
+  // position is what that flow then uses. It used to be #table's LAST
+  // child, landing after the (already fixed-height) lowerBlock/hand/chat/
+  // foot, i.e. off the bottom of a 669px viewport with nothing short of a
+  // scroll to reach it (found by the #133 3b checker: lessons 1/2/8's now-
+  // longer "do" line grew the COLLAPSED panel just enough to stop clearing
+  // either edge at 390x669/375x667/320x568). Right after #map is where flow
+  // mode actually needs it to render — see pinCoach()'s flowActive/
+  // flowHeight below, which reserves this same slot's real height out of
+  // the map's own budget (mirrors capital-ui.js's #capitalBannerRow: "a
+  // normal in-flow element, not an overlay").
+  ctx.$("map").insertAdjacentElement("afterend", el);
   el.querySelector("#tutSkipBtn").onclick = skipToDone;
   el.querySelector("#tutBackBtn").onclick = goBack;
   el.querySelector("#tutHeadBtn").onclick = () => setExpanded(!expanded);
   el.querySelector("#tutGotItBtn").onclick = () => setExpanded(false);
+  // #139: the peeked flow-mode line itself (tutorial.css's tut-flow-peek
+  // hides everything else) is the only tap target left in that state — a
+  // plain click on the panel, not a button of its own (CSS already gives it
+  // cursor:pointer), reveals the rest. Only acts while actually peeked; a
+  // harmless no-op the rest of the time (every other click inside the panel
+  // already lands on its own button, which stops here via .closest("button")
+  // before this ever fires).
+  el.onclick = (ev) => {
+    if (!flowPeek || !el.classList.contains("tut-pin-flow") || ev.target.closest("button")) return;
+    flowPeek = false;
+    pinCoach();
+    checkOverflow();
+  };
 }
 // Toggles the prose and repositions/resizes the panel off the back of it —
 // used by the header tap, the "Got it" button (see pinCoach() below), and
@@ -596,24 +663,61 @@ function measuredHeight(el, hideText) {
   gotIt.hidden = wasGotIt;
   return h;
 }
+// #139: the peeked flow panel's own real height (tutorial.css's
+// tut-flow-peek hides everything but .tut-do) — toggling the class itself
+// for the measurement, same "measure it for real" rule measuredHeight()
+// above already follows, rather than computing it from tut-do's own rect
+// plus a guessed margin/border/padding sum.
+function measuredPeekHeight(el) {
+  const was = el.classList.contains("tut-flow-peek");
+  el.classList.add("tut-flow-peek");
+  const h = el.getBoundingClientRect().height;
+  el.classList.toggle("tut-flow-peek", was);
+  return h;
+}
+// #139: deactivates flow mode (if it was on) and asks layoutTable() to give
+// the map its full budget back. A no-op call (flow already off) never
+// touches layoutTable() — every other pinCoach() exit already runs on the
+// tail of a render that just called it once.
+function clearFlowReserve() {
+  if (!flowActive) return;
+  flowActive = false; flowHeight = 0;
+  ctx.layoutTable();
+}
 function pinCoach() {
   const el = ctx.$("tutCoach");
   if (!el) return;
   const gotItBtn = el.querySelector("#tutGotItBtn");
   if (window.matchMedia("(min-width: 1024px)").matches) {
     el.style.top = ""; el.style.bottom = "";
-    el.classList.remove("tut-pin-flow", "tut-pin-top", "tut-pin-bottom");
+    el.classList.remove("tut-pin-flow", "tut-pin-top", "tut-pin-bottom", "tut-flow-peek");
     gotItBtn.hidden = true;
+    clearFlowReserve();
     return;
   }
-  const tableRect = ctx.$("table").getBoundingClientRect();
-  const mapRect = ctx.$("map").getBoundingClientRect();
+  // #139: tut-flow-peek (tutorial.css) hides everything but .tut-do — if a
+  // PREVIOUS call this same lesson left it on, measuredHeight() below would
+  // measure that peeked, near-nothing box for BOTH collapsed and expanded
+  // (p.hidden stops mattering once its own ancestor row is display:none),
+  // corrupting the very numbers the flow-vs-pin decision and needsGotIt
+  // both run on. Collapsed/expanded are the FULL panel's own two heights,
+  // never the peeked one — strip it before measuring, then the flow branch
+  // below (if reached) puts it straight back once it has decided flowPeek
+  // is still true this lesson.
+  el.classList.remove("tut-flow-peek");
   const target = targetRect();
   const collapsedH = measuredHeight(el, true);
   const expandedH = measuredHeight(el, false);
-  const rectAt = (edge, h) => edge === "bottom"
-    ? { top: mapRect.bottom - h - 8, bottom: mapRect.bottom - 8, left: mapRect.left, right: mapRect.right }
-    : { top: mapRect.top + 8, bottom: mapRect.top + 8 + h, left: mapRect.left, right: mapRect.right };
+  // mapRect is read fresh inside here (not hoisted) since deciding flow
+  // on/off below can itself call layoutTable() and resize the map — every
+  // caller of rectAt() after that point must see the map's CURRENT rect,
+  // never one measured before that resize (#139).
+  const rectAt = (edge, h) => {
+    const mapRect = ctx.$("map").getBoundingClientRect();
+    return edge === "bottom"
+      ? { top: mapRect.bottom - h - 8, bottom: mapRect.bottom - 8, left: mapRect.left, right: mapRect.right }
+      : { top: mapRect.top + 8, bottom: mapRect.top + 8 + h, left: mapRect.left, right: mapRect.right };
+  };
   const covers = (edge, h) => !!target && overlaps(rectAt(edge, h), target);
   const fits = (r) => r.top >= 0 && r.bottom <= window.innerHeight;
   // Prefer bottom (matches the design's Tut_Card); flip to top only when
@@ -626,8 +730,30 @@ function pinCoach() {
     el.style.top = ""; el.style.bottom = "";
     el.classList.remove("tut-pin-top", "tut-pin-bottom");
     gotItBtn.hidden = true; // flow mode never covers the map, so there's nothing to dismiss
+    // #139: even a fully-given-way map (its own floor, FLOOR_SCALE) plus an
+    // emptied #lowerBlock (app.js's own #139 fix, measured not guessed) isn't
+    // always enough room for the FULL panel — peeked (tut-flow-peek,
+    // tutorial.css: just the "do" line) is small enough to always fit;
+    // buildCoach()'s own click handler expands it back to the full panel on
+    // tap (flowPeek flips false), at which point THIS branch reserves the
+    // full flow height instead, same as it always did. Reserved out of the
+    // map's own budget either way — see app.js's layoutTable()/flowReserve()
+    // below — so the page still fits without scrolling, instead of the panel
+    // landing wherever the map's UNSHRUNK height happens to leave it
+    // (previously: off the bottom of a 669px viewport). Only re-runs
+    // layoutTable() when the reserve actually needs to change (a fresh
+    // lesson entry, the peek/expand tap, or the Got-it/header toggle
+    // switching expanded<->collapsed height) — every other call this same
+    // lesson (e.g. checkOverflow()'s later re-pin) is a no-op here.
+    el.classList.toggle("tut-flow-peek", flowPeek);
+    const rawH = flowPeek ? measuredPeekHeight(el) : (expanded ? expandedH : collapsedH);
+    const h = flowFootprint(el, rawH);
+    if (!flowActive || flowHeight !== h) { flowActive = true; flowHeight = h; ctx.layoutTable(); }
     return;
   }
+  clearFlowReserve(); // this lesson doesn't need the flow slot — give it back
+  el.classList.remove("tut-flow-peek");
+  const tableRect = ctx.$("table").getBoundingClientRect();
   // The chosen edge clears the target once collapsed, but must also land
   // fully inside the viewport at whichever height it's showing RIGHT NOW
   // (issue #15 review round 5, item 1) — try the other edge if this one
@@ -641,6 +767,7 @@ function pinCoach() {
   gotItBtn.hidden = !needsGotIt;
   el.classList.toggle("tut-pin-top", edge === "top");
   el.classList.toggle("tut-pin-bottom", edge === "bottom");
+  const mapRect = ctx.$("map").getBoundingClientRect(); // fresh, post-clearFlowReserve()
   if (edge === "top") { el.style.bottom = ""; el.style.top = `${Math.round(mapRect.top - tableRect.top) + 8}px`; }
   else { el.style.top = ""; el.style.bottom = `${Math.round(tableRect.bottom - mapRect.bottom) + 8}px`; }
 }

@@ -1134,14 +1134,38 @@ function layoutTable() {
   // 375 (`narrowTable`): 375/390 keep the plain constant, same as before,
   // so this can never move their own map rect.
   let lowerBlockH = LOWER_BLOCK_H;
-  if (narrowTable) {
+  if (narrowTable || tutOn) {
+    // #139: a tutorial lesson never reaches LOWER_BLOCK_H's own worst-case
+    // spec (see its own comment above) — restrictSheet()/restrictHand()
+    // (tutorial-ui.js) either empty #lowerBlock outright (a tap-kind lesson:
+    // no card, no hand) or trim it to the "simple" sheet, well under the
+    // fixed budget. Reserving the full constant regardless left the coach
+    // panel's own flow-mode fallback (pinCoach() below) nothing to reserve
+    // out of even once the map had already given up everything down to its
+    // own floor (measured: 390x669 lesson 1 — map already at FLOOR_SCALE
+    // with zero slack left, #lowerBlock sitting on 172px it wasn't using).
+    // Measured for real (never guessed), same rule narrowTable's own branch
+    // already followed below — a lesson that DOES fill the lower block
+    // (place/enemyCard's sheet+hand) still gets its real content's height.
+    // Only `narrowTable` (never a tutorial alone) keeps LOWER_BLOCK_H_NARROW
+    // as a FLOOR under that measurement — a real 320px GAME state still
+    // needs it (#118's own ruling); a 320px TUTORIAL lesson's empty lower
+    // block does not, and that floor alone was exactly what starved the
+    // coach's flow reserve at 320x568 (lesson "control": 140px reserved,
+    // ~4px actually used).
     const prevFlex = lowerBlock.style.flex;
     lowerBlock.style.flex = "none";
-    lowerBlockH = Math.max(LOWER_BLOCK_H_NARROW, lowerBlock.scrollHeight);
+    lowerBlockH = narrowTable && !tutOn ? Math.max(LOWER_BLOCK_H_NARROW, lowerBlock.scrollHeight) : lowerBlock.scrollHeight;
     lowerBlock.style.flex = prevFlex;
   }
   const spaceForMapAndLower = availH - topbarH - statlineH - bannerH - gapsAndPadding;
-  const spaceForMap = spaceForMapAndLower - lowerBlockH;
+  // #139: the tutorial coach panel's flow-mode fallback (tutorial-ui.js's
+  // pinCoach()/flowReserve()) is a normal in-flow row right after #map,
+  // same pattern as capitalBannerRow above — the map gives way to it
+  // instead of it landing wherever the map's own, unshrunk height leaves
+  // it. 0 outside a tutorial, or whenever the panel isn't in flow mode.
+  const coachH = Tut.flowReserve();
+  const spaceForMap = spaceForMapAndLower - lowerBlockH - coachH;
   // Never below FLOOR_SCALE (the map's own spec), never above widthScale
   // (that would overflow sideways) — same floor/width clamp #68 inherited
   // from the old budget, just against a fixed target instead of a measured

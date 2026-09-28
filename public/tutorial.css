@@ -43,7 +43,48 @@ body.tut-on #table { position: relative; }
    over either, which can never cover a map target and lets the page's own
    scroll (checkOverflow()'s table-overflow) reach it. Higher specificity
    than .tut-coach alone so it wins regardless of source order. */
-.tut-coach.tut-pin-flow { position: static; left: auto; right: auto; top: auto; bottom: auto; margin: 6px 8px 0; max-height: none; }
+/* #139: flex:none is load-bearing, not cosmetic — #table is itself a
+   flex column, and a static-flow child with no explicit flex value takes
+   the default (0 1 auto), which SHRINKS to whatever's left once every
+   sibling with a fixed flex-basis (the map, #lowerBlock) is accounted for.
+   app.js's layoutTable()/flowReserve() below sizes the map against this
+   panel's own REAL (getBoundingClientRect) height so nothing should ever
+   need to shrink it — but without flex:none, a still-too-tight budget
+   would silently squeeze the panel down to a sliver instead of #table
+   genuinely overflowing (checkOverflow()'s own signal that the budget
+   didn't actually work) — and worse, pinCoach()'s own measuredHeight()
+   would then measure THAT squeezed height back, corrupting the very
+   number the flow/pin decision and "Got it" both run on (found testing
+   390x669: a lesson stuck in this shrunk state read collapsed/expanded
+   as ~23-29px, decided pin instead of flow, and hid "Got it" even though
+   the real 264px panel visibly covered the target). flex:none instead
+   lets #table's own real overflow show through, honestly. */
+.tut-coach.tut-pin-flow { position: static; left: auto; right: auto; top: auto; bottom: auto; margin: 6px 8px 8px; max-height: none; flex: none; }
+/* #139: flow mode's own default state — even the map's own floor
+   (FLOOR_SCALE, app.js) plus a fully-emptied #lowerBlock (the #139 measured-
+   not-guessed fix just above it) isn't always enough slack for the FULL
+   panel (title + text + do-line + back/skip) to also fit without scrolling
+   (measured: 390x669 zh lesson 1, floor map 347 + coach 278 alone over the
+   621px budget). Collapsing to just the "do" line — the brief's own
+   "essential instruction" — is small enough to always fit; tapping it
+   (tutorial-ui.js's own click handler, not a link/button so no extra a11y
+   role is claimed beyond the cursor) reveals the rest, same escape hatch
+   the brief offered as an option. Only ever applied in flow mode: every
+   other lesson keeps its full panel, always open, exactly as before. */
+/* Peeked padding/margin trimmed to the bone — found testing 375x667
+   English lesson 8 (lobby, the brief's own other named case, with the same
+   #133 3b longer text lesson 1 got): even the map's floor plus a genuinely
+   real (not emptiable) lower block — the lobby chip + Cancel row — left
+   only ~31px of slack, and .tut-coach's own base padding (18px vertical)
+   plus tut-pin-flow's margin (14px) alone already ate more than that,
+   before .tut-do's own box even starts. Peek mode never needs the base
+   panel's roomier padding (built for the FULL card's title+text+actions,
+   none of which show here) or a full margin below it (nothing sits flush
+   under it) — this alone closed the remaining gap without shrinking
+   .tut-do's own border/padding (still a real 44px+ tap target). */
+.tut-coach.tut-pin-flow.tut-flow-peek { gap: 0; cursor: pointer; padding: 1px 12px; margin: 0 8px; }
+.tut-coach.tut-pin-flow.tut-flow-peek > *:not(.tut-do) { display: none; }
+.tut-coach.tut-pin-flow.tut-flow-peek .tut-do { border-style: solid; padding: 4px 10px; }
 @media (min-width: 1024px) {
   .tut-coach {
     position: static; grid-area: coach; left: auto; right: auto; top: auto; bottom: auto;
