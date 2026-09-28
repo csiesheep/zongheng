@@ -377,6 +377,21 @@ $("btnStart").onclick = () => {
 // every one of those resets untouched, since it doesn't represent anything
 // about the player's own turn.
 const game = { st: null, me: 0, level: "normal", rng: null, ui: null, botLine: "", botName: "", room: false, spectator: false, peek: null };
+// #141: a room's `game.st` (set in onRoomMsg from the server's own `view`
+// message, src/room.js) is ALREADY this seat's (or spectator's) redacted
+// view -- E.view() expects the raw engine state (it reads `st.draw.length`
+// etc., fields a view no longer has, having replaced them with counts) and
+// throws when run over one a second time. Solo's `game.st` is the real
+// engine state and still needs E.view() to produce "what this seat/
+// spectator sees" at all. Every call site that used to write out
+// `game.room ? game.st : E.view(game.st, ...)` by hand now goes through
+// this one function -- #137's checker caught two more that had been
+// written as a bare `E.view(game.st, game.me)` with no room guard at all
+// (both inside the log panel's own open/filter handlers), which threw on
+// every room open and silently dropped whatever should have run after it.
+function currentView() {
+  return game.room ? game.st : E.view(game.st, game.spectator ? null : game.me);
+}
 // #53 round 2 (orchestrator's review): `botLine` alone never reached the table
 // itself, only the closed log panel / a desktop-only sidebar strip -- so on
 // the phone neither a replaced move nor a genuinely stuck game said anything
@@ -710,7 +725,7 @@ function render() {
   if (!$("table").hidden) paintBody("table");
   // In a room the state on hand is already this seat's view.
   const prevView = game.lastView; // #41: the view from just before this action, read BEFORE it's overwritten below
-  const v = game.room ? game.st : E.view(game.st, game.me);
+  const v = currentView();
   game.lastView = v; // layoutTable() re-renders the hand off this if it flips full<->chip
   // #133: the dice-遊說 summary (mockup 4_summary) -- shown once, to the
   // actor only, right after a sequence this seat ran fully resolves (a
@@ -1542,7 +1557,7 @@ function cardInfo(L, card) {
   // `opsNow` keeps the play-time number the order changed it from.
   const eventFirst = !game.ui.pair && c.uses.enemy && game.ui.order === "eventFirst";
   const ops = game.ui.pair ? E.opsOf(game.st, game.me, game.ui.pair)
-    : eventFirst ? B.opsForOrder(game.room ? game.st : E.view(game.st, game.me), game.me, card, "eventFirst") : c.ops;
+    : eventFirst ? B.opsForOrder(currentView(), game.me, card, "eventFirst") : c.ops;
   return { id: card, ops, opsNow: c.ops, enemy: !!c.uses.enemy, uses: c.uses };
 }
 
@@ -3421,7 +3436,7 @@ $("logFilters").querySelectorAll(".logf").forEach((b) => {
     logFilter = b.dataset.filter;
     LogView.saveFilter(logFilter);
     Audio.play("sfx.ui.tap");
-    if (game.st) renderLog(E.view(game.st, game.me));
+    if (game.st) renderLog(currentView());
   };
 });
 const desktopLayout = () => { try { return matchMedia("(min-width: 1024px)").matches; } catch { return false; } };
@@ -3504,7 +3519,7 @@ $("logToggle").onclick = () => {
   const opening = $("logBody").hidden;
   setLogOpen(opening);
   Audio.play(opening ? "sfx.ui.open" : "sfx.ui.close");
-  if (game.st) renderLog(E.view(game.st, game.me));
+  if (game.st) renderLog(currentView());
 };
 // The result screen's whole colour follows the WINNER, not your own seat
 // (owner, 2026-09-19: "for win page, the background should be the winner's
@@ -3591,14 +3606,8 @@ function exportNames() {
 function exportMeta() {
   return { mode: game.room ? "room" : "solo", level: game.room ? null : game.level, viewer: game.spectator ? null : game.me, names: exportNames(), lang };
 }
-// A room's `game.st` is already the server's own redacted view (#131) --
-// running it through E.view() a second time would blow up (it deletes
-// `.draw`/`.later`, which a view no longer has) and would be double
-// redaction regardless. Solo's `game.st` is the real engine state, so it
-// still needs E.view() to get "what this seat/spectator sees" (decision:
-// "while the game is on, a download holds exactly what that seat sees").
 function currentExportJson() {
-  const view = game.room ? game.st : E.view(game.st, game.spectator ? null : game.me);
+  const view = currentView();
   const meta = exportMeta();
   return typeof E.exportGame === "function" ? E.exportGame(view, meta) : LogDL.stubExportGame(view, meta);
 }
