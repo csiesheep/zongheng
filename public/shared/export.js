@@ -5,7 +5,7 @@
 // does not know about itself, and returns the contract object:
 //
 //   { format: "zongheng-log", version: 1, exportedAt, lang,
-//     game: { mode, level, viewer, names: [qin, chu], options },
+//     game: { mode, level, viewer, names: [qin, chu], options, rulesVersion },
 //     result: null | { winner, reason, turn, mandate },
 //     log: [...the view's log...],
 //     final: null | view.final }
@@ -51,6 +51,9 @@ export function exportGame(view, meta = {}) {
       viewer,
       names: namesOf(meta.names),
       options: copy(view.options) ?? {},
+      // The rules the game was CREATED under (engine.js RULES_VERSION, kept in
+      // the state as `rulesVersion`); null for a game from before #137.
+      rulesVersion: typeof view.rulesVersion === "string" ? view.rulesVersion : null,
     },
     result: over ? { winner: view.winner, reason: view.reason ?? null, turn: view.turn, mandate: view.mandate } : null,
     log: copy(view.log) ?? [],

@@ -769,10 +769,25 @@ export function forcedCard(st, side) {
 export function jiudingUsable(st, side) { return st.jiuding.holder === side && !st.jiuding.faceDown; }
 
 // ---------- creating a game ----------
+// #137: which rules a game was created under, kept in the state
+// (`st.rulesVersion`, public) and written into an export's `game.rulesVersion`,
+// so a later engine can tell whether a recorded action list still replays
+// under its rules. It is the date of the last change to what a given seed +
+// options + actions play out to: bump it (to that day's date, "-2" for a
+// second change the same day) with any change to the rules in engine.js /
+// cards.js / board.js, or to what the engine does with a given options object.
+// A change to DEFAULT_OPTIONS alone needs no bump: it only reaches new games,
+// and a replay uses the recorded options exactly (`replay`).
+export const RULES_VERSION = "2026-09-27";
+// A new game: the options given, over today's defaults.
 export function createGame(seed, options = {}) {
+  return startGame(seed, { ...DEFAULT_OPTIONS, ...options });
+}
+// `options` is the game's complete options object, used as it is.
+function startGame(seed, options) {
   const rng = makeRng(seed);
   const st = {
-    seed, rngState: 0, options: { ...DEFAULT_OPTIONS, ...options },
+    seed, rngState: 0, options, rulesVersion: RULES_VERSION,
     turn: 0, era: null, phase: "setup", round: 0, rounds: 0, actor: QIN, phasing: QIN,
     inf: {}, mandate: 0, weariness: 5,
     reform: [0, 0], reformUsed: [0, 0], reformFirst: {}, perkUsed: [false, false],
@@ -1180,14 +1195,15 @@ export function apply(state, action) {
 }
 
 // #137: the game again from its seed, its options and its recorded actions.
-// `options` is the game's own `st.options` (an export's `game.options`): it is
-// already DEFAULT_OPTIONS merged with what the game was created with, and
-// createGame merges it over the defaults again, key for key, so the start is
-// the same state. No actions (a game from before #137, or the tutorial) means
+// `options` is the game's own `st.options` (an export's `game.options`), used
+// EXACTLY as recorded: it is not merged over today's DEFAULT_OPTIONS, so a key
+// the recorded object lacks (a key added or a default flipped since, or one a
+// JSON copy dropped because it was undefined) stays absent, which the engine
+// reads as the old rule, as it did when the game was played. No actions (a game from before #137, or the tutorial) means
 // no replay: this throws rather than hand back a game that never happened.
 export function replay(seed, options, actions) {
   if (!Array.isArray(actions)) fail("replay: this game has no recorded actions");
-  let st = createGame(seed, options);
+  let st = startGame(seed, clone(options || {}));
   for (const a of actions) st = apply(st, a);
   return st;
 }
