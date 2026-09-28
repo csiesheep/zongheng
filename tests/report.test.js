@@ -73,6 +73,7 @@ T("#138 maps: one board per year, at the end of that year, rebuilt from the acti
     assert.equal(ends.length, st.turn);
     ends.forEach((e, i) => assert.equal(e.turn, i + 1));
     assert.equal(JSON.stringify(ends[ends.length - 1].state.inf), JSON.stringify(st.inf), "the last board is the final board");
+    assert.equal(ends[ends.length - 1].state.winner, st.winner, "the last board is taken after the game is decided");
   }
 }, D);
 
@@ -97,6 +98,8 @@ T("#138 check: a clean report passes; wrong years, foreign cards, a missing lang
   const bad = (mutate, why) => { const r = goodReport(d); mutate(r); assert.ok(V.validateReport(r, d).length > 0, why); };
   bad((r) => r.zh.chapters.pop(), "a year is missing (zh)");
   bad((r) => r.en.chapters.reverse(), "years out of order (en)");
+  bad((r) => { r.zh.chapters[0].turn = 2; }, "a chapter labelled with the wrong year");
+  bad((r) => { r.en.chapters[1].turn = 1; }, "two chapters for one year");
   bad((r) => delete r.en, "English is required");
   bad((r) => { r.zh.chapters[0].cards = ["no-such-card"]; }, "an unknown card");
   const later = d.turns.findIndex((t, i) => i > 0 && t.cards.some((c) => !d.turns[0].cards.includes(c)));
