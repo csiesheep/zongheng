@@ -132,16 +132,24 @@ test("tutorial 7 campaign: 上黨 changes hands and the realm tires from 承平 
   assert.equal(E.WEARINESS_NAMES[after.weariness], "兵連");
 });
 
-test("tutorial 8 lobby: a positive edge takes Chu points off, places nothing and tires nobody", () => {
+// #133 part 3b: the tutorial plays the new rules, so lesson 8 is the dice 遊說 (realign-own). The check is the rule
+// itself, replayed from the log: every roll's loser loses the difference at the target (never below 0), nothing is
+// placed, and weariness does not move.
+test("tutorial 8 lobby: the dice rule -- each roll's loser loses the difference there, nothing is placed, nobody tires", () => {
   const states = walk();
   const before = states[7], after = states[8];
   const target = STEPS[7].expect.action.target;
   assert.equal(STEPS[7].expect.action.use, "lobby");
-  const edge = E.edge(before, QIN, target);
-  assert.ok(edge > 0, `edge at ${target} must be positive, got ${edge}`);
-  const ops = E.opsOf(before, QIN, STEPS[7].expect.action.card);
-  assert.equal(inf(after, target)[CHU], inf(before, target)[CHU] - Math.min(ops, edge), "remove min(ops, edge)");
-  assert.equal(inf(after, target)[QIN], inf(before, target)[QIN], "lobby places nothing");
+  assert.equal(before.options.lobby, "realign-own", "the tutorial teaches the rule the game uses");
+  assert.ok(inf(before, target)[QIN] > 0 && inf(before, target)[CHU] > 0, "realign-own needs both sides' influence there");
+  const rolls = after.log.filter((l) => l.type === "realign" && l.target === target && l.i > before.logSeq);
+  assert.ok(rolls.length >= 1, "the lesson rolls at least once");
+  let [q, c] = inf(before, target);
+  for (const r of rolls) {
+    const d = (r.roll[QIN] + r.mod[QIN]) - (r.roll[CHU] + r.mod[CHU]);
+    if (d > 0) c = Math.max(0, c - d); else if (d < 0) q = Math.max(0, q + d);
+  }
+  assert.deepEqual(inf(after, target), [q, c], "influence there is what the rolls say");
   assert.equal(after.weariness, before.weariness, "lobby tires nobody");
 });
 
