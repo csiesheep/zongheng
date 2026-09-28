@@ -2169,12 +2169,33 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 }
 .node .nm .nm-win.nm-win-low { background: #2a1f10; color: var(--gold); border: 1px solid var(--gold); }
 .node .nm.two-line .nm-win { display: block; margin: 2px auto 0; width: fit-content; }
+/* #143 checker follow-up: English names are systematically wider than their
+   zh-Hant counterparts for the same space (Luoyi vs 洛邑, Ying vs 郢) --
+   a real getBoundingClientRect sweep found the merged win% label reaching a
+   neighbour's stability chip on Luoyi and Ying in English specifically,
+   at 375x667, in the checker's OWN realistic 7-target set (not just the
+   synthetic all-26 case) -- zh-Hant had no such collision on those two
+   spaces. A blanket, English-only, win%-present-only shrink rather than
+   more per-space entries: every space's name is already narrower with the
+   win% merged in than the old separate pill ever needed to be on its own. */
+:root[lang="en"] .node .nm:has(.nm-win) { font-size: 10px; }
 /* Luoyi and Ju sit close enough to a neighbour (Xinzheng; another East
    node) that even the shrunk nm-win above still reached into the
    neighbour's own stability chip/disc -- found by the same
    getBoundingClientRect sweep, not guessed. A per-space tighter size, same
    shape as NODE_SMALL_EN's own English-only per-space exception. */
-.node[data-space="luoyi"] .nm-win, .node[data-space="ju"] .nm-win { padding: 0 2px; margin-left: 0; font-size: 8px; }
+.node[data-space="luoyi"] .nm-win, .node[data-space="ju"] .nm-win, .node[data-space="ying"] .nm-win { padding: 0 2px; margin-left: 0; font-size: 8px; }
+/* #143 checker: 函谷關/Hangu Pass anchors its name to the RIGHT (NODE_ANCHOR,
+   map-draw.js) -- 上黨/Shangdang sits close by in that exact direction
+   (NODE_POS: dx 90, dy 6), so appending the win% INLINE after the name text
+   only made the anchored box reach further right, into Shangdang's own tap
+   target (elementFromPoint at the pill's centre resolved to Shangdang's
+   button, not Hangu's -- confirmed by the checker at 390/320/1280). Dropped
+   below the name text instead of extending past it -- an anchored box's own
+   width is set by its widest line, and "函谷關"/"Hangu Pass" is wider than
+   "72%", so this stops the box from reaching any further right than the
+   name alone already did. */
+.node[data-space="hangu"] .nm-win { display: block; margin: 1px auto 0; width: fit-content; }
 /* Ju and its East-region neighbour Xue sit close enough that even Ju's own
    tighter size above still reached Xue's disc -- pull Ju's whole label
    left instead of centred, the same "give it somewhere to go" idea
