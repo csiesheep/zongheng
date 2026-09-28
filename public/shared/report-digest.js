@@ -635,7 +635,8 @@ function yearEndText(it, prev, lang) {
       : `By now Qin had destroyed ${T.list(it.fallen.map(T.state))}${fresh.length ? `; ${T.list(fresh.map(T.state))} fell this year` : ""}`);
   }
   const box = (b) => (b ? `「${T.box(b)}」` : "尚未起步");
-  lines.push(zh ? `變法:秦${box(it.reform[0])},楚${box(it.reform[1])}` : `Reforms: Qin ${it.reform[0] ? T.box(it.reform[0]) : "not yet begun"}; Chu ${it.reform[1] ? T.box(it.reform[1]) : "not yet begun"}`);
+  const boxEn = (s, b) => (b ? `${s}'s reforms stood at "${T.box(b)}"` : `${s} had not yet begun to reform`);
+  lines.push(zh ? `變法:秦${box(it.reform[0])},楚${box(it.reform[1])}` : `${boxEn("Qin", it.reform[0])}; ${boxEn("Chu", it.reform[1])}`);
   lines.push(zh ? `九鼎在${T.side[sideIx(it.cauldrons)]}` : `The Nine Cauldrons were with ${T.side[sideIx(it.cauldrons)]}`);
   return lines;
 }
@@ -676,11 +677,16 @@ function keyEvents(t, prevEnd, d, lang) {
   const end = all.find((it) => it.type === "end");
   const crown = all.filter((it) => it.type === "reform" && it.emperor);
   if (end) {
-    const byCard = ["final", "tie", "scoring", "scoringBoth", "emperor"].includes(end.reason) ? [] : cardsOf([end]);
+    // What decided it: for a lost capital, the moves that took it; for a
+    // count at the end of the years, nothing in particular.
+    const loser = otherSide(end.winner);
+    const byCard = ["final", "tie", "scoring", "scoringBoth", "emperor"].includes(end.reason) ? []
+      : end.reason === "homeFall" ? cardsOf(all.filter((x) => x.type === "capital" && x.whose === loser && x.status === "taken"))
+        : cardsOf([end]);
     let text = endText(end, lang);
     const won = crown.find((c) => c.emperor === "won");
     if (won) text = zh ? `${S(won.side)}王變法功成,登基稱帝,${S(won.side)}勝` : `the King of ${S(won.side)}, his reforms complete, proclaimed himself Emperor, and ${S(won.side)} won`;
-    out.push({ rank: 1, seq: seqOf(end), text, cards: byCard });
+    out.push({ rank: 1, seq: -1, text, cards: byCard }); // the end before anything else of its rank
   }
   for (const c of crown) {
     if (c.emperor === "won" && end) continue;
@@ -706,10 +712,13 @@ function keyEvents(t, prevEnd, d, lang) {
         : (zh ? `${w}都${cap}一度落入${o}之手,其後${o}的掌握動搖,至年終仍未安` : `${w}'s capital ${cap} fell into ${o}'s hands for a time; ${o}'s grip then loosened, but the city was still not safe at the year's end`);
       else if (fin === "secure") text = threats > 1 ? (zh ? `${w}都${cap}${numZh(threats)}度告急,終得穩住` : `${w}'s capital ${cap} was threatened ${threats === 2 ? "twice" : `${numEn(threats)} times`}, and held`) : (zh ? `${w}都${cap}一度告急,終得穩住` : `${w}'s capital ${cap} was threatened, and held`);
       else text = threats > 1 ? (zh ? `${w}都${cap}${numZh(threats)}度告急,至年終仍未解圍` : `${w}'s capital ${cap} was threatened ${threats === 2 ? "twice" : `${numEn(threats)} times`}, and was still in danger at the year's end`) : (zh ? `${w}都${cap}告急,至年終仍未解圍` : `${w}'s capital ${cap} was threatened, and was still in danger at the year's end`);
+      const fell = all.find((x) => x.type === "capitalFell" && x.whose === whose);
+      if (fell) text += zh ? ",國都就此陷落" : `; the capital was lost`;
       out.push({ rank: 2, seq: seqOf(seq[0]), text, cards: cardsOf(seq) });
     }
   }
-  for (const it of all.filter((x) => x.type === "capitalFell" || x.type === "capitalMoved")) {
+  const told2 = new Set(["qin", "chu"].filter((w) => all.some((x) => x.type === "capital" && x.whose === w)));
+  for (const it of all.filter((x) => (x.type === "capitalFell" && !told2.has(x.whose)) || x.type === "capitalMoved")) {
     out.push({ rank: 2, seq: seqOf(it), text: describe(it, lang), cards: it.type === "capitalMoved" ? [] : cardsOf([it]) });
   }
 
@@ -725,8 +734,20 @@ function keyEvents(t, prevEnd, d, lang) {
     }
     out.push({ rank: 3, seq: seqOf(it), text, cards: cardsOf([it]) });
   }
-  for (const it of all.filter((x) => (x.type === "seal" || x.type === "unseal") && !sealsWithFall.has(x))) {
-    out.push({ rank: 4, seq: seqOf(it), text: describe(it, lang), cards: cardsOf([it]) });
+  // One item per state: a seal given and taken back in one year is one story.
+  const sealMoves = all.filter((x) => (x.type === "seal" || x.type === "unseal") && !sealsWithFall.has(x));
+  for (const state of [...new Set(sealMoves.map((x) => x.state))]) {
+    const seq = sealMoves.filter((x) => x.state === state);
+    const a = seq[0], z = seq[seq.length - 1], st = T.state(state);
+    let text;
+    if (seq.length === 1) text = describe(a, lang);
+    else if (a.type === "unseal") text = z.type === "seal"
+      ? (zh ? `${st}國一度收回給楚的相印,其後又交還給楚` : `the state of ${st} took back the seal it had given Chu, and later gave it to Chu again`)
+      : (zh ? `${st}國的相印幾度往返,年終已不在楚手` : `the seal of ${st} went back and forth, and at the year's end Chu no longer held it`);
+    else text = z.type === "unseal"
+      ? (zh ? `${st}國將相印交給楚,其後又收回` : `the state of ${st} gave its seal to Chu and later took it back`)
+      : (zh ? `${st}國的相印幾度往返,年終仍在楚手` : `the seal of ${st} went back and forth, and at the year's end Chu held it`);
+    out.push({ rank: 4, seq: seqOf(a), text, cards: cardsOf(seq) });
   }
 
   // 5: the regions at the year's end, against the year before (year 1: who leads at all).
@@ -804,7 +825,7 @@ function keyEvents(t, prevEnd, d, lang) {
       for (const s of helped) bits.push(zh ? `${S(s)}添了不少親附者` : `${S(s)} won many new supporters`);
     }
     const name = zh ? `「${T.card(ev.card)}」一事` : T.card(ev.card);
-    const text = zh ? `${name}:${bits.join(",")}` : `${name}: ${bits.join(", ")}`;
+    const text = zh ? `${name}:${bits.join(",")}` : `${name}: ${T.list(bits)}`;
     out.push({ rank: 8, seq: seqOf(ev), text, cards: [ev.card].filter((c) => !isScoring(c)) });
   }
 
@@ -850,6 +871,7 @@ function arcText(d, lang) {
   const W = SIDE[d.winner], lastRun = runs[runs.length - 1];
   if (lastRun.tw === W) {
     if (lastRun.from === 1) parts.push(zh ? `${S(W)}自首年起始終領先` : `${S(W)} led from the first year to the last`);
+    else if (lastRun.from === ends.length) parts.push(zh ? `直到最後的${Y(lastRun.from)},${S(W)}才轉居上風` : `${S(W)} only took the lead in the last year, ${Y(lastRun.from)}`);
     else {
       const sh = ends[lastRun.from - 1].shift;
       const how = sh.toward === W ? (zh ? `天命${sh.strength === "strongly" ? "大幅" : "略"}移向${S(W)}` : `Heaven's Mandate moved ${sh.strength} toward ${S(W)}`) : (zh ? `${S(W)}重新領先` : `${S(W)} took the lead again`);
