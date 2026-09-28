@@ -406,6 +406,22 @@ const L = {
     box: (b) => REFORM_EN[b - 1], list: (a) => (a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1]), sep: "; ", end: ".",
   },
 };
+// Natural or fated happenings (#138 round 3). Of the 67 cards that are not a
+// region's council, these four are the ones whose event is weather, harvest,
+// sickness or an omen -- nothing a court does (cards.js): 大饑 (the harvest
+// fails), 黃河決口 (the river floods), 疫癘 (sickness), 天狗食日 (an eclipse).
+// Every other card is a man, a battle, a policy, an embassy, a ruse, a trade or
+// a gift, something someone does. The same four as `DISASTER` in buildDigest.
+// Told as what befell the realm that year, never as a side's deed: whoever
+// played the card only chose the moment (a headline says so), and a card of
+// these used for its means, not its event, did not happen at all.
+const NATURAL = {
+  daji: { zh: "天降大饑", zhAt: "饑荒之機", en: "famine came upon the land", enAt: "the famine" },
+  huanghe: { zh: "黃河決口,洪水氾濫", zhAt: "河患之機", en: "the Yellow River broke its banks and flooded the plain", enAt: "the flood" },
+  yili: { zh: "疫癘流行", zhAt: "疫病流行之機", en: "pestilence spread through the land", enAt: "the pestilence" },
+  tiangou: { zh: "天狗食日,人心惶惶", zhAt: "天象示警之機", en: "the sun was eaten in the sky, and men were afraid", enAt: "the omen in the sky" },
+};
+const isNatural = (c) => Object.prototype.hasOwnProperty.call(NATURAL, c);
 const sideIx = (s) => (s === "qin" ? QIN : CHU);
 const otherSide = (s) => (s === "qin" ? "chu" : "qin");
 const isScoring = (c) => !!(CARD[c] && CARD[c].scoring);
@@ -455,7 +471,8 @@ function describe(it, lang, k = 0, cont = false) {
         const c = it.cards[s], court = zh ? `${T.side[s]}廷${then ? "則" : ""}` : `the court of ${T.side[s]}`;
         if (c == null) return zh ? `${court}未有定議` : `${court} settled on no plan`;
         if (isScoring(c)) return zh ? `${court}議定召${T.region(CARD[c].scoring)}諸國會盟表態` : `${court} resolved to summon the states of ${T.region(CARD[c].scoring)} to declare themselves`;
-        if (DISASTER[c]) return zh ? `${court}議定乘${q(c)}之機行事` : `${court} resolved to turn ${T.card(c)} to its advantage`;
+        // A side chooses only the moment of a natural happening, never the happening.
+        if (isNatural(c)) return zh ? `${court}欲趁${NATURAL[c].zhAt}行事` : `${court} meant to seize the moment of ${NATURAL[c].enAt}`;
         return zh ? `${court}議定以${q(c)}為急務` : `${court} resolved to make ${T.card(c)} its first concern`;
       };
       const first = it.first ? (zh ? `;${S(it.first)}搶先一步` : `; ${S(it.first)} moved first`) : "";
@@ -465,6 +482,12 @@ function describe(it, lang, k = 0, cont = false) {
       const c = CARD[it.card];
       if (c && c.scoring) return zh ? `${S(it.side)}召${T.region(c.scoring)}諸國會盟表態` : `${S(it.side)} summoned the states of ${T.region(c.scoring)} to declare themselves`;
       const enemy = c && c.side != null && SIDE[c.side] !== it.side;
+      if (isNatural(it.card)) {
+        // The happening is told by its event; nobody's deed. Used for its means, it never happened.
+        if (it.use === "event") return "";
+        if (it.use === "reform") return zh ? `${S(it.side)}王專心推行變法` : `the King of ${S(it.side)} pressed on with his reforms`;
+        if (["place", "campaign", "lobby"].includes(it.use)) return "";
+      }
       switch (it.use) {
         case "event": return enemy ? (zh ? `${S(it.side)}聽任${q(it.card)}一事發生` : `${S(it.side)} stood aside and let ${T.card(it.card)} run its course`) : (zh ? `${S(it.side)}行${q(it.card)}之事` : `${S(it.side)} set ${T.card(it.card)} in motion`);
         case "reform": return zh ? `${S(it.side)}王擱下${q(it.card)}一事,專心推行變法` : `the King of ${S(it.side)} set aside the matter of ${T.card(it.card)} and pressed on with his reforms`;
@@ -476,13 +499,15 @@ function describe(it, lang, k = 0, cont = false) {
         default: return zh ? `${S(it.side)}有所舉措` : `${S(it.side)} acted`;
       }
     }
-    case "bogged": return zh ? `${S(it.side)}軍頓兵堅城之下,只得放棄${q(it.card)}之謀` : `${S(it.side)}'s army was held up before the walls and had to give up ${T.card(it.card)}`;
+    case "bogged":
+      if (isNatural(it.card)) return zh ? `${S(it.side)}軍頓兵堅城之下,一時無所作為` : `${S(it.side)}'s army was held up before the walls and could do nothing`;
+      return zh ?`${S(it.side)}軍頓兵堅城之下,只得放棄${q(it.card)}之謀` : `${S(it.side)}'s army was held up before the walls and had to give up ${T.card(it.card)}`;
     case "event": {
       const parts = [];
       const favours = it.owner !== it.by;
       const fav = favours ? (zh ? `,於${S(it.owner)}有利` : `, which favoured ${S(it.owner)}`) : "";
-      // A calamity is told as itself (its name is in the words), not as "the famine happened; famine struck".
-      if (it.disaster) parts.push((zh ? { famine: "天降大饑", flood: "黃河決口,洪水氾濫", pestilence: "疫癘流行", eclipse: "天狗食日,人心惶惶" }[it.disaster] : { famine: "famine struck", flood: "the Yellow River broke its banks", pestilence: "pestilence spread", eclipse: "the dog ate the sun, and men were afraid" }[it.disaster]) + fav);
+      // A natural happening is told as what befell the realm that year (its name is in the words).
+      if (isNatural(it.card)) parts.push((zh ? `是年${NATURAL[it.card].zh}` : `that year ${NATURAL[it.card].en}`) + fav);
       else if (!cont) parts.push(zh ? `${q(it.card)}一事既起${fav}` : `then came ${T.card(it.card)}${fav}`);
       if (it.gains) parts.push(...movesText(it.gains, true, lang));
       if (it.losses) parts.push(...movesText(it.losses, false, lang));
@@ -491,7 +516,9 @@ function describe(it, lang, k = 0, cont = false) {
       if (it.lasting) parts.push(zh ? "其影響延續下去" : "its influence would last");
       if (it.ends) parts.push(zh ? `${it.ends.map(q).join("、")}的影響就此消散` : `the influence of ${T.list(it.ends.map(T.card))} came to an end`);
       if (it.hands) it.hands.forEach((n, s) => { if (n > 0) parts.push(zh ? `${T.side[s]}得到新的謀略` : `${T.side[s]} gained new counsel`); });
-      if (it.setAside) parts.push(zh ? `${it.setAside.map(q).join("、")}之謀遂被擱置` : `the plan of ${T.list(it.setAside.map(T.card))} was set aside`);
+      // A natural card set aside was never anyone's plan: it is left out.
+      const aside = (it.setAside || []).filter((c) => !isNatural(c));
+      if (aside.length) parts.push(zh ? `${aside.map(q).join("、")}之謀遂被擱置` : `the plan of ${T.list(aside.map(T.card))} was set aside`);
       if (it.easedTo) parts.push(wearyText(it.easedTo, lang, true));
       if (it.cauldronsTo) parts.push(zh ? `九鼎歸${S(it.cauldronsTo)}` : `the Nine Cauldrons passed to ${S(it.cauldronsTo)}`);
       if (it.wearied) parts.push(wearyText(it.wearied, lang));
@@ -655,7 +682,8 @@ function movesOf(t) {
     const leads = it.type === "play" || (it.type === "event" && it.headline) || ["headline", "era", "bogged", "zhou"].includes(it.type);
     if (leads || !m) { m = { items: [], cards: [], seq }; moves.push(m); }
     m.items.push(it);
-    if (it.type === "play" && it.use !== "reform" && !it.pair) add(it.card);
+    // A natural card used for its means did not happen: it is behind nothing.
+    if (it.type === "play" && it.use !== "reform" && !it.pair && !(isNatural(it.card) && it.use !== "event")) add(it.card);
     if (it.type === "play" && it.pair) add(it.card);
     if (it.type === "event" || it.type === "campaign") add(it.card);
   });
@@ -812,7 +840,6 @@ function keyEvents(t, prevEnd, d, lang) {
     const gained = {}, lost = {};
     for (const [id, from, to] of ctl) { if (to) (gained[to] = gained[to] || []).push(T.space(id)); if (from && from !== to) (lost[from] = lost[from] || []).push(T.space(id)); }
     const bits = [];
-    if (ev.disaster) bits.push(zh ? { famine: "天降大饑", flood: "黃河決口,洪水氾濫", pestilence: "疫癘流行", eclipse: "天狗食日" }[ev.disaster] : { famine: "famine struck", flood: "the Yellow River broke its banks", pestilence: "pestilence spread", eclipse: "the dog ate the sun" }[ev.disaster]);
     for (const c of camps) bits.push(zh ? `${S(c.side)}發兵攻${T.space(c.target)}` : `${S(c.side)} marched on ${T.space(c.target)}`);
     for (const s of ["qin", "chu"]) {
       if (gained[s]) bits.push(zh ? `${S(s)}得${[...new Set(gained[s])].join("、")}` : `${S(s)} won ${T.list([...new Set(gained[s])])}`);
@@ -824,8 +851,14 @@ function keyEvents(t, prevEnd, d, lang) {
       const helped = [...new Set((ev.gains || []).map(([, s]) => s))];
       for (const s of helped) bits.push(zh ? `${S(s)}添了不少親附者` : `${S(s)} won many new supporters`);
     }
-    const name = zh ? `「${T.card(ev.card)}」一事` : T.card(ev.card);
-    const text = zh ? `${name}:${bits.join(",")}` : `${name}: ${T.list(bits)}`;
+    let text;
+    if (isNatural(ev.card)) {
+      const hap = zh ? `是年${NATURAL[ev.card].zh}` : `that year ${NATURAL[ev.card].en}`;
+      text = zh ? [hap, ...bits].join(",") : bits.length ? `${hap}: ${T.list(bits)}` : hap;
+    } else {
+      const name = zh ? `「${T.card(ev.card)}」一事` : T.card(ev.card);
+      text = zh ? `${name}:${bits.join(",")}` : `${name}: ${T.list(bits)}`;
+    }
     out.push({ rank: 8, seq: seqOf(ev), text, cards: [ev.card].filter((c) => !isScoring(c)) });
   }
 
@@ -924,7 +957,7 @@ export function digestText(d, lang) {
     const yend = t.events.find((it) => it.type === "yearEnd");
     for (const it of t.events) {
       if (it.type === "yearEnd") continue;
-      const opsPlay = it.type === "play" && ["place", "campaign", "lobby"].includes(it.use) && !it.pair && it.card !== JIUDING && !isScoring(it.card);
+      const opsPlay = it.type === "play" && ["place", "campaign", "lobby"].includes(it.use) && !it.pair && it.card !== JIUDING && !isScoring(it.card) && !isNatural(it.card);
       const cont = it.type === "event" && lead && lead.type === "play" && lead.use === "event" && lead.card === it.card;
       const s = describe(it, lang, k++, cont);
       const leads = it.type === "play" || (it.type === "event" && it.headline);
