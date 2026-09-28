@@ -610,4 +610,32 @@ export default {
       hexi: "\"If that gives\": Chu loses 1 in Daliang only if these 2 are what give Qin Hedong; if Qin already controlled it, nothing is removed.",
     },
   },
+  // #138: the 戰報 report -- the end page's entry button, the waiting page, the
+  // failed/daily-cap/not-found states, and the report page's own fixed chrome
+  // (title, chapter list, footer). The chapter prose itself comes from the server.
+  report: {
+    endButton: "Report",
+    waitingTitle: "The storyteller is writing up this game…",
+    waitingNote: "Usually one to three minutes. Leaving this page is fine -- reopen the same link and it picks up where it left off.",
+    back: "‹ Result",
+    failed: "The storyteller couldn't finish this one.",
+    dailyCap: "Today's reports are used up -- try again tomorrow.",
+    invalid: "This game's record isn't in a shape a report can be written from.",
+    notFound: "No report at this link -- it may be wrong.",
+    tooBig: "This game's record is too large for a report.",
+    wayBack: "Back to the result",
+    toc: "Contents",
+    subtitle: "A history in {n} chapters",
+    resultLine: "{side} wins · {reason} · turn {turn}",
+    you: "You: {side}",
+    opponentBot: "Opponent: {side} (computer · {level})",
+    opponentPlayer: "Opponent: {name}",
+    vsNamed: "{qin} vs {chu}",
+    download: "Download the record",
+    share: "Share",
+    shareCopied: "Link copied",
+    footnote: "Written by AI from this game's record · maps and cards are the real position",
+    viewCard: "View card ›",
+    mandateCaption: "The realm's favor at each year's end · Qin above, Chu below",
+  },
 };

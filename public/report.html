@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Zongheng 縱橫 · 戰報</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;700;900&display=swap">
+<!-- #138: style.css alone gives report.js the exact same .map/.node/.disc/
+     .region-label rendering the live table and rules.js already use (the C2
+     tokens + map geometry classes), so the report's maps are drawn with the
+     game's own map code, not a second copy of its look. report.css is this
+     page's own chrome only (header/hero/chart/toc/chapters/card figures/
+     footer) -- see its own top comment. -->
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="ui-states.css">
+<link rel="stylesheet" href="report.css">
+</head>
+<body>
+<div class="d-frame" aria-hidden="true">
+  <div class="d-tex d-tex-a"></div>
+  <div class="d-tex d-tex-b"></div>
+  <div class="d-vignette"></div>
+</div>
+<div class="page-card" id="pageCard">
+<header class="bar">
+  <a class="hub back" id="backLink" href="play.html?resume" data-t="report.back"></a>
+  <span id="barMid"></span>
+  <button id="langBtn" class="langBtn" type="button"></button>
+</header>
+<main class="rp" id="rpRoot">
+  <div class="rp-state" id="rpWaiting" hidden>
+    <div class="rp-spinner" aria-hidden="true"></div>
+    <p class="rp-state-title" id="rpWaitingTitle"></p>
+    <p class="rp-state-note" id="rpWaitingNote"></p>
+    <a class="rp-wayback" id="rpWaitingBack" href="play.html?resume"></a>
+  </div>
+  <div class="rp-state" id="rpError" hidden>
+    <p class="rp-state-title" id="rpErrorTitle"></p>
+    <a class="rp-wayback" id="rpErrorBack" href="play.html?resume"></a>
+  </div>
+  <article id="rpArticle" hidden></article>
+</main>
+<footer class="credit" id="credit"></footer>
+</div>
+<script type="module" src="report.js"></script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+/* 戰報 (#138). This page's own chrome only -- title, hero, mandate chart,
+   chapter list, chapter body, card figures, footer. The map itself uses
+   style.css's own .map/.map-inner/.node/.disc/.region-label rules (the same
+   ones the live table and rules.js draw with) completely unchanged; nothing
+   here restyles a single node. C2 tokens (var(--gold) etc.) come from
+   style.css's :root, same convention as rules.css. */
+/* `body` (style.css) is a column flex container with the default
+   align-items:stretch -- a flex item's auto margins are only honoured for
+   cross-axis centering when the item ISN'T being stretched to the
+   container's full size first; once max-width clamps a stretched item,
+   plain `margin: 0 auto` leaves the leftover space unclaimed instead of
+   centering (confirmed here: getComputedStyle reported the resolved
+   marginLeft/Right as 0px, not the expected offset). `align-self: center`
+   opts this one flex item out of stretch and back to ordinary centering,
+   same problem rules.css's own comment two lines up documents for
+   min-width, different property. */
+.rp { padding: 6px 14px 40px; max-width: 720px; width: 100%; min-width: 0; margin: 0 auto; align-self: center; box-sizing: border-box; }
+/* 1280x800 desktop: a centred reading column (the brief's own words), not
+   the phone layout stretched wide -- narrower than .rules's 720px so long
+   lines of prose stay readable. */
+@media (min-width: 720px) {
+  .rp { max-width: 560px; padding-top: 14px; }
+}
+
+/* ---------- waiting / error states ---------- */
+.rp-state { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 56px 12px; }
+.rp-spinner {
+  width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--gold-line); border-top-color: var(--gold);
+  animation: rp-spin 1s linear infinite;
+}
+@keyframes rp-spin { to { transform: rotate(360deg); } }
+.rp-state-title { font: 600 16px var(--serif); color: var(--gold); margin: 4px 0 0; }
+.rp-state-note { font: 400 13px/1.6 var(--serif); color: var(--text-dim); max-width: 320px; margin: 0; }
+.rp-wayback { margin-top: 8px; color: var(--gold); text-decoration: underline; text-decoration-color: var(--gold-line); font: 600 14px var(--serif); min-height: 44px; display: inline-flex; align-items: center; }
+
+/* ---------- hero / header ---------- */
+.rp-hero { padding: 6px 2px 10px; }
+.rp-hero h1 { font-family: var(--kai); font-weight: 400; letter-spacing: 3px; margin: 0 0 4px; color: var(--gold); font-size: 24px; }
+.rp-sub { font-size: 12.5px; color: var(--text-dim); }
+.rp-meta { margin-top: 8px; font-size: 13px; color: var(--text-soft); line-height: 1.6; }
+
+/* ---------- mandate chart ---------- */
+.rp-chart { margin: 8px 0 10px; padding: 8px 0 6px; border: 1px solid var(--gold-line); border-radius: 12px; background: rgba(0, 0, 0, 0.25); text-align: center; }
+.rp-chart svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+.rp-chart-cap { font-size: 11px; color: var(--gold-line); margin: 4px 0 0; }
+
+/* ---------- 目錄 ---------- */
+.rp-toc { margin: 8px 0; padding: 10px 12px; border: 1px solid var(--gold-line); border-radius: 10px; font-size: 13px; line-height: 1.9; color: var(--text-soft); }
+.rp-toc-title { color: var(--gold); font-weight: 600; margin: 0 0 4px; font-size: 12px; letter-spacing: 2px; }
+.rp-toc a { color: var(--text-soft); text-decoration: none; display: inline; }
+.rp-toc a b { color: var(--gold); font-weight: 600; }
+.rp-toc a:hover, .rp-toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--gold-line); }
+.rp-toc-sep { color: var(--gold-line); }
+
+/* ---------- chapters ---------- */
+.rp-intro { font-size: 15px; line-height: 1.85; text-indent: 2em; color: var(--text-soft); margin: 10px 0; }
+.rp-ch { padding: 4px 0 4px; scroll-margin-top: 12px; }
+.rp-ch-n { margin: 20px 0 0; text-align: center; color: var(--gold-line); font: 600 12.5px var(--serif); letter-spacing: 4px; }
+.rp-ch-h { margin: 2px 0 10px; text-align: center; font: 700 16.5px var(--kai); color: var(--gold); letter-spacing: 1px; line-height: 1.5; }
+.rp-ch p { margin: 9px 0; font-size: 15px; line-height: 1.85; text-indent: 2em; color: var(--text-soft); }
+.rp-ch a.cl { color: var(--gold); text-decoration: underline; text-decoration-color: rgba(216, 181, 106, 0.5); text-underline-offset: 3px; }
+.rp-end { text-indent: 0 !important; text-align: center; color: var(--gold); border-top: 1px solid var(--gold-line); padding-top: 12px; margin-top: 16px !important; }
+
+/* ---------- one map per chapter ---------- */
+.rp-map { margin: 12px 0; }
+.rp-mapbox { width: 100%; aspect-ratio: 390 / 408; border-radius: 10px; overflow: hidden; }
+.rp-mapbox .map-inner { width: 390px; height: 408px; top: 50%; left: 50%; }
+.rp-map figcaption { font-size: 12px; color: var(--text-dim); margin-top: 6px; text-align: center; }
+.rp-map-loading { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: var(--gold-line); font-size: 12px; }
+
+/* ---------- card figures ---------- */
+.rp-card { display: flex; gap: 10px; align-items: center; margin: 12px 0; padding: 8px; border: 1px solid rgba(216, 181, 106, 0.55); border-radius: 10px; background: rgba(216, 181, 106, 0.08); color: var(--text-soft); text-decoration: none; font-size: 13px; min-height: 44px; }
+.rp-card img { width: 56px; height: 76px; object-fit: cover; border-radius: 6px; border: 1px solid var(--gold); flex: none; background: #1a1712; }
+.rp-card-body { display: flex; flex-direction: column; min-width: 0; }
+.rp-card-body b { display: block; color: var(--gold); font: 700 15px var(--kai); }
+.rp-card-body i { display: block; font-style: normal; color: var(--gold); font-size: 12px; margin-top: 4px; }
+
+/* ---------- footer ---------- */
+.rp-foot { padding: 14px 2px 20px; border-top: 1px solid var(--gold-line); margin-top: 8px; }
+.rp-foot-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.rp-foot-row button, .rp-foot-row a.rp-btn { flex: 1; min-width: 100px; min-height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px solid var(--gold-line); background: none; color: var(--gold); font: 600 13px var(--serif); text-align: center; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+.rp-gen { font-size: 11px; color: var(--gold-line); text-align: center; margin-top: 10px; }
+.rp-share-note { font-size: 11.5px; color: var(--gold); text-align: center; margin-top: 6px; }
+.rp-share-note:empty { display: none; }

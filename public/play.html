@@ -228,8 +228,13 @@
     </div>
   </div>
   <div class="over-footer">
-    <!-- #137 decision 3: 下載本局紀錄, above 再來一局. -->
-    <button type="button" id="btnDlLog" class="over-dl no-tap-sound" data-t="logDownload.endButton"></button>
+    <!-- #137 decision 3: 下載本局紀錄, above 再來一局. #138: 戰報 sits next to
+         it, same row, same styling -- both are "do something with this
+         finished game" actions, neither is the primary "play again" ask. -->
+    <div class="over-dl-row">
+      <button type="button" id="btnDlLog" class="over-dl no-tap-sound" data-t="logDownload.endButton"></button>
+      <button type="button" id="btnReport" class="over-dl no-tap-sound" data-t="report.endButton"></button>
+    </div>
     <button id="btnAgain" class="primary" data-t="buttons.playAgain"></button>
     <div class="row">
       <button id="btnBoard" data-t="buttons.board"></button>
