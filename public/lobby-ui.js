@@ -242,6 +242,10 @@ export function syncPreviewCard(v, side, target, ops, lang, me, onCancel, onStar
   const c = el.querySelector("[data-lobby-cancel]"); if (c) c.onclick = onCancel;
   const s = el.querySelector("[data-lobby-start]"); if (s) s.onclick = onStart;
 }
+// #143: app.js's botLoop() reads this before it lets the bot take its next
+// action, so a solo bot cannot advance the board while the human is still
+// looking at a just-finished sequence's summary card.
+export function summaryOpen() { return summaryActive; }
 export function hideCard() {
   summaryActive = false;
   if (!cardEl) return;

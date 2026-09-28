@@ -166,6 +166,12 @@ function foldEventChips(lines, lang) {
 // nothing left to point at. Substituted with the mover's actual side name,
 // tracked from the last-seen move's own head line ("{side} 打出 …" /
 // "{side} plays …", moveRowHtml's own wording).
+// #143 follow-up: the panel's own chipLobbyLost/log.lobbyDice templates
+// (i18n) now name the side directly ("{target}:{side}失去 {n}") instead of
+// "己方" -- this regex no longer matches anything real, so this function is
+// now an inert no-op net rather than a real substitution. Left in place
+// (harmless) rather than removed, in case some other, not-yet-found wording
+// still produces the bare pattern.
 function fixOwnSideLines(lines, lang) {
   const moveHeadRe = lang === "en" ? /^(Qin|Chu) plays / : /^(秦|楚) 打出 /;
   const lostRe = lang === "en" ? /^(.+): loses (\d+) of its own$/ : /^(.+):己方失去\s*(\d+)$/;

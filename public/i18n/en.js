@@ -154,6 +154,10 @@ export default {
     pickHint: "Tap a space where both you and {opp} have influence",
     pickRule: "Each attempt, both roll a die plus modifiers; the loser removes the difference -- you can lose your own points too.",
     winTag: "{pct}% win",
+    // #143: shorter form for the pick screen's win% once it moved inside
+    // the space's own name label (nodeLabelHTML, map-draw.js) -- see
+    // zh-Hant.js's own comment on this key.
+    winTagShort: "{pct}%",
     previewTitle: "{target} · {n} lobby attempt(s)",
     vs: "vs",
     modLine: "{side} rolls {mod}",
@@ -236,7 +240,11 @@ export default {
     // path only fires for an orphaned entry (#128's 400-entry cap dropping
     // the move that opened it); the normal in-move rendering is
     // log-view.js's chipsForSteps().
-    lobbyDice: "{side} lobbies {target}, {attempts} attempt(s): {removed} of theirs lost, {lost} of its own lost.",
+    // #143 follow-up (orchestrator: "its own" doesn't say which side -- the
+    // #137 .txt export already names it, the panel should match): {side}
+    // already appears once at the start of this template; named again here
+    // instead of "its own".
+    lobbyDice: "{side} lobbies {target}, {attempts} attempt(s): {removed} of theirs lost, {side} loses {lost} of its own.",
     realign: "Attempt {k}: {loserOrTie}.",
     lobbyStop: "{side} stops lobbying {target}, {left} attempt(s) unspent.",
     capitalCheck: "Turn-end check: {side}'s home capital {capital} is {status}.",
@@ -255,7 +263,10 @@ export default {
     headlineLine: "Headlines: {qinSide} {qinCard} · {chuSide} {chuCard}", headlineFirst: "{first} resolves first",
     chipPlace: "{space} +{n}", chipRemove: "{target}: removes {n} {side}",
     // #133: the dice-lobby's own per-roll and stop chips.
-    chipRealign: "Attempt {k}: {loserOrTie}", chipRealignTie: "a tie", chipRealignLoss: "{side} loses {n}", chipLobbyLost: "{target}: loses {n} of its own", chipLobbyStop: "Stops ({left} left)",
+    // #143 follow-up: "{target}: {side} loses {n} of its own" -- was "loses
+    // {n} of its own" with no side named (owner: log_dice_zh_320x568.png's
+    // zh chip had the same gap, "己方失去").
+    chipRealign: "Attempt {k}: {loserOrTie}", chipRealignTie: "a tie", chipRealignLoss: "{side} loses {n}", chipLobbyLost: "{target}: {side} loses {n} of its own", chipLobbyStop: "Stops ({left} left)",
     chipReform: "Reform → box {box}", chipTire: "Weariness → {to}",
     chipDiscard: "{side} discards {card}", chipOpsLost: "{side} has nowhere to spend {ops} ops",
     // #127: the "ended it" chip on the move (or headline) that ended the

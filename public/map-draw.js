@@ -291,12 +291,28 @@ export function stateTagHTML(sp, name, esc) {
 export function stabilityTagHTML(sp) {
   return `<span class="stab" aria-hidden="true">${sp.stability}</span>`;
 }
-export function nodeLabelHTML(id, name, lang, esc) {
+// `winTag`, optional: the pick screen's per-target win% (mockup 1_pick,
+// #133), pre-rendered by the caller (app.js's t("lobbyRoll.winTag", {pct}),
+// already escaped -- this file takes no i18n dependency of its own, same
+// rule as every other caller-supplied string here). #143 (owner,
+// screenshot: 邯鄲's separate win% pill sat directly under its own name
+// label "★邯鄲"): a THIRD absolutely-positioned mark stacked below the node
+// (after the name) has nowhere to go on a board this dense -- pushing it
+// further down to clear the name collided with the NEXT node down instead
+// (measured: a real getBoundingClientRect sweep of all 26 spaces, at every
+// offset tried, always traded one collision for another). Folded into the
+// name label itself instead (the brief's own listed alternative): one box,
+// not two, so there is nothing left for it to collide WITH in the space
+// below the node -- the name label's own position is the one already
+// proven collision-free for every space, in both languages, by years of
+// NODE_ANCHOR/NODE_BREAK_EN/NODE_SMALL_EN tuning this file already carries.
+export function nodeLabelHTML(id, name, lang, esc, winTag) {
   const star = E.SPACE[id].battleground ? "★" : "";
+  const pct = winTag ? ` <b class="nm-win${winTag.low ? " nm-win-low" : ""}">${esc(winTag.text)}</b>` : "";
   if (lang === "en" && NODE_BREAK_EN[id]) {
     const [l1, l2] = NODE_BREAK_EN[id];
-    return `<span class="nm two-line">${star}${esc(l1)}<br>${esc(l2)}</span>`;
+    return `<span class="nm two-line">${star}${esc(l1)}<br>${esc(l2)}${pct}</span>`;
   }
   const small = lang === "en" && NODE_SMALL_EN.has(id);
-  return `<span class="nm${small ? " sm" : ""}">${star}${esc(name)}</span>`;
+  return `<span class="nm${small ? " sm" : ""}${winTag ? " has-win" : ""}">${star}${esc(name)}${pct}</span>`;
 }
