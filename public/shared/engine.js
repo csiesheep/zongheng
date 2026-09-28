@@ -96,7 +96,11 @@ export const REFORM = [
 // `seals: 4` baked in from whenever it was created -- this flip cannot
 // reach it at all, by construction, not just by the merge-once-at-creation
 // rule those two rely on. Confirmed with a throwaway script, not committed.
-export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "lose-turn" };
+// #142 (owner, 2026-09-27, 「好 採用D1」): `qinFarStart: 1` (遠交, Qin starts
+// with 1 in 臨淄 and 1 in 薊; see startGame) becomes the default. An absent key
+// is 0, so a save or an export whose own options predate this has no foothold
+// and keeps it that way (createGame merges once; `replay` does not merge).
+export const DEFAULT_OPTIONS = { cap: 2, seals: 5, mie: 3, comp: 0, homeLock: 4, luoyi: 1, turns: 8, scoringSplit: "homes", sealAt: "cap", tie: "chu", hangu: 3, wuguo: "nonbg", westBonus: true, yue: "none", reach: "ts", emperor: "win-lead", lobby: "realign-own", homeFall: "lose-turn", qinFarStart: 1 };
 export const USES = ["event", "place", "campaign", "lobby", "reform"];
 // #130, two options that are NOT keys of DEFAULT_OPTIONS: an absent one plays
 // as today, byte for byte (tests/defaults-130.test.js).
@@ -808,6 +812,10 @@ function startGame(seed, options) {
     for (const [id, n] of Object.entries(SETUP[SIDES[side]].fixed)) ensure(st, id)[side] = n;
   }
   ensure(st, "hangu")[QIN] = st.options.hangu;
+  // #135 (D1, 遠交): `qinFarStart: n` -- Qin's fixed setup also puts n in 臨淄 and
+  // n in 薊, before the free placement. 1 by default since #142; absent (a game
+  // created before #142) or 0 is the setup without it, and stays so.
+  if (st.options.qinFarStart > 0) for (const id of ["linzi", "ji"]) ensure(st, id)[QIN] = st.options.qinFarStart;
   if (st.options.homeFall === "move") st.capital = HOME_CAPITAL.slice();
   const decks = { reform: ERA_DECKS.reform.slice(), alliance: ERA_DECKS.alliance.slice(), conquest: ERA_DECKS.conquest.slice() };
   if (st.options.scoringSplit === "v2") {
