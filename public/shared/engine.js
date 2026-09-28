@@ -331,8 +331,11 @@ export function placeTargets(st, side, ops, points = []) {
 // Set by the balance harness (tests/sim.js) to watch placements (`place`) and
 // the two home capitals (`home`, #130: called with (st, "check") at the end of
 // every `checkMarkers` and (st, "turnEnd") where the turn-end checks start);
-// null in play.
-export const probe = { place: null, home: null };
+// null in play. #138: `turnEnd` is called with (st) once a year is over and
+// before the next begins (after the turn-end checks and any 明法令 discard, before
+// the final scoring or the next deal); report-digest.js `turnEnds` reads the
+// board of each year there. It sees the state; it must not change it.
+export const probe = { place: null, home: null, turnEnd: null };
 export function placeCost(st, side, id) { return controller(st, id) === other(side) ? 2 : 1; }
 // 局勢 for 遊說: my controlled neighbours minus theirs.
 export function edge(st, side, id) {
@@ -957,6 +960,7 @@ function exec(st, step) {
         if (pick) discardCard(st, side, pick);
         step.sides.shift();
       }
+      if (probe.turnEnd) probe.turnEnd(st);
       if (st.turn >= st.options.turns) finalScoring(st);
       else st.plan.push({ do: "startTurn" });
       return true;

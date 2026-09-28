@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "model": "sample (hand-written by the orchestrator for #138 FE; not model output)",
+  "zh": {
+    "title": "縱橫演義・楚帝傳",
+    "intro": "話說戰國之世,秦據西陲,楚踞南方,韓、魏、趙擠在中原,齊在東海,燕守北疆,五國夾在兩強之間,朝秦暮楚。開局之時,秦人在巴蜀、宜陽、新鄭屯下兵馬,楚人則東渡淮水,在臨淄、即墨結交齊人。一場八年的縱橫之爭,就此拉開序幕。",
+    "chapters": [
+      { "turn": 1, "heading": "馬陵道楚師伏秦兵　九鼎移新鄭韓奉印", "cards": ["jiuding", "maling"], "mapCaption": "第一回終:三晉秦楚平分秋色",
+        "paragraphs": ["頭一年,天降大饑,偏偏落在楚國郢都與陳蔡,百姓流離。楚王卻不慌不忙,效法孫臏故智,在馬陵之戰的故道上設伏,打得宜陽的秦軍折了兩陣。", "秦國這邊,早已派人在新鄭、宜陽、河東廣布耳目。楚王竟將國之重器九鼎請到新鄭,韓王見了鼎,當即捧出相印,願奉楚國為盟主。", "秦王豈肯罷休?暗遣說客突襲郢都,又使張儀施連橫之計,從新鄭、大梁、臨淄三地各拉走一批親楚之人。年終一算,中原三晉秦楚平分秋色,南方則仍是楚國的天下。"] },
+      { "turn": 2, "heading": "舉鼎破梁秦滅魏國　楚師叩關入漢中", "cards": ["wuguo"], "mapCaption": "第二回終:魏國已亡,楚師屯於漢中",
+        "paragraphs": ["次年饑荒又至,這回落在淮泗。楚國說客遊說宜陽,勸走了駐守的秦人。秦王卻將九鼎迎回咸陽,借鼎之威舉兵直取魏都大梁,把楚軍趕得一乾二淨,魏國就此滅亡。", "楚人並不氣餒,用蘇秦之謀在淮泗、大梁、新鄭重新聚兵。秦國說客隨即奔赴邯鄲,一番唇槍舌劍,趙地的楚人盡數離去。", "最出人意料的是,五國伐秦之師竟由楚人領路,一路打進秦國的後院漢中,在那裡紮下了營寨。"] },
+      { "turn": 3, "heading": "商君變法秦勢日熾　黃河決口兩軍皆傷", "cards": ["shangyang"], "mapCaption": "第三回終:三晉多在秦手,天下人心向秦",
+        "paragraphs": ["第三年,秦國起用商鞅,商鞅變法,國力陡增。楚國以「圍魏救趙」之計在大梁牽制秦兵,又往邯鄲安插人馬;秦將隨即回師大梁,把楚兵逐走。", "不料這年黃河決口,洪水漫過宜陽、新鄭、河東、大梁、上黨、邯鄲,秦楚兩軍都折損不少。", "這一年,三晉之地秦國據有的城池遠多於楚國,天下人心一度歸向秦國,正是秦國最得意的時候。"] },
+      { "turn": 4, "heading": "楚民西徙叩函谷　田單復齊定東方", "cards": ["tiandan", "zhangyi2"], "mapCaption": "第四回終:東方盡歸楚國",
+        "paragraphs": ["第四年,楚王做了一件大膽的事:遷徙百姓,深入秦國的關中與函谷關,又在大梁增兵。秦國則助齊滅宋,把宋地收入囊中。", "楚國借田單復國之勢,在即墨、莒城重振齊地;屈原也為楚國奔走邯鄲。", "年底,東方齊地盡歸楚國。秦國的張儀本想欺楚,結果這一欺,反讓楚國得了趙國的相印。"] },
+      { "turn": 5, "heading": "秦王欲稱西帝未果　說客舌戰退關中", "cards": [], "mapCaption": "第五回:秦國說客退走關中的楚人",
+        "paragraphs": ["第五年,秦王想仿效齊王稱西帝,卻因勢力不及,反倒讓天下人看了笑話。", "楚國則在即墨、莒、宋三地遭逢樂毅伐齊之禍,親楚之人折損大半。", "秦王眼見楚人盤踞關中,急遣說客前往,一番辯論,楚人盡被說走,秦都才轉危為安。"] },
+      { "turn": 6, "heading": "胡服騎射楚學燕趙　黃金臺上三印歸楚", "cards": ["huangjintai", "hufu"], "mapCaption": "第六回終:楚握韓、趙、燕三印",
+        "paragraphs": ["第六年,秦國遷民入郢都,想在楚國心臟插上一足。", "趙武靈王胡服騎射之風吹到楚國,楚國變法更進一步,薊城也有了楚人落腳。楚國的說客回到郢都,把秦人全數逐出國都。", "接著燕國築起黃金臺招攬天下賢士,賢士紛紛投楚,燕王也奉上相印。"] },
+      { "turn": 7, "heading": "廉頗李牧守楚疆　大梁易手魏復國", "cards": [], "mapCaption": "第七回終:大梁得而復失",
+        "paragraphs": ["第七年,楚國得廉頗、李牧鎮守邊關。", "大梁成了兩國必爭之地。周天子賜胙之下,魏國在楚國扶持下復國;秦國又增兵大梁,大梁得而復失。", "楚國借「弭兵之議」,一面息兵,一面變法,離稱帝只差一階。"] },
+      { "turn": 8, "heading": "合縱攻秦兵臨關中　王翦兵符反成帝階", "cards": ["wangjian", "hezong", "changping"], "mapCaption": "第八回:楚王稱帝之前的天下",
+        "paragraphs": ["最後一年,楚國號召六國合縱攻秦,大軍直逼秦都關中。秦國則滅了韓國。", "秦王急調長平之戰的兵力回防關中與函谷關,總算保住國都。", "可就在此時,楚王將一面王翦滅楚的兵符投入變法爐中。王翦本是秦國滅楚的大將,這面兵符卻成了楚王登上帝位的最後一階。"] }
+    ],
+    "ending": "正是:王翦兵符原滅楚,翻作楚王稱帝階。全局終。"
+  },
+  "en": {
+    "title": "The Rise of the Chu Emperor",
+    "intro": "In the age of the Warring States, Qin held the western frontier and Chu the south, while Han, Wei and Zhao crowded the central plain, Qi kept the eastern sea and Yan the northern border. Eight years of rivalry were about to begin.",
+    "chapters": [
+      { "turn": 1, "heading": "An ambush at Maling; the Nine Cauldrons move to Xinzheng", "cards": ["jiuding", "maling"], "mapCaption": "End of year one: the Three Jin evenly split",
+        "paragraphs": ["In the first year famine struck the Chu capital. Undaunted, the King of Chu laid an ambush on the old road of Maling and broke the Qin army at Yiyang twice.", "Chu brought the Nine Cauldrons to Xinzheng, and the King of Han handed over his seal of office.", "Qin answered with Zhang Yi's Horizontal Alliance, drawing away Chu's friends in Xinzheng, Daliang and Linzi."] },
+      { "turn": 2, "heading": "Qin takes Daliang and Wei falls", "cards": ["wuguo"], "mapCaption": "End of year two: Wei is gone",
+        "paragraphs": ["Qin carried the Cauldrons to Xianyang and marched on Daliang; Wei fell.", "Chu gathered its men again, and Qin's envoys talked Chu out of Handan.", "Then the Five States' Attack on Qin, led by Chu, broke into Hanzhong."] },
+      { "turn": 3, "heading": "Shang Yang's reforms; the Yellow River floods", "cards": ["shangyang"], "mapCaption": "End of year three: the Three Jin lean to Qin",
+        "paragraphs": ["Qin took up Shang Yang's Reforms and grew strong.", "The Yellow River burst its banks and both armies suffered.", "By year's end the Three Jin were mostly Qin's."] },
+      { "turn": 4, "heading": "Chu settlers at the pass; Tian Dan restores Qi", "cards": ["tiandan", "zhangyi2"], "mapCaption": "End of year four: the East is Chu's",
+        "paragraphs": ["Chu sent settlers deep into Guanzhong and Hangu Pass.", "With Tian Dan restoring Qi, Chu took Jimo and Ju.", "Zhang Yi's deceit of Chu backfired, and Zhao's seal went to Chu."] },
+      { "turn": 5, "heading": "Qin's claim to empire fails", "cards": [], "mapCaption": "Year five: Qin's envoys clear Guanzhong",
+        "paragraphs": ["The King of Qin tried to call himself Western Emperor and failed.", "Yue Yi's campaign against Qi cost Chu dearly in the east.", "Qin's envoys talked every Chu man out of Guanzhong."] },
+      { "turn": 6, "heading": "Nomad dress; three seals go to Chu", "cards": ["huangjintai", "hufu"], "mapCaption": "End of year six: Chu holds three seals",
+        "paragraphs": ["Qin moved settlers into Ying.", "Chu adopted the riding dress of the north and pressed its reforms; its envoys cleared Qin from Ying.", "Yan's Golden Terrace drew the talents of the world to Chu, and Yan's seal followed."] },
+      { "turn": 7, "heading": "Wei restored; Daliang changes hands", "cards": [], "mapCaption": "End of year seven: Daliang lost again",
+        "paragraphs": ["Lian Po and Li Mu guarded Chu's borders.", "Wei rose again under Chu's protection, but Qin retook Daliang.", "Chu's reforms stood one step from empire."] },
+      { "turn": 8, "heading": "The Vertical Alliance at Qin's gate", "cards": ["wangjian", "hezong", "changping"], "mapCaption": "Year eight: the world before the Chu emperor",
+        "paragraphs": ["The six states marched on Qin and reached Guanzhong; Qin destroyed Han.", "Qin held its capital with the army of Changping.", "Then the King of Chu cast the tally of Wang Jian into the reform, and took the last step to empire."] }
+    ],
+    "ending": "The tally meant to destroy Chu became its emperor's stair."
+  }
+}
