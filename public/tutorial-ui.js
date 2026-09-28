@@ -195,6 +195,32 @@ export function allowsAction(action) {
   return allows(step, { ...action, side: QIN });
 }
 
+// #140: lesson 8's own `then` script resolves the dice-遊說 sequence, and
+// enterStep()/showDone()'s own render() (below) is what app.js notices this
+// on (its own "a lobby sequence just completed" watermark, read off the
+// log) -- raising lobby-ui.js's summary card as a side effect. That card
+// used to stay up until the player tapped 完成 (its own onDone callback
+// just re-renders), so a player who never tapped it was left staring at a
+// result card sitting on top of whatever lesson came next, with no way
+// back (found live, #139 peer round 1). Rendering the CURRENT lesson's own
+// state again first (so the card would appear before switching) was tried
+// and reverted: the "lobby" step's own facts() (shared/tutorial.js) only
+// know how to simulate a trial OR read the log back, keyed off whether
+// QIN's action round has started yet -- re-rendering against the OLD
+// stepIdx after step.then has already resolved a full round can land in
+// neither case (a NEW action round already open) and throw ("card not in
+// hand", envoy already spent) — not this file's own bug to fix (shared/
+// tutorial.js is BE's), so the safer fix is closing the card ourselves
+// instead of asking it to render again. Closes it automatically a few
+// seconds after showing so a player who WAS about to tap 完成 still sees
+// the result, but nobody can get stuck on it — the tutorial itself is
+// responsible for moving on, not the player's own tap.
+const LOBBY_CARD_AUTOCLOSE_MS = 2000;
+function autoCloseLobbyCard() {
+  const el = document.getElementById("lobbyCardOverlay");
+  if (!el || el.hidden) return;
+  setTimeout(() => { if (el && !el.hidden) { el.hidden = true; el.innerHTML = ""; } }, LOBBY_CARD_AUTOCLOSE_MS);
+}
 // Called by app.js instead of botLoop() once the player's own move has
 // already landed on game.st (E.apply already ran with the gated action).
 export function afterAction() {
@@ -209,6 +235,7 @@ export function afterAction() {
     // that ends the whole tutorial instead.
     if (stepIdx + 1 >= STEPS.length) { on = true; showDone(); }
     else { Audio.play("sfx.tut.step"); enterStep(stepIdx + 1); }
+    autoCloseLobbyCard(); // #140: right after the render() either branch just triggered
   }, 650);
 }
 
@@ -701,14 +728,33 @@ function positionOverlay(el, h) {
   const rectAt = (edge) => edge === "bottom"
     ? { top: mapRect.bottom - h - 8, bottom: mapRect.bottom - 8 }
     : { top: mapRect.top + 8, bottom: mapRect.top + 8 + h };
-  const fits = (r) => r.top >= 0 && r.bottom <= window.innerHeight;
+  // #140: the top bound is `mapRect.top`, not window-relative 0 — #map is
+  // the topbar's very next sibling, so anything above mapRect.top is INSIDE
+  // the topbar's own row. A tall enough panel pinned to the BOTTOM edge
+  // (`mapRect.bottom - h - 8`) can still land above mapRect.top yet still
+  // pass a plain ">= 0" check (found at 320x568/375x667, lesson 8: the
+  // panel's own dots/跳過教學 row sat partly under the topbar even though it
+  // "fit" the window) — checking against the real floor is what actually
+  // catches that and falls through to the "top" edge instead.
+  const fits = (r) => r.top >= mapRect.top && r.bottom <= window.innerHeight;
   el.classList.remove("tut-pin-flow");
-  let edge = fits(rectAt("bottom")) ? "bottom" : fits(rectAt("top")) ? "top" : null;
+  const edge = fits(rectAt("bottom")) ? "bottom" : "top";
+  // #140: the "neither fits" case (found at 320x568, lesson 8: the panel's
+  // top edge sat partly UNDER the topbar) used to fall back to a flat
+  // `top: 8px`, table-relative — but #table's own top-left corner is BEFORE
+  // its topbar child in normal flow (topbar/#map/#statline/#lowerBlock, in
+  // that DOM order), so "8px below #table's own top" lands inside the
+  // topbar's own row, not below it. The "top" edge's own anchor
+  // (`mapRect.top`, i.e. right after the topbar — #map is the topbar's very
+  // next sibling) is exactly "below the topbar" already; reusing it here
+  // (rather than a second, independent anchor) is what actually clears it,
+  // and the base .tut-coach max-height/overflow-y:auto (already there for
+  // the "pathologically long string" backstop) contains whatever still
+  // doesn't fit, same as it always has.
   el.classList.toggle("tut-pin-top", edge === "top");
   el.classList.toggle("tut-pin-bottom", edge === "bottom");
   if (edge === "top") { el.style.bottom = ""; el.style.top = `${Math.round(mapRect.top - tableRect.top) + 8}px`; }
-  else if (edge === "bottom") { el.style.top = ""; el.style.bottom = `${Math.round(tableRect.bottom - mapRect.bottom) + 8}px`; }
-  else { el.style.bottom = ""; el.style.top = "8px"; }
+  else { el.style.top = ""; el.style.bottom = `${Math.round(tableRect.bottom - mapRect.bottom) + 8}px`; }
   updateHasMore(el);
 }
 // ---------- COLLAPSED (post "Got it"): pin clear of the target, or flow ----------
@@ -720,7 +766,11 @@ function positionCollapsed(el, h, target) {
       : { top: mapRect.top + 8, bottom: mapRect.top + 8 + h, left: mapRect.left, right: mapRect.right };
   };
   const covers = (edge) => !!target && overlaps(rectAt(edge), target);
-  const fits = (r) => r.top >= 0 && r.bottom <= window.innerHeight;
+  // #140: the top bound is #map's own top edge, not window-relative 0 --
+  // same reasoning as positionOverlay()'s own fits() above (#map is right
+  // after the topbar; anything above its top edge sits inside the topbar's
+  // own row).
+  const fits = (r) => r.top >= ctx.$("map").getBoundingClientRect().top && r.bottom <= window.innerHeight;
   let edge = !covers("bottom") ? "bottom" : !covers("top") ? "top" : null;
   const flow = edge == null;
   el.classList.toggle("tut-pin-flow", flow);

@@ -37,6 +37,21 @@ body.tut-on #table { position: relative; }
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
   display: flex; flex-direction: column; gap: 5px;
 }
+/* #140: a lesson whose card has no map-needing use yet (event's own preset
+   leaves the use for the player to pick) makes app.js's own
+   wantsCardOverlay() open the real full-card overlay (#sheet.overlay,
+   style.css, z-index 40) — same picture a real game shows while just
+   browsing a card. Without this, that overlay painted OVER the coach panel
+   (z-index 15), so 知道了/上一步 were on screen but not tappable: a real
+   tap landed on the overlay's own backdrop instead (found live, lesson 5).
+   Scoped to body.tut-on so a real game's own full-card overlay (routine,
+   z-index 40, meant to cover the map) is never touched — the coach only
+   exists during a tutorial. Still below lobby-ui.js's own cards (z-index
+   45) and the log/confirm overlays (44/45/50): none of those are reachable
+   mid-lesson except lesson 8's dice card, which #140's OTHER fix (waiting
+   for it in tutorial-ui.js's afterAction()) keeps from ever overlapping the
+   coach in the first place. */
+body.tut-on .tut-coach { z-index: 41; }
 /* Escape valve for a map too short to let the COLLAPSED pill avoid its own
    target at either edge (pinCoach()'s positionCollapsed(), found at
    375x553) — falls back into #table's normal flex column right after #map
