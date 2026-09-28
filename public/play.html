@@ -179,6 +179,12 @@
         <button type="button" class="logf" data-filter="1" data-t="logPanel.filterChu"></button>
         <button type="button" class="logf" data-filter="chat" data-t="logPanel.filterChat" hidden></button>
       </div>
+      <!-- #137: 下載 -- available at any time during the game (owner's
+           decision 1), between the filters and 收起 per the approved
+           mockup (A_logpanel.png). Narrow phones (320px) hide its label
+           and show just the icon so it never crowds 全部/秦/楚 -- see
+           style.css's own 320px rule below `.logbody-dl`. -->
+      <button type="button" id="logDl" class="small logbody-dl no-tap-sound" data-t="logDownload.button"></button>
       <button type="button" id="logClose" class="small logbody-close no-tap-sound" data-t="buttons.hide"></button>
     </div>
     <div class="logbody-content" id="logLines"></div>
@@ -209,6 +215,8 @@
     </div>
   </div>
   <div class="over-footer">
+    <!-- #137 decision 3: 下載本局紀錄, above 再來一局. -->
+    <button type="button" id="btnDlLog" class="over-dl no-tap-sound" data-t="logDownload.endButton"></button>
     <button id="btnAgain" class="primary" data-t="buttons.playAgain"></button>
     <div class="row">
       <button id="btnBoard" data-t="buttons.board"></button>
@@ -217,6 +225,32 @@
     </div>
   </div>
 </main>
+
+<!-- #137: the download bottom sheet -- shared by the log panel's 下載 and
+     the end page's 下載本局紀錄 (both just call openDlSheet()), so it lives
+     outside any one <main> view. Structure mirrors #logBody/#logScrim's own
+     fixed bottom-sheet + full-viewport scrim pair (style.css), not
+     #peekSheet's full-screen overlay -- the approved mockup (B_sheet.png)
+     is a rounded-top drawer over the table, not a takeover screen. -->
+<div id="dlScrim" class="logscrim" hidden></div>
+<div id="dlSheet" class="dlsheet" hidden role="dialog" aria-modal="true" aria-labelledby="dlTitle">
+  <h3 id="dlTitle" data-t="logDownload.sheetTitle"></h3>
+  <p class="dlsub" id="dlSubtitle"></p>
+  <button type="button" class="dlopt dlopt-primary" id="dlOptTxt">
+    <span class="dlopt-ic">TXT</span>
+    <span class="dlopt-body"><b id="dlTxtTitle" data-t="logDownload.txtTitle"></b><span id="dlTxtDesc" data-t="logDownload.txtDesc"></span></span>
+  </button>
+  <button type="button" class="dlopt dlopt-json" id="dlOptJson">
+    <span class="dlopt-ic">JSON</span>
+    <span class="dlopt-body"><b id="dlJsonTitle" data-t="logDownload.jsonTitle"></b><span id="dlJsonDesc" data-t="logDownload.jsonDesc"></span></span>
+  </button>
+  <div class="dlrow">
+    <button type="button" id="dlCopy" data-t="logDownload.copyText"></button>
+    <button type="button" id="dlCancel" class="no-tap-sound" data-t="logDownload.cancel"></button>
+  </div>
+  <p class="dlfn" id="dlFilename"></p>
+  <p class="dlnote" id="dlNote" hidden></p>
+</div>
 </div>
 
 <script type="module" src="app.js"></script>

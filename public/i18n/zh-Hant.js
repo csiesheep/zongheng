@@ -230,6 +230,53 @@ export default {
     pairWith: "搭配{side}的「{card}」(不觸發事件)",
     close: "收起",
   },
+  // #137:下載本局紀錄——面板按鈕、底部選單(格式/複製/取消/檔名/隱私提示)
+  // 與結局頁上的同名按鈕。文字紀錄(.txt)本身的字句沿用 logPanel/oppmove/
+  // over.reasons 等既有 key(見 log-text.js),這裡只放這個功能自己專屬的字。
+  logDownload: {
+    button: "下載",
+    sheetTitle: "下載本局紀錄",
+    subtitleLive: "{turnLine} · 進行中也可以下載",
+    subtitleDone: "{turnLine} · 本局已結束",
+    txtTitle: "文字紀錄",
+    txtDesc: "像棋譜一樣逐回合列出每一步。可以直接讀,也方便傳給朋友。",
+    jsonTitle: "完整資料",
+    jsonDesc: "每一步、規則設定與結果都在裡面。之後可以用來寫戰報或重播。",
+    copyText: "複製文字",
+    copyDone: "已複製",
+    cancel: "取消",
+    filename: "檔名:{name}",
+    privacy: "線上對戰只會包含你看得到的資訊:對手的手牌、牌庫的順序都不會出現在紀錄裡。",
+    endButton: "下載本局紀錄",
+    // #137:iOS Chrome(WebKit 引擎)對 Blob + <a download> 不可靠,常常直接
+    // 開新分頁或忽略——偵測到那類瀏覽器就改走「開新分頁」,這裡提示為什麼。
+    fallbackNote: "這個瀏覽器不支援直接下載,已改用開新分頁——用「分享」或長按存成檔案。",
+  },
+  // #137:文字紀錄(.txt)自己的字句——標頭(標題/日期/對手或強度/陣營/規則/
+  // 結果)與終局公開段。逐回合的內文重用 log-view.js 的 renderRows()(跟
+  // logPanel 用同一份文案),這裡只放檔案獨有的收尾與規則措辭。
+  logText: {
+    title: "縱橫 · 對局紀錄",
+    vsComputer: "與電腦對弈({level})",
+    vsRoom: "與{name}對戰",
+    vsRoomBoth: "{a} 對 {b}",
+    you: "你:{side}",
+    spectating: "觀戰",
+    rules: "規則:{rules}",
+    result: "結果:{result}",
+    resultLine: "{winner}勝({reason})‧第 {turn} 回合‧天命 {mandateSide} {mandate}",
+    ongoing: "進行中‧第 {turn} 回合",
+    ruleLobbyDice: "遊說擲骰", ruleLobbyLocal: "局勢遊說",
+    ruleHomeFall: "國都陷落",
+    ruleSeals: "{n}國相印",
+    ruleEmperorWinLead: "稱帝需天命領先", ruleEmperorWin: "稱帝即勝", ruleEmperorWinLate: "第{n}回合起稱帝即勝", ruleEmperorVp: "稱帝不勝,得天命",
+    finalHeader: "終局公開",
+    finalHands: "{side}手牌:{cards}",
+    finalDraw: "牌庫剩餘(依序):{cards}",
+    seed: "種子:{seed}",
+    seals1: "一", seals2: "二", seals3: "三", seals4: "四", seals5: "五", seals6: "六", seals7: "七", seals8: "八", seals9: "九",
+    reasonShort: { unification: "一統", alliance: "合縱", mandate: "天命", emperor: "稱帝", collapse: "土崩", scoring: "記分卡", scoringBoth: "記分卡", final: "終局", tie: "終局", homeFall: "國都陷落" },
+  },
   // #79/#87:對手的一手亮牌——卡牌面板(①,等待一次點按)與地圖演出(②)。
   // #85 的常駐膠囊/底部清單已移除(#87)。只有 oppmove-ui.js 讀這一段。
   oppmove: {

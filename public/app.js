@@ -36,6 +36,8 @@ import * as OppUI from "./oppmove-ui.js"; // #79: the opponent's-move reveal (ca
 // though it textually comes first).
 OppUI.setOpenPeek((id, side) => openPeek(id, side));
 import * as LogView from "./log-view.js"; // #88: the log panel's own rows/chips and its tap-to-flash overlay
+import { buildLogText, buildFilename } from "./log-text.js"; // #137: JSON export -> the .txt layout
+import * as LogDL from "./log-download.js"; // #137: Blob/clipboard saving, and the exportGame stub until be/137-export lands
 import * as LobbyUI from "./lobby-ui.js"; // #133: the dice-遊說 pick/preview/roll-card/summary screens
 import * as CapitalUI from "./capital-ui.js"; // #133 part 2: the homeFall badge/banners/toast/turn-end check
 import { discParts } from "./disc-view.js";
@@ -134,6 +136,9 @@ function setLang(l) {
   $("lobbyChatIn").placeholder = t("lobby.say");
   renderSetup();
   if (game.st) { render(); if (game.st.winner != null) renderOver(); }
+  // #137: the sheet's own dynamic bits (subtitle/filename) aren't `[data-t]`
+  // -- refresh them too, or a language switch mid-sheet leaves them stale.
+  if (!$("dlSheet").hidden) openDlSheet();
   layoutBar(); // #62 part 2: keeps the back link's squeezed-vs-full aria-label/title in sync even on a view with no game.st yet (setup/lobby)
 }
 $("langBtn").addEventListener("click", () => setLang(lang === "en" ? "zh-Hant" : "en"));
@@ -3542,6 +3547,85 @@ function renderOver() {
   $("over").setAttribute("aria-label", t("over.winner", { side: sideName(winner) }));
   show("over");
 }
+
+// ---------- #137: download this game's log ----------
+// The JSON contract's own `viewer`/`names`/`mode`/`level` (see the issue) --
+// built fresh every open/download so it always reflects whichever seat (or
+// spectator) is looking right now, never cached from an earlier render.
+// `names` is always [Qin's name, Chu's name] regardless of who asked, same
+// order the contract itself shows.
+function exportNames() {
+  if (game.room) return [0, 1].map((s) => room.seats.find((x) => x.side === s)?.name || "");
+  const you = store.get("zh.name", "").trim() || t("setup.defaultName");
+  return game.me === E.QIN ? [you, game.botName] : [game.botName, you];
+}
+function exportMeta() {
+  return { mode: game.room ? "room" : "solo", level: game.room ? null : game.level, viewer: game.spectator ? null : game.me, names: exportNames(), lang };
+}
+// A room's `game.st` is already the server's own redacted view (#131) --
+// running it through E.view() a second time would blow up (it deletes
+// `.draw`/`.later`, which a view no longer has) and would be double
+// redaction regardless. Solo's `game.st` is the real engine state, so it
+// still needs E.view() to get "what this seat/spectator sees" (decision:
+// "while the game is on, a download holds exactly what that seat sees").
+function currentExportJson() {
+  const view = game.room ? game.st : E.view(game.st, game.spectator ? null : game.me);
+  const meta = exportMeta();
+  return typeof E.exportGame === "function" ? E.exportGame(view, meta) : LogDL.stubExportGame(view, meta);
+}
+function dlTurnLine() {
+  const st = game.st;
+  return t("logPanel.turnHeader", { turn: st.turn, era: st.era ? t("eras." + st.era) : "" });
+}
+function closeDlSheet() {
+  $("dlScrim").hidden = true;
+  $("dlSheet").hidden = true;
+}
+function noteDlFallback() {
+  $("dlNote").hidden = false;
+  $("dlNote").textContent = t("logDownload.fallbackNote");
+}
+function openDlSheet() {
+  if (!game.st) return;
+  const json = currentExportJson();
+  $("dlSubtitle").textContent = t(game.st.winner != null ? "logDownload.subtitleDone" : "logDownload.subtitleLive", { turnLine: dlTurnLine() });
+  $("dlFilename").textContent = t("logDownload.filename", { name: buildFilename(json, "txt") });
+  $("dlNote").hidden = true;
+  $("dlNote").textContent = "";
+  $("dlScrim").hidden = false;
+  $("dlSheet").hidden = false;
+}
+function downloadDlFormat(ext) {
+  const json = currentExportJson();
+  const filename = buildFilename(json, ext);
+  const content = ext === "txt" ? buildLogText(json) : JSON.stringify(json, null, 1);
+  const mime = ext === "txt" ? "text/plain;charset=utf-8" : "application/json;charset=utf-8";
+  const { fellBackToTab } = LogDL.saveText(filename, content, mime);
+  if (fellBackToTab) noteDlFallback();
+  // No manual sfx.ui.tap here -- #dlOptTxt/#dlOptJson are plain buttons
+  // without .no-tap-sound, so the generic click listener (near the bottom
+  // of this file) already plays it.
+}
+let dlCopyResetTimer = null;
+// #logDl/#btnDlLog/#dlScrim/#dlCancel are all marked .no-tap-sound in
+// play.html (same reasoning as #logToggle/#logClose/#logScrim just above):
+// opening/closing plays the more specific sfx.ui.open/close instead of the
+// generic tap, so it never doubles up.
+$("logDl").onclick = () => { openDlSheet(); Audio.play("sfx.ui.open"); };
+$("btnDlLog").onclick = () => { openDlSheet(); Audio.play("sfx.ui.open"); };
+$("dlScrim").onclick = () => { closeDlSheet(); Audio.play("sfx.ui.close"); };
+$("dlCancel").onclick = () => { closeDlSheet(); Audio.play("sfx.ui.close"); };
+$("dlOptTxt").onclick = () => downloadDlFormat("txt");
+$("dlOptJson").onclick = () => downloadDlFormat("json");
+$("dlCopy").onclick = async () => {
+  const json = currentExportJson();
+  const ok = await LogDL.copyText(buildLogText(json));
+  if (!ok) return;
+  const btn = $("dlCopy");
+  clearTimeout(dlCopyResetTimer);
+  btn.textContent = t("logDownload.copyDone");
+  dlCopyResetTimer = setTimeout(() => { btn.textContent = t("logDownload.copyText"); }, 1500);
+};
 
 // ---------- rooms: a socket to the Durable Object ----------
 const room = { ws: null, code: null, me: null, token: null, seats: [], settings: null, phase: null, deadline: 0, gen: 0, isHost: false, fatal: false, chat: [] };
