@@ -1908,6 +1908,19 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    the gold #btnAgain right under it, same idea as .over-footer's own
    outlined row buttons but on its own full-width line. */
 .over-dl { min-height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px dashed var(--gold-line); background: none; color: var(--gold); font: 600 14px var(--serif); }
+/* #138: 戰報 sits beside 下載本局紀錄 -- a dedicated flex row (not
+   .over-footer's own `.row`, which restyles its buttons to a plain grey
+   outline for the board/swap/home trio further down) so both keep .over-dl's
+   dashed-gold look at half width each. Still shows in solo, in a room seat
+   and for a spectator (app.js only checks `game.st` before wiring #btnReport,
+   same as #btnDlLog above it), same as the download button. */
+.over-dl-row { display: flex; gap: 8px; }
+.over-dl-row .over-dl { flex: 1; min-width: 0; }
+/* 320px: two half-width buttons leaves little room per label -- stack them
+   instead of letting either clip or wrap onto two lines. */
+@media (max-width: 340px) {
+  .over-dl-row { flex-direction: column; }
+}
 /* #88 (design A 逐手卷軸): 全部/秦/楚/對話 -- the 對話 tab is hidden by
    app.js's syncLogFilters() whenever there is no chat/bot line yet. */
 .logbody-filters { display: flex; gap: 5px; flex: none; }
@@ -2204,6 +2217,17 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
   background: linear-gradient(160deg, #5c130d, #33090a); color: var(--gold); border: 1px solid var(--gold-line);
   border-radius: 999px; padding: 8px 18px; font: 700 13px var(--serif); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
   white-space: nowrap;
+}
+/* #138: the 戰報 button's own toast -- same fixed top-center slot as
+   .capital-toast-wrap (reused as-is, .report-toast-wrap only exists so this
+   isn't literally the same element id), but a sentence-length message
+   (daily-cap / invalid / failed) needs to wrap and can be wider than a pill. */
+.report-toast-wrap { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 46; pointer-events: none; width: min(320px, calc(100vw - 32px)); }
+.report-toast-wrap[hidden] { display: none; }
+.report-toast {
+  background: linear-gradient(160deg, #5c130d, #33090a); color: var(--gold); border: 1px solid var(--gold-line);
+  border-radius: 14px; padding: 10px 16px; font: 600 13px/1.5 var(--serif); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  text-align: center;
 }
 
 /* D_check: the turn-end capital check, in the same dark .lobby-card family

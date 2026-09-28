@@ -3669,6 +3669,60 @@ $("dlCopy").onclick = async () => {
   dlCopyResetTimer = setTimeout(() => { btn.textContent = t("logDownload.copyText"); }, 1500);
 };
 
+// ---------- #138: 戰報 -- send this game's export to the report API, then
+// hand off to report.html?report=<key>. Uses the exact same exportGame call
+// the download button does (currentExportJson()), so a report is always
+// built from the same record a player could download themselves.
+let reportToastEl = null, reportToastTimer = 0;
+function reportToast(msg) {
+  if (!reportToastEl) {
+    reportToastEl = document.createElement("div");
+    reportToastEl.className = "report-toast-wrap";
+    reportToastEl.hidden = true;
+    document.body.appendChild(reportToastEl);
+  }
+  reportToastEl.innerHTML = `<div class="report-toast">${esc(msg)}</div>`;
+  reportToastEl.hidden = false;
+  clearTimeout(reportToastTimer);
+  reportToastTimer = setTimeout(() => { reportToastEl.hidden = true; reportToastEl.innerHTML = ""; }, 4200);
+}
+// `report.html` is a standalone page (its own bootstrap, not a `view` of
+// this one) -- see the #138 brief: play.html's own render()/show() plumbing
+// is entangled with live-game state (mode/legal moves/room sockets) this
+// static, shareable page has no use for. The key alone in the query string
+// is enough for it to re-fetch on its own, including after a reload.
+async function submitReport() {
+  if (!game.st) return;
+  const btn = $("btnReport");
+  const was = btn.textContent;
+  btn.disabled = true;
+  try {
+    const body = JSON.stringify(currentExportJson());
+    const res = await fetch(`${location.pathname.replace(/\/[^/]*$/, "")}/api/report`, {
+      method: "POST", headers: { "content-type": "application/json" }, body,
+    });
+    if (res.status === 429) { const j = await res.json().catch(() => null); reportToast(j && j.error === "daily-cap" ? t("report.dailyCap") : t("report.failed")); return; }
+    if (res.status === 413) { reportToast(t("report.tooBig")); return; }
+    if (res.status === 400) { reportToast(t("report.invalid")); return; }
+    if (!res.ok) { reportToast(t("report.failed")); return; }
+    const j = await res.json();
+    if (!j || !j.key) { reportToast(t("report.failed")); return; }
+    // Marks this browser tab as the one that submitted this key, so
+    // report.html can show "你:楚 · 對手:秦(...)" instead of the
+    // spectator-style "秦 vs 楚" a shared link (or a different tab) gets --
+    // sessionStorage, not the export itself, is what makes that call: it
+    // never has to agree with what the server ends up storing.
+    try { sessionStorage.setItem("zh.report.mine." + j.key, "1"); } catch {}
+    location.href = `report.html?report=${encodeURIComponent(j.key)}&lang=${encodeURIComponent(lang)}`;
+  } catch {
+    reportToast(t("report.failed"));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = was;
+  }
+}
+$("btnReport").onclick = () => { submitReport(); Audio.play("sfx.ui.open"); };
+
 // ---------- rooms: a socket to the Durable Object ----------
 const room = { ws: null, code: null, me: null, token: null, seats: [], settings: null, phase: null, deadline: 0, gen: 0, isHost: false, fatal: false, chat: [] };
 function wsUrl(params) {

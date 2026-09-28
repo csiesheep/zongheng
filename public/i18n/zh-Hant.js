@@ -524,4 +524,43 @@ export default {
       hexi: "「因此」:只有這 2 點讓秦拿下河東,才移除楚在大梁 1;秦原本就控制河東則不移除。",
     },
   },
+  // #138:戰報——結局頁的入口按鈕、等待頁、失敗/每日上限/找不到這幾種狀態,
+  // 以及戰報頁本身的固定文案(標題、目錄、頁尾)。逐回內文由伺服器寫,不在這裡。
+  report: {
+    endButton: "戰報",
+    waitingTitle: "說書人正在整理這一局……",
+    waitingNote: "通常要一到三分鐘,離開這頁也不會不見——重新打開同一個網址就接得回來。",
+    back: "‹ 結局",
+    failed: "說書人這回沒能把話說完。",
+    dailyCap: "今天的戰報名額已經用完,請明天再來。",
+    invalid: "這局紀錄的格式不對,沒辦法寫戰報。",
+    notFound: "找不到這份戰報,連結可能有誤。",
+    tooBig: "這局紀錄太大,沒辦法寫戰報。",
+    wayBack: "回結局頁",
+    toc: "目錄",
+    subtitle: "章回說書 · 共 {n} 回", // #138 owner: 回 here names a chapter, stays
+    // #138 owner (page-frame no-game-words pass): 「第 X 回合」是遊戲用語,戰報頁
+    // 一律讀史書式的「第 X 年」;turn 的中文字是 ZH_NUM 查表出的數字,不是阿拉伯數字
+    // (report.js resultLineText())。
+    resultLine: "{side}勝 · {reason} · 第{turn}年",
+    you: "你:{side}",
+    opponentBot: "對手:{side}(電腦 · {level})",
+    opponentPlayer: "對手:{name}",
+    vsNamed: "{qin} vs {chu}",
+    download: "下載紀錄",
+    share: "分享",
+    shareCopied: "連結已複製",
+    footnote: "由 AI 依本局紀錄撰寫 · 地圖與卡牌取自實際局面",
+    viewCard: "查看卡牌 ›", // #138 owner: a link label, not narrative -- stays
+    mandateCaption: "天下人心之向背(每年年終)· 上屬秦,下屬楚",
+    // #138 owner: the report's own historical wording for each win reason,
+    // separate from logText.reasonShort (the downloadable record's plain,
+    // mechanical labels, e.g. 記分卡/國都陷落 -- fine there, that file
+    // documents the actual rules; wrong voice for a "history" page).
+    reason: {
+      unification: "秦并天下", alliance: "合縱功成", mandate: "天命所歸", emperor: "稱帝",
+      collapse: "天下土崩", scoring: "功虧一簣", scoringBoth: "功虧一簣", final: "天下大勢",
+      tie: "天命所歸", homeFall: "社稷傾覆",
+    },
+  },
 };
