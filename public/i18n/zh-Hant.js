@@ -278,6 +278,16 @@ export default {
     // #137(orchestrator,be/137-replay):final.actions 存在時才印這句——完整資料
     // (.json)裡有每一步實際執行的操作,可以照原樣重播;這份文字檔本身不列出來。
     replayable: "這份完整資料(.json)可以照原樣重播整局。",
+    // #137(orchestrator,owner 通讀樣本後的回饋):以下三句只有文字檔會用到——
+    // 面板上這些都是貼著自己那排顏色/陣營徽章的小標籤,單獨落在純文字裡就
+    // 看不出是誰、對誰。realignRoll/realignTie 把遊說擲骰的兩顆骰、修正值、
+    // 總和都攤開(log 條目本身就有 roll/mod/lose 這三個欄位);homeFallLine
+    // 補回「回合結束的國都檢查」這件事——它有自己的 log 型別(capitalCheck),
+    // 但面板的 chipsForSteps 沒有替它寫規則,所以連面板都看不到,只吞進最後
+    // 一手牌的步驟裡,只留下一個孤立的「秦敗」。
+    realignRoll: "第 {k} 次 {sideA} {sumA} 對 {sideB} {sumB} → {result}",
+    realignTie: "平手",
+    homeFallLine: "回合結束:{capital}({side})陷落 → {side}敗",
     seals1: "一", seals2: "二", seals3: "三", seals4: "四", seals5: "五", seals6: "六", seals7: "七", seals8: "八", seals9: "九",
     reasonShort: { unification: "一統", alliance: "合縱", mandate: "天命", emperor: "稱帝", collapse: "土崩", scoring: "記分卡", scoringBoth: "記分卡", final: "終局", tie: "終局", homeFall: "國都陷落" },
   },

@@ -130,6 +130,11 @@ function setLang(l) {
   document.documentElement.lang = lang;
   document.title = lang === "en" ? "Zongheng 縱橫" : "縱橫 Zongheng";
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
+  // #137: #logDl's visible label is its own child span (icon + label, not a
+  // CSS ::before + the button's own textContent -- see play.html's comment),
+  // hidden at <=340px (style.css); the button needs its own accessible name
+  // either way, so this sets it directly rather than relying on data-t.
+  $("logDl").setAttribute("aria-label", t("logDownload.button"));
   renderBackLink();
   audioBtn.sync();
   $("chatIn").placeholder = t("lobby.say");

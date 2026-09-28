@@ -326,6 +326,16 @@ export default {
     // taken, so the whole game can be replayed from it exactly; this text
     // file never lists the actions themselves.
     replayable: "The full data (.json) can replay this whole game exactly.",
+    // #137 (orchestrator, owner's read-through): three lines that only made
+    // sense next to their own move's colour/side badge on screen -- alone in
+    // plain text they lost who/whom. realignRoll/realignTie spell out the
+    // dice-遊說's own roll (the log entry already carries roll/mod/lose);
+    // homeFallLine restores the turn-end capital check itself -- its own log
+    // entry type (capitalCheck) has no branch in the panel's own chip
+    // renderer, so even the panel never shows it, only a lone "Chu loses".
+    realignRoll: "Attempt {k}: {sideA} {sumA} vs {sideB} {sumB} → {result}",
+    realignTie: "a tie",
+    homeFallLine: "Turn ends: {capital} ({side}) falls → {side} loses",
     reasonShort: { unification: "Unification", alliance: "Alliance", mandate: "Mandate", emperor: "Emperor", collapse: "Collapse", scoring: "Scoring card", scoringBoth: "Scoring card", final: "Final tally", tie: "Final tally", homeFall: "Capital falls" },
   },
   // #79/#87: the opponent's-move reveal -- the card panel (①, which waits

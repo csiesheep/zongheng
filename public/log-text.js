@@ -23,8 +23,22 @@ function t(lang, key, p = {}) {
 }
 const sideName = (s, lang) => t(lang, `sides.${E.SIDES[s]}`);
 const cardName = (id, lang) => (id === E.JIUDING ? (lang === "en" ? "The Nine Cauldrons" : "九鼎") : lang === "en" ? E.CARD[id].en : E.CARD[id].zh);
+const spaceName = (id, lang) => (id && E.SPACE[id] ? (lang === "en" ? E.SPACE[id].en : E.SPACE[id].zh) : "");
 const sep = (lang) => (lang === "en" ? ", " : "、");
 const decodeEntities = (s) => s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ");
+// #137 (orchestrator, owner: the sample said 09-28 while the owner's local
+// date was 09-27 Pacific): `exportedAt` is an ISO UTC instant (the
+// contract's own wording); the header/filename want the CALENDAR date the
+// player is actually looking at it on, so this reads it back with the
+// runtime's own local getFullYear/getMonth/getDate -- the browser's tz in
+// the browser, the machine's tz in Node (both "local", never UTC), never a
+// plain string slice of the ISO text (which is UTC by construction).
+function localDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso || "").slice(0, 10);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
 
 // ---------- turn-by-turn body, from the panel's own HTML ----------
 // renderRows() returns one flat string of sibling `<div class="log...">`
@@ -73,6 +87,134 @@ function bodyLines(log, lang) {
   return out;
 }
 
+// ---------- #137 (orchestrator, owner's read-through): three fixes to lines
+// that only make sense as a chip pill next to its move's colour/side badge --
+// none of this touches log-view.js (the panel keeps its own short chips;
+// these three are enrichments this file alone needs once the chips are
+// flattened to plain text with no visual context left to lean on). ----------
+
+// 1) 遊說's dice rolls: the panel's own chip is deliberately short ("第{k}
+// 次:{loserOrTie}", logPanel.chipRealign) -- fine net to a coloured row, not
+// enough on paper. The raw `realign` log entry (public/shared/engine.js's
+// realignAttempt) carries `roll`/`mod` indexed by [QIN, CHU] regardless of
+// who is lobbying, so the actual math is rebuilt here and slotted in in the
+// exact spot bodyLines() already put the terse line, matched by ORDER (the
+// same order groupLog/chipsForSteps already visited them in), not by text
+// pattern -- text patterns differ subtly between an in-move chip and an
+// orphaned line's `log.realign` template, but the queue order is exact.
+function realignDetailText(e, lang) {
+  const a = e.side, b = E.other(a);
+  const totalA = e.roll[a] + e.mod[a], totalB = e.roll[b] + e.mod[b];
+  const sumA = `${e.roll[a]}+${e.mod[a]}=${totalA}`, sumB = `${e.roll[b]}+${e.mod[b]}=${totalB}`;
+  const result = e.lose == null ? t(lang, "logText.realignTie") : `${sideName(e.lose, lang)} −${e.n}`;
+  return t(lang, "logText.realignRoll", { k: e.k, sideA: sideName(a, lang), sumA, sideB: sideName(b, lang), sumB, result });
+}
+function enrichRealignLines(lines, log, lang) {
+  const queue = (log || []).filter((e) => e.type === "realign");
+  if (!queue.length) return lines;
+  const re = lang === "en" ? /^(\s*)Attempt\s+\d+:/ : /^(\s*)第\s*\d+\s*次[:：]/;
+  let qi = 0;
+  return lines.map((line) => {
+    if (qi >= queue.length) return line;
+    const m = re.exec(line);
+    if (!m) return line;
+    return m[1] + realignDetailText(queue[qi++], lang);
+  });
+}
+
+// 2) A bare "{side}的事件:{card}" chip used to sit next to its own row's
+// colour badge; on paper it reads as a stray header. Fold the immediately-
+// following "{side}選擇" chip (chipChose) in as a parenthetical, and fold
+// every other same-indent chip up to the next boundary (a blank line, a new
+// event marker, or a differently-indented line -- i.e. the next move/round/
+// turn) into the same line, comma/頓號-joined -- one line per event instead
+// of a scattered run only a coloured chip strip could have explained.
+function foldEventChips(lines, lang) {
+  const eventRe = lang === "en" ? /^(.+)'s event: (.+)$/ : /^(.+)的事件:(.+)$/;
+  const choseRe = lang === "en" ? /^chosen by (.+)$/ : /^(.+)選擇$/;
+  const boundaryRe = lang === "en" ? /^Attempt\s+\d+:/ : /^第\s*\d+\s*次[:：]/;
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const indent = /^(\s*)/.exec(line)[1];
+    const body = line.slice(indent.length);
+    if (!eventRe.test(body)) { out.push(line); continue; }
+    let head = body, chooser = null;
+    const parts = [];
+    let j = i + 1;
+    while (j < lines.length) {
+      const l = lines[j];
+      const indent2 = /^(\s*)/.exec(l)[1];
+      const body2 = l.slice(indent2.length);
+      if (indent2 !== indent || !body2 || eventRe.test(body2) || boundaryRe.test(body2)) break;
+      const cm = choseRe.exec(body2);
+      if (cm) { chooser = cm[1]; j++; continue; }
+      parts.push(body2);
+      j++;
+    }
+    if (chooser) head = lang === "en" ? `${head} (chosen by ${chooser})` : `${head}(${chooser}選擇)`;
+    if (parts.length) head = `${head}:${parts.join(sep(lang))}`;
+    out.push(indent + head);
+    i = j - 1;
+  }
+  return out;
+}
+
+// 3) "{target}:己方失去{n}" (logPanel.chipLobbyLost, the dice-遊說's own
+// loss to the mover's own side) reads fine beside a coloured row that
+// already says whose move it is; alone on paper "己方" ("its own side") has
+// nothing left to point at. Substituted with the mover's actual side name,
+// tracked from the last-seen move's own head line ("{side} 打出 …" /
+// "{side} plays …", moveRowHtml's own wording).
+function fixOwnSideLines(lines, lang) {
+  const moveHeadRe = lang === "en" ? /^(Qin|Chu) plays / : /^(秦|楚) 打出 /;
+  const lostRe = lang === "en" ? /^(.+): loses (\d+) of its own$/ : /^(.+):己方失去\s*(\d+)$/;
+  let side = null;
+  return lines.map((line) => {
+    const indent = /^(\s*)/.exec(line)[1];
+    const body = line.slice(indent.length);
+    const mh = moveHeadRe.exec(body);
+    if (mh) { side = mh[1] === "Qin" || mh[1] === "秦" ? E.QIN : E.CHU; return line; }
+    const m = lostRe.exec(body);
+    if (!m || side == null) return line;
+    const sideWord = sideName(side, lang);
+    return indent + (lang === "en" ? `${m[1]}: ${sideWord} loses ${m[2]}` : `${m[1]}:${sideWord}失去${m[2]}`);
+  });
+}
+
+// 4) A bare "{loser}敗" (logPanel.chipOver) after the last move of the turn
+// is #127's own "this move/headline ended the game" marker -- true even
+// when the actual reason has nothing to do with that move (a turn-end
+// homeFall check runs after every move/score of the turn, not attached to
+// any one of them; chipsForSteps has no branch for its own `capitalCheck`
+// log entries, which is why they never reached the panel's chips at all,
+// swallowed into whichever move happened to be logged last). Only touches
+// it when the game's own recorded reason is "homeFall" -- every other
+// reason's chipOver already sits right next to the card/event that caused
+// it, and needs no help.
+function insertHomeFallDetail(lines, json) {
+  if (!json.result || json.result.reason !== "homeFall") return lines;
+  const lang = json.lang;
+  const loser = E.other(json.result.winner);
+  // Only the LOSER's own fallen capital explains this result -- if the
+  // other side's capital also fell the same turn (both at once, decided by
+  // the Mandate tie-break), that entry isn't why this loss reads the way it
+  // does, so it's left out rather than reported alongside a mismatched line.
+  const fallen = (json.log || []).filter((e) => e.type === "capitalCheck" && e.result === "fallen" && e.whose === loser);
+  if (!fallen.length) return lines;
+  const loserWord = lang === "en" ? `${sideName(loser, lang)} loses` : `${sideName(loser, lang)}敗`;
+  let idx = -1;
+  for (let i = lines.length - 1; i >= 0; i--) { if (lines[i].trim() === loserWord) { idx = i; break; } }
+  if (idx === -1) return lines; // defensive: couldn't find the exact chip text, leave the lines untouched rather than guess
+  const indent = /^(\s*)/.exec(lines[idx])[1];
+  // homeFallLine already ends in "…→ {side}敗"/"…loses" -- REPLACE the bare
+  // chip line with it (not insert-before-and-keep), or the loss would be
+  // named twice in a row.
+  const out = lines.slice();
+  out.splice(idx, 1, ...fallen.map((e) => indent + t(lang, "logText.homeFallLine", { capital: spaceName(e.capital, lang), side: sideName(e.whose, lang) })));
+  return out;
+}
+
 // ---------- header ----------
 const SEALS_ZH = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
 const sealsWord = (n, lang) => (lang === "en" ? String(n) : SEALS_ZH[n] || String(n));
@@ -114,7 +256,7 @@ function resultLine(json) {
 }
 function headerLines(json) {
   const { lang } = json;
-  const date = String(json.exportedAt || "").slice(0, 10);
+  const date = localDate(json.exportedAt);
   const lines = [t(lang, "logText.title"), `${date} ${opponentLine(json)}`, t(lang, "logText.rules", { rules: rulesWords(json.game, lang) })];
   const rl = resultLine(json);
   lines.push(rl ? t(lang, "logText.result", { result: rl }) : t(lang, "logText.ongoing", { turn: lastTurn(json.log) }));
@@ -150,7 +292,15 @@ function finalLines(json) {
 // (or this branch's stub, see log-download.js) builds from the contract in
 // issue #137.
 export function buildLogText(json) {
-  const lines = [...headerLines(json), "", ...bodyLines(json.log, json.lang), ...finalLines(json)];
+  let body = bodyLines(json.log, json.lang);
+  body = enrichRealignLines(body, json.log, json.lang);
+  // fixOwnSideLines needs each "己方失去N" chip on its own whole line (it
+  // anchors the regex to the full line) -- run it before foldEventChips
+  // could ever fuse such a chip into a longer joined line.
+  body = fixOwnSideLines(body, json.lang);
+  body = foldEventChips(body, json.lang);
+  body = insertHomeFallDetail(body, json);
+  const lines = [...headerLines(json), "", ...body, ...finalLines(json)];
   // Collapse any run of blank lines the header/section joins above may have
   // produced (e.g. a game that ends on the very first logged row) down to one.
   return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
@@ -160,7 +310,7 @@ export function buildLogText(json) {
 const slug = (s, lang) => (lang === "en" ? String(s).replace(/[^A-Za-z0-9]+/g, "") : String(s));
 export function buildFilename(json, ext) {
   const { lang } = json;
-  const date = String(json.exportedAt || "").slice(0, 10);
+  const date = localDate(json.exportedAt);
   const prefix = lang === "en" ? "Zongheng" : "縱橫";
   let tag;
   if (json.result) {

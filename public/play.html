@@ -184,7 +184,20 @@
            mockup (A_logpanel.png). Narrow phones (320px) hide its label
            and show just the icon so it never crowds 全部/秦/楚 -- see
            style.css's own 320px rule below `.logbody-dl`. -->
-      <button type="button" id="logDl" class="small logbody-dl no-tap-sound" data-t="logDownload.button"></button>
+      <!-- #137 (orchestrator, owner's 320px screenshot review): the icon and
+           the label are now two real DOM children, not a CSS ::before glyph
+           plus the button's own textContent -- letting flex shrink a text
+           node/pseudo-element down to fit is what produced the overlapping
+           "↓載" glyph soup at 320px. At <=340px (style.css) the label span
+           is `display:none` (removed from layout entirely, not just visually
+           clipped), so the button becomes a clean fixed-size icon-only
+           control; aria-label (set in app.js's setLang(), since data-t only
+           ever fills the label span's textContent) keeps its accessible name
+           either way. -->
+      <button type="button" id="logDl" class="small logbody-dl no-tap-sound">
+        <span class="logbody-dl-icon" aria-hidden="true">&#10515;</span>
+        <span class="logbody-dl-label" data-t="logDownload.button"></span>
+      </button>
       <button type="button" id="logClose" class="small logbody-close no-tap-sound" data-t="buttons.hide"></button>
     </div>
     <div class="logbody-content" id="logLines"></div>
