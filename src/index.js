@@ -26,6 +26,9 @@ const SITEMAP_URLS = [
   { loc: CANONICAL, lastmod: LAST_MOD },
   { loc: CANONICAL + "?lang=zh-Hant", lastmod: LAST_MOD },
   { loc: CANONICAL + "rules", lastmod: LAST_MOD },
+  // #146: the dev log (static, both languages in the markup); listed once per language like the landing.
+  { loc: CANONICAL + "devlog", lastmod: "2026-09-28" },
+  { loc: CANONICAL + "devlog?lang=zh-Hant", lastmod: "2026-09-28" },
 ];
 const SITEMAP_XML = [
   '<?xml version="1.0" encoding="UTF-8"?>',
@@ -60,6 +63,11 @@ const ZH_HEAD = {
     url: CANONICAL + "rules?lang=" + ZH,
     title: "縱橫 Zongheng 規則 — 怎麼玩這個兩人卡牌遊戲",
     description: "縱橫 Zongheng 的完整規則與七十二張牌:戰國時期兩人對戰的卡牌策略遊戲,秦對楚。",
+  },
+  "/devlog": {
+    url: CANONICAL + "devlog?lang=" + ZH,
+    title: "開發日誌 — 縱橫 Zongheng",
+    description: "縱橫 Zongheng 的開發日誌:戰國兩人卡牌策略遊戲,每一次改版、每一條新規則,都記在這裡。",
   },
 };
 

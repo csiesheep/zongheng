@@ -1,0 +1,142 @@
+<!doctype html>
+<!-- #146: the dev log. Static default is English (same convention as index.html and rules.html); both languages are in
+     the markup as zh/en pairs and devlog.css shows the half <html lang> names, so a crawler that runs no script reads
+     every entry. devlog.js only switches <html lang> (?lang=, zh.lang, navigator) and wires the language button. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Q4VS3P3T58"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  // #111: same allow-list guard as index.html/play.html. rules.html's own
+  // query params (lang, from) are never player-identifying, but the point
+  // of an allow-list is that nothing else gets through even if that changes.
+  gtag('config', 'G-Q4VS3P3T58', { page_location: (function () {
+    var ALLOW = ["lang", "from"];
+    var u = new URL(location.href);
+    var kept = new URLSearchParams();
+    ALLOW.forEach(function (k) { if (u.searchParams.has(k)) kept.set(k, u.searchParams.get(k)); });
+    var qs = kept.toString();
+    return u.origin + u.pathname + (qs ? "?" + qs : "");
+  })() });
+</script>
+<title>Dev log — Zongheng</title>
+<meta name="description" content="The Zongheng 縱橫 dev log: every update and every new rule of the two-player Warring States card game, written down as it lands.">
+<link rel="canonical" href="https://games.csiesheep.com/zongheng/devlog">
+<link rel="alternate" hreflang="en" href="https://games.csiesheep.com/zongheng/devlog">
+<link rel="alternate" hreflang="zh-Hant" href="https://games.csiesheep.com/zongheng/devlog?lang=zh-Hant">
+<link rel="alternate" hreflang="x-default" href="https://games.csiesheep.com/zongheng/devlog">
+<meta name="theme-color" content="#0c0b0a">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Dev log — Zongheng">
+<meta property="og:description" content="The Zongheng 縱橫 dev log: every update and every new rule of the two-player Warring States card game, written down as it lands.">
+<meta property="og:url" content="https://games.csiesheep.com/zongheng/devlog">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="zh_TW">
+<meta property="og:image" content="https://games.csiesheep.com/zongheng/art/og-zongheng.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Zongheng 縱橫: bronze tiger tallies for Qin facing a red phoenix for Chu.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Dev log — Zongheng">
+<meta name="twitter:description" content="The Zongheng 縱橫 dev log: every update and every new rule of the two-player Warring States card game, written down as it lands.">
+<meta name="twitter:image" content="https://games.csiesheep.com/zongheng/art/og-zongheng.jpg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="ui-states.css">
+<link rel="stylesheet" href="devlog.css">
+<script src="devlog.js"></script>
+</head>
+<body class="devlog-body">
+<header class="bar">
+  <a class="hub back" href="./"><span class="zh" lang="zh-Hant">‹ 縱橫</span><span class="en" lang="en">‹ Zongheng</span></a>
+  <span id="barMid"><span class="zh" lang="zh-Hant">開發日誌</span><span class="en" lang="en">Dev log</span></span>
+  <button id="langBtn" class="langBtn" type="button"><span class="zh" lang="zh-Hant">EN</span><span class="en" lang="en">中文</span></button>
+</header>
+<main class="dl">
+  <div class="dl-main">
+    <header class="dl-head">
+      <div class="dl-kicker">DEV LOG</div>
+      <h1><span class="zh" lang="zh-Hant">開發日誌</span><span class="en" lang="en">Dev log</span></h1>
+      <p><span class="zh" lang="zh-Hant">縱橫還在長大。每一次改版、每一條新規則，都記在這裡。</span><span class="en" lang="en">Zongheng is still growing. Every update and every new rule is written down here.</span></p>
+    </header>
+    <div class="timeline">
+    <article class="entry">
+      <div class="date">2026.09.28 <span class="tag"><span class="zh" lang="zh-Hant">新功能</span><span class="en" lang="en">New</span></span></div>
+      <span class="dot" aria-hidden="true"></span>
+      <div class="ebox">
+        <h3 class="etitle"><span class="zh" lang="zh-Hant">說書人上場：戰報</span><span class="en" lang="en">The storyteller arrives: battle reports</span></h3>
+        <p class="ebody"><span class="zh" lang="zh-Hant">玩完一局按「戰報」，說書人把這局寫成八回章回演義。每回附當年年底的地圖，相印、國都、滅國一目了然；重要的牌可以點開看。中英文各一份，也能分享給朋友。</span><span class="en" lang="en">After a game, press "Battle report" and a storyteller writes it up as an eight-chapter tale in the old style. Each chapter shows that year's closing map, with the seals, the capitals and the fallen states marked, and the key cards open with a tap. It comes in Chinese and English, ready to share.</span></p>
+        <img class="eshot eshot-m" src="art/devlog-report.webp" width="760" height="571" loading="lazy" alt="戰報頁的開頭 / The top of a battle report">
+      </div>
+    </article>
+    <article class="entry">
+      <div class="date">2026.09.27 <span class="tag"><span class="zh" lang="zh-Hant">規則</span><span class="en" lang="en">Rules</span></span></div>
+      <span class="dot" aria-hidden="true"></span>
+      <div class="ebox">
+        <h3 class="etitle"><span class="zh" lang="zh-Hant">擲骰遊說、國都陷落、五枚相印</span><span class="en" lang="en">Dice persuasion, fallen capitals, five seals</span></h3>
+        <p class="ebody"><span class="zh" lang="zh-Hant">遊說改成雙方擲骰，輸的一方失去差額，隨時可以收手。國都被敵方占到年底沒奪回，就此亡國。相印從四枚改為五枚，秦開局在臨淄、薊各有耳目：遠交近攻。</span><span class="en" lang="en">Persuasion is now a dice contest: the loser gives up the difference, and you may stop at any time. A capital still in enemy hands at year's end loses the game. The seals go from four to five, and Qin starts with agents in Linzi and Ji: befriend the far, strike the near.</span></p>
+      </div>
+    </article>
+    <article class="entry">
+      <div class="date">2026.09.27 <span class="tag"><span class="zh" lang="zh-Hant">新功能</span><span class="en" lang="en">New</span></span></div>
+      <span class="dot" aria-hidden="true"></span>
+      <div class="ebox">
+        <h3 class="etitle"><span class="zh" lang="zh-Hant">下載紀錄，整局重現</span><span class="en" lang="en">Download the log, replay the whole game</span></h3>
+        <p class="ebody"><span class="zh" lang="zh-Hant">每一局都能下載文字紀錄和完整資料。對局結束後雙方手牌全部公開，整局可以一步步重現。</span><span class="en" lang="en">Every game can be downloaded as a text log and as full data. When it ends, both hands are revealed and the whole game can be rebuilt move by move.</span></p>
+      </div>
+    </article>
+    <article class="entry">
+      <div class="date">2026.09.22</div>
+      <span class="dot" aria-hidden="true"></span>
+      <div class="ebox">
+        <h3 class="etitle"><span class="zh" lang="zh-Hant">正式上線</span><span class="en" lang="en">Live</span></h3>
+        <p class="ebody"><span class="zh" lang="zh-Hant">兩種用法定名「扶植」與「奇襲」；規則頁的七十二張牌，每張都附上史事。</span><span class="en" lang="en">The two uses get their names, Foster and Raid, and every one of the 72 cards on the rules page carries its history.</span></p>
+      </div>
+    </article>
+    <article class="entry">
+      <div class="date">2026.09.21</div>
+      <span class="dot" aria-hidden="true"></span>
+      <div class="ebox">
+        <h3 class="etitle"><span class="zh" lang="zh-Hant">烽火開場與「對手的一手」</span><span class="en" lang="en">A beacon-fire opening, and the opponent's move</span></h3>
+        <p class="ebody"><span class="zh" lang="zh-Hant">第一次打開，七國烽火依序點燃，化作黑虎與朱雀。對手出牌時先亮牌，再在地圖上一步步演出。</span><span class="en" lang="en">The first time you open the game, the seven states' beacons light one by one and become the black tiger and the vermilion bird. When the opponent plays, the card is shown first, then acted out step by step on the map.</span></p>
+      </div>
+    </article>
+    <article class="entry">
+      <div class="date">2026.09.20</div>
+      <span class="dot" aria-hidden="true"></span>
+      <div class="ebox">
+        <h3 class="etitle"><span class="zh" lang="zh-Hant">秦有秦的樂，楚有楚的樂</span><span class="en" lang="en">Qin has its music, Chu has its own</span></h3>
+        <p class="ebody"><span class="zh" lang="zh-Hant">數十段配樂與音效，一首首挑過：執秦或執楚、變法前後，音樂都不一樣。</span><span class="en" lang="en">Dozens of pieces of music and sound, each picked by ear: the music changes with your side and with the era.</span></p>
+      </div>
+    </article>
+    <article class="entry">
+      <div class="date">2026.09.18</div>
+      <span class="dot" aria-hidden="true"></span>
+      <div class="ebox">
+        <h3 class="etitle"><span class="zh" lang="zh-Hant">開工</span><span class="en" lang="en">Work begins</span></h3>
+        <p class="ebody"><span class="zh" lang="zh-Hant">以《冷戰熱鬥》的卡牌驅動設計為靈感，把冷戰搬到戰國：秦對楚，七國爭雄。</span><span class="en" lang="en">Inspired by the card-driven design of Twilight Struggle, the Cold War moves to the Warring States: Qin against Chu, seven states in contention.</span></p>
+      </div>
+    </article>
+    </div>
+  </div>
+  <aside class="dl-side">
+    <img class="eshot eshot-d" src="art/devlog-report.webp" width="760" height="571" loading="lazy" alt="戰報頁的開頭 / The top of a battle report">
+    <a class="blog" href="https://csiesheep.com/2026/09/23/%e9%81%8a%e6%88%b2%e9%96%8b%e7%99%bc%e6%97%a5%e8%a8%98-%e7%b8%b1%e6%a9%ab%ef%bc%9a%e7%a7%a6%e6%bb%85%e5%85%ad%e5%9c%8b%ef%bc%8c%e9%82%84%e6%98%af%e5%85%ad%e5%9c%8b%e5%90%88%e7%b8%b1/" target="_blank" rel="noopener">
+      <span class="blog-k"><span class="zh" lang="zh-Hant">部落格</span><span class="en" lang="en">Blog</span> · 2026.09.23</span>
+      <span class="blog-t"><span class="zh" lang="zh-Hant">[遊戲開發日記] 縱橫：秦滅六國，還是六國合縱？</span><span class="en" lang="en">Dev diary (in Chinese): Zongheng: will Qin conquer the six, or will the six unite?</span></span>
+      <span class="blog-x"><span class="zh" lang="zh-Hant">關中，秦王在燈下看地圖。張儀說，與遠的齊國交好，先吃近的韓魏，一城一城地啃，這叫連橫。</span><span class="en" lang="en">The post is in Chinese.</span></span>
+      <span class="blog-go"><span class="zh" lang="zh-Hant">讀全文 ›</span><span class="en" lang="en">Read it ›</span></span>
+    </a>
+  </aside>
+</main>
+<footer class="credit"><span class="zh" lang="zh-Hant">同人、免費。靈感來自《冷戰熱鬥》的卡驅動設計;與 GMT Games 無關。</span><span class="en" lang="en">A free fan project. Inspired by the card-driven design of Twilight Struggle; not affiliated with GMT Games.</span> · <a href="https://csiesheep.com/privacy-policy/" target="_blank" rel="noopener"><span class="zh" lang="zh-Hant">隱私權政策</span><span class="en" lang="en">Privacy</span></a></footer>
+</body>
+</html>
