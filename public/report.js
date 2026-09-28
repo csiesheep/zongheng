@@ -10,19 +10,25 @@
 // report map is the real board, not a picture or a second implementation of
 // it), and log-text.js/log-download.js for the download button.
 //
-// `discHTML()` below is the one piece copied rather than imported: it is
-// app.js's own private helper (not exported, and app.js can't be imported
-// here for the reason above), but it is a small, pure function of
-// disc-view.js's discParts() output, so a copy is cheap to keep in sync.
+// #144: every mark this page draws on the map -- discHTML() itself, the seal
+// chop, the capital badge/ring, the state tags -- comes from the SAME shared
+// functions app.js's live renderMap() draws with (map-draw.js/disc-view.js/
+// capital-ui.js/seal-progress.js), never a second copy. discHTML() used to be
+// the one exception (app.js's own private helper, not exported); it now lives
+// in disc-view.js as a shared export (see that file's own comment) so this
+// page and app.js use the one function.
 import * as E from "./shared/engine.js";
 import {
   regionMembers, isCapital, renderRegionBlobs, renderRoads, REGION_LABEL_POS,
-  NODE_ANCHOR, NODE_POS, nodeLabelHTML, NODE_STAB_RIGHT, NODE_STAB_HI, stateTagHTML, stabilityTagHTML,
+  NODE_ANCHOR, NODE_POS, nodeLabelHTML, NODE_STAB_RIGHT, NODE_STAB_HI, NODE_PILL_POS,
+  SEAL_MARK_POS, stateTagHTML, stabilityTagHTML,
 } from "./map-draw.js";
-import { discParts } from "./disc-view.js";
+import { discParts, discHTML } from "./disc-view.js";
+import { sealProgress } from "./seal-progress.js";
+import { capitalBadgeHTML } from "./capital-ui.js";
 import en from "./i18n/en.js";
 import zh from "./i18n/zh-Hant.js";
-import * as D from "./shared/report-digest.js"; // #138 FE stub until be/138-report lands -- see that file's own header
+import * as D from "./shared/report-digest.js"; // the real digest/turnEnds module (be/138-report), not a stub
 import { buildLogText, buildFilename } from "./log-text.js";
 import * as LogDL from "./log-download.js";
 
@@ -57,38 +63,82 @@ const ZH_NUM = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九
 const chapterLabel = (turn) => (lang === "en" ? `Year ${turn}` : `第${ZH_NUM[turn] || turn}回`);
 
 // ---------- the map: same drawing code the live table uses ----------
-// Copied from app.js's own discHTML() -- see this file's top comment.
-function discHTML(parts, cap) {
-  const base = "disc" + (cap ? " sq" : "");
-  if (parts.kind === "empty") return `<span class="${base}"></span>`;
-  if (parts.kind === "lone") {
-    const side = parts.side === E.QIN ? "q" : "c";
-    const cls = `${base} lone-${side}${parts.controlled ? " ctl" : ""}`;
-    return `<span class="${cls}"><i${parts.atCap ? ` class="atcap"` : ""}>${parts.n}</i></span>`;
-  }
-  const cls = `${base} split${parts.qin.controlled ? " ctl-q" : ""}${parts.chu.controlled ? " ctl-c" : ""}`;
-  return `<span class="${cls}"><i class="q${parts.qin.atCap ? " atcap" : ""}">${parts.qin.n}</i><i class="c${parts.chu.atCap ? " atcap" : ""}">${parts.chu.n}</i></span>`;
+// #144: the seal chop (印) and capital badge (都) below call the exact same
+// shared functions app.js's live renderMap() draws them with -- sealProgress()
+// (seal-progress.js), SEAL_MARK_POS (map-draw.js) and capitalBadgeHTML()
+// (capital-ui.js) -- fed with this year-end's own raw engine state, which
+// carries every field they read (.seals, .options, .capital) the same as the
+// live view does.
+//
+// The one piece that can't be a straight reuse is the capital's own
+// threatened/fallen RING: app.js's live version (capRing in renderMap()) is
+// deliberately viewer-relative -- red ("capital-fallen") for MY OWN capital
+// held by the enemy, gold ("capital-held") for the ENEMY's capital I hold --
+// keyed off `game.me`, the seat this particular browser is sitting in. A
+// report has no such seat: `mine`/g.viewer only frame the header's "你/對手"
+// line for the one reader who played it, and even then never for a stranger
+// reading a shared link (see headerMetaLine()'s own comment above -- the same
+// rule this follows). So every reader must see one fact stated the same way:
+// a capital under its OWN state's enemy's control is "fallen" -- always the
+// red ring (style.css's `.capital-fallen`, unchanged), never the gold
+// "held" variant, which only exists to flatter whichever seat is looking.
+function capitalRingClass(homeCapitals, spaceId) {
+  const hc = homeCapitals.find((c) => c.capital === spaceId);
+  return hc && hc.heldBy != null ? " capital-fallen" : "";
 }
-// A static snapshot node: the same geometry/tone/label pieces app.js's live
-// renderMap() draws with, minus what only makes sense for an interactive,
-// currently-legal-moves board (the hit layer, last-move marks, pick/lit
-// states, the capital-fallen ring, the seal chop) -- a historical year-end
-// position has none of those, only influence/control/state ownership, which
-// is exactly what this draws.
-function snapshotNodeHTML(sp, st) {
+// #144: the destroyed-state mark (滅). The live table has no PERSISTENT
+// per-space mark for this at all -- `st.mie[id]` only ever surfaces as the
+// last-move tag's one-shot "滅"/"復國" word (app.js's lastMoveTagText(),
+// i18n `lastMove.destroyed`/`.restored`), which is explicitly out of scope
+// here (#144 brief: "leave out... the last-move marks"). But a year-end
+// snapshot has no "last move" to diff against, and the owner asked for 滅國
+// to read on the map itself, not just in prose. This reuses that SAME class
+// and SAME word (style.css's `.lastmove-tag`, no side class -- the bronze,
+// no-side look app.js's own lastMoveTagClass() already gives a destroyed
+// mark) and the SAME per-space corner slot (NODE_PILL_POS) app.js already
+// proved collision-free for a pill in this exact spot, just driven by the
+// state's CURRENT mie flag instead of a one-turn diff. No frame, no pulse --
+// only the parts of "a last-move mark" that make sense on a still picture.
+// Flagged at hand-in: this is the one mark not a byte-for-byte reuse of live
+// code, because the live table never persists this fact anywhere on the map.
+// Only the state's OWN CAPITAL carries the mark -- same rule as the seal
+// chop (a state has several spaces, e.g. every one of Wei's counts toward
+// its own 滅, but the mark itself belongs on the one space a reader already
+// looks to for "which state is this", not repeated on all of them.
+function destroyedMarkHTML(sp, st, cap) {
+  if (!cap || !sp.state || !st.mie[sp.state]) return "";
+  return `<span class="lastmove-tag" aria-hidden="true">${esc(t("lastMove.destroyed"))}</span>`;
+}
+// A static snapshot node: the same geometry/tone/label/seal/capital/state-tag
+// pieces app.js's live renderMap() draws with, minus what only makes sense
+// for an interactive, currently-legal-moves board (the hit layer, pick/lit
+// states, win% pills) -- a historical year-end position has none of those.
+function snapshotNodeHTML(sp, st, seals, homeCapitals) {
   const [x, y] = NODE_POS[sp.id];
   const cap = isCapital(sp.id);
   const big = sp.battleground || cap;
   const anchor = NODE_ANCHOR[sp.id];
   const [q, c] = E.infOf(st, sp.id), ctl = E.controller(st, sp.id);
   const parts = discParts(q, c, ctl, E.capOf(st, sp.id));
+  // Same seal-chop rule as app.js's renderMap(): only a capital (sp.state
+  // names the state), keyed by sealProgress()'s own per-state output.
+  const seal = cap && sp.state ? seals[sp.state] : null;
+  const sp89 = SEAL_MARK_POS[sp.id];
+  const sealStyle = sp89 ? ` style="transform:translate(calc(-50% + ${sp89.dx}px), calc(-50% + ${sp89.dy}px)) rotate(-9deg)"` : "";
+  const sealMarkHTML = seal && seal.sealed
+    ? `<span class="seal-chop"${sealStyle} aria-hidden="true"><span lang="zh-Hant">印</span></span>`
+    : "";
   const cls = "node" + (big ? " big" : "") + (anchor ? ` anchor-${anchor}` : "") +
     (NODE_STAB_RIGHT.has(sp.id) ? " stab-r" : "") + (NODE_STAB_HI.has(sp.id) ? " stab-hi" : "") +
-    (!q && !c ? " empty" : "");
+    (!q && !c ? " empty" : "") + capitalRingClass(homeCapitals, sp.id) +
+    " pill-" + (NODE_PILL_POS[sp.id] || "tr");
   return `<div class="${cls}" style="left:${x}px;top:${y}px">` +
     discHTML(parts, cap) +
     stabilityTagHTML(sp) +
+    sealMarkHTML +
     stateTagHTML(sp, stateName(sp.state), esc) +
+    capitalBadgeHTML(st, sp.id, lang) +
+    destroyedMarkHTML(sp, st, cap) +
     nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc) +
     `</div>`;
 }
@@ -98,8 +148,25 @@ function mapInnerHTML(st) {
     const [x, y] = REGION_LABEL_POS[r];
     return `<span class="region-label rl-${r}" style="left:${x}px;top:${y}px">${esc(regionShortName(r))}</span>`;
   }).join("");
-  const nodes = E.SPACES.map((sp) => snapshotNodeHTML(sp, st)).join("");
+  const seals = sealProgress(st);
+  const homeCapitals = st.options && st.options.homeFall && st.options.homeFall !== "none" ? E.homeCapitalStatus(st) : [];
+  const nodes = E.SPACES.map((sp) => snapshotNodeHTML(sp, st, seals, homeCapitals)).join("");
   return `${renderRoads()}${renderRegionBlobs(members)}${labels}${nodes}`;
+}
+// #144 brief: "check that each [mark] explains itself" -- the seal chop and
+// the destroyed mark have no tooltip on the live table at all (相印's own
+// explanation is a TAP on the stat line, map.sealHelp; 滅 has no explanation
+// anywhere but the log's own sentence), and the capital badge's live tooltip
+// (capitalUi.badgeTitle) is unreachable without a hover/long-press a reader
+// of a static page may never try. One short caption line per map, built only
+// from marks actually present on THAT year's map (brief: "only for marks
+// present on that map") -- never a fixed legend repeated under every map.
+function mapLegendLine(st) {
+  const parts = [];
+  if (Object.keys(st.seals || {}).length) parts.push(t("report.legendSeal"));
+  if (st.options && st.options.homeFall && st.options.homeFall !== "none") parts.push(t("report.legendCapital"));
+  if (Object.keys(st.mie || {}).length) parts.push(t("report.legendDestroyed"));
+  return parts.join(" · ");
 }
 function fitMapBox(box) {
   const inner = box.querySelector(".map-inner");
@@ -132,9 +199,15 @@ const mapObserver = new IntersectionObserver((entries) => {
 }, { rootMargin: "600px 0px" });
 window.addEventListener("resize", () => { document.querySelectorAll(".rp-mapbox").forEach(fitMapBox); });
 function mapFigureHTML(turn, caption) {
+  // currentEndsByTurn is always populated before this runs (renderReport
+  // sets it, then builds articleHTML synchronously) -- the legend line reads
+  // the same year-end state the map itself will lazily draw.
+  const end = currentEndsByTurn.get(turn);
+  const legend = end ? mapLegendLine(end.state) : "";
   return `<figure class="rp-map"><div class="map rp-mapbox" data-turn="${turn}" role="img" aria-label="${esc(caption || "")}">` +
     `<div class="map-inner"><span class="rp-map-loading">…</span></div></div>` +
-    (caption ? `<figcaption>${esc(caption)}</figcaption>` : "") + `</figure>`;
+    (caption ? `<figcaption>${esc(caption)}</figcaption>` : "") +
+    (legend ? `<p class="rp-map-legend">${esc(legend)}</p>` : "") + `</figure>`;
 }
 
 // ---------- card figures + inline links ----------

@@ -564,6 +564,13 @@ export default {
     footnote: "由 AI 依本局紀錄撰寫 · 地圖與卡牌取自實際局面",
     viewCard: "查看卡牌 ›", // #138 owner: a link label, not narrative -- stays
     mandateCaption: "天下人心之向背(每年年終)· 上屬秦,下屬楚",
+    // #144(FE 改動——交付時點名,這個檔案是 writer 的):地圖下方的一行說明,
+    // 只在那張地圖真的出現印/都/滅其中之一時才顯示(report.js 的
+    // mapLegendLine())——現場牌桌這幾個標記只靠滑鼠停留或點一下才看得到說
+    // 明,靜態頁面的讀者兩者都碰不到。
+    legendSeal: "印＝已被奪去相印",
+    legendCapital: "都＝國都(紅圈＝已被敵方控制)",
+    legendDestroyed: "滅＝已滅之國",
     // #138 owner: the report's own historical wording for each win reason,
     // separate from logText.reasonShort (the downloadable record's plain,
     // mechanical labels, e.g. 記分卡/國都陷落 -- fine there, that file

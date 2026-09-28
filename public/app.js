@@ -40,7 +40,7 @@ import { buildLogText, buildFilename } from "./log-text.js"; // #137: JSON expor
 import * as LogDL from "./log-download.js"; // #137: Blob/clipboard saving, and the exportGame stub until be/137-export lands
 import * as LobbyUI from "./lobby-ui.js"; // #133: the dice-遊說 pick/preview/roll-card/summary screens
 import * as CapitalUI from "./capital-ui.js"; // #133 part 2: the homeFall badge/banners/toast/turn-end check
-import { discParts } from "./disc-view.js";
+import { discParts, discHTML } from "./disc-view.js";
 import * as Audio from "./audio.js";
 import * as Cues from "./audio-cues.js";
 import { mountAudioButton } from "./audio-switch.js";
@@ -1756,17 +1756,8 @@ function clearLastMoveMarks() {
 // it's automatically the number's own colour (white/dark/etc, whatever the
 // tone rules above already set) with no new colour and no new element to
 // size against the disc.
-function discHTML(parts, cap) {
-  const base = "disc" + (cap ? " sq" : "");
-  if (parts.kind === "empty") return `<span class="${base}"></span>`;
-  if (parts.kind === "lone") {
-    const side = parts.side === E.QIN ? "q" : "c";
-    const cls = `${base} lone-${side}${parts.controlled ? " ctl" : ""}`;
-    return `<span class="${cls}"><i${parts.atCap ? ` class="atcap"` : ""}>${parts.n}</i></span>`;
-  }
-  const cls = `${base} split${parts.qin.controlled ? " ctl-q" : ""}${parts.chu.controlled ? " ctl-c" : ""}`;
-  return `<span class="${cls}"><i class="q${parts.qin.atCap ? " atcap" : ""}">${parts.qin.n}</i><i class="c${parts.chu.atCap ? " atcap" : ""}">${parts.chu.n}</i></span>`;
-}
+// #144: discHTML() itself moved to disc-view.js (shared export) so report.js
+// stops carrying its own copy -- see that file's own comment.
 function renderMap(v) {
   const el = $("mapInner");
   const hitEl = $("hitLayer");
