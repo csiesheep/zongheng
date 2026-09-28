@@ -427,6 +427,14 @@ function syncChrome() {
   $("backLink").textContent = t("report.back");
   $("langBtn").textContent = lang === "en" ? "中文" : "EN";
   $("barMid").textContent = t("report.endButton");
+  const credit = $("credit");
+  credit.textContent = "";
+  const privacyLink = document.createElement("a");
+  privacyLink.href = "https://csiesheep.com/privacy-policy/";
+  privacyLink.target = "_blank";
+  privacyLink.rel = "noopener";
+  privacyLink.textContent = t("landing.privacy");
+  credit.appendChild(privacyLink);
 }
 function boot() {
   syncChrome();
