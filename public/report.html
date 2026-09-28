@@ -34,10 +34,15 @@
   <button id="langBtn" class="langBtn" type="button"></button>
 </header>
 <main class="rp" id="rpRoot">
-  <div class="rp-state" id="rpWaiting" hidden>
-    <div class="rp-spinner" aria-hidden="true"></div>
-    <p class="rp-state-title" id="rpWaitingTitle"></p>
-    <p class="rp-state-note" id="rpWaitingNote"></p>
+  <div class="rp-wait" id="rpWaiting" hidden>
+    <div class="rp-wait-status">
+      <div class="rp-spinner" aria-hidden="true"></div>
+      <div class="rp-wait-text">
+        <p class="rp-state-title" id="rpWaitingTitle"></p>
+        <p class="rp-state-note" id="rpWaitingNote"></p>
+      </div>
+    </div>
+    <section class="rp-recap" id="rpRecap" hidden></section>
     <a class="rp-wayback" id="rpWaitingBack" href="play.html?resume"></a>
   </div>
   <div class="rp-state" id="rpError" hidden>
@@ -45,6 +50,7 @@
     <a class="rp-wayback" id="rpErrorBack" href="play.html?resume"></a>
   </div>
   <article id="rpArticle" hidden></article>
+  <aside class="rp-rail" id="rpRail" hidden></aside>
 </main>
 <footer class="credit" id="credit"></footer>
 </div>

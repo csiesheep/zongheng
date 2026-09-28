@@ -1052,3 +1052,51 @@ export function digestText(d, lang) {
   out.push(cap(endText({ winner: SIDE[d.winner], reason: d.reason }, lang)) + T.end);
   return out.join("\n");
 }
+
+// #145: one or two short lines per year for the waiting page's 本局回顧, taken from
+// the same ranked 「本年要事」 the model is given. Bookkeeping ("(其事見…)",
+// "(behind it: …)") is never carried over, and a line that is too long is cut at
+// a clause boundary, never mid-word. The last year opens with how the game ended
+// and who won. Returns [{turn, items: [string, string?]}], the same for either seat.
+const HL_MAX = { zh: 40, en: 140 };
+const HL_GAMEWORDS = {
+  zh: /打出|出牌|手牌|抽牌|棄牌|牌庫|記分|計分|得分|分數|扶植|奇襲|行動點|回合|骰|其事見/,
+  en: /\b(cards?|ops|scor(e|ed|es|ing)|points|dice|discard(ed|s)?|deck)\b|see the affair|\(in the days of/i,
+};
+function trimClauses(text, lang) {
+  const zh = lang === "zh", max = HL_MAX[lang];
+  const s = zh ? text.replace(/,/g, "，").replace(/;/g, "；").replace(/:/g, "：") : text;
+  const fit = (x) => x.length <= (zh ? max - 1 : max - 1); // room for the full stop
+  const line = (x) => (zh ? x + "。" : x + ".");
+  if (fit(s)) return line(s);
+  // clause boundaries: zh ，； en , ;
+  const parts = zh ? s.split(/(?<=[，；])/) : s.split(/(?<=[,;.])\s+/);
+  const tail = zh ? /[，；]$/ : /[,;.]$/;
+  let acc = "";
+  for (const p of parts) {
+    const next = acc ? (zh ? acc + p : acc + " " + p) : p;
+    if (!fit(next.replace(tail, ""))) break;
+    acc = next;
+  }
+  acc = acc.replace(tail, "");
+  return acc ? line(acc) : null;
+}
+export function yearHighlights(exp, lang) {
+  if (lang !== "zh" && lang !== "en") throw new Error("yearHighlights: lang is zh or en");
+  const d = buildDigest(exp);
+  const out = [];
+  let prevEnd = null;
+  d.turns.forEach((t, i) => {
+    const last = i === d.turns.length - 1;
+    const items = [];
+    keyEvents(t, prevEnd, d, lang).forEach((k, j) => {
+      if (items.length >= 2) return;
+      if (!(last && j === 0) && HL_GAMEWORDS[lang].test(k.text)) return;
+      const s = trimClauses(cap(k.text), lang);
+      if (s && !items.includes(s)) items.push(s);
+    });
+    out.push({ turn: t.turn, items });
+    prevEnd = t.events.find((it) => it.type === "yearEnd");
+  });
+  return out;
+}

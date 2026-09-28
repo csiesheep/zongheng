@@ -87,3 +87,36 @@
 .rp-gen { font-size: 11px; color: var(--gold-line); text-align: center; margin-top: 10px; }
 .rp-share-note { font-size: 11.5px; color: var(--gold); text-align: center; margin-top: 6px; }
 .rp-share-note:empty { display: none; }
+
+/* ---------- waiting page: status line + 本局回顧 (#145, design A) ---------- */
+.rp-wait { display: flex; flex-direction: column; padding: 8px 0 24px; }
+.rp-wait-status { display: flex; gap: 14px; align-items: center; padding: 14px 2px 12px; }
+.rp-wait-status .rp-spinner { flex: none; width: 44px; height: 44px; }
+.rp-wait-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.rp-wait-text .rp-state-title { margin: 0; font: 400 19px/1.35 var(--kai); }
+.rp-wait-text .rp-state-note { max-width: none; }
+.rp-wait .rp-wayback { align-self: center; margin-top: 16px; }
+.rp-recap { margin-top: 4px; padding: 14px; border: 1px solid var(--gold-line); border-radius: 12px; background: rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; gap: 10px; }
+.rp-recap[hidden] { display: none; }
+.rp-recap-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.rp-recap-head h2 { margin: 0; font: 400 18px var(--kai); letter-spacing: 2px; color: var(--gold); }
+.rp-recap-head span { font-size: 13px; color: var(--text-soft); }
+.rp-recap .rp-chart { margin: 0; border: 0; background: none; padding: 0; }
+.rp-recap-years { margin: 4px 0 0; font: 400 14px var(--serif); letter-spacing: 2px; color: var(--gold); }
+.rp-yr { display: flex; gap: 10px; font-size: 14px; line-height: 1.6; color: var(--text-soft); }
+.rp-yr-n { flex: none; width: 3.6em; color: var(--gold-line); }
+.rp-yr-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+[lang="en"] .rp-yr-n { width: 4.6em; }
+
+/* ---------- ad slots (#145): empty and invisible until AdSense is set up (ads.js) ---------- */
+.ad-slot[hidden], .rp-rail[hidden] { display: none !important; }
+.ad-slot { margin: 18px 0; text-align: center; }
+.ad-tag { margin: 0 0 4px; font: 400 10px var(--serif); letter-spacing: 2px; color: var(--text-dim); text-align: center; text-indent: 0 !important; }
+.ad-box { overflow: hidden; border-radius: 10px; }
+.rp-rail { display: none; }
+/* >= 1100px with a rail: the reading column keeps its 560px and the 300px rail sits beside it. */
+@media (min-width: 1100px) {
+  .rp.has-rail { max-width: 892px; display: grid; grid-template-columns: 560px 300px; column-gap: 32px; justify-content: center; align-items: start; }
+  .rp.has-rail > .rp-rail:not([hidden]) { display: block; grid-column: 2; grid-row: 1; position: sticky; top: 16px; }
+  .rp.has-rail > :not(.rp-rail) { grid-column: 1; }
+}
