@@ -37,13 +37,56 @@ body.tut-on #table { position: relative; }
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
   display: flex; flex-direction: column; gap: 5px;
 }
-/* Escape valve for a map too short to let the panel avoid its own target at
-   either edge (pinCoach()'s bothCover case, found at 375x553) — falls back
-   into #table's normal flex column below the map/hand instead of floating
-   over either, which can never cover a map target and lets the page's own
-   scroll (checkOverflow()'s table-overflow) reach it. Higher specificity
-   than .tut-coach alone so it wins regardless of source order. */
-.tut-coach.tut-pin-flow { position: static; left: auto; right: auto; top: auto; bottom: auto; margin: 6px 8px 0; max-height: none; }
+/* Escape valve for a map too short to let the COLLAPSED pill avoid its own
+   target at either edge (pinCoach()'s positionCollapsed(), found at
+   375x553) — falls back into #table's normal flex column right after #map
+   instead of floating over either edge, which can never cover a map target
+   and lets the page's own scroll (checkOverflow()'s table-overflow) reach
+   it. Higher specificity than .tut-coach alone so it wins regardless of
+   source order. #139 round 2: EXPANDED (first sight) never uses this rule
+   at all any more — it's always position:absolute (positionOverlay()) —
+   this only ever applies to the small collapsed pill. */
+/* #139: flex:none is load-bearing, not cosmetic — #table is itself a
+   flex column, and a static-flow child with no explicit flex value takes
+   the default (0 1 auto), which SHRINKS to whatever's left once every
+   sibling with a fixed flex-basis (the map, #lowerBlock) is accounted for.
+   app.js's layoutTable()/flowReserve() sizes the map against this panel's
+   own REAL (getBoundingClientRect) height so nothing should ever need to
+   shrink it — but without flex:none, a still-too-tight budget would
+   silently squeeze the panel down to a sliver instead of #table genuinely
+   overflowing (checkOverflow()'s own signal that the budget didn't
+   actually work), corrupting tutorial-ui.js's own height measurements in
+   the process (found testing 390x669 during round 1 of this fix). flex:
+   none instead lets #table's own real overflow show through, honestly. */
+.tut-coach.tut-pin-flow { position: static; left: auto; right: auto; top: auto; bottom: auto; margin: 6px 8px 8px; max-height: none; flex: none; }
+/* #139 round 2 (owner/checker): the coach's FULL text is what a new player
+   must see first — round 1 of this fix collapsed straight to the do-line
+   pill by default whenever flow mode was needed, which is exactly the
+   "never seen the lesson" bug the checker caught. Collapsing now only ever
+   follows a deliberate "Got it" tap (tutorial-ui.js's setExpanded(false)),
+   regardless of whether the panel is pinned (tut-pin-top/-bottom) or has
+   dropped into flow (tut-pin-flow) — hence no .tut-pin-flow qualifier here,
+   unlike round 1's version. tut-collapsed's own chevron (below) is the
+   "you can tap this" affordance the checker asked for; the click handler
+   itself lives in tutorial-ui.js's buildCoach(). */
+.tut-coach.tut-collapsed { gap: 0; cursor: pointer; padding: 1px 12px; }
+.tut-coach.tut-pin-flow.tut-collapsed { margin: 0 8px; }
+.tut-coach.tut-collapsed > *:not(.tut-do) { display: none; }
+.tut-coach.tut-collapsed .tut-do { border-style: solid; padding: 4px 26px 4px 10px; position: relative; }
+/* The chevron itself — CSS-only (no i18n string needed, works in either
+   language) so a collapsed pill visibly promises more, per the checker's
+   own "a chevron or 「展開」" requirement. */
+.tut-coach.tut-collapsed .tut-do::after {
+  content: "\25BE"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  color: var(--gold); font-size: 13px;
+}
+/* #139 round 2: a visible cue (an inward fade at the bottom edge) whenever
+   the EXPANDED panel's own max-height/overflow-y:auto (base .tut-coach
+   rule, above) is actually clipping content — the checker's own complaint
+   about round 1's overflow was as much "no on-screen cue to scroll" as the
+   overflow itself. Never applies to the collapsed pill (positionCollapsed()
+   always clears this class): the do-line is never long enough to need it. */
+.tut-coach.tut-has-more { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), inset 0 -20px 16px -12px rgba(21, 19, 15, 0.95); }
 @media (min-width: 1024px) {
   .tut-coach {
     position: static; grid-area: coach; left: auto; right: auto; top: auto; bottom: auto;

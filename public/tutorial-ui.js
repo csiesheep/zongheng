@@ -42,8 +42,51 @@ let advanceTimer = 0;
 // alone" (restrictMap's own convention — see its `allowed == null` return).
 let mapAllowed = null;   // Set of space ids, or null
 let handAllowedIdx = -1; // index into the hand array, or -1 (no card wanted)
+// #139 round 2 (owner/checker: the coach's full text — the essential
+// FIRST-sight reading, not just the "do" line — must be readable on entry,
+// at every lesson and every phone size; only tapping 知道了 (Got it)
+// deliberately collapses it to the tiny do-line pill). So `expanded` is now
+// the ONLY state that decides what the panel shows: true (always the
+// starting state, owner's "the coach's words ARE the lesson" rule) renders
+// the full panel — title, text, do-line, Got it, Back — as an OVERLAY
+// (position:absolute, pinCoach()'s positionOverlay() below) that may cover
+// the map target (owner's standing ruling: nobody taps while still
+// reading) and may overlay/scroll internally as far as it needs to, but
+// never asks the map to shrink for it — it competes for nothing in
+// layoutTable()'s budget. false (only reached via a deliberate Got it tap)
+// shows just the do-line pill (tut-collapsed, tutorial.css), positioned by
+// positionCollapsed() below to clear the target the same way this file
+// always has — pinned to whichever edge doesn't cover it, or (the rare
+// case neither edge does) dropped into normal document flow right after
+// #map, which IS the one case that still needs a real budget reservation —
+// see flowActive/flowHeight/flowReserve() just below.
+//
+// Round 1 of this fix got this backwards (peeked FIRST, expand on tap) —
+// the checker's own round-2 report: a new player never sees lesson 1's
+// text (the map legend + the new capital rule) because nothing about a
+// plain pill says "tap me", and the lessons whose text is long enough to
+// need the overlay-scroll treatment overflowed the SAME way the original
+// bug did, just one tap later.
+let flowActive = false;
+let flowHeight = 0;
 
 export function active() { return on; }
+// Read by app.js's layoutTable() on every call (a no-op outside a tutorial,
+// or whenever the panel isn't in flow mode): the real px flow mode's panel
+// needs taken out of the map's own height budget — flowHeight already has
+// its own margin folded in (see flowFootprint() below), so no separate
+// constant is added here.
+export function flowReserve() { return on && flowActive ? flowHeight : 0; }
+// The real vertical space `el` (in flow mode — the collapsed pill only,
+// round 2 on) takes out of #table's flex column right now: its own box
+// height plus margin-top/bottom, which getBoundingClientRect() never
+// includes — read live, never guessed, same rule this whole fix follows
+// everywhere else (targetHeights() below, and app.js's own #139
+// lowerBlockH fix).
+function flowFootprint(el, h) {
+  const cs = getComputedStyle(el);
+  return h + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+}
 // app.js's topbar (#barMid) shows this instead of "Turn N · side" while a
 // tutorial is running (owner: "教學 · 第 n / 10 課", not the turn count).
 export function barText() { return ctx.t("tutorial.topbar", { n: stepIdx + 1, total: STEPS.length }); }
@@ -448,22 +491,48 @@ function buildCoach() {
     d.className = "tut-dot";
     dotsWrap.appendChild(d);
   }
-  // Mounted as #table's own last child (not #map's): on a phone (<1024px)
-  // tutorial.css makes it float, position:absolute, over the map's box
-  // (pinCoach() below computes its top/bottom in pixels to match #map's own
-  // rect within #table, since the two no longer share a box); it can never
-  // push the "Back"/"Skip" row off screen because it never takes a row of
-  // its own (issue #15 review, item 1). On desktop (>=1024px, #7's frame)
-  // it instead becomes a normal grid child in the sidebar's own "prompt"
-  // grid-area (which is empty during a tutorial — see $("prompt").hidden
-  // above) rather than floating over the map (the orchestrator's desktop
-  // note on this same issue): tutorial.css's @media(min-width:1024px)
-  // block resets position back to static for that.
-  ctx.$("table").insertAdjacentElement("beforeend", el);
+  // Mounted right after #map (not #table's last child — #139: see below) —
+  // on a phone (<1024px) tutorial.css makes it float, position:absolute,
+  // over the map's box (pinCoach() below computes its top/bottom in pixels
+  // to match #map's own rect within #table, since the two no longer share a
+  // box); it can never push the "Back"/"Skip" row off screen because it
+  // never takes a row of its own (issue #15 review, item 1). On desktop
+  // (>=1024px, #7's frame) it instead becomes a normal grid child in the
+  // sidebar's own "prompt" grid-area (which is empty during a tutorial —
+  // see $("prompt").hidden above) rather than floating over the map (the
+  // orchestrator's desktop note on this same issue): tutorial.css's
+  // @media(min-width:1024px) block resets position back to static for that.
+  //
+  // #139: when the COLLAPSED (post Got-it) pill can't clear the
+  // spotlighted target at either edge, pinCoach() drops it out of
+  // position:absolute into the normal flex flow instead — and its DOM
+  // position is what that flow then uses. It used to be #table's LAST
+  // child, landing after the (already fixed-height) lowerBlock/hand/chat/
+  // foot, i.e. off the bottom of a 669px viewport with nothing short of a
+  // scroll to reach it (found by the #133 3b checker). Right after #map is
+  // where that flow fallback actually needs it to render — see pinCoach()'s
+  // flowActive/flowHeight below, which reserves this same slot's real
+  // height out of the map's own budget (mirrors capital-ui.js's
+  // #capitalBannerRow: "a normal in-flow element, not an overlay"). The
+  // EXPANDED (first-sight) panel never uses this path at all — it's always
+  // an absolute overlay, positionOverlay() below — so this insertion point
+  // only ever matters for the small collapsed pill.
+  ctx.$("map").insertAdjacentElement("afterend", el);
   el.querySelector("#tutSkipBtn").onclick = skipToDone;
   el.querySelector("#tutBackBtn").onclick = goBack;
   el.querySelector("#tutHeadBtn").onclick = () => setExpanded(!expanded);
   el.querySelector("#tutGotItBtn").onclick = () => setExpanded(false);
+  // #139 round 2: the collapsed pill (tutorial.css's tut-collapsed hides
+  // everything but .tut-do, with its own chevron cue) is the only tap
+  // target left once collapsed — a plain click on the panel, not a button
+  // of its own (CSS gives it cursor:pointer), re-expands it. A harmless
+  // no-op while already expanded, or when the click lands on one of the
+  // panel's own buttons (.closest("button") — those already have their own
+  // handlers, checked first so this never double-fires).
+  el.onclick = (ev) => {
+    if (expanded || ev.target.closest("button")) return;
+    setExpanded(true);
+  };
 }
 // Toggles the prose and repositions/resizes the panel off the back of it —
 // used by the header tap, the "Got it" button (see pinCoach() below), and
@@ -560,41 +629,127 @@ function targetRect() {
   };
 }
 function overlaps(a, b) { return !(a.bottom <= b.top || a.top >= b.bottom || a.right <= b.left || a.left >= b.right); }
-// Owner's ruling, issue #15 review round 4: the coach's prose starts open
-// on EVERY lesson (never auto-collapsed) — collapsing only ever happens
-// because the player tapped "Got it", never automatically. That button
-// itself only appears when the fully-expanded panel, at whichever edge it
-// would otherwise pin to, still covers the taught target — a lesson whose
-// panel never reaches the target keeps the text open with no button at all.
-// Round 5's ruling (issue #15 review): the EXPANDED panel is allowed to sit
-// over the target — nobody is expected to tap while still reading the
-// lesson — so the edge is chosen against the COLLAPSED ("Got it" already
-// tapped) height, the one state the player actually has to act in. Only
-// when EVEN the collapsed panel covers the target at both edges (owner
-// named 375x553 as the one case this should ever happen) does this fall
-// back to flow mode. Both heights are measured for real via the DOM (toggle
-// #tutTextP's hidden, read the box, put it back) instead of guessed, since a
-// wrong guess here is exactly what round 4's single-measurement version got
-// wrong — it read whatever state the panel happened to already be in.
-// The "Got it" button's own visibility is decided by THIS function's caller,
-// from a coverage check that itself needs a clean height to test against —
-// so both measurements are taken with it force-hidden, not however the
-// PREVIOUS lesson's pinCoach() call happened to leave it. Without this, a
-// lesson entered right after one that needed "Got it" measured its own
-// collapsed height ~50px too tall (the leftover visible button, not yet
-// updated for the new step), wrongly concluding neither edge clears the
-// target and falling into flow mode — found testing English 390x669's
-// "lobby" lesson, entered right after "campaign" (issue #15 review round 5).
-function measuredHeight(el, hideText) {
-  const p = el.querySelector("#tutTextP");
-  const gotIt = el.querySelector("#tutGotItBtn");
-  const wasP = p.hidden, wasGotIt = gotIt.hidden;
-  p.hidden = hideText;
-  gotIt.hidden = true;
-  const h = el.getBoundingClientRect().height;
-  p.hidden = wasP;
-  gotIt.hidden = wasGotIt;
-  return h;
+// Owner's ruling, issue #15 review round 4, reaffirmed by the #139 round-2
+// checker: the coach's prose starts open on EVERY lesson (never
+// auto-collapsed) — collapsing only ever happens because the player
+// tapped "Got it", never automatically, and the FULL text (title/text/
+// do-line/Got it/Back) must be readable, inside the viewport, the moment a
+// lesson opens — a new player has no way to discover a plain, silently-
+// collapsed pill exists to tap (the checker's own round-2 finding: lesson
+// 1, the map legend + the new capital rule, opened collapsed at the
+// owner's two priority sizes). So the EXPANDED state (positionOverlay()
+// below) is now always an absolute overlay that may cover the map target
+// (nobody is expected to tap while still reading) and may cover/scroll
+// over the map as far as it needs to (its own max-height/overflow-y:auto,
+// tutorial.css, already the "pathologically long string" backstop) — it
+// never competes for layoutTable()'s budget, so it can never be squeezed
+// by the map's own floor the way the flow-mode RESERVE used to (round 1 of
+// this fix reserved the full EXPANDED height in-flow when a lesson was
+// tapped open from its collapsed pill, reproducing the original
+// below-the-fold bug one tap later — the checker's other round-2 finding).
+// Collapsing (positionCollapsed() below, reached only via a "Got it" tap)
+// is the one state that still needs to clear the taught target, same as
+// this file always has — pinned to whichever edge doesn't cover it, or (the
+// rare case neither edge does) the flow-mode fallback that DOES need a real
+// budget reservation (flowActive/flowHeight/flowReserve() above).
+function targetHeights(el) {
+  // Both heights measured for real via the DOM (toggle the tut-collapsed
+  // class, read the box, put it back) rather than guessed — a wrong guess
+  // here is exactly what an earlier round's single-measurement version got
+  // wrong (issue #15 review round 4), and what round 1 of #139 got wrong a
+  // different way (measuring while a STALE collapsed class from the
+  // previous call was still on, silently hiding everything but the do-line
+  // for BOTH readings).
+  const wasCollapsed = el.classList.contains("tut-collapsed");
+  el.classList.remove("tut-collapsed");
+  const expandedH = el.getBoundingClientRect().height;
+  el.classList.add("tut-collapsed");
+  const collapsedH = el.getBoundingClientRect().height;
+  el.classList.toggle("tut-collapsed", wasCollapsed);
+  return { expandedH, collapsedH };
+}
+// #139: deactivates flow mode (if it was on) and asks layoutTable() to give
+// the map its full budget back. A no-op call (flow already off) never
+// touches layoutTable() — every other pinCoach() exit already runs on the
+// tail of a render that just called it once.
+function clearFlowReserve() {
+  if (!flowActive) return;
+  flowActive = false; flowHeight = 0;
+  ctx.layoutTable();
+}
+// Toggles tut-has-more (tutorial.css: an inset shadow at the bottom edge)
+// whenever the panel's own max-height/overflow-y:auto is actually clipping
+// content — the "visible cue" the #139 round-2 checker asked for, rather
+// than a silent internal scroll nobody knows is there.
+function updateHasMore(el) {
+  el.classList.toggle("tut-has-more", el.scrollHeight > el.clientHeight + 1);
+}
+// ---------- EXPANDED (first sight): always an overlay, never in-flow ----------
+// Prefers pinning to the map's bottom edge (matches the design's Tut_Card);
+// flips to the top edge only if bottom would spill off the visible
+// viewport. If NEITHER keeps the FULL expanded panel on screen (the
+// longest lesson text at the shortest viewports — 375x667 English lesson
+// 8, 320x568's own longest cases), it pins flush to #table's own top
+// instead: #table's own box is guaranteed on-screen (body.table-lock's
+// height:100svh + overflow:hidden), so anchoring to IT — not the map's
+// edges — is what actually keeps this inside the viewport, and the base
+// .tut-coach rule's own max-height (calc(100% - 16px)) + overflow-y:auto
+// contains whatever doesn't fit, with updateHasMore()'s cue if it does.
+function positionOverlay(el, h) {
+  const mapRect = ctx.$("map").getBoundingClientRect();
+  const tableRect = ctx.$("table").getBoundingClientRect();
+  const rectAt = (edge) => edge === "bottom"
+    ? { top: mapRect.bottom - h - 8, bottom: mapRect.bottom - 8 }
+    : { top: mapRect.top + 8, bottom: mapRect.top + 8 + h };
+  const fits = (r) => r.top >= 0 && r.bottom <= window.innerHeight;
+  el.classList.remove("tut-pin-flow");
+  let edge = fits(rectAt("bottom")) ? "bottom" : fits(rectAt("top")) ? "top" : null;
+  el.classList.toggle("tut-pin-top", edge === "top");
+  el.classList.toggle("tut-pin-bottom", edge === "bottom");
+  if (edge === "top") { el.style.bottom = ""; el.style.top = `${Math.round(mapRect.top - tableRect.top) + 8}px`; }
+  else if (edge === "bottom") { el.style.top = ""; el.style.bottom = `${Math.round(tableRect.bottom - mapRect.bottom) + 8}px`; }
+  else { el.style.bottom = ""; el.style.top = "8px"; }
+  updateHasMore(el);
+}
+// ---------- COLLAPSED (post "Got it"): pin clear of the target, or flow ----------
+function positionCollapsed(el, h, target) {
+  const rectAt = (edge) => {
+    const mapRect = ctx.$("map").getBoundingClientRect();
+    return edge === "bottom"
+      ? { top: mapRect.bottom - h - 8, bottom: mapRect.bottom - 8, left: mapRect.left, right: mapRect.right }
+      : { top: mapRect.top + 8, bottom: mapRect.top + 8 + h, left: mapRect.left, right: mapRect.right };
+  };
+  const covers = (edge) => !!target && overlaps(rectAt(edge), target);
+  const fits = (r) => r.top >= 0 && r.bottom <= window.innerHeight;
+  let edge = !covers("bottom") ? "bottom" : !covers("top") ? "top" : null;
+  const flow = edge == null;
+  el.classList.toggle("tut-pin-flow", flow);
+  el.classList.remove("tut-has-more"); // the tiny pill never needs its own internal scroll
+  if (flow) {
+    el.style.top = ""; el.style.bottom = "";
+    el.classList.remove("tut-pin-top", "tut-pin-bottom");
+    // #139: even a fully-given-way map (its own floor, FLOOR_SCALE) plus an
+    // emptied #lowerBlock (app.js's own #139 fix, measured not guessed)
+    // occasionally still can't clear the target at either edge for this
+    // tiny pill — reserve its real footprint (content + margin) out of the
+    // map's own budget instead of letting it land wherever the map's
+    // UNSHRUNK height happens to leave it (the original #139 bug). Only
+    // re-runs layoutTable() when the reserve actually needs to change.
+    const fh = flowFootprint(el, h);
+    if (!flowActive || flowHeight !== fh) { flowActive = true; flowHeight = fh; ctx.layoutTable(); }
+    return;
+  }
+  clearFlowReserve(); // this lesson doesn't need the flow slot — give it back
+  const tableRect = ctx.$("table").getBoundingClientRect();
+  if (!fits(rectAt(edge))) {
+    const other = edge === "bottom" ? "top" : "bottom";
+    if (fits(rectAt(other))) edge = other;
+  }
+  el.classList.toggle("tut-pin-top", edge === "top");
+  el.classList.toggle("tut-pin-bottom", edge === "bottom");
+  const mapRect = ctx.$("map").getBoundingClientRect(); // fresh, post-clearFlowReserve()
+  if (edge === "top") { el.style.bottom = ""; el.style.top = `${Math.round(mapRect.top - tableRect.top) + 8}px`; }
+  else { el.style.top = ""; el.style.bottom = `${Math.round(tableRect.bottom - mapRect.bottom) + 8}px`; }
 }
 function pinCoach() {
   const el = ctx.$("tutCoach");
@@ -602,47 +757,21 @@ function pinCoach() {
   const gotItBtn = el.querySelector("#tutGotItBtn");
   if (window.matchMedia("(min-width: 1024px)").matches) {
     el.style.top = ""; el.style.bottom = "";
-    el.classList.remove("tut-pin-flow", "tut-pin-top", "tut-pin-bottom");
+    el.classList.remove("tut-pin-flow", "tut-pin-top", "tut-pin-bottom", "tut-collapsed", "tut-has-more");
     gotItBtn.hidden = true;
+    clearFlowReserve();
     return;
   }
-  const tableRect = ctx.$("table").getBoundingClientRect();
-  const mapRect = ctx.$("map").getBoundingClientRect();
-  const target = targetRect();
-  const collapsedH = measuredHeight(el, true);
-  const expandedH = measuredHeight(el, false);
-  const rectAt = (edge, h) => edge === "bottom"
-    ? { top: mapRect.bottom - h - 8, bottom: mapRect.bottom - 8, left: mapRect.left, right: mapRect.right }
-    : { top: mapRect.top + 8, bottom: mapRect.top + 8 + h, left: mapRect.left, right: mapRect.right };
-  const covers = (edge, h) => !!target && overlaps(rectAt(edge, h), target);
-  const fits = (r) => r.top >= 0 && r.bottom <= window.innerHeight;
-  // Prefer bottom (matches the design's Tut_Card); flip to top only when
-  // bottom fails collapsed and top doesn't. Neither clearing collapsed is
-  // the genuine "nowhere works" case — flow mode.
-  let edge = !covers("bottom", collapsedH) ? "bottom" : !covers("top", collapsedH) ? "top" : null;
-  const flow = edge == null;
-  el.classList.toggle("tut-pin-flow", flow);
-  if (flow) {
-    el.style.top = ""; el.style.bottom = "";
-    el.classList.remove("tut-pin-top", "tut-pin-bottom");
-    gotItBtn.hidden = true; // flow mode never covers the map, so there's nothing to dismiss
-    return;
+  gotItBtn.hidden = false; // visibility from here on is purely the tut-collapsed class (tutorial.css)
+  const { expandedH, collapsedH } = targetHeights(el);
+  if (expanded) {
+    el.classList.remove("tut-collapsed");
+    clearFlowReserve();
+    positionOverlay(el, expandedH);
+  } else {
+    el.classList.add("tut-collapsed");
+    positionCollapsed(el, collapsedH, targetRect());
   }
-  // The chosen edge clears the target once collapsed, but must also land
-  // fully inside the viewport at whichever height it's showing RIGHT NOW
-  // (issue #15 review round 5, item 1) — try the other edge if this one
-  // would spill off screen and the other one wouldn't.
-  const h = expanded ? expandedH : collapsedH;
-  if (!fits(rectAt(edge, h))) {
-    const other = edge === "bottom" ? "top" : "bottom";
-    if (fits(rectAt(other, h))) edge = other;
-  }
-  const needsGotIt = expanded && covers(edge, expandedH);
-  gotItBtn.hidden = !needsGotIt;
-  el.classList.toggle("tut-pin-top", edge === "top");
-  el.classList.toggle("tut-pin-bottom", edge === "bottom");
-  if (edge === "top") { el.style.bottom = ""; el.style.top = `${Math.round(mapRect.top - tableRect.top) + 8}px`; }
-  else { el.style.top = ""; el.style.bottom = `${Math.round(tableRect.bottom - mapRect.bottom) + 8}px`; }
 }
 
 // ---------- last-resort escape hatch: let the page scroll rather than clip ----------
