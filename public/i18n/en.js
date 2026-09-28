@@ -272,6 +272,72 @@ export default {
     pairWith: "with {side}'s {card} (its event does not fire)",
     close: "Hide",
   },
+  // #137: download this game's log -- the panel button, the bottom sheet
+  // (format cards / copy / cancel / filename / privacy note) and the same
+  // button on the end page. The .txt file's own turn-by-turn wording reuses
+  // logPanel/oppmove/over.reasons (see log-text.js); only this feature's own
+  // copy lives here.
+  logDownload: {
+    button: "Download",
+    sheetTitle: "Download this game's log",
+    subtitleLive: "{turnLine} · works mid-game too",
+    subtitleDone: "{turnLine} · game over",
+    turnOnly: "Turn {turn}",
+    txtTitle: "Text log",
+    txtDesc: "Every move, turn by turn, like a game score. Readable on its own, easy to share.",
+    jsonTitle: "Full data",
+    jsonDesc: "Every step, the rules, and the result. Good for a write-up or a replay later.",
+    copyText: "Copy text",
+    copyDone: "Copied",
+    cancel: "Cancel",
+    filename: "File: {name}",
+    privacy: "An online game's log only ever holds what you can see: the other side's hand and deck order never appear in it.",
+    endButton: "Download this game's log",
+    // #137: iOS Chrome (WebKit under the hood) is unreliable with Blob +
+    // <a download> -- it often opens a new tab or ignores it outright, so a
+    // detected WebKit-on-iOS browser opens a new tab instead; this explains why.
+    fallbackNote: "This browser can't download directly, so this opened in a new tab -- use Share or press-and-hold to save it.",
+  },
+  // #137: the .txt file's own copy -- the header (title/date/opponent or
+  // level/side/rules/result) and the final-reveal section. The turn-by-turn
+  // body reuses log-view.js's renderRows() (the same copy the panel shows);
+  // only the file's own wrap-up and rule wording live here.
+  logText: {
+    title: "Zongheng · Game Record",
+    vsComputer: "vs the computer ({level})",
+    vsRoom: "vs {name}",
+    vsRoomBoth: "{a} vs {b}",
+    you: "You: {side}",
+    spectating: "Spectating",
+    rules: "Rules: {rules}",
+    result: "Result: {result}",
+    resultLine: "{winner} wins ({reason}) · turn {turn} · Mandate {mandateSide} {mandate}",
+    ongoing: "In progress · turn {turn}",
+    ruleLobbyDice: "lobbying by dice", ruleLobbyLocal: "lobbying by local strength",
+    ruleHomeFall: "home capital falls",
+    ruleSeals: "{n} seals",
+    ruleEmperorWinLead: "Emperor needs the Mandate lead", ruleEmperorWin: "Emperor wins at once", ruleEmperorWinLate: "Emperor wins at once from turn {n}", ruleEmperorVp: "Emperor doesn't win, just Mandate",
+    finalHeader: "Final reveal",
+    finalHands: "{side} hand: {cards}",
+    finalDraw: "Draw pile (in order): {cards}",
+    seed: "Seed: {seed}",
+    // #137 (orchestrator, be/137-replay): only printed once `final.actions`
+    // is there -- the full data (.json) then holds every action actually
+    // taken, so the whole game can be replayed from it exactly; this text
+    // file never lists the actions themselves.
+    replayable: "The full data (.json) can replay this whole game exactly.",
+    // #137 (orchestrator, owner's read-through): three lines that only made
+    // sense next to their own move's colour/side badge on screen -- alone in
+    // plain text they lost who/whom. realignRoll/realignTie spell out the
+    // dice-遊說's own roll (the log entry already carries roll/mod/lose);
+    // homeFallLine restores the turn-end capital check itself -- its own log
+    // entry type (capitalCheck) has no branch in the panel's own chip
+    // renderer, so even the panel never shows it, only a lone "Chu loses".
+    realignRoll: "Attempt {k}: {sideA} {sumA} vs {sideB} {sumB} → {result}",
+    realignTie: "a tie",
+    homeFallLine: "Turn ends: {capital} ({side}) falls → {side} loses",
+    reasonShort: { unification: "Unification", alliance: "Alliance", mandate: "Mandate", emperor: "Emperor", collapse: "Collapse", scoring: "Scoring card", scoringBoth: "Scoring card", final: "Final tally", tie: "Final tally", homeFall: "Capital falls" },
+  },
   // #79/#87: the opponent's-move reveal -- the card panel (①, which waits
   // for its own tap) and the map playback (②). #85's persistent chip and
   // its bottom sheet are gone (#87). oppmove-ui.js is the only file that

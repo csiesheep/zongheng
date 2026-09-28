@@ -353,6 +353,28 @@
     z-index: 45;
     border-radius: 14px 14px 0 0;
   }
+  /* #137: the download sheet, same idea as .logbody just above -- without
+     this it inherits `position: fixed` (style.css), which anchors to the
+     VIEWPORT regardless of any ancestor's `position: relative` (`.page-card`
+     just above), so it stretched edge to edge on desktop instead of sitting
+     in the card. Deliberately NOT scoped to `body[data-view="table"]` like
+     .logbody just above -- decision 3 opens this same sheet from the end
+     page too (`data-view="over"`), and `.page-card` itself is only widened
+     to 1280px for the table (this file's "page-card shell" rule); on every
+     other view it stays the 390px mobile column, so one unscoped rule
+     anchoring to the card's own edge (`inset: auto 0 0 auto`) already reads
+     right in both places -- full-width-of-the-card on the narrow end page,
+     a 390px corner sheet on the wide table. */
+  .dlsheet, #dlScrim { position: absolute; }
+  .dlsheet {
+    inset: auto 0 0 auto;
+    left: auto;
+    top: auto;
+    width: min(390px, 100%);
+    max-height: 80%;
+    z-index: 47;
+    border-radius: 14px 14px 0 0;
+  }
 
   /* #83, widened by #86 round 2 (owner: first "縮小一點按鈕..在 desktop" for
      just the sheet, then "所有按鈕都可以考虑縮小" for every desktop button):
