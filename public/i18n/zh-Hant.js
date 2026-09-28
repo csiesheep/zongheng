@@ -202,7 +202,9 @@ export default {
     // 自己的 log.realign,收手是 log.lobbyStop。孤兒(#128 400 筆上限截斷、
     // 沒有 play 開頭的一手)時走這裡的通用路徑,平常在一手牌裡由
     // log-view.js 的 chipsForSteps() 顯示短版。
-    lobbyDice: "{side}遊說{target},共 {attempts} 次:對方失去 {removed},己方失去 {lost}。",
+    // #143 追加(orchestrator:「己方」看不出是誰,.txt 匯出#137 已經點名,面板也要一樣):
+    // {side} 在這個模板裡本來就出現過一次(句首),這裡直接再點名一次,不寫「己方」。
+    lobbyDice: "{side}遊說{target},共 {attempts} 次:對方失去 {removed},{side}失去 {lost}。",
     realign: "第 {k} 次:{loserOrTie}。",
     lobbyStop: "{side}在{target}收手,還剩 {left} 次不擲。",
     capitalCheck: "回合結束檢查:{side}的國都{capital}{status}。",
@@ -222,7 +224,9 @@ export default {
     headlineLine: "標題:{qinSide} {qinCard} · {chuSide} {chuCard}", headlineFirst: "{first}先結算",
     chipPlace: "{space} +{n}", chipRemove: "{target}:移除{side} {n}",
     // #133: 遊說(骰子)每次擲骰、以及收手的小標籤。
-    chipRealign: "第{k}次:{loserOrTie}", chipRealignTie: "平手", chipRealignLoss: "{side}失去{n}", chipLobbyLost: "{target}:己方失去 {n}", chipLobbyStop: "收手(剩{left}次)",
+    // #143 追加:{target}:{side}失去 {n} ——原本寫「己方」,看不出是哪一方
+    // (owner: log_dice_zh_320x568.png 的「洛邑:己方失去 1」)。
+    chipRealign: "第{k}次:{loserOrTie}", chipRealignTie: "平手", chipRealignLoss: "{side}失去{n}", chipLobbyLost: "{target}:{side}失去 {n}", chipLobbyStop: "收手(剩{left}次)",
     chipReform: "變法 → 第 {box} 格", chipTire: "疲敝 → {to}",
     chipDiscard: "{side}棄掉{card}", chipOpsLost: "{side}的 {ops} 點行動點無處可用",
     // #127:結束這局的那手牌(或標題)身上的「就是這手」小標,只點出誰輸;

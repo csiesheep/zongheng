@@ -96,7 +96,10 @@ function chipsForSteps(steps, moverSide, lang) {
       // #133: under the dice rule (realign-own, `st.mode` set) the actor can
       // lose its OWN points too -- `st.lost` (the header's own running total,
       // #130) is that loss, distinct from `st.removed` (the enemy's).
-      if (st.lost) chips.push({ text: t(lang, "logPanel.chipLobbyLost", { target: spaceName(st.target, lang), n: st.lost }), gold: false });
+      // #143 follow-up (owner: "己方" doesn't say which side): name
+      // `moverSide` explicitly, the same side chipRemove above already names
+      // as the OTHER side's loser.
+      if (st.lost) chips.push({ text: t(lang, "logPanel.chipLobbyLost", { target: spaceName(st.target, lang), side: sideName(moverSide, lang), n: st.lost }), gold: false });
     } else if (st.type === "realign") {
       // #143: one chip per attempt, now with the dice/mods/totals (owner:
       // the old terse "第{k}次:{side}失去{n}" chip showed no roll at all --
