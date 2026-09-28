@@ -1426,5 +1426,21 @@ export function view(st, side) {
     const hidden = new Set([QIN, CHU].filter((s) => v.hands[s] == null).flatMap((s) => st.hands[s]));
     v.pending.options = v.pending.options.filter((c) => !hidden.has(c));
   }
+  // #137: once the game is over everything is revealed, to every seat and to
+  // spectators alike: both hands, the draw pile and the later eras in order,
+  // the discard and removed piles, the seed (seed + options + the moves replay
+  // the whole game) and the board. The rest of the view keeps #131's shape;
+  // `final` is the one place the secrets appear, and only after the end.
+  if (st.winner != null) {
+    v.final = clone({
+      hands: st.hands, draw: st.draw, later: st.later, discard: st.discard, removed: st.removed,
+      seed: st.seed ?? 0, inf: st.inf, reform: st.reform, weariness: st.weariness, seals: st.seals, mie: st.mie,
+    });
+  }
   return v;
 }
+
+// #137: the download's JSON, built from a view (what the client holds) and
+// what the view does not know. Pure and DOM-free (browser and Node alike);
+// the one clock it reads is `new Date()` when `meta.exportedAt` is not given.
+export { exportGame } from "./export.js";
