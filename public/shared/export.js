@@ -12,7 +12,11 @@
 //
 // Because it only reads the view, a download holds exactly what that viewer
 // sees: mid-game there is no seed and no hidden card in it (#131); once the
-// game is over `view.final` carries the reveal for every seat and spectators.
+// game is over `view.final` carries the reveal for every seat and spectators,
+// and `final.actions`, every action the engine applied, in order:
+// `E.replay(final.seed, game.options, final.actions)` rebuilds the game
+// exactly. A game with no recorded actions (a save from before #137, the
+// tutorial) has no `final.actions` key: that absence means "not replayable".
 //
 // meta: { mode: "solo" | "room", level: "easy"|"normal"|"hard"|null,
 //         names: [qin, chu] or { qin, chu } (the room's `names` message),
