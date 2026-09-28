@@ -238,6 +238,7 @@ export default {
     sheetTitle: "下載本局紀錄",
     subtitleLive: "{turnLine} · 進行中也可以下載",
     subtitleDone: "{turnLine} · 本局已結束",
+    turnOnly: "第 {turn} 回合",
     txtTitle: "文字紀錄",
     txtDesc: "像棋譜一樣逐回合列出每一步。可以直接讀,也方便傳給朋友。",
     jsonTitle: "完整資料",
@@ -274,6 +275,9 @@ export default {
     finalHands: "{side}手牌:{cards}",
     finalDraw: "牌庫剩餘(依序):{cards}",
     seed: "種子:{seed}",
+    // #137(orchestrator,be/137-replay):final.actions 存在時才印這句——完整資料
+    // (.json)裡有每一步實際執行的操作,可以照原樣重播;這份文字檔本身不列出來。
+    replayable: "這份完整資料(.json)可以照原樣重播整局。",
     seals1: "一", seals2: "二", seals3: "三", seals4: "四", seals5: "五", seals6: "六", seals7: "七", seals8: "八", seals9: "九",
     reasonShort: { unification: "一統", alliance: "合縱", mandate: "天命", emperor: "稱帝", collapse: "土崩", scoring: "記分卡", scoringBoth: "記分卡", final: "終局", tie: "終局", homeFall: "國都陷落" },
   },

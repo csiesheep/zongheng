@@ -3573,25 +3573,29 @@ function currentExportJson() {
   const meta = exportMeta();
   return typeof E.exportGame === "function" ? E.exportGame(view, meta) : LogDL.stubExportGame(view, meta);
 }
+// `st.era` is still null before turn 1's first headline resolves (setup
+// phase) -- logPanel.turnHeader's own " · {era}" would leave a bare
+// trailing dot with nothing after it, so this only asks for the era half
+// once there is one.
 function dlTurnLine() {
   const st = game.st;
-  return t("logPanel.turnHeader", { turn: st.turn, era: st.era ? t("eras." + st.era) : "" });
+  return st.era ? t("logPanel.turnHeader", { turn: st.turn, era: t("eras." + st.era) }) : t("logDownload.turnOnly", { turn: st.turn });
 }
 function closeDlSheet() {
   $("dlScrim").hidden = true;
   $("dlSheet").hidden = true;
 }
 function noteDlFallback() {
-  $("dlNote").hidden = false;
-  $("dlNote").textContent = t("logDownload.fallbackNote");
+  $("dlFallbackNote").hidden = false;
+  $("dlFallbackNote").textContent = t("logDownload.fallbackNote");
 }
 function openDlSheet() {
   if (!game.st) return;
   const json = currentExportJson();
   $("dlSubtitle").textContent = t(game.st.winner != null ? "logDownload.subtitleDone" : "logDownload.subtitleLive", { turnLine: dlTurnLine() });
   $("dlFilename").textContent = t("logDownload.filename", { name: buildFilename(json, "txt") });
-  $("dlNote").hidden = true;
-  $("dlNote").textContent = "";
+  $("dlFallbackNote").hidden = true;
+  $("dlFallbackNote").textContent = "";
   $("dlScrim").hidden = false;
   $("dlSheet").hidden = false;
 }

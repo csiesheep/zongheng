@@ -249,7 +249,12 @@
     <button type="button" id="dlCancel" class="no-tap-sound" data-t="logDownload.cancel"></button>
   </div>
   <p class="dlfn" id="dlFilename"></p>
-  <p class="dlnote" id="dlNote" hidden></p>
+  <!-- #137 decision 2: the privacy note is always shown (what a download
+       holds while the game is on: this seat's/spectator's own view only).
+       #dlFallbackNote is separate and only appears when saveText() actually
+       fell back to a new tab (iOS Chrome/WebKit -- see log-download.js). -->
+  <p class="dlnote" id="dlPrivacy" data-t="logDownload.privacy"></p>
+  <p class="dlnote dlnote-warn" id="dlFallbackNote" hidden></p>
 </div>
 </div>
 

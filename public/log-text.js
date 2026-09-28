@@ -102,10 +102,14 @@ function opponentLine(json) {
 function resultLine(json) {
   const { lang, result } = json;
   if (!result) return null;
+  // `result.mandate`'s sign is QIN-positive/CHU-negative (the engine's own
+  // convention, e.g. app.js's mandateText()) -- mandateSide already reads
+  // that sign to say WHICH side it favours, so the number after it is
+  // always a plain "+N" (never "+-N" nor a bare "N"), same as mandateText().
   const mandateSide = result.mandate >= 0 ? sideName(E.QIN, lang) : sideName(E.CHU, lang);
   return t(lang, "logText.resultLine", {
     winner: sideName(result.winner, lang), reason: t(lang, `logText.reasonShort.${result.reason}`),
-    turn: result.turn, mandateSide, mandate: (result.mandate >= 0 ? "+" : "") + Math.abs(result.mandate),
+    turn: result.turn, mandateSide, mandate: `+${Math.abs(result.mandate)}`,
   });
 }
 function headerLines(json) {
@@ -133,6 +137,12 @@ function finalLines(json) {
   }
   const draw = (final.draw || []).map((id) => cardName(id, lang)).join(sep(lang));
   out.push(t(lang, "logText.finalDraw", { cards: draw || "—" }));
+  // #137 (orchestrator, be/137-replay): `final.actions` (every applied
+  // action, in order) is what makes an exact replay possible from this
+  // file's own JSON sibling -- the .txt never prints the actions themselves
+  // (that's what the .json is for), just says so, and only once they're
+  // actually there to replay from.
+  if (Array.isArray(final.actions) && final.actions.length) out.push(t(lang, "logText.replayable"));
   return out;
 }
 

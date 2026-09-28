@@ -1892,6 +1892,11 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .dlfn { font: 12px var(--sans); color: var(--text-dim); margin: 8px 0 2px; word-break: break-all; }
 .dlnote { font-size: 11.5px; line-height: 1.5; color: var(--text-dim); border-top: 1px solid rgba(138, 122, 82, 0.35); padding-top: 7px; margin: 8px 0 0; }
 .dlnote:empty { display: none; }
+/* #137: the iOS-Chrome/WebKit fallback note (log-download.js's own
+   isIOSLike() branch) is its own line under the always-shown privacy note,
+   not styled as a second identical paragraph -- it only appears once a
+   download has actually taken that path. */
+.dlnote-warn { border-top: none; color: var(--gold); padding-top: 0; }
 /* #137 decision 3: the end page's own 下載本局紀錄, above 再來一局 -- a
    dashed border (approved mockup C_endpage.png) so it reads as secondary to
    the gold #btnAgain right under it, same idea as .over-footer's own
@@ -1917,8 +1922,11 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
   /* `overflow: hidden` clips the label, not `display`/`visibility` --
      the button's own text (set via data-t like every other bar button)
      stays in the accessible tree, just not painted, so it isn't reachable
-     without its own wrapper element. */
-  .logbody-dl { width: 26px; padding: 0; justify-content: center; overflow: hidden; }
+     without its own wrapper element. `.small`'s own 44px min-width (style.css
+     `.bar button, .small`) otherwise wins over this rule's `width` outright
+     (a min-width always beats a smaller width), so it has to be overridden
+     here too, not just guessed past. */
+  .logbody-dl { width: 26px; min-width: 26px; padding: 0; justify-content: center; overflow: hidden; }
 }
 /* #88's own phone-only lower-third shrink (app.js's setLogOpen()/row-tap
    handler toggle .logbody-shrunk): the map stays visible above it (#68's

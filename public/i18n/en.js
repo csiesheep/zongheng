@@ -282,6 +282,7 @@ export default {
     sheetTitle: "Download this game's log",
     subtitleLive: "{turnLine} · works mid-game too",
     subtitleDone: "{turnLine} · game over",
+    turnOnly: "Turn {turn}",
     txtTitle: "Text log",
     txtDesc: "Every move, turn by turn, like a game score. Readable on its own, easy to share.",
     jsonTitle: "Full data",
@@ -320,6 +321,11 @@ export default {
     finalHands: "{side} hand: {cards}",
     finalDraw: "Draw pile (in order): {cards}",
     seed: "Seed: {seed}",
+    // #137 (orchestrator, be/137-replay): only printed once `final.actions`
+    // is there -- the full data (.json) then holds every action actually
+    // taken, so the whole game can be replayed from it exactly; this text
+    // file never lists the actions themselves.
+    replayable: "The full data (.json) can replay this whole game exactly.",
     reasonShort: { unification: "Unification", alliance: "Alliance", mandate: "Mandate", emperor: "Emperor", collapse: "Collapse", scoring: "Scoring card", scoringBoth: "Scoring card", final: "Final tally", tie: "Final tally", homeFall: "Capital falls" },
   },
   // #79/#87: the opponent's-move reveal -- the card panel (①, which waits
