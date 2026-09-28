@@ -379,6 +379,10 @@ export const CELLS = [
   ...[["nn", "new+seals5"], ["nn", "today+seals5"], ["hh", "new+seals5"], ["hh", "today+seals5"], ["nn", "new"], ["nn", "today"], ["hh", "new"], ["hh", "today"]].map(([lv, v]) => [`s5/${lv}/${v}`, {
     qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard",
     options: { ...(v.startsWith("new") ? { lobby: "realign-own", homeFall: "lose-turn" } : {}), ...(v.endsWith("+seals5") ? { seals: 5 } : {}) } }]),
+  // NB: since #133 the defaults ARE realign-own + lose-turn + seals 5, so on a build after 62b2380 the `today` cells
+  // above (d1/, s5/) play the new rules; their recorded results were run before that (see tests/sim-results/135-*.md).
+  // #135, third ask: 5 相印 + D1 on the new defaults. `def` = no options at all, `def+D1` = { qinFarStart: 1 }.
+  ...["nn", "hh"].flatMap((lv) => [["def", {}], ["def+D1", { qinFarStart: 1 }]].map(([v, options]) => [`def/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options }])),
 ];
 
 function parseArgs(argv) {
@@ -937,7 +941,7 @@ export function report135(files) {
   for (const f of files) {
     const st = JSON.parse(readFileSync(f, "utf8"));
     for (const [name, v] of Object.entries(st)) {
-      if (!v.result || !/^(d1|s5)\//.test(name)) continue;
+      if (!v.result || !/^(d1|s5|def)\//.test(name)) continue;
       const rows = v.result.rows.map((x) => Object.fromEntries(cols.map((k, i) => [k, x[i] ?? 0])));
       cells[name] = { rows, n: rows.length, errors: v.result.errors.length, stuck: v.result.stuck || 0, games: v.result.games };
     }
@@ -1019,7 +1023,7 @@ export function report135(files) {
     const hf = rows.filter((x) => x.reason === "homeFall");
     out.push(`| ${name} | ${part("g").join(" | ")} | ${part("y").join(" | ")} | ${hf.length} (${cnt(hf, (x) => x.qinWin)} / ${cnt(hf, (x) => !x.qinWin)}) |`);
   }
-  const s5 = order.filter((n) => n.startsWith("s5/"));
+  const s5 = order.filter((n) => /^(s5|def)\//.test(n));
   if (s5.length) {
     out.push("", "相印 held at once (the most at any marker check; games per count 0…5), and the games in which Chu held 4 at once (under seals 5 the game goes on), with how they ended (reason: Qin won / Chu won).", "");
     out.push("| cell | most 相印 held at once (count:games) | held 4 at once, games | … of which Chu won | … how they ended |");
