@@ -373,16 +373,18 @@ export const CELLS = [
   ["k132/nn", { qin: "normal", chu: "normal" }],
   ["k132/hh", { qin: "hard", chu: "hard" }],
   // #135: D1 (遠交) -- Qin starts with 1 in 臨淄 and 1 in 薊 -- under the new rules (realign-own + lose-turn) and today's.
-  ...["nn", "hh"].flatMap((lv) => [["new", { lobby: "realign-own", homeFall: "lose-turn" }], ["new+D1", { lobby: "realign-own", homeFall: "lose-turn", qinFarStart: 1 }],
-    ["today+D1", { qinFarStart: 1 }], ["today", {}]].map(([v, options]) => [`d1/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options }])),
+  ...["nn", "hh"].flatMap((lv) => [["new", { lobby: "realign-own", homeFall: "lose-turn", qinFarStart: 0 }], ["new+D1", { lobby: "realign-own", homeFall: "lose-turn", qinFarStart: 1 }],
+    ["today+D1", { qinFarStart: 1 }], ["today", { qinFarStart: 0 }]].map(([v, options]) => [`d1/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options }])),
   // #135, second ask: 相印 needed for 合縱 = 5 (all five capitals). The variants first, then their baselines on the same build.
   ...[["nn", "new+seals5"], ["nn", "today+seals5"], ["hh", "new+seals5"], ["hh", "today+seals5"], ["nn", "new"], ["nn", "today"], ["hh", "new"], ["hh", "today"]].map(([lv, v]) => [`s5/${lv}/${v}`, {
     qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard",
-    options: { ...(v.startsWith("new") ? { lobby: "realign-own", homeFall: "lose-turn" } : {}), ...(v.endsWith("+seals5") ? { seals: 5 } : {}) } }]),
+    options: { ...(v.startsWith("new") ? { lobby: "realign-own", homeFall: "lose-turn" } : {}), ...(v.endsWith("+seals5") ? { seals: 5 } : {}), qinFarStart: 0 } }]),
   // NB: since #133 the defaults ARE realign-own + lose-turn + seals 5, so on a build after 62b2380 the `today` cells
   // above (d1/, s5/) play the new rules; their recorded results were run before that (see tests/sim-results/135-*.md).
-  // #135, third ask: 5 相印 + D1 on the new defaults. `def` = no options at all, `def+D1` = { qinFarStart: 1 }.
-  ...["nn", "hh"].flatMap((lv) => [["def", {}], ["def+D1", { qinFarStart: 1 }]].map(([v, options]) => [`def/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options }])),
+  // #135, third ask: 5 相印 + D1 on the new defaults. `def` = the defaults without D1, `def+D1` = { qinFarStart: 1 }.
+  // #142 made qinFarStart 1 the default, so every cell above that names no qinFarStart now plays with the foothold;
+  // the #135 cells without D1 name `qinFarStart: 0`, which is what they played when they were recorded.
+  ...["nn", "hh"].flatMap((lv) => [["def", { qinFarStart: 0 }], ["def+D1", { qinFarStart: 1 }]].map(([v, options]) => [`def/${lv}/${v}`, { qin: lv === "nn" ? "normal" : "hard", chu: lv === "nn" ? "normal" : "hard", options }])),
 ];
 
 function parseArgs(argv) {
