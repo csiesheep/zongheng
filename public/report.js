@@ -222,10 +222,15 @@ function headerMetaLine(gameExp, mine) {
   const label = (side) => (names[side] ? `${sideName(side)}(${names[side]})` : sideName(side));
   return t("report.vsNamed", { qin: label(E.QIN), chu: label(E.CHU) });
 }
+// #138 owner: the page frame follows the same no-game-words rule as the
+// report text itself -- never logText.reasonShort (the download's plain,
+// mechanical labels: 記分卡/國都陷落/...), and the year is spelled out in
+// Chinese ("第七年"), never a bare "第 7 回合".
 function resultLineText(gameExp) {
   const r = gameExp.result;
   if (!r) return "";
-  return t("report.resultLine", { side: sideName(r.winner), reason: t(`logText.reasonShort.${r.reason}`), turn: r.turn });
+  const turn = lang === "en" ? r.turn : (ZH_NUM[r.turn] || r.turn);
+  return t("report.resultLine", { side: sideName(r.winner), reason: t(`report.reason.${r.reason}`), turn });
 }
 
 // ---------- footer ----------
