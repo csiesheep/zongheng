@@ -559,6 +559,10 @@ let botTimer = 0;
 function botLoop() {
   clearTimeout(botTimer);
   if (game.room || Tut.active()) return;
+  // #143: never let the bot take its next action while the human is still
+  // looking at a just-finished 遊說 sequence's summary card -- resumed by
+  // the summary's own onDone callback (render() above) once dismissed.
+  if (LobbyUI.summaryOpen()) return;
   const st = game.st;
   if (st.winner != null) { saveSolo(); renderOver(); return; }
   // `?auto` (a development aid) lets the bot play the human seat too, so a
@@ -727,26 +731,40 @@ function render() {
   const prevView = game.lastView; // #41: the view from just before this action, read BEFORE it's overwritten below
   const v = currentView();
   game.lastView = v; // layoutTable() re-renders the hand off this if it flips full<->chip
-  // #133: the dice-遊說 summary (mockup 4_summary) -- shown once, to the
-  // actor only, right after a sequence this seat ran fully resolves (a
-  // stop, an auto-stop, or the last attempt). Detected off the log alone so
-  // it works the same way for solo's local E.apply() and a room's `view`
-  // message; a watermark (`lobbySummarySeenUpTo`) stops it firing twice for
-  // the same sequence, and is reset when the log itself goes backwards
-  // (a new game/room replacing the old one -- the log's own logSeq always
-  // restarts low then).
-  if (!game.spectator && game.me != null) {
+  // #133/#143: the dice-遊說 summary (mockup 4_summary) -- shown once, to
+  // EVERY viewer (the actor, the other seat, and a spectator alike), right
+  // after a sequence fully resolves (a stop, an auto-stop, or the last
+  // attempt). #133 originally only showed this to the sequence's own actor
+  // (`e.side === game.me`) and never to a spectator (`!game.spectator`
+  // gated the whole block) -- in solo, the bot resolves every roll and its
+  // own 收手/再說一次 at once, so the human never saw the opponent's result,
+  // only the log's own compact line (#143, owner: "沒有顯示對方遊說的結
+  //果"). Detected off the log alone so it works the same way for solo's
+  // local E.apply() and a room's `view` message; a watermark
+  // (`lobbySummarySeenUpTo`) stops it firing twice for the same sequence,
+  // and is reset when the log itself goes backwards (a new game/room
+  // replacing the old one -- the log's own logSeq always restarts low
+  // then). Runs ahead of the spectator branch's own early return below, so
+  // a spectator's `game.me === null` no longer excludes them.
+  {
     if ((v.logSeq || 0) < (game.lobbySummarySeenUpTo || 0)) game.lobbySummarySeenUpTo = 0;
     if (!(v.pending && v.pending.tag === "realign")) {
       const log = v.log || [];
       for (let i = log.length - 1; i >= 0; i--) {
         const e = log[i];
         if (e.i <= (game.lobbySummarySeenUpTo || 0)) break;
-        if (e.type === "lobby" && e.mode != null && e.side === game.me) {
+        if (e.type === "lobby" && e.mode != null) {
           const { header, entries } = LobbyUI.findLobbySequence(v, e.target);
           if (header && header.i === e.i && header.attempts === entries.length) {
             game.lobbySummarySeenUpTo = e.i;
-            LobbyUI.syncSummary(v, header, entries, lang, () => render());
+            // #143: the bot must not race ahead while this card is open --
+            // botLoop() itself checks LobbyUI.summaryOpen() and no-ops
+            // while it's up (see its own comment); resume it here once the
+            // viewer dismisses, the same "apply then let the bot go" shape
+            // humanAct()/botLoop() already use elsewhere. Never for a
+            // spectator: botLoop() reads game.me to decide which side is
+            // "the bot", and a spectator's game.me is null.
+            LobbyUI.syncSummary(v, header, entries, lang, () => { render(); if (!game.spectator) botLoop(); });
           }
           break;
         }
@@ -1832,14 +1850,16 @@ function renderMap(v) {
       stabilityTagHTML(sp) +
       (picked ? `<span class="badge">+${picked}</span>` : "") +
       (mode.costs && mode.costs[sp.id] === 2 ? `<span class="cost">2</span>` : "") +
-      // #133: the dice-遊說 pick screen's per-target win% tag (mockup
-      // 1_pick) -- dark when under 40% (the mockup's own threshold).
-      (mode.odds && mode.odds[sp.id] != null ? `<span class="odds-tag${mode.odds[sp.id] < 40 ? " odds-low" : ""}">${t("lobbyRoll.winTag", { pct: mode.odds[sp.id] })}</span>` : "") +
       (mvTag ? `<span class="lastmove-tag${lastMoveTagClass(mv)}" aria-hidden="true">${esc(mvTag)}</span>` : "") +
       sealMarkHTML +
       stateTagHTML(sp, sp.state ? stateName(sp.state) : "", esc) +
       CapitalUI.capitalBadgeHTML(v, sp.id, lang) + // #133 part 2: mockup 0_rest's gold 都 badge
-      nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc);
+      // #143: the dice-遊說 pick screen's per-target win% (mockup 1_pick) is
+      // now folded into the name label itself, not a separate stacked mark
+      // below the node -- see nodeLabelHTML()'s own comment (map-draw.js).
+      nodeLabelHTML(sp.id, spaceName(sp.id), lang, esc, mode.odds && mode.odds[sp.id] != null
+        ? { text: t("lobbyRoll.winTagShort", { pct: mode.odds[sp.id] }), low: mode.odds[sp.id] < 40 }
+        : null);
     el.appendChild(vis);
     const hb = document.createElement("button");
     hb.type = "button";

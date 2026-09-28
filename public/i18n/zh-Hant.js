@@ -122,6 +122,13 @@ export default {
     pickHint: "點一個你和{opp}都有影響力的據點",
     pickRule: "雙方各擲骰加局勢;輸的一方失去差值,你也可能倒賠。",
     winTag: "勝 {pct}%",
+    // #143: the pick screen's win% now sits inside the space's own name
+    // label (nodeLabelHTML, map-draw.js), not a separate pill -- a shorter
+    // form, since the gold pill styling + the map context already say what
+    // the number means; a real getBoundingClientRect sweep of all 26 spaces
+    // still found the fuller "勝 {pct}%" wording wide enough to spill into a
+    // neighbour's own name on a handful of tightly-packed spaces.
+    winTagShort: "{pct}%",
     previewTitle: "{target} · 遊說 {n} 次",
     vs: "對",
     modLine: "{side}擲 {mod}",

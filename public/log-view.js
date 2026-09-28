@@ -71,6 +71,19 @@ export function loadFilter() { try { return localStorage.getItem(FILTER_KEY) || 
 export function saveFilter(f) { try { localStorage.setItem(FILTER_KEY, f); } catch {} }
 export function hasChat(chat, botLine) { return (Array.isArray(chat) && chat.length > 0) || !!botLine; }
 
+// #143 (owner: the panel's own 「第1次:秦失去3」 shows no dice, no mods --
+// "should read like the .txt download"): the same detail line log-text.js's
+// own realignDetailText() builds for the #137 export, duplicated here
+// rather than imported -- log-text.js itself imports renderRows FROM this
+// file, so importing back would be circular. Keep the two in step by hand
+// if the wording or the entry's shape ever changes.
+function realignDetailText(e, lang) {
+  const a = e.side, b = E.other(a);
+  const totalA = e.roll[a] + e.mod[a], totalB = e.roll[b] + e.mod[b];
+  const sumA = `${e.roll[a]}+${e.mod[a]}=${totalA}`, sumB = `${e.roll[b]}+${e.mod[b]}=${totalB}`;
+  const result = e.lose == null ? t(lang, "logText.realignTie") : `${sideName(e.lose, lang)} −${e.n}`;
+  return t(lang, "logText.realignRoll", { k: e.k, sideA: sideName(a, lang), sumA, sideB: sideName(b, lang), sumB, result });
+}
 // ---------- chips: one per result, gold for a status change (#88 brief) ----------
 function chipsForSteps(steps, moverSide, lang) {
   const chips = [];
@@ -85,11 +98,11 @@ function chipsForSteps(steps, moverSide, lang) {
       // #130) is that loss, distinct from `st.removed` (the enemy's).
       if (st.lost) chips.push({ text: t(lang, "logPanel.chipLobbyLost", { target: spaceName(st.target, lang), n: st.lost }), gold: false });
     } else if (st.type === "realign") {
-      // #133: one chip per attempt -- who lost the roll (and how much), or
-      // a tie. `st.lose` is the LOSING side (or null); the winner is simply
-      // the other one, same reading as lobby-ui.js's own verdictHtml().
-      const loserOrTie = st.lose == null ? t(lang, "logPanel.chipRealignTie") : t(lang, "logPanel.chipRealignLoss", { side: sideName(st.lose, lang), n: st.n });
-      chips.push({ text: t(lang, "logPanel.chipRealign", { k: st.k, loserOrTie }), gold: false });
+      // #143: one chip per attempt, now with the dice/mods/totals (owner:
+      // the old terse "第{k}次:{side}失去{n}" chip showed no roll at all --
+      // "should read like the .txt download"), same realignDetailText()
+      // shape as log-text.js's own #137 line.
+      chips.push({ text: realignDetailText(st, lang), gold: false });
     } else if (st.type === "lobbyStop") {
       chips.push({ text: t(lang, "logPanel.chipLobbyStop", { left: st.left }), gold: true });
     } else if (st.type === "reform") {
@@ -250,8 +263,7 @@ function otherRowHtml(row, lang) {
     return `<div class="logrow logrow-other">${t(lang, "log.lobbyDice", { side: sideName(e.side, lang), target: spaceName(e.target, lang), attempts: e.attempts, removed: e.removed, lost: e.lost })}</div>`;
   }
   if (e.type === "realign") {
-    const loserOrTie = e.lose == null ? t(lang, "logPanel.chipRealignTie") : t(lang, "logPanel.chipRealignLoss", { side: sideName(e.lose, lang), n: e.n });
-    return `<div class="logrow logrow-other">${t(lang, "log.realign", { k: e.k, loserOrTie })}</div>`;
+    return `<div class="logrow logrow-other">${realignDetailText(e, lang)}</div>`;
   }
   if (e.type === "lobbyStop") {
     return `<div class="logrow logrow-other">${t(lang, "log.lobbyStop", { side: sideName(e.side, lang), target: spaceName(e.target, lang), left: e.left })}</div>`;

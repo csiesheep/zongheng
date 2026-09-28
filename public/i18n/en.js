@@ -154,6 +154,10 @@ export default {
     pickHint: "Tap a space where both you and {opp} have influence",
     pickRule: "Each attempt, both roll a die plus modifiers; the loser removes the difference -- you can lose your own points too.",
     winTag: "{pct}% win",
+    // #143: shorter form for the pick screen's win% once it moved inside
+    // the space's own name label (nodeLabelHTML, map-draw.js) -- see
+    // zh-Hant.js's own comment on this key.
+    winTagShort: "{pct}%",
     previewTitle: "{target} · {n} lobby attempt(s)",
     vs: "vs",
     modLine: "{side} rolls {mod}",
