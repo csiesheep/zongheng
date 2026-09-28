@@ -58,6 +58,50 @@ split into "Key events this year" (the few that mattered most, already ranked) a
   benefit" -- write what Zhang Yi actually did). Prefer naming the people who acted over naming the
   card or episode. Write full, grammatical sentences throughout -- this is narrative history (think
   a good translation of Sima Qian, or popular history writing), never a template with blanks filled in.
+- Do not carry a digest sentence into your prose unchanged. "made Guest Ministers its first
+  concern", "won over two groups of supporters", "set X in motion" are the digest's bookkeeping, not
+  a historian's sentence -- read what the line reports, then say it your own way, with a real
+  subject and a real action ("Qin's court gave the Guest Ministers precedence that year"; "Qin's
+  agents turned a handful of Daliang's notables").
+
+### The subject rule
+
+- Before you write a sentence about a city changing hands, a following growing or scattering, or a
+  seal being given or withheld, check the record line it comes from and name the side it actually
+  names. A record line naming only one side gets a sentence with only that side as its subject; a
+  line naming both sides ("Qin lost Daliang; Chu took it") needs a subject for each half, and the
+  two subjects must not swap. Never let the losing side of one clause quietly become the acting
+  side of the next just because the sentence reads smoother that way.
+- When a year's record has several lines about the same city or the same following, track who is
+  named in each one before you draft the paragraph, not while you draft it. A paragraph that blurs
+  two sides into "the war went back and forth" without saying which side did which is a paragraph
+  that got the subject rule wrong.
+- **Self-check (do this before moving on to Part 2): for every sentence you wrote about a gain or a
+  loss, point back at the record line it came from and confirm the side named as subject is the
+  side that line names as gaining or losing.** If you cannot point to a line, the sentence does not
+  belong in the report.
+
+### Card names
+
+- Use a card's English name only where it reads as the name of an event or a policy that the
+  historical actors are undergoing or invoking -- "the reforms of Shang Yang", "the ruse of
+  besieging Wei to save Zhao", "the covenant of the Six States". Named this way, the card sits as an
+  object or a label inside a sentence whose subject is a person or a state.
+- Never let a card's name be the grammatical actor of a sentence ("Five States Attack Qin followed"
+  gives the card itself hands and feet). Say instead who convened the five states, or what their
+  armies did. Never write "set [Card Name] in motion" -- that phrase names the mechanism, not the
+  history. Instead say what the policy or the ruse actually did: "Chu's generals moved on Daliang
+  while Handan's gates stayed shut against Qin's relief force" reads as history; "Chu set Besiege
+  Wei to Save Zhao in motion" reads as a rulebook.
+
+### Natural events
+
+- A famine, a flood, a solar omen, a plague, and similar happenings in the record are not a deed of
+  either side. Tell them as things that happened to the realm that year -- "that year the crops
+  failed across three commanderies" -- never as something Qin or Chu "did" or "used".
+  If the record itself says a side timed its move around the omen or the famine, you may say the
+  court seized the moment, but the omen or famine remains the cause of itself, not of that side's
+  making.
 
 ## Words you must never use
 
@@ -98,6 +142,23 @@ it worth the telling."
 
 Nothing here goes beyond the record, yet Jimo's defection becomes an event with a cause and a
 scene, Yiyang's flood is told plainly, and the rest of the year is dismissed in one line.
+
+## Example: two sides in one line, done right
+
+Say (again, made-up facts) one record line reads:
+
+> Qin lost its hold on Anyi; Chu's agents took the city.
+
+Two sides, two different fates, in one line. Checked against the subject rule, that becomes:
+
+"Qin's garrison at Anyi, unpaid and unwatched for a season, opened the gates to Chu's envoys
+without a fight. Chu had the city before Qin's court even heard the news."
+
+Notice what this avoids: it never says "Qin took Anyi" or folds both sides into one vague verb like
+"Anyi changed hands" without saying whose hold ended and whose began. Each sentence has one subject,
+and that subject is the side the record line actually names for that half of the event. A wrong
+version -- the kind the subject rule exists to catch -- would read "Chu's garrison at Anyi fell to
+Qin's envoys", which quietly swaps the two sides.
 
 ## Part 2: Output format (JSON)
 
