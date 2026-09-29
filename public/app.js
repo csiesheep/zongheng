@@ -856,7 +856,7 @@ function render() {
   renderMap(v);
   game.lastMoveFresh = false; // #41: same reason as the spectator branch above
   renderStatLine(v);
-  CapitalUI.syncBanner(v, game.me, lang); // #133 part 2: mockups A_defender/B_attacker, below the map
+  CapitalUI.syncBanner(v, game.me, lang, () => layoutTable()); // #133 part 2: mockups A_defender/B_attacker, below the map
   renderPromptAndSheet(v); // sets #sheet's className outright, so setSheetOpen must come after this, not before
   renderHand(v);
   renderLog(v);
@@ -1215,7 +1215,11 @@ function layoutTable() {
   // one.
   const scale = narrowTable
     ? Math.min(widthScale, spaceForMap / DESIGN_H)
-    : Math.min(widthScale, Math.max(FLOOR_SCALE, spaceForMap / DESIGN_H));
+    : Math.min(widthScale, Math.max(bannerH > 0 ? FLOOR_SCALE * 0.75 : FLOOR_SCALE, spaceForMap / DESIGN_H));
+  // #147: with the capital banner showing, the map may go a little under its
+  // floor (never below 75% of it) so the hand stays on screen and the page
+  // never scrolls -- a scrolled page + the fixed card sheet is what made taps
+  // land a button off on iOS. No banner: the floor is exactly what it was.
   const mapH = Math.round(DESIGN_H * scale);
   // #68 point 3: a viewport that can't give the map its FLOOR_SCALE spec
   // alongside this fixed lower block (375x553 is the known case) keeps the
@@ -1223,7 +1227,7 @@ function layoutTable() {
   // below their own specs. Same sub-pixel tolerance the old code carried
   // (#24 round 3) for a near-exact fit's rounding.
   const mapOverflow = mapH > spaceForMap + 1;
-  $("map").style.flex = `0 0 ${mapH}px`;
+  $("map").style.minHeight = ""; $("map").style.flex = `0 0 ${mapH}px`;
   fitMap(scale);
   lowerBlock.style.flex = `0 0 ${lowerBlockH}px`;
 
@@ -1302,6 +1306,19 @@ function layoutTable() {
   // renderHand() keeps it "full" there; layoutTableDesktop() never reads
   // hand.dataset.mode at all).
   if (hasHand && !hand.hidden && hand.dataset.mode !== "chip") { hand.dataset.mode = "chip"; if (game.lastView) renderHand(game.lastView, "chip"); }
+  // #147: the lower block is measured BEFORE the hand flips to its chip row,
+  // so at 320 (en) the hand could end up 16-22px below #table's clipped
+  // bottom with nothing scrolling to it. Only while the capital banner shows
+  // (every other table is byte-for-byte what it was): give the excess back
+  // from the map, the one part that can shrink.
+  if (bannerH > 0 && !document.body.classList.contains("table-overflow")) {
+    const over = table.scrollHeight - table.clientHeight;
+    if (over > 1) {
+      const mh = Math.max(60, mapH - over);
+      $("map").style.flex = `0 0 ${mh}px`; $("map").style.minHeight = mh + "px"; // style.css gives #map min-height:130px
+      fitMap(Math.min(scale, mh / DESIGN_H));
+    }
+  }
 }
 // Whether the whole table is locked into the full-screen-overlay layout
 // (page scroll off, --bar-h set) — shared by the real card sheet (#29) and
@@ -1315,6 +1332,10 @@ function layoutTable() {
 // the same `--bar-h` back as its own `top`.
 function refreshSheetLock() {
   const open = $("sheet").classList.contains("overlay") || !!game.peek;
+  // #147 safety net: never open a fixed overlay over a scrolled document
+  // (iOS offsets taps on fixed elements by the scroll -- the owner had to tap
+  // one button-height above each use button).
+  if (open && (window.scrollY || document.documentElement.scrollTop)) window.scrollTo(0, 0);
   document.body.classList.toggle("sheet-open", open);
   if (open) {
     const barH = document.querySelector(".bar")?.getBoundingClientRect().height || 0;
