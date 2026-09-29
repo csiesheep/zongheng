@@ -1,0 +1,60 @@
+/* #146: the dev log page only. Design A of the owner's artboards (Main.dc.html / Desktop.dc.html), numbers strip removed.
+   Reuses the C2 tokens style.css declares on :root; the top bar is the rules page's (style.css .bar). */
+
+/* zh/en pairs: <html lang> picks the visible half. The static default is "en" (a crawler reads both halves in the
+   markup); devlog.js sets lang, and the Worker rewrites it for ?lang=zh-Hant. */
+html[lang="en"] .zh { display: none; }
+html:not([lang="en"]) .en { display: none; }
+
+.devlog-body { overflow-x: hidden; }
+.devlog-body .bar { max-width: 1120px; width: 100%; margin: 0 auto; box-sizing: border-box; }
+#barMid { font-size: 12px; color: var(--text-dim); }
+
+.dl { width: 100%; max-width: 1120px; margin: 0 auto; box-sizing: border-box; padding: 20px 20px 28px; min-width: 0; }
+.dl-main { min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+.dl-head { display: flex; flex-direction: column; gap: 8px; }
+.dl-kicker { font: 12px/1 system-ui, sans-serif; letter-spacing: 4px; color: var(--gold-line); }
+.dl h1 { margin: 0; font-family: var(--kai); font-weight: 400; font-size: 30px; letter-spacing: 3px; color: #f4d98a; }
+.dl-head p { margin: 0; font-size: 14.5px; line-height: 1.8; color: var(--text-soft); }
+
+.timeline { position: relative; display: flex; flex-direction: column; gap: 22px; }
+.timeline::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 1px; background: rgba(216, 181, 106, .35); }
+.entry { position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr); column-gap: 12px; }
+.dot { grid-column: 1; grid-row: 1; width: 11px; height: 11px; margin-top: 4px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 4px var(--bg); }
+.date { grid-column: 2; grid-row: 1; font: 12px/1.6 system-ui, sans-serif; letter-spacing: 1px; color: #b39a62; }
+.ebox { grid-column: 2; grid-row: 2; min-width: 0; }
+.tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border: 1px solid var(--gold-line); border-radius: 999px; font: 11px/1.5 system-ui, sans-serif; color: var(--gold); letter-spacing: 0; vertical-align: 2px; }
+.etitle { margin: 2px 0 4px; font-family: var(--kai); font-weight: 400; font-size: 18px; line-height: 1.4; color: #f4d98a; }
+.ebody { margin: 0; font-size: 14.5px; line-height: 1.8; color: var(--text-soft); overflow-wrap: anywhere; }
+.eshot { display: block; margin-top: 10px; width: 100%; height: auto; border: 1px solid var(--gold-line); border-radius: 10px; }
+.eshot-d { display: none; }
+
+.dl-side { margin-top: 22px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.blog { display: flex; flex-direction: column; gap: 6px; padding: 16px; border: 1px solid var(--gold); border-radius: 14px; background: #1a130c; color: var(--text-soft); text-decoration: none; }
+.blog-k { font: 11px/1.4 system-ui, sans-serif; letter-spacing: 3px; color: #b39a62; }
+.blog-t { font-family: var(--kai); font-size: 19px; line-height: 1.45; color: #f4d98a; }
+.blog-x { font-size: 14px; line-height: 1.75; }
+.blog-go { font-size: 13px; color: var(--gold); }
+.blog:hover .blog-go, .blog:focus-visible .blog-go { color: #ffe7a8; }
+
+.devlog-body .credit { max-width: 1120px; width: 100%; margin: 0 auto; box-sizing: border-box; padding: 6px 20px 18px; text-align: center; color: var(--gold-line); font-size: 11px; line-height: 1.8; }
+.devlog-body .credit a { color: inherit; }
+
+@media (min-width: 1024px) {
+  .dl { display: grid; grid-template-columns: 720px 340px; gap: 60px; justify-content: center; padding: 40px 0 40px; }
+  .dl h1 { font-size: 40px; letter-spacing: 4px; }
+  .dl-head p { font-size: 16px; }
+  .timeline { gap: 26px; }
+  .timeline::before { left: 141px; top: 10px; bottom: 10px; }
+  .entry { grid-template-columns: 120px 18px minmax(0, 1fr); column-gap: 16px; }
+  .date { grid-column: 1; grid-row: 1; text-align: right; font-size: 13px; padding-top: 5px; }
+  .dot { grid-column: 2; margin-top: 9px; }
+  .ebox { grid-column: 3; grid-row: 1; }
+  .etitle { margin: 0 0 6px; font-size: 21px; }
+  .ebody { font-size: 15.5px; line-height: 1.85; }
+  .eshot-m { display: none; }
+  .eshot-d { display: block; width: 340px; height: auto; margin: 0; border-radius: 12px; }
+  .dl-side { margin-top: 0; padding-top: 118px; }
+  .blog { padding: 18px; gap: 8px; }
+  .blog-t { font-size: 20px; }
+}
