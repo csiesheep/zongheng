@@ -120,3 +120,19 @@
   .rp.has-rail > .rp-rail:not([hidden]) { display: block; grid-column: 2; grid-row: 1; position: sticky; top: 16px; }
   .rp.has-rail > :not(.rp-rail) { grid-column: 1; }
 }
+
+/* ---------- card peek over the report (#150) ---------- */
+/* The game's own read-only card sheet (card-view.js, styled by style.css's .sheet / .sheet-q/c/n/s) in a
+   modal <dialog>: a bottom sheet on a phone, a centred dialog on desktop. The dialog fills the viewport
+   (transparent, so ::backdrop's dim shows through and a tap outside the sheet lands on the dialog itself =
+   backdrop close); only the sheet is opaque. The sheet's middle scrolls, the page behind is frozen by
+   report.js (position:fixed; top:-scrollY). */
+dialog.rp-peek { margin: 0; padding: 0; border: 0; background: transparent; color: inherit; width: 100%; max-width: none; height: 100%; max-height: none; overflow: hidden; }
+dialog.rp-peek[open] { display: flex; align-items: flex-end; justify-content: center; }
+dialog.rp-peek::backdrop { background: rgba(6, 5, 3, 0.72); }
+.rp-peek-sheet { width: 100%; max-width: 560px; box-sizing: border-box; max-height: calc(100svh - 24px); margin: 0; overflow: hidden; border-radius: 14px 14px 0 0; border: 1px solid var(--gold-line); border-bottom: 0; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); gap: 8px; }
+.rp-peek-sheet .sheet-mid { overscroll-behavior: contain; }
+@media (min-width: 720px) {
+  dialog.rp-peek[open] { align-items: center; padding: 24px; box-sizing: border-box; }
+  .rp-peek-sheet { width: 440px; max-height: min(720px, calc(100svh - 48px)); border-radius: 14px; border-bottom: 1px solid var(--gold-line); padding-bottom: 14px; }
+}
