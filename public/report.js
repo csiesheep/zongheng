@@ -31,6 +31,7 @@ import zh from "./i18n/zh-Hant.js";
 import * as D from "./shared/report-digest.js"; // the real digest/turnEnds module (be/138-report), not a stub
 import { buildLogText, buildFilename } from "./log-text.js";
 import * as LogDL from "./log-download.js";
+import { renderCardView } from "./card-view.js"; // #150: the game's own read-only card view, opened in-page over the report
 import { adOn, adSlotHTML, activateAds } from "./ads.js"; // #145: empty, invisible slots until AdSense is set up
 
 const $ = (id) => document.getElementById(id);
@@ -214,7 +215,7 @@ function mapFigureHTML(turn, caption) {
 // ---------- card figures + inline links ----------
 function cardFigureHTML(id) {
   const name = cardName(id);
-  return `<a class="rp-card" href="${cardHref(id)}">` +
+  return `<a class="rp-card" href="${cardHref(id)}" data-card="${id}">` +
     `<img src="art/cards/${id}.jpg" alt="" onerror="this.style.visibility='hidden'">` +
     `<span class="rp-card-body"><b>${esc(name)}</b><i>${esc(t("report.viewCard"))}</i></span></a>`;
 }
@@ -234,7 +235,7 @@ function linkifyParagraph(text, cardIds) {
   return escaped.replace(re, (m) => {
     const bare = m.replace(/^「|」$/g, "");
     const hit = names.find((n) => n.name === bare);
-    return hit ? `<a class="cl" href="${cardHref(hit.id)}">${m}</a>` : m;
+    return hit ? `<a class="cl" href="${cardHref(hit.id)}" data-card="${hit.id}">${m}</a>` : m;
   });
 }
 
@@ -493,6 +494,81 @@ function syncChrome() {
   privacyLink.textContent = t("landing.privacy");
   credit.appendChild(privacyLink);
 }
+// ---------- #150: a card link opens the card over the report ----------
+// Owner: 「戰報中,點的卡牌,關閉後,應該回到戰報,而不是規則頁」. The links keep their
+// rules.html href (new tab, long press, no-script), but a plain primary click opens the SAME read-only
+// card view the table's log peek uses (card-view.js) in a modal <dialog>, so the reader never leaves
+// the report. Closing must put the reader back exactly where they were:
+//  - the document is frozen with position:fixed; top:-scrollY while the card is up (the iOS lesson of
+//    #147: a fixed overlay over a scrolled document can take taps one row off) and unfrozen with an
+//    exact scrollTo on close;
+//  - open pushes one history entry (same URL), every close path goes through history.back() and the
+//    popstate handler does the actual teardown, so the phone's back gesture closes the card instead of
+//    leaving the report, and exactly one entry is added while open and none is left after.
+const peekDlg = document.createElement("dialog");
+peekDlg.className = "rp-peek";
+peekDlg.setAttribute("role", "dialog");
+peekDlg.setAttribute("aria-modal", "true");
+document.body.appendChild(peekDlg);
+let peekOpenId = null, peekPushed = false, peekReturn = null, peekScrollY = 0;
+const peekCardOk = (id) => typeof id === "string" && (id === E.JIUDING || Object.hasOwn(E.CARD, id));
+function peekLock() {
+  peekScrollY = window.scrollY;
+  const b = document.body.style;
+  const sbw = window.innerWidth - document.documentElement.clientWidth; // keep the layout width when the scrollbar goes
+  b.position = "fixed"; b.top = `-${peekScrollY}px`; b.left = "0"; b.right = "0";
+  if (sbw > 0) b.paddingRight = `${sbw}px`;
+}
+function peekUnlock() {
+  const b = document.body.style;
+  b.position = ""; b.top = ""; b.left = ""; b.right = ""; b.paddingRight = "";
+  window.scrollTo({ top: peekScrollY, left: 0, behavior: "instant" });
+}
+function peekOpen(id, from, push) {
+  if (peekOpenId != null) return;
+  peekOpenId = id; peekReturn = from;
+  const sheet = document.createElement("div");
+  renderCardView(sheet, id, lang, { onClose: peekRequestClose, historyState: { open: false } });
+  sheet.classList.remove("overlay"); sheet.classList.add("rp-peek-sheet");
+  peekDlg.replaceChildren(sheet);
+  peekDlg.setAttribute("aria-label", cardName(id));
+  // Chrome/Safari restore the popped entry's saved scroll on back(); ours is the frozen 0 if the entry
+  // is pushed after the lock, so push first (it saves the real position) and take restoration over.
+  if (push) { history.pushState({ rpCard: id }, ""); peekPushed = true; }
+  try { history.scrollRestoration = "manual"; } catch {}
+  peekLock();
+  peekDlg.showModal();
+}
+function peekTeardown() {
+  if (peekOpenId == null) return;
+  peekOpenId = null; peekPushed = false;
+  peekDlg.close();
+  peekDlg.replaceChildren();
+  peekUnlock();
+  const r = peekReturn; peekReturn = null;
+  if (r && r.isConnected) r.focus({ preventScroll: true });
+}
+// The four ways out (button, backdrop, Escape, back) all end in peekTeardown() via popstate.
+function peekRequestClose() {
+  if (peekOpenId == null) return;
+  if (peekPushed) history.back(); else peekTeardown();
+}
+window.addEventListener("popstate", (ev) => {
+  if (peekOpenId != null) peekTeardown();
+  else if (ev.state && peekCardOk(ev.state.rpCard)) peekOpen(ev.state.rpCard, null, false); // forward onto an open card
+});
+peekDlg.addEventListener("cancel", (ev) => { ev.preventDefault(); peekRequestClose(); }); // Escape
+peekDlg.addEventListener("click", (ev) => { if (ev.target === peekDlg) peekRequestClose(); }); // backdrop
+document.addEventListener("click", (ev) => {
+  if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+  const a = ev.target.closest && ev.target.closest("a[data-card]");
+  if (!a || !$("rpArticle").contains(a)) return;
+  const id = a.dataset.card;
+  if (!peekCardOk(id)) return; // unknown id: let the link go to the rules page
+  ev.preventDefault();
+  peekOpen(id, a, true);
+});
+
 function boot() {
   syncChrome();
   const key = qs.get("report");
