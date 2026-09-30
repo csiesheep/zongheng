@@ -4089,18 +4089,7 @@ document.addEventListener("click", (ev) => {
 }, true);
 
 // ---------- boot ----------
-function stripGpToken() {
-  try {
-    const u = new URL(location.href);
-    if (!u.searchParams.has("gp_token")) return;
-    u.searchParams.delete("gp_token");
-    history.replaceState(history.state, "", u.pathname + u.search + u.hash);
-  } catch {}
-}
 const params = new URLSearchParams(location.search);
-// #149: the platform's token was stored by portal.js at import; drop it from the address bar so a later
-// same-origin navigation's Referer (which GA reads) and the shown URL never carry it.
-stripGpToken();
 portalBeaconOnLeave(() => ({ outcome: game.st && game.st.winner != null && !game.spectator && game.st.winner === game.me ? "win" : "abandon" }));
 setLang(params.get("lang") || store.get("zh.lang", (navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
 if (params.has("tutorial")) {

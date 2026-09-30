@@ -3,6 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+  // #149: the platform links here with ?gp_token=. GA4's own listeners (scroll, clicks) and its page_view's
+  // referrer read location.href, so the token must be out of the address bar BEFORE the gtag tag loads. It goes
+  // into sessionStorage, where public/portal.js (verbatim from the platform's guide) finds it as its fallback.
+  (function () {
+    try {
+      var u = new URL(location.href);
+      var tk = u.searchParams.get("gp_token");
+      if (tk) {
+        try { sessionStorage.setItem("gp_token", tk); } catch (e) {}
+        u.searchParams.delete("gp_token");
+        history.replaceState(null, "", u.pathname + u.search + u.hash);
+      }
+    } catch (e) {}
+  })();
+</script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q4VS3P3T58"></script>
 <script>
@@ -15,6 +31,21 @@
   // only params named here reach Google, so a future one can't leak by just
   // existing. Keep the list in sync with GA_SAFE_PARAMS in app.js (this runs
   // as a classic script before app.js, a module, so it can't import it).
+  // #149: every GA hit, enhanced-measurement events (scroll, clicks) included, carries the allow-listed location
+  // and referrer, never the raw ones: 'set' applies to all later hits, unlike a per-config or per-event parameter.
+  (function () {
+    var ALLOW_SET = ["lang"];
+    function clean(h) {
+      try {
+        var u = new URL(h);
+        var kept = new URLSearchParams();
+        ALLOW_SET.forEach(function (k) { if (u.searchParams.has(k)) kept.set(k, u.searchParams.get(k)); });
+        var qs = kept.toString();
+        return u.origin + u.pathname + (qs ? "?" + qs : "");
+      } catch (e) { return ""; }
+    }
+    gtag('set', { page_location: clean(location.href), page_referrer: clean(document.referrer) });
+  })();
   gtag('config', 'G-Q4VS3P3T58', { page_location: (function () {
     var ALLOW = ["lang"];
     var u = new URL(location.href);
