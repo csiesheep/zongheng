@@ -41,32 +41,35 @@ const MOVE_ROAD = [1, 0.3, 0.1, 0.03];
 // turn's very last action. Before this a held capital was FALL x ROAD_DEFENCE[0]
 // = 30 with the defender to act and FALL x ROAD_TEMPO[0] = 60 after its own
 // move, whatever it had left, and taking it back by one point (ROAD_TEMPO[1],
-// 54) gained 6: in 120 normal games 13 ended by 國都陷落, and 6 losers never
-// touched their capital again with 5.7 actions left on average. Now, while the
-// enemy holds `s`'s capital, with `dl` = the actions `s` has not yet begun this
-// turn (capped by the cards it holds):
-//   dl = 0                      CAP_LOST, the turn-end loss (500, the certain
-//                               loss the scoring card term uses; a real end is
-//                               1000, which `surestWin` alone may claim);
-//   no retake within dl         CAP_HOPELESS: a loss unless the estimate is
-//     (`capBreakable`)          wrong, so all plays that leave it so score alike
-//                               and the bot does not chase it;
-//   a retake within dl          FALL x CAP_URGENT[dl] + CAP_STEP per point still
-//                               to break beyond the first, so the first step of
-//                               a two-action retake counts.
-// CAP_URGENT grows as dl falls. With 7 left (Qin took it in round 1) it is the
-// old 30, so a capital the defender can undo all turn still ranks below a
-// certain 稱帝 (#136's EMPEROR_NEAR 60, tests/bots-136.test.js). From dl = 4
-// down a retake gains at least 30 over the old one-point-short value (54 with
-// the attacker to act), more than a last 相印 or 滅 step (8 + the road); at
-// dl = 1 it gains 156.
+// 54) gained 6: in 600 normal games (main 4ef2a22) 74 ended by 國都陷落, 37 of
+// them with a retake by ops the loser could have made and did not. Now, while
+// the enemy holds `s`'s capital, with `dl` = the actions `s` has not yet begun
+// this turn (capped by the cards it holds) and `m` = the fewest of them that
+// retake it by ops (`capBreakable`, its best cards first):
+//   dl = 0         CAP_LOST, the turn-end loss (500, the certain loss the
+//                  scoring card term uses; a real end is 1000, which only
+//                  `surestWin` may claim);
+//   no m           CAP_HOPELESS: a loss unless the estimate is wrong, so every
+//                  play that leaves it so scores alike and the bot does not
+//                  chase it -- and the attacker gains the most by making it so;
+//   else           FALL x CAP_SPARE[dl - m] with `s` to move next: 30 (the old
+//                  ROAD_DEFENCE[0]) with 3 actions to spare, 150 with none; and
+//                  after `s`'s own move (it chose to leave it held) at least
+//                  FALL x CAP_URGENT[dl]: 84 with 5 left, 210 with 1 left.
+//                  Plus CAP_STEP per point still to break beyond the first.
+// A capital `s` can take back in one action all turn (Qin took it in round 1)
+// is still 30, below a certain 稱帝 (#136's EMPEROR_NEAR 60,
+// tests/bots-136.test.js). Against the old one-point-short value after a
+// retake (54, the attacker to act) a retake gains at least 30 with 5 actions
+// left, 66 with 3, 156 with 1: more than a last 相印 or 滅 step (8 + its road).
 // The other side of it, not held: with no action of `s` left and the enemy
 // still to act (Qin's last action against Chu's last), the enemy retaking it is
 // the loss, so it is CAP_LOST x the chance the enemy's next card can
-// (`capTakeChance`), plus the next turn's road for the rest; a retake by
-// margin beats a retake by one point. Anything else is the old road.
+// (`capTakeChance`), plus the next turn's road for the rest; a retake by margin
+// beats a retake by one point. Anything else is the old road.
 const CAP_LOST = 500, CAP_HOPELESS = 400, CAP_STEP = 4;
 const CAP_URGENT = [0, 3.5, 2.5, 2, 1.6, 1.4];
+const CAP_SPARE = [2.5, 1.2, 0.7, ROAD_DEFENCE[0]];
 // #136: a 稱帝 the side can finish THIS TURN with its own hand (one or two of its
 // actions left: a reform with a card of the next box's ops, one per advance left,
 // or an event whose text reads 「變法軌前進 N」, which uses no advance) is a win
@@ -128,8 +131,8 @@ function capOps(st, s, k, known) {
   if (E.jiudingUsable(st, s)) ops.push(4);
   return ops.sort((a, b) => b - a).slice(0, k);
 }
-// Whether `s` can end the enemy's hold on its capital `id` with one action per
-// entry of `ops`: each action places (2 ops a point while the enemy controls the
+// The fewest of `s`'s actions (one per entry of `ops`, best first) that end the
+// enemy's hold on its capital `id`, or 0 if they cannot: each action places (2 ops a point while the enemy controls the
 // space, 1 after; own influence there or next door, up to the cap) or campaigns
 // there (removes that many enemy points, places the rest; not while locked or
 // protected), whichever leaves less to do. 遊說 (dice) and events are not counted.
@@ -137,15 +140,16 @@ function capBreakable(st, s, id, hf, ops) {
   const S = SPACE[id].stability, cap = E.capOf(st, id);
   let own = E.infOf(st, id)[s], foe = E.infOf(st, id)[1 - s];
   const reach = E.canPlaceAt(st, s, id), camp = !E.campaignLocked(st, id) && !E.isProtected(st, id);
-  for (const x of ops) {
-    if (capNeed(hf, own, foe, S) <= 0) return true;
+  for (let i = 0; i < ops.length; i++) {
+    const x = ops[i];
     let pOwn = own, left = x;
     if (reach) while (pOwn < cap && capNeed(hf, pOwn, foe, S) > 0) { const c = foe >= pOwn + S ? 2 : 1; if (c > left) break; left -= c; pOwn++; }
     let cOwn = own, cFoe = foe;
     if (camp && foe > 0) { const r = Math.max(0, x + E.campaignMod(st, s, id)), k = Math.min(r, foe); cFoe = foe - k; cOwn = Math.min(cap, own + r - k); }
     if (capNeed(hf, cOwn, cFoe, S) < capNeed(hf, pOwn, foe, S)) { own = cOwn; foe = cFoe; } else own = pOwn;
+    if (capNeed(hf, own, foe, S) <= 0) return i + 1;
   }
-  return capNeed(hf, own, foe, S) <= 0;
+  return 0;
 }
 // The chance the enemy of `s` takes `s`'s capital `id` with ONE action: the
 // fewest ops that do it (placing or campaigning as above, from its side), then
@@ -181,13 +185,16 @@ function capitalAtTurnEnd(st, s, id, hf, side, short) {
     if (dl === 0) return CAP_LOST;
     const known = s === side, S = SPACE[id].stability;
     const k = known ? dl - st.hands[s].filter((c) => CARD[c].scoring).length : dl;
-    if (!capBreakable(st, s, id, hf, capOps(st, s, k, known))) return CAP_HOPELESS;
+    const m = capBreakable(st, s, id, hf, capOps(st, s, k, known));
+    if (!m) return CAP_HOPELESS;
     const need = capNeed(hf, E.infOf(st, id)[s], E.infOf(st, id)[1 - s], S);
-    // Whose move comes next: `s`'s own (it is to begin one, or the enemy's is
-    // being resolved) -- it can retake now, the old ROAD_DEFENCE; or the enemy's
-    // (`s` just moved, or is resolving its own move) -- `s` chose to leave it held.
+    // By the actions to spare (dl - m); and when the enemy moves next (`s` just
+    // moved, or is resolving its own move: it chose to leave it held) at least
+    // the ramp by dl. `s` to move next (it is to begin one, or the enemy's is
+    // being resolved) with room to spare is the old ROAD_DEFENCE[0].
     const ownNext = (st.actor === s) === !st.pending;
-    const base = ownNext ? ROAD_DEFENCE[0] : CAP_URGENT[Math.min(dl, CAP_URGENT.length - 1)];
+    const spare = CAP_SPARE[Math.min(dl - m, CAP_SPARE.length - 1)];
+    const base = ownNext ? spare : Math.max(spare, CAP_URGENT[Math.min(dl, CAP_URGENT.length - 1)]);
     return FALL * base + CAP_STEP * (need - 1);
   }
   if (dl === 0 && actionsLeft(st, 1 - s) > 0) {
