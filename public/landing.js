@@ -6,9 +6,15 @@ import * as Audio from "./audio.js";
 import * as Cues from "./audio-cues.js";
 import { mountAudioButton } from "./audio-switch.js";
 import * as Opening from "./opening.js";
+import "./portal.js"; // #149: the platform links here with ?gp_token=; portal.js stores it in sessionStorage for play.html
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);
+// #149: portal.js has stored the token; drop it from the address bar so play.html's Referer (which GA reads) never carries it.
+try {
+  const u = new URL(location.href);
+  if (u.searchParams.has("gp_token")) { u.searchParams.delete("gp_token"); history.replaceState(history.state, "", u.pathname + u.search + u.hash); }
+} catch {}
 const store = {
   get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
