@@ -1131,6 +1131,9 @@ function endTurnChecks(st) {
   if (st.luoyiYields) {
     const ctl = controller(st, "luoyi");
     if (ctl != null) vp(st, ctl, st.options.luoyi);
+    // #151: the yield can reach 天命 ±20 and end the game here; the game-over
+    // row must stay the log's last (tests/log-no-placeholders.test.js #127).
+    if (st.winner != null) return;
   }
   st.effects = st.effects.filter((e) => e.until !== "turn");
   log(st, { type: "endTurn", turn: st.turn, weariness: st.weariness });
