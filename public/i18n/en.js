@@ -184,6 +184,9 @@ export default {
   capitalUi: {
     badge: "Cap.", badgeTitle: "Home capital",
     defenderTitle: "Capital under siege -- {capital} has fallen to {enemy}",
+    defenderShort: "{left} action(s) left -- {n} more point(s) to retake",
+    defenderShortZero: "{left} action(s) left -- you can retake it now",
+    attackerShort: "The defender needs {n} more point(s)",
     defenderSub: "Retake it before the turn ends, or {you} lose -- {left} action(s) left",
     retakeHint: "{n} more point(s) breaks {enemy}'s control",
     retakeHintZero: "Already enough to break their control",

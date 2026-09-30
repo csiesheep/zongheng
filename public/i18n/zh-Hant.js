@@ -155,6 +155,9 @@ export default {
   capitalUi: {
     badge: "都", badgeTitle: "國都",
     defenderTitle: "國都告急 · {capital}落入{enemy}手",
+    defenderShort: "還有 {left} 次行動 · 還差 {n} 點",
+    defenderShortZero: "還有 {left} 次行動 · 現在就能奪回",
+    attackerShort: "對方還要 {n} 點才能奪回",
     defenderSub: "回合結束前奪回,否則{you}亡 · 你還有 {left} 次行動",
     retakeHint: "還差 {n} 點就能讓{enemy}不再控制",
     retakeHintZero: "現在就能讓對方不再控制",

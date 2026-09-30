@@ -62,6 +62,7 @@ export function bannerRows(v, me, lang) {
         kind: "defender", capital: c.capital,
         text: t(lang, "capitalUi.defenderTitle", { capital: capName, enemy: sideName(c.heldBy, lang) }),
         sub: t(lang, "capitalUi.defenderSub", { you: sideName(me, lang), left: left ?? 0 }),
+        short: n > 0 ? t(lang, "capitalUi.defenderShort", { left: left ?? 0, n }) : t(lang, "capitalUi.defenderShortZero", { left: left ?? 0 }),
         retake: n > 0 ? t(lang, "capitalUi.retakeHint", { n, enemy: sideName(c.heldBy, lang) }) : t(lang, "capitalUi.retakeHintZero"),
       });
     } else if (c.heldBy === me) {
@@ -71,19 +72,26 @@ export function bannerRows(v, me, lang) {
         kind: "attacker", capital: c.capital,
         text: t(lang, "capitalUi.attackerTitle", { capital: capName }),
         sub: n > 0 ? t(lang, "capitalUi.attackerSub", { n }) : t(lang, "capitalUi.attackerSubZero"),
+        short: n > 0 ? t(lang, "capitalUi.attackerShort", { n }) : t(lang, "capitalUi.attackerSubZero"),
       });
     }
   }
   return rows;
 }
+// #147: the banner used to be three lines (~73px at 390 wide), which -- with
+// the map already at its floor -- pushed the hand below the fold and made the
+// page scroll on a phone. Now two lines by default (title + a short summary
+// of actions left / points to retake); a tap on it opens the full text.
+let bannerOpen = false;
 export function bannerHtml(v, me, lang) {
   const rows = bannerRows(v, me, lang);
   if (!rows.length) return "";
   return rows.map((r) => (
-    `<div class="capital-banner capital-banner-${r.kind}" data-capital="${r.capital}">` +
+    `<div class="capital-banner capital-banner-${r.kind}${bannerOpen ? " open" : ""}" data-capital="${r.capital}" role="button" tabindex="0" aria-expanded="${bannerOpen}">` +
       `<div class="capital-banner-title">${r.text}</div>` +
-      `<div class="capital-banner-sub">${r.sub}</div>` +
-      (r.retake ? `<div class="capital-banner-retake">${r.retake}</div>` : "") +
+      (bannerOpen
+        ? `<div class="capital-banner-sub">${r.sub}</div>` + (r.retake ? `<div class="capital-banner-retake">${r.retake}</div>` : "")
+        : `<div class="capital-banner-sub capital-banner-short">${r.short}</div>`) +
     `</div>`
   )).join("");
 }
@@ -145,12 +153,13 @@ function ensureBanner() {
   else document.body.appendChild(bannerEl);
   return bannerEl;
 }
-export function syncBanner(v, me, lang) {
+export function syncBanner(v, me, lang, onToggle) {
   const el = ensureBanner();
   if (me == null) { el.hidden = true; el.innerHTML = ""; return; } // a spectator has no "your capital"
   const html = bannerHtml(v, me, lang);
   el.innerHTML = html;
   el.hidden = !html;
+  el.onclick = () => { bannerOpen = !bannerOpen; el.innerHTML = bannerHtml(v, me, lang); if (onToggle) onToggle(); };
 }
 
 // ---------- mount points: two small fixed elements, created once ----------

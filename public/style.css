@@ -2250,7 +2250,7 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
    map-height math needs no changes -- see capital-ui.js's own comment). */
 #capitalBannerRow { display: flex; flex-direction: column; gap: 6px; padding: 0 2px; }
 #capitalBannerRow[hidden] { display: none; }
-.capital-banner { border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.4; }
+.capital-banner { cursor: pointer; border-radius: 8px; padding: 5px 10px; font-size: 12px; line-height: 1.4; }
 .capital-banner-defender { background: rgba(196, 38, 28, 0.22); border: 1px solid #c4261c; }
 .capital-banner-attacker { background: rgba(216, 181, 106, 0.16); border: 1px solid var(--gold-line); }
 .capital-banner-title { font-weight: 700; }
@@ -2292,3 +2292,6 @@ body.sheet-open { overflow: hidden; height: 100svh; min-height: 0; }
 .capital-check-rows { margin: 10px 0; font-size: 13px; }
 .capital-check-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(216, 181, 106, 0.2); }
 .capital-check-row.fallen .capital-check-status { color: #ff8f7d; font-weight: 700; }
+/* #147: collapsed banner = two single lines (full text on tap) so the hand never leaves the screen */
+.capital-banner:not(.open) .capital-banner-title,
+.capital-banner:not(.open) .capital-banner-short { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
