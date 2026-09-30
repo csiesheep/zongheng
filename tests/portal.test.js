@@ -70,6 +70,13 @@ T("#149 wiring: the game imports the portal, never awaits it, and the GA allow-l
   const app = readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
   assert.match(app, /from\s+["']\.\/portal\.js["']/, "app.js imports portal.js");
   assert.doesNotMatch(app, /await\s+(Portal\.)?portal(Start|Restart|Result)/, "no await on a portal call");
+  // A restart is ONE end_and_restart (guide section 5): the game has exactly one start call site (the first game) and
+  // exactly one result call site (the end), and every later game goes through portalRestart. A restart wired as
+  // result + start adds a call site of each.
+  const calls = (name) => (app.match(new RegExp(`\\b${name}\\(`, "g")) || []).length;
+  assert.equal(calls("portalStart"), 1, "portalStart is called from exactly one place");
+  assert.equal(calls("portalResult"), 1, "portalResult is called from exactly one place");
+  assert.ok(calls("portalRestart") >= 1, "later games go through portalRestart");
   for (const f of ["ga-safe-location.js", "index.html", "rules.html", "devlog.html", "play.html"]) {
     const s = readFileSync(new URL("../public/" + f, import.meta.url), "utf8");
     assert.doesNotMatch(s, /ALLOW[^\n]*gp_token|GA_SAFE_PARAMS[^\n]*gp_token/, `${f}: gp_token is not allow-listed for GA`);
