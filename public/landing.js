@@ -6,6 +6,7 @@ import * as Audio from "./audio.js";
 import * as Cues from "./audio-cues.js";
 import { mountAudioButton } from "./audio-switch.js";
 import * as Opening from "./opening.js";
+import "./portal.js"; // #149: the platform links here with ?gp_token=; index.html's head script moved it to sessionStorage before GA loaded, portal.js reads it there
 
 const LANGS = { en, "zh-Hant": zh };
 const $ = (id) => document.getElementById(id);

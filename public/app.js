@@ -42,6 +42,7 @@ import * as LobbyUI from "./lobby-ui.js"; // #133: the dice-遊說 pick/preview/
 import * as CapitalUI from "./capital-ui.js"; // #133 part 2: the homeFall badge/banners/toast/turn-end check
 import { discParts, discHTML } from "./disc-view.js";
 import * as Audio from "./audio.js";
+import { portalStart, portalResult, portalRestart, portalBeaconOnLeave } from "./portal.js"; // #149: 遊戲路口 result reporting (a no-op without a gp_token)
 import * as Cues from "./audio-cues.js";
 import { mountAudioButton } from "./audio-switch.js";
 
@@ -63,6 +64,26 @@ const store = {
   get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
 };
+
+// #149: 遊戲路口 reporting. Never awaited, never on the game's path (portal.js only console.warns on failure).
+// `portalState` is this page load's one running tally: null = no game reported yet, "live" = a real game is
+// on (its session is open), "win"/"lose" = that game ended and was already reported. A new game therefore
+// makes exactly ONE call: portalStart the first time, else portalRestart(prev) -- prev is the finished game's
+// outcome or "abandon" -- never portalResult then portalStart (the platform would record the old game as left).
+// The tutorial is not a real game and a spectator has no result: neither ever calls in.
+let portalState = null;
+function portalBegin() { // hook: a real game begins for this browser's seat (BEFORE the old game's state is reset)
+  if (Tut.active()) return;
+  const prev = portalState;
+  portalState = "live";
+  if (prev === null) portalStart();
+  else portalRestart(prev === "live" ? "abandon" : prev);
+}
+function portalFinish(st) { // hook: the end page shows (idempotent: renderOver() re-runs on a language switch / view update)
+  if (portalState !== "live" || Tut.active() || game.spectator) return;
+  portalState = st.winner === game.me ? "win" : "lose";
+  portalResult(portalState); // Zongheng always has a winner (the tie goes to Chu): no draw, and no score
+}
 
 // ---------- language and names ----------
 let lang = "en", S = en;
@@ -470,6 +491,7 @@ const sess = {
 const freshUi = (card = null) => ({ card, use: null, order: null, pair: null, noPair: false, points: [], target: null, picks: [], opsUse: null, err: "", historyOpen: false, useWarn: false, useWarnPulse: false });
 
 function startSolo() {
+  portalBegin(); // #149: before the old game's state is replaced below
   game.room = false; game.spectator = false;
   game.me = setup.side === "random" ? (Math.random() < 0.5 ? 0 : 1) : setup.side === "qin" ? 0 : 1;
   game.level = setup.level;
@@ -498,6 +520,7 @@ function loadSolo() {
 function resumeSolo() {
   const s = loadSolo();
   if (!s) return;
+  portalBegin(); // #149: a restored game counts as a new one from this moment
   Object.assign(game, { room: false, spectator: false, st: s.st, me: s.me, level: s.level, rng: E.makeRng(0), ui: freshUi(), botLine: "", fallbackNote: "", stuck: false, seenLog: s.seenLog, auto: false });
   game.rng.setState(s.rng);
   game.botName = S.names[E.SIDES[1 - game.me]][0];
@@ -3566,6 +3589,7 @@ $("logToggle").onclick = () => {
 const overGlyphChar = (side) => (side === E.QIN ? "秦" : "楚");
 function renderOver() {
   const st = game.st;
+  portalFinish(st); // #149
   const winner = st.winner;
   const lost = !game.spectator && game.me !== winner;
   const loserSide = lost ? game.me : null;
@@ -3845,6 +3869,9 @@ function onRoomMsg(m) {
     case "view":
       if (m.view == null) { game.st = null; renderLobby(); show("lobby"); break; }
       room.deadline = m.deadline; room.gen = m.gen;
+      // #149: a room game starts for this seat when the first view of it arrives (game.st is null between games and on a
+      // fresh connect); a spectator, and a view of an already-finished game, never open a session.
+      if (!game.st && !game.spectator && m.view.winner == null) portalBegin();
       game.st = m.view; game.me = m.me ?? game.me;
       game.botName = m.names ? m.names[E.SIDES[1 - game.me]] : "";
       if (!game.ui) game.ui = freshUi();
@@ -4063,6 +4090,7 @@ document.addEventListener("click", (ev) => {
 
 // ---------- boot ----------
 const params = new URLSearchParams(location.search);
+portalBeaconOnLeave(() => ({ outcome: game.st && game.st.winner != null && !game.spectator && game.st.winner === game.me ? "win" : "abandon" }));
 setLang(params.get("lang") || store.get("zh.lang", (navigator.language || "").startsWith("zh") ? "zh-Hant" : "en"));
 if (params.has("tutorial")) {
   // Hand the whole page over to the tutorial (#15): it owns game.st/game.ui
