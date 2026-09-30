@@ -35,6 +35,38 @@ const NOISE = { easy: 0, normal: 0.6, hard: 0.2 };
 // whole +3 to the taker rather than being credited in advance.
 const FALL = 60, ROAD = [1, 0.6, 0.25, 0.1, 0.03], ROAD_TEMPO = [1, 0.9, 0.4, 0.15, 0.05], ROAD_DEFENCE = [0.5, 0.25, 0.1, 0.03, 0.01];
 const MOVE_ROAD = [1, 0.3, 0.1, 0.03];
+// #151 (owner: 「Ai 似乎不知道國都失守會輸」), only under the values checked at the
+// turn end (lose-turn, lose-majority, and move's second capital): the loss
+// happens at the turn-end check, and a one-ply search reaches it only from the
+// turn's very last action. Before this a held capital was FALL x ROAD_DEFENCE[0]
+// = 30 with the defender to act and FALL x ROAD_TEMPO[0] = 60 after its own
+// move, whatever it had left, and taking it back by one point (ROAD_TEMPO[1],
+// 54) gained 6: in 120 normal games 13 ended by 國都陷落, and 6 losers never
+// touched their capital again with 5.7 actions left on average. Now, while the
+// enemy holds `s`'s capital, with `dl` = the actions `s` has not yet begun this
+// turn (capped by the cards it holds):
+//   dl = 0                      CAP_LOST, the turn-end loss (500, the certain
+//                               loss the scoring card term uses; a real end is
+//                               1000, which `surestWin` alone may claim);
+//   no retake within dl         CAP_HOPELESS: a loss unless the estimate is
+//     (`capBreakable`)          wrong, so all plays that leave it so score alike
+//                               and the bot does not chase it;
+//   a retake within dl          FALL x CAP_URGENT[dl] + CAP_STEP per point still
+//                               to break beyond the first, so the first step of
+//                               a two-action retake counts.
+// CAP_URGENT grows as dl falls. With 7 left (Qin took it in round 1) it is the
+// old 30, so a capital the defender can undo all turn still ranks below a
+// certain 稱帝 (#136's EMPEROR_NEAR 60, tests/bots-136.test.js). From dl = 4
+// down a retake gains at least 30 over the old one-point-short value (54 with
+// the attacker to act), more than a last 相印 or 滅 step (8 + the road); at
+// dl = 1 it gains 156.
+// The other side of it, not held: with no action of `s` left and the enemy
+// still to act (Qin's last action against Chu's last), the enemy retaking it is
+// the loss, so it is CAP_LOST x the chance the enemy's next card can
+// (`capTakeChance`), plus the next turn's road for the rest; a retake by
+// margin beats a retake by one point. Anything else is the old road.
+const CAP_LOST = 500, CAP_HOPELESS = 400, CAP_STEP = 4;
+const CAP_URGENT = [0, 3.5, 2.5, 2, 1.6, 1.4];
 // #136: a 稱帝 the side can finish THIS TURN with its own hand (one or two of its
 // actions left: a reform with a card of the next box's ops, one per advance left,
 // or an event whose text reads 「變法軌前進 N」, which uses no advance) is a win
@@ -73,6 +105,121 @@ function emperorSteps(st, s) {
     return best;
   };
   return go(st.reform[s], E.reformUsesLeft(st, s), 0, cards);
+}
+// ---------- #151: a home capital under a turn-end value ----------
+// The actions `s` has not yet begun this turn: the rounds after this one, its
+// half of this round if still to come, capped by the cards it can play (a side
+// with none skips its half, engine beginAction).
+function actionsLeft(st, s) {
+  const n = st.rounds - st.round + (st.actor === QIN && s === CHU ? 1 : 0) + (st.actor === s && !st.pending ? 1 : 0);
+  return Math.min(n, st.hands[s].length + (E.jiudingUsable(st, s) ? 1 : 0));
+}
+// Whether the enemy's `foe` points against the owner's `own` lose the capital at
+// the turn end, and how many owner points it takes to stop that (> 0 while held).
+function capHeld(hf, own, foe, S) { return hf === "lose-majority" ? foe > own : foe >= own + S; }
+function capNeed(hf, own, foe, S) { return hf === "lose-majority" ? foe - own : foe - own - S + 1; }
+// The ops of `s`'s next `k` actions. Its own hand when it is the side judging
+// (`known`), best cards first; else the best of every card it might hold (its
+// guessed hand and the unseen pile), a bound on what it can do, not a guess.
+function capOps(st, s, k, known) {
+  if (k <= 0) return [];
+  const cards = known ? st.hands[s] : st.hands[s].concat(st.draw);
+  const ops = cards.filter((c) => c !== JIUDING && !CARD[c].scoring).map((c) => E.opsOf(st, s, c));
+  if (E.jiudingUsable(st, s)) ops.push(4);
+  return ops.sort((a, b) => b - a).slice(0, k);
+}
+// Whether `s` can end the enemy's hold on its capital `id` with one action per
+// entry of `ops`: each action places (2 ops a point while the enemy controls the
+// space, 1 after; own influence there or next door, up to the cap) or campaigns
+// there (removes that many enemy points, places the rest; not while locked or
+// protected), whichever leaves less to do. 遊說 (dice) and events are not counted.
+function capBreakable(st, s, id, hf, ops) {
+  const S = SPACE[id].stability, cap = E.capOf(st, id);
+  let own = E.infOf(st, id)[s], foe = E.infOf(st, id)[1 - s];
+  const reach = E.canPlaceAt(st, s, id), camp = !E.campaignLocked(st, id) && !E.isProtected(st, id);
+  for (const x of ops) {
+    if (capNeed(hf, own, foe, S) <= 0) return true;
+    let pOwn = own, left = x;
+    if (reach) while (pOwn < cap && capNeed(hf, pOwn, foe, S) > 0) { const c = foe >= pOwn + S ? 2 : 1; if (c > left) break; left -= c; pOwn++; }
+    let cOwn = own, cFoe = foe;
+    if (camp && foe > 0) { const r = Math.max(0, x + E.campaignMod(st, s, id)), k = Math.min(r, foe); cFoe = foe - k; cOwn = Math.min(cap, own + r - k); }
+    if (capNeed(hf, cOwn, cFoe, S) < capNeed(hf, pOwn, foe, S)) { own = cOwn; foe = cFoe; } else own = pOwn;
+  }
+  return capNeed(hf, own, foe, S) <= 0;
+}
+// The chance the enemy of `s` takes `s`'s capital `id` with ONE action: the
+// fewest ops that do it (placing or campaigning as above, from its side), then
+// whether its hand has a card of that many ops -- known: yes or no; hidden: the
+// chance a hand of its size dealt from the cards it might hold has one (the
+// uniform belief `determinize` deals from).
+function capTakeChance(st, s, id, hf, known) {
+  const o = 1 - s, S = SPACE[id].stability, cap = E.capOf(st, id);
+  const own = E.infOf(st, id)[s], foe = E.infOf(st, id)[o];
+  const reach = E.canPlaceAt(st, o, id), camp = own > 0 && !E.campaignLocked(st, id) && !E.isProtected(st, id);
+  let xmin = 0;
+  for (let x = 1; x <= 6 && !xmin; x++) {
+    let f = foe, left = x;
+    if (reach) while (f < cap && !capHeld(hf, own, f, S)) { const c = own >= f + S ? 2 : 1; if (c > left) break; left -= c; f++; }
+    if (capHeld(hf, own, f, S)) xmin = x;
+    else if (camp) { const r = Math.max(0, x + E.campaignMod(st, o, id)), k = Math.min(r, own); if (capHeld(hf, own - k, Math.min(cap, foe + r - k), S)) xmin = x; }
+  }
+  if (!xmin) return 0;
+  if (E.jiudingUsable(st, o) && xmin <= 4) return 1;
+  const good = (c) => c !== JIUDING && !CARD[c].scoring && E.opsOf(st, o, c) >= xmin;
+  if (known) return st.hands[o].some(good) ? 1 : 0;
+  const h = st.hands[o].length, pool = st.hands[o].concat(st.draw), g = pool.filter(good).length;
+  let none = 1;
+  for (let i = 0; i < h; i++) none *= Math.max(0, pool.length - g - i) / (pool.length - i);
+  return 1 - none;
+}
+// The capital term for `s` under a turn-end value (see CAP_LOST), or null where
+// the old road applies. `short` is evaluate's: 0 = held.
+function capitalAtTurnEnd(st, s, id, hf, side, short) {
+  if (hf === "lose" || (hf === "move" && id === E.HOME_CAPITAL[s]) || st.phase !== "action") return null;
+  const dl = actionsLeft(st, s);
+  if (short === 0) {
+    if (dl === 0) return CAP_LOST;
+    const known = s === side, S = SPACE[id].stability;
+    const k = known ? dl - st.hands[s].filter((c) => CARD[c].scoring).length : dl;
+    if (!capBreakable(st, s, id, hf, capOps(st, s, k, known))) return CAP_HOPELESS;
+    const need = capNeed(hf, E.infOf(st, id)[s], E.infOf(st, id)[1 - s], S);
+    // Whose move comes next: `s`'s own (it is to begin one, or the enemy's is
+    // being resolved) -- it can retake now, the old ROAD_DEFENCE; or the enemy's
+    // (`s` just moved, or is resolving its own move) -- `s` chose to leave it held.
+    const ownNext = (st.actor === s) === !st.pending;
+    const base = ownNext ? ROAD_DEFENCE[0] : CAP_URGENT[Math.min(dl, CAP_URGENT.length - 1)];
+    return FALL * base + CAP_STEP * (need - 1);
+  }
+  if (dl === 0 && actionsLeft(st, 1 - s) > 0) {
+    const p = capTakeChance(st, s, id, hf, 1 - s === side);
+    return CAP_LOST * p + (1 - p) * (short < ROAD.length ? FALL * ROAD[short] : 0);
+  }
+  return null;
+}
+// Placements aimed at `side`'s own capital under a turn-end value, offered next
+// to the greedy one (whose point-by-point steps cannot see a break that takes 2
+// points or more): the fewest points that end the enemy's hold, and, on
+// `side`'s last action with the enemy still to act, all it can put there.
+export function capitalPlacements(st, side, ops, restrict = null) {
+  const hf = st.options.homeFall;
+  if (!hf || hf === "none" || hf === "lose" || st.phase !== "action") return [];
+  const id = E.homeCapital(st, side), o = 1 - side;
+  if ((hf === "move" && id === E.HOME_CAPITAL[side]) || (restrict && !restrict(id)) || !E.canPlaceAt(st, side, id)) return [];
+  const S = SPACE[id].stability, cap = E.capOf(st, id), foe = E.infOf(st, id)[o];
+  let own = E.infOf(st, id)[side], left = ops;
+  const wasHeld = capHeld(hf, own, foe, S);
+  const after = actionsLeft(st, side) - (st.actor === side && !st.pending ? 1 : 0);
+  const guard = after <= 0 && actionsLeft(st, o) > 0;
+  if (!wasHeld && !guard) return [];
+  const out = [], pts = [];
+  while (own < cap) {
+    const c = foe >= own + S ? 2 : 1;
+    if (c > left) break;
+    left -= c; own++; pts.push(id);
+    if (wasHeld && !capHeld(hf, own, foe, S) && !out.length) { out.push(pts.slice()); if (!guard) break; }
+  }
+  if (guard && pts.length && (!out.length || out[0].length < pts.length)) out.push(pts.slice());
+  return out;
 }
 const pickOne = (arr, rng) => arr[rng.int(arr.length)];
 function gauss(rng) {
@@ -198,6 +345,8 @@ export function evaluate(st, side, terms = null) {
       const short = hf === "lose-majority" ? Math.max(0, own - foe + 1) : Math.max(0, own + SPACE[id].stability - foe);
       const next = st.phase === "action" && !st.pending ? st.actor : null;
       const first = hf === "move" && id === E.HOME_CAPITAL[s];
+      const urgent = capitalAtTurnEnd(st, s, id, hf, side, short); // #151
+      if (urgent != null) { cap += (s === QIN ? -1 : 1) * urgent; continue; }
       const road = first ? MOVE_ROAD : next === 1 - s ? ROAD_TEMPO : next === s ? ROAD_DEFENCE : ROAD;
       if (short >= road.length) continue;
       cap += (s === QIN ? -1 : 1) * (first ? E.MOVE_VP : FALL) * road[short];
@@ -541,6 +690,7 @@ function bestOps(st, who, ops, allowed, rng) {
   if (allowed.includes("place")) {
     const points = greedyPlacement(st, who, ops); if (points.length) cands.push({ use: "place", points });
     for (const pts of winningPlacements(st, who, ops)) cands.push({ use: "place", points: pts }); // #134
+    for (const pts of capitalPlacements(st, who, ops)) cands.push({ use: "place", points: pts }); // #151
   }
   if (allowed.includes("campaign")) for (const t of o.campaignTargets) cands.push({ use: "campaign", target: t });
   if (allowed.includes("lobby")) for (const t of lobbyTargetsFor(st, who, o.lobbyTargets)) cands.push({ use: "lobby", target: t.id });
@@ -588,6 +738,7 @@ function actionCandidates(st, side, L) {
   // #134: a placement that wins now, next to the greedy one (winTargets above).
   const winPlace = (ops, make, restrict) => {
     for (const points of winningPlacements(st, side, ops, restrict)) { const a = make(points); if (winsNow(st, a)) out.push(a); }
+    for (const points of capitalPlacements(st, side, ops, restrict)) out.push(make(points)); // #151
   };
   if (L.bog && L.bog.length) return L.bog.map((c) => ({ type: "play", side, card: c, use: "bog" }));
   let dead = null;
