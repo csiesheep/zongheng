@@ -511,7 +511,7 @@ peekDlg.setAttribute("role", "dialog");
 peekDlg.setAttribute("aria-modal", "true");
 document.body.appendChild(peekDlg);
 let peekOpenId = null, peekPushed = false, peekReturn = null, peekScrollY = 0;
-const peekCardOk = (id) => id === E.JIUDING || (Number.isInteger(id) && !!E.CARD[id]);
+const peekCardOk = (id) => typeof id === "string" && (id === E.JIUDING || Object.hasOwn(E.CARD, id));
 function peekLock() {
   peekScrollY = window.scrollY;
   const b = document.body.style;
@@ -532,9 +532,12 @@ function peekOpen(id, from, push) {
   sheet.classList.remove("overlay"); sheet.classList.add("rp-peek-sheet");
   peekDlg.replaceChildren(sheet);
   peekDlg.setAttribute("aria-label", cardName(id));
+  // Chrome/Safari restore the popped entry's saved scroll on back(); ours is the frozen 0 if the entry
+  // is pushed after the lock, so push first (it saves the real position) and take restoration over.
+  if (push) { history.pushState({ rpCard: id }, ""); peekPushed = true; }
+  try { history.scrollRestoration = "manual"; } catch {}
   peekLock();
   peekDlg.showModal();
-  if (push) { history.pushState({ rpCard: id }, ""); peekPushed = true; }
 }
 function peekTeardown() {
   if (peekOpenId == null) return;
@@ -560,7 +563,7 @@ document.addEventListener("click", (ev) => {
   if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
   const a = ev.target.closest && ev.target.closest("a[data-card]");
   if (!a || !$("rpArticle").contains(a)) return;
-  const id = a.dataset.card === E.JIUDING ? E.JIUDING : Number(a.dataset.card);
+  const id = a.dataset.card;
   if (!peekCardOk(id)) return; // unknown id: let the link go to the rules page
   ev.preventDefault();
   peekOpen(id, a, true);
