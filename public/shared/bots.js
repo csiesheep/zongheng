@@ -62,11 +62,29 @@ const MOVE_ROAD = [1, 0.3, 0.1, 0.03];
 // tests/bots-136.test.js). Against the old one-point-short value after a
 // retake (54, the attacker to act) a retake gains at least 30 with 5 actions
 // left, 66 with 3, 156 with 1: more than a last 相印 or 滅 step (8 + its road).
-// The other side of it, not held: with no action of `s` left and the enemy
-// still to act (Qin's last action against Chu's last), the enemy retaking it is
-// the loss, so it is CAP_LOST x the chance the enemy's next card can
-// (`capTakeChance`), plus the next turn's road for the rest; a retake by margin
-// beats a retake by one point. Anything else is the old road.
+// Not held, the enemy's capital as a side sees it: with no action of the owner
+// left and the taker still to act, taking it is the win, so it is CAP_LOST x
+// whether the taker's hand can (`capTakeOps`, `capOpsChance`). Pressing a
+// capital is otherwise valued as before: this change is about defence.
+//
+// Not held, a side's OWN capital (owner: 「加強 ai 對國都的防守，目前國都陷落
+// 贏法太容易了」): the old road counted points (`short`) and gave 3 of 60 to a
+// capital a 4-op card takes at once. A threat is now read from the rules: the
+// fewest ops x with which ONE enemy action takes it (placing needs enemy
+// influence in or next to it and the owner at no more than cap - stability
+// points; a campaign needs the home lock off), times the chance the enemy's
+// hidden hand holds a card of x ops (九鼎 counts). No such x, or no such card
+// left unseen: no threat, nothing changes, nothing is piled on the capital.
+//   mid-turn          at least FALL x CAP_THREAT[x] x that chance, the enemy to
+//                     move next (x 0.3 with the owner to move, x 0.65 neither):
+//                     54 for a 1-op take, 15 for a 4-op one (the old road: 3);
+//   no way back       a take the owner cannot undo with the actions it has
+//                     left is the loss: CAP_LOST x the chance of the card that
+//                     makes it. Qin counts one action fewer, Chu moving last:
+//                     CAP_REPLY of it while Qin still has an answer after;
+//   遊說              an enemy 遊說 there that gains on average adds up to
+//                     FALL x CAP_LOBBY (15): the margin is being worn down.
+// CAP_MAX_OPS: a 4-op card under a +1 effect; no action has more ops.
 const CAP_LOST = 500, CAP_HOPELESS = 400, CAP_STEP = 4;
 const CAP_URGENT = [0, 3.5, 2.5, 2, 1.6, 1.4];
 const CAP_SPARE = [2.5, 1.2, 0.7, ROAD_DEFENCE[0]];
