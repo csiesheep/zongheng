@@ -70,7 +70,8 @@ const MOVE_ROAD = [1, 0.3, 0.1, 0.03];
 const CAP_LOST = 500, CAP_HOPELESS = 400, CAP_STEP = 4;
 const CAP_URGENT = [0, 3.5, 2.5, 2, 1.6, 1.4];
 const CAP_SPARE = [2.5, 1.2, 0.7, ROAD_DEFENCE[0]];
-const CAP_THREAT = 1, CAP_REPLY = 0.5, CAP_LOBBY = 0.25, CAP_MAX_OPS = 5;
+const CAP_THREAT = [0, 0.9, 0.6, 0.4, 0.25, 0.1], CAP_THREAT_OWN = 0.3, CAP_THREAT_NONE = 0.65;
+const CAP_REPLY = 0.5, CAP_LOBBY = 0.25, CAP_MAX_OPS = 5;
 // #136: a 稱帝 the side can finish THIS TURN with its own hand (one or two of its
 // actions left: a reform with a card of the next box's ops, one per advance left,
 // or an event whose text reads 「變法軌前進 N」, which uses no advance) is a win
@@ -229,7 +230,7 @@ function capitalAtTurnEnd(st, s, id, hf, side, short, old) {
   let v = old;
   if (x1) {
     const next = st.pending ? null : st.actor;
-    v = Math.max(v, FALL * CAP_THREAT * capOpsChance(st, o, x1, false) * (next === o ? ROAD_TEMPO[1] : next === s ? ROAD_DEFENCE[1] : ROAD[1]));
+    v = Math.max(v, FALL * CAP_THREAT[x1] * capOpsChance(st, o, x1, false) * (next === o ? 1 : next === s ? CAP_THREAT_OWN : CAP_THREAT_NONE));
     // A take `s` cannot undo with the actions it has left is the loss. Qin has
     // one action fewer for that: Chu moves after Qin's last, and takes back
     // what Qin retook (CAP_REPLY of it while Qin can still answer once more).
